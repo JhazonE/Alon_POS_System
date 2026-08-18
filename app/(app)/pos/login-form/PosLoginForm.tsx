@@ -34,9 +34,9 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
             <Settings className="h-4 w-4" />
           </Button>
           <div className="mx-auto mb-3 h-16 w-16 overflow-hidden rounded-2xl shadow-lg ring-1 ring-white/25">
-            <Image src="/verdix-icon.svg" alt="Vendix" width={64} height={64} className="h-full w-full object-contain" priority />
+            <Image src="/alon-icon.svg" alt="Alon POS System" width={64} height={64} className="h-full w-full object-contain" priority />
           </div>
-          <h1 className="text-2xl font-black tracking-tight drop-shadow-sm">VENDIX POS</h1>
+          <h1 className="text-2xl font-black tracking-tight drop-shadow-sm">ALON POS SYSTEM</h1>
           <p className="mt-1 text-sm text-white/70">Point of Sale Terminal</p>
         </div>
 

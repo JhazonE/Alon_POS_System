@@ -24,8 +24,8 @@ export function Logo({ className, enableLink = true, variant = 'default', size, 
       className
     )}>
       <Image
-        src="/verdix_logo.png"
-        alt="VENDIX"
+        src="/alon_logo.png"
+        alt="ALON POS SYSTEM"
         width={currentSize} 
         height={isIcon ? currentSize : 80} 
         className={cn("object-contain", isIcon ? "p-0.5" : "p-1")}

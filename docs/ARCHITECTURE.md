@@ -229,8 +229,8 @@ Key tables:
 
 | Setting | Value |
 |---------|-------|
-| App ID | `com.verdix.pos` |
-| Product Name | verdix |
+| App ID | `com.alonpos.system` |
+| Product Name | AlonPOSSystem |
 | Target | Windows Portable (.exe) |
 | Main Entry | `main.js` |
 | Preload | `preload.js` |

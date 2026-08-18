@@ -93,7 +93,7 @@ function createSplashScreen() {
       </style>
     </head>
     <body>
-      <div class="title">Vendix</div>
+      <div class="title">Alon POS System</div>
       <div class="subtitle">Starting background services...</div>
       <div class="spinner"></div>
     </body>
@@ -136,7 +136,7 @@ function createWindow() {
   });
 
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.vendix.pos');
+    app.setAppUserModelId('com.alonpos.system');
   }
 
   const isAdmin = roleName === 'Admin Dashboard' || startRoute.includes('dashboard');
@@ -156,9 +156,9 @@ function createWindow() {
       backgroundThrottling: false,
       spellcheck: false,
     },
-    title: `Vendix - ${roleName}`,
+    title: `Alon POS System - ${roleName}`,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'public', 'verdix_logo.png'),
+    icon: path.join(__dirname, 'public', 'alon_logo.png'),
     fullscreen: !isAdmin,
     frame: isAdmin,
     resizable: true,
@@ -172,7 +172,7 @@ function createWindow() {
     win.on('close', () => saveWindowState(win, stateKey));
   }
 
-  win.setIcon(path.join(__dirname, 'public', 'verdix_logo.png'));
+  win.setIcon(path.join(__dirname, 'public', 'alon_logo.png'));
 
   const startUrl = `${SERVER_ORIGIN}${startRoute}`;
   win.loadURL(startUrl);
@@ -266,7 +266,7 @@ ipcMain.handle('window:open-customer-display', () => {
     height,
     frame: false,
     fullscreen: true,
-    icon: path.join(__dirname, 'public', 'verdix_logo.png'),
+    icon: path.join(__dirname, 'public', 'alon_logo.png'),
     title: 'Customer Display',
     skipTaskbar: false,
     webPreferences: {
@@ -278,7 +278,7 @@ ipcMain.handle('window:open-customer-display', () => {
     show: false,
   });
 
-  customerDisplayWindow.setIcon(path.join(__dirname, 'public', 'verdix_logo.png'));
+  customerDisplayWindow.setIcon(path.join(__dirname, 'public', 'alon_logo.png'));
   customerDisplayWindow.loadURL(`${SERVER_ORIGIN}/pos/customer-display`);
   customerDisplayWindow.once('ready-to-show', () => customerDisplayWindow.show());
   customerDisplayWindow.on('closed', () => { customerDisplayWindow = null; });

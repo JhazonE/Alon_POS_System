@@ -117,8 +117,8 @@
     "wait-on": "^9.0.4"
   },
   "build": {
-    "appId": "com.verdix.pos",
-    "productName": "verdix",
+    "appId": "com.alonpos.system",
+    "productName": "AlonPOSSystem",
     "directories": {
       "output": "dist"
     },
@@ -133,7 +133,7 @@
     ],
     "win": {
       "target": "dir",
-      "icon": "public/verdix_logo.ico"
+      "icon": "public/alon_logo.ico"
     }
   }
 }

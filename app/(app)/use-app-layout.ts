@@ -18,7 +18,7 @@ export function useAppLayout() {
 
   const [user, setUser] = useState<AppUser | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
-  const [businessName, setBusinessName] = useState('VENDIX');
+  const [businessName, setBusinessName] = useState('ALON POS SYSTEM');
   const [disabledKeys, setDisabledKeys] = useState<Set<string>>(new Set());
   const [disabledLoaded, setDisabledLoaded] = useState(false);
 

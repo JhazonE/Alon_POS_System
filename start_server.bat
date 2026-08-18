@@ -9,7 +9,7 @@ if %errorlevel% neq 0 (
     timeout /t 8 /nobreak >nul
 )
 
-echo Starting Vendix Server...
+echo Starting Alon POS System Server...
 :: server.js defaults to port 3000; the Electron app and NEXT_PUBLIC_API_BASE_URL
 :: both expect 47821, so the boot launcher must pin it too.
 :: Keep in sync with SERVER_PORT in main.js.

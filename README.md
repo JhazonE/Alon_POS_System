@@ -1,4 +1,4 @@
-# verdix Enterprise
+# Alon POS System
 
 > A full-featured, offline-capable Inventory & Point-of-Sale management system built with **Next.js 16**, **Electron 33**, and **MySQL**.
 

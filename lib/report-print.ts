@@ -106,7 +106,7 @@ export function printReportTable<T>(opts: PrintReportOptions<T>): void {
         .join('')}</div>`
     : '';
 
-  const bizName = escapeReportHtml(business?.businessName || 'Vendix');
+  const bizName = escapeReportHtml(business?.businessName || 'Alon POS System');
   const bizMeta = [
     business?.address ? escapeReportHtml(business.address) : '',
     business?.contactNumber ? `Tel: ${escapeReportHtml(business.contactNumber)}` : '',
@@ -118,7 +118,7 @@ export function printReportTable<T>(opts: PrintReportOptions<T>): void {
          <div>Authorized Signature: ___________________________</div>
          <div class="footer-right">
            <div>Generated: ${escapeReportHtml(format(new Date(), 'PPpp'))}</div>
-           <div class="powered">Powered by Vendix</div>
+           <div class="powered">Powered by Alon POS System</div>
          </div>
        </div>`
     : `<p class="meta">Generated: ${escapeReportHtml(format(new Date(), 'PPpp'))} &middot; ${rows.length} record(s)</p>`;

@@ -1,4 +1,4 @@
-// Generates Verdix raster/ICO assets from public/verdix-icon.svg
+// Generates Alon POS System raster/ICO assets from public/alon-icon.svg
 // Usage: node scripts/generate-logo.mjs
 import sharp from 'sharp';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const svgPath = path.join(root, 'public', 'verdix-icon.svg');
+const svgPath = path.join(root, 'public', 'alon-icon.svg');
 
 const pngFromSvg = async (svg, size) =>
   sharp(svg, { density: 384 }).resize(size, size, { fit: 'contain' }).png().toBuffer();
@@ -41,7 +41,7 @@ const main = async () => {
   const svg = await readFile(svgPath);
 
   // App-loaded PNGs
-  await writeFile(path.join(root, 'public', 'verdix_logo.png'), await pngFromSvg(svg, 512));
+  await writeFile(path.join(root, 'public', 'alon_logo.png'), await pngFromSvg(svg, 512));
   await writeFile(path.join(root, 'app', 'icon.png'), await pngFromSvg(svg, 512));
 
   // ICO sizes
@@ -50,10 +50,10 @@ const main = async () => {
     sizes.map(async (size) => ({ size, data: await pngFromSvg(svg, size) }))
   );
 
-  await writeFile(path.join(root, 'public', 'verdix_logo.ico'), buildIco(pngs));
+  await writeFile(path.join(root, 'public', 'alon_logo.ico'), buildIco(pngs));
   await writeFile(path.join(root, 'public', 'favicon.ico'), buildIco(pngs.filter((p) => p.size <= 64)));
 
-  console.log('Generated: public/verdix_logo.png, app/icon.png, public/verdix_logo.ico, public/favicon.ico');
+  console.log('Generated: public/alon_logo.png, app/icon.png, public/alon_logo.ico, public/favicon.ico');
 };
 
 main().catch((err) => {

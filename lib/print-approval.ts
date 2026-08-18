@@ -82,7 +82,7 @@ export const printApproval = (data: ApprovalItem) => {
     <div class="document-container">
       <div class="doc-header">
         <div class="company-info">
-          <h1 class="company-title">VENDIX</h1>
+          <h1 class="company-title">ALON POS SYSTEM</h1>
         </div>
         <div class="report-title">
           <h2 class="doc-type">TRANSACTION AUTHORIZATION</h2>

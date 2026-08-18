@@ -119,7 +119,7 @@ export function AppSidebar({
         <div className="flex items-center gap-3 transition-all duration-300 group-data-[collapsible=icon]:justify-center">
           <Logo variant="icon" size={36} />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <h1 className="text-xl font-extrabold font-headline tracking-tight text-sidebar-foreground">VENDIX</h1>
+            <h1 className="text-xl font-extrabold font-headline tracking-tight text-sidebar-foreground">ALON POS SYSTEM</h1>
             <span className="text-[10px] uppercase font-bold text-primary tracking-[0.2em] mt-0.5 opacity-90">Enterprise</span>
           </div>
         </div>

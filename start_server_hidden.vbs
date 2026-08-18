@@ -1,4 +1,4 @@
-' Vendix Server — hidden launcher
+' Alon POS System Server — hidden launcher
 ' Runs start_server.bat with a fully hidden window (style 0) so the Next.js
 ' server autostarts at boot WITHOUT a visible/minimized console window.
 ' Kept as a wrapper (vs. removing the startup entry) so the server-start path

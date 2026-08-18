@@ -153,7 +153,7 @@ export class ReceiptGenerator {
         // ─── HEADER (centered) ───────────────────────────────────────────
 
 
-        const bizName = settings?.businessName?.trim() || 'VENDIX';
+        const bizName = settings?.businessName?.trim() || 'ALON POS SYSTEM';
         const address = settings?.address?.trim() || 'General Merchandise';
         const minNumber = sale.terminalMin || settings?.minNumber || '1234567890';
         const serialNumber = sale.terminalSerialNumber || settings?.serialNumber || '0987654321-11';
@@ -425,7 +425,7 @@ export class ReceiptGenerator {
 
         const paymentDate = new Date(payment.date);
         const dateStr = format(paymentDate, 'PP p');
-        const bizName = settings?.businessName?.trim() || 'VENDIX';
+        const bizName = settings?.businessName?.trim() || 'ALON POS SYSTEM';
         const address = settings?.address?.trim() || 'General Merchandise';
         const minNumber = settings?.minNumber || '';
         const serialNumber = settings?.serialNumber || '';
@@ -505,7 +505,7 @@ export class ReceiptGenerator {
 
         const currentDate = data.transactionDate ? new Date(data.transactionDate) : new Date();
         const dateStr = format(currentDate, 'PP p');
-        const bizName = settings?.businessName?.trim() || 'VENDIX';
+        const bizName = settings?.businessName?.trim() || 'ALON POS SYSTEM';
         const address = settings?.address?.trim() || 'General Merchandise';
 
         // HEADER (store block, reused from the sale receipt — but NO MIN/SN/SI)

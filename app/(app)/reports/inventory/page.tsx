@@ -441,7 +441,7 @@ export default function InventoryReportPage() {
               </div>
               <div className="text-right">
                   <p>Page 1 of 1</p>
-                  <p className="mt-1 font-bold text-primary/40">Powered by Vendix</p>
+                  <p className="mt-1 font-bold text-primary/40">Powered by Alon POS System</p>
               </div>
           </div>
       </div>

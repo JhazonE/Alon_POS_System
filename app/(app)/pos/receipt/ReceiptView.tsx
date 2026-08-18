@@ -27,7 +27,7 @@ export const ReceiptView = forwardRef<HTMLDivElement, ReceiptViewProps>(({ saleD
             }}
         >
             <div className="text-center mb-4">
-                <div className="font-bold text-lg mb-1">{settings?.businessName?.trim() || 'VENDIX'}</div>
+                <div className="font-bold text-lg mb-1">{settings?.businessName?.trim() || 'ALON POS SYSTEM'}</div>
                 <div>{settings?.address?.trim() || 'General Merchandise'}</div>
                 {settings?.contactNumber && <div>{settings.contactNumber}</div>}
                 {settings?.tin && <div>{settings?.vatRegistration === 'NON_VAT' ? 'NON-VAT REG TIN' : 'VAT REG TIN'}: {settings.tin}</div>}
@@ -245,7 +245,7 @@ export const ReceiptView = forwardRef<HTMLDivElement, ReceiptViewProps>(({ saleD
                         <div>ASK FOR RECEIPT!</div>
                     </div>
                 )}
-                <div>Shop smart, save more! Thank you for visiting {settings?.businessName?.trim() || 'VENDIX'}.</div>
+                <div>Shop smart, save more! Thank you for visiting {settings?.businessName?.trim() || 'ALON POS SYSTEM'}.</div>
                 {saleDetails.isTrainingMode && (
                     <div className="mt-4 border-2 border-black p-2 bg-gray-100 text-center font-bold text-[10px] leading-tight flex flex-col gap-1">
                         <div>THIS IS NOT A SALES INVOICE RECEIPT.</div>

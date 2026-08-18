@@ -1,12 +1,12 @@
-; Vendix Inno Setup Script
-#define AppName "Vendix"
+; Alon POS System Inno Setup Script
+#define AppName "Alon POS System"
 ; Version comes from package.json via `npm run build:installer`
 ; (iscc /DAppVersion=x.y.z). The fallback below is only for direct iscc runs.
 #ifndef AppVersion
   #define AppVersion "1.19.5"
 #endif
 #define AppPublisher "BHAGOH SYSTEMS"
-#define AppExeName "verdix.exe"
+#define AppExeName "AlonPOSSystem.exe"
 
 [Setup]
 AppId={{D3F73FF9-A96F-4F5C-9E2B-62972F84B373}
@@ -16,14 +16,14 @@ VersionInfoVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\{#AppName}
 DisableProgramGroupPage=yes
-SetupIconFile=public\verdix_logo.ico
-OutputBaseFilename=VendixSetup_{#AppVersion}
+SetupIconFile=public\alon_logo.ico
+OutputBaseFilename=AlonPOSSystemSetup_{#AppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
 DisableFinishedPage=yes
-; Install as a true 64-bit app into C:\Program Files\Vendix (no "(x86)").
+; Install as a true 64-bit app into C:\Program Files\Alon POS System (no "(x86)").
 ; The bundled node.exe and MySQL are x64, and a paren-free path avoids batch
 ; quoting pitfalls during MySQL setup.
 ArchitecturesAllowed=x64compatible
@@ -102,13 +102,13 @@ Source: "public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs
 
 
 [Icons]
-Name: "{autoprograms}\Vendix POS"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\verdix_logo.ico"
-Name: "{autodesktop}\Vendix POS"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\verdix_logo.ico"
-Name: "{userstartup}\Vendix POS"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\verdix_logo.ico"
+Name: "{autoprograms}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon_logo.ico"
+Name: "{autodesktop}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon_logo.ico"
+Name: "{userstartup}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon_logo.ico"
 ; Launch the server at boot through wscript + the hidden VBS wrapper so no
 ; console window appears (start_server.bat directly would flash a cmd window
 ; even with runminimized). wscript is the default, no-console host for .vbs.
-Name: "{commonstartup}\Vendix Server"; Filename: "wscript.exe"; Parameters: """{app}\start_server_hidden.vbs"""
+Name: "{commonstartup}\Alon POS System Server"; Filename: "wscript.exe"; Parameters: """{app}\start_server_hidden.vbs"""
 
 
 [Run]

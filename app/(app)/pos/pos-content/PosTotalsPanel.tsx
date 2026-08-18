@@ -55,7 +55,7 @@ export function PosTotalsPanel({
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-xl font-black uppercase tracking-wide leading-none truncate drop-shadow-sm">{businessSettings?.businessName || 'Vendix'}</p>
+            <p className="text-xl font-black uppercase tracking-wide leading-none truncate drop-shadow-sm">{businessSettings?.businessName || 'Alon POS System'}</p>
             <p className="text-[11px] text-white/70 mt-1 font-mono truncate">{currentTerminalName}</p>
           </div>
         </div>

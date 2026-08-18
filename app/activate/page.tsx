@@ -140,7 +140,7 @@ export default function ActivatePage() {
     return {
       icon: <ShieldAlert className="h-4 w-4" />,
       title: 'Not Activated',
-      message: 'This copy of Vendix is not activated. Enter your license key below to continue.',
+      message: 'This copy of Alon POS System is not activated. Enter your license key below to continue.',
     };
   }
 
@@ -182,7 +182,7 @@ export default function ActivatePage() {
         <div className="flex flex-col items-center gap-3">
           <Logo size={72} />
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Vendix POS</h1>
+            <h1 className="text-2xl font-bold">Alon POS System</h1>
             <p className="text-sm text-muted-foreground">Software Activation</p>
           </div>
         </div>

@@ -14,7 +14,7 @@ function layout(settings: EJSettings) {
 export function renderReceiptHeader(settings: EJSettings, dateTime: string): string[] {
   const cols = colsFor(settings.paperSize);
   const lines: string[] = [];
-  lines.push(center(settings.businessName?.trim() || 'VENDIX', cols));
+  lines.push(center(settings.businessName?.trim() || 'ALON POS SYSTEM', cols));
   lines.push(center(settings.address?.trim() || 'General Merchandise', cols));
   if (settings.contactNumber) lines.push(center(settings.contactNumber, cols));
   if (settings.tin) {

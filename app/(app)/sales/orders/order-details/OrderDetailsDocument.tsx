@@ -54,7 +54,7 @@ export function OrderDetailsDocument({
               )}
             </div>
             <h2 className="text-xl font-bold uppercase tracking-tight">
-              {settings.businessName || 'VENDIX'}
+              {settings.businessName || 'ALON POS SYSTEM'}
             </h2>
           </div>
 

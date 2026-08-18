@@ -3,13 +3,13 @@ import './globals.css';
 import ClientLayout from '../components/client-layout';
 
 export const metadata = {
-  title: 'VENDIX POS',
+  title: 'ALON POS SYSTEM',
   description: 'Point of Sales + Inventory Management',
   icons: {
     icon: [
-      { url: '/verdix_logo.png' }
+      { url: '/alon_logo.png' }
     ],
-    apple: '/verdix_logo.png',
+    apple: '/alon_logo.png',
   },
 };
 
