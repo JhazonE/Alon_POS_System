@@ -76,6 +76,10 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		boxShadow: {
+  			brand: '0 1px 3px rgba(14,124,134,.10)',
+  			'brand-lg': '0 4px 20px rgba(14,124,134,.10)'
+  		},
   		keyframes: {
   			'toast-bar': {
   				'0%':   { transform: 'translateX(-100%)' },
