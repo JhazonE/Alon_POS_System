@@ -84,3 +84,4 @@ license.dat
 
 # Office lock files (created when a .docx/.xlsx is open in Word/Excel)
 ~$*
+.superpowers/
