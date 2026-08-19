@@ -64,7 +64,7 @@ export function DatabaseConnectionTab({ dbConfig, connectionStatus, statusMessag
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="database">Database Name</Label>
-            <Input id="database" name="database" value={dbConfig.database} onChange={onInputChange} placeholder="verdix" />
+            <Input id="database" name="database" value={dbConfig.database} onChange={onInputChange} placeholder="alon_pos" />
           </div>
         </div>
       </CardContent>

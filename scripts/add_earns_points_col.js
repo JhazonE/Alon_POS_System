@@ -8,7 +8,7 @@ async function migrate() {
     port: parseInt(process.env.DB_PORT || '3306'),
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'verdix',
+    database: process.env.DB_NAME || 'alon_pos',
   });
 
   try {
@@ -17,7 +17,7 @@ async function migrate() {
       SELECT COLUMN_NAME 
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'products' AND COLUMN_NAME = 'earns_points'
-    `, [process.env.DB_NAME || 'verdix']);
+    `, [process.env.DB_NAME || 'alon_pos']);
 
     if (columns.length === 0) {
       console.log('Adding earns_points column...');

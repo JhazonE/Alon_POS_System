@@ -1,6 +1,6 @@
 # E2E Tests (Playwright)
 
-Browser-based end-to-end tests para sa Verdix POS Next.js web app.
+Browser-based end-to-end tests para sa Alon POS Next.js web app.
 
 ## Pagdagan
 
@@ -14,14 +14,14 @@ npm run test:e2e:db       # i-recreate + i-seed ra ang test DB (manwal)
 ## Giunsa molihok
 
 - **Isolated test server:** ang tests modagan batok sa usa ka dedicated `next dev`
-  sa **port 3100** nga naka-point sa **`verdix_test`** database — DILI sa imong dev
-  `verdix` (port 3000). Luwas modagan bisan naa'y dev server nga gigamit.
+  sa **port 3100** nga naka-point sa **`alon_pos_test`** database — DILI sa imong dev
+  `alon_pos` (port 3000). Luwas modagan bisan naa'y dev server nga gigamit.
 - **Coexistence sa dev server:** ang Next.js dev naa'y singleton lock per `.next`.
   Ang test server mogamit ug `NEXT_DIST_DIR=.next-test` (set sa webServer env) aron
   makasabay sa usa ka running nga dev server sa 3000. Tan-awa ang `distDir` sa
   [next.config.ts](../../next.config.ts).
 - **Test database:** ang [global-setup](setup/global-setup.ts) mo-recreate sa
-  `verdix_test` kada run pinaagi sa pag-**clone sa schema** gikan sa dev `verdix`
+  `alon_pos_test` kada run pinaagi sa pag-**clone sa schema** gikan sa dev `alon_pos`
   (structure ra, walay data) dayon mo-seed ug deterministic fixtures.
   - Schema-clone ang gigamit (dili migration-replay) kay ang migrations dili clean
     modagan gikan sa zero. Ang dev DB mao ang source of truth sa schema.
@@ -40,7 +40,7 @@ npm run test:e2e:db       # i-recreate + i-seed ra ang test DB (manwal)
 
 - [`login.spec.ts`](login.spec.ts) — login page UI + validation (walay DB)
 - [`auth.spec.ts`](auth.spec.ts) — auth flow nga gi-**mock** ang `/api/auth/login` (walay DB)
-- [`db-backed.spec.ts`](db-backed.spec.ts) — tinuod nga login + seeded data batok sa `verdix_test`
+- [`db-backed.spec.ts`](db-backed.spec.ts) — tinuod nga login + seeded data batok sa `alon_pos_test`
 - [`pos-sale.spec.ts`](pos-sale.spec.ts) — kompleto nga POS flow: cashier login → start shift →
   add product → tender → cash sale (na-save sa DB) → cart clear
 - [`add-product.spec.ts`](add-product.spec.ts) — admin mag-create ug bag-ong product pinaagi sa
@@ -86,5 +86,5 @@ sa pag-return ug stable nga empty-array constant ([hooks/use-api.ts](../../hooks
 3. Kung magdugang ug bag-ong fixture data, i-add sa `fixtures/test-data.ts` UG
    i-seed sa `setup/prepare-test-db.ts`.
 
-> ⚠️ Ang test DB drop/seed naa'y hard guard batok sa `verdix` — dili gyud ni
+> ⚠️ Ang test DB drop/seed naa'y hard guard batok sa `alon_pos` — dili gyud ni
 > makahilabot sa imong dev/prod data.

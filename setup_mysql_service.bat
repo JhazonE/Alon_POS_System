@@ -97,7 +97,7 @@ echo [%date% %time%] Root password set. >> "%LOG_FILE%"
 set "MYSQL_CLIENT=%MYSQL_BIN%\mysql.exe"
 
 echo Creating database...
-"%MYSQL_CLIENT%" -u root -prootpassword -e "CREATE DATABASE IF NOT EXISTS verdix CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;" >> "%LOG_FILE%" 2>&1
+"%MYSQL_CLIENT%" -u root -prootpassword -e "CREATE DATABASE IF NOT EXISTS alon_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;" >> "%LOG_FILE%" 2>&1
 if %errorlevel% neq 0 (
     echo [FAIL] Could not create database. Check %LOG_FILE%
     echo [%date% %time%] FAIL: create database returned %errorlevel% >> "%LOG_FILE%"
@@ -105,7 +105,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Applying schema, reference data, and default admin...
-"%MYSQL_CLIENT%" -u root -prootpassword verdix < "%~dp0verdix_install.sql" >> "%LOG_FILE%" 2>&1
+"%MYSQL_CLIENT%" -u root -prootpassword alon_pos < "%~dp0verdix_install.sql" >> "%LOG_FILE%" 2>&1
 if %errorlevel% neq 0 (
     echo [FAIL] Could not apply verdix_install.sql. Check %LOG_FILE%
     echo [%date% %time%] FAIL: apply verdix_install.sql returned %errorlevel% >> "%LOG_FILE%"

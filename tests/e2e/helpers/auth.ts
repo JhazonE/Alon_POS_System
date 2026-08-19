@@ -86,7 +86,7 @@ export async function loginViaUI(
 
 /**
  * Real login — WALAY mock; mo-agi sa tinuod nga `/api/auth/login` batok sa
- * verdix_test database. Gamita ang seeded fixture credentials.
+ * alon_pos_test database. Gamita ang seeded fixture credentials.
  */
 export async function realLogin(page: Page, username: string, password: string): Promise<void> {
   await page.goto('/login');

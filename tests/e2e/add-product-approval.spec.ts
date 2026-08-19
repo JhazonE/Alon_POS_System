@@ -107,7 +107,7 @@ test.describe('Add Product Approval', () => {
   test('switch ON + workflow: product is held for approval, not created', async ({ page, request }) => {
     // Seed a PRODUCT_CREATE workflow step assigned to a non-Admin role (defense
     // in depth — the seeded session uid 'test-admin-uid' likely doesn't exist in
-    // verdix_test.users anyway, so role resolution yields undefined and no step
+    // alon_pos_test.users anyway, so role resolution yields undefined and no step
     // is auto-skipped regardless).
     const nonAdminRole = await testQuery(
       "SELECT id FROM user_types WHERE name <> 'Admin' ORDER BY id LIMIT 1"
@@ -176,7 +176,7 @@ test.describe('Add Product Approval', () => {
 
     // The approver must satisfy the role check in app/api/approvals/process/route.ts:
     // username='admin' OR role name in ('Admin','Super Admin') bypasses the
-    // per-step role requirement. test-admin-uid may not exist in verdix_test.users,
+    // per-step role requirement. test-admin-uid may not exist in alon_pos_test.users,
     // so look up a real admin user from the seeded DB.
     const adminUsers = await testQuery(`
       SELECT u.uid FROM users u
@@ -184,7 +184,7 @@ test.describe('Add Product Approval', () => {
       WHERE ut.name IN ('Admin','Super Admin') OR u.username='admin'
       LIMIT 1
     `);
-    expect(adminUsers.length, 'a real admin user must exist in verdix_test to approve').toBeGreaterThan(0);
+    expect(adminUsers.length, 'a real admin user must exist in alon_pos_test to approve').toBeGreaterThan(0);
     const approverUid = adminUsers[0].uid;
 
     const approveRes = await request.post('/api/approvals/process', {

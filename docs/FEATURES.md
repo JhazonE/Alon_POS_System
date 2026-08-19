@@ -1,6 +1,6 @@
-# verdix — Feature Reference
+# Alon POS — Feature Reference
 
-This document provides a comprehensive description of every module and feature in verdix Enterprise, including business purpose, usage workflows, configuration options, and field-level details.
+This document provides a comprehensive description of every module and feature in Alon POS Enterprise, including business purpose, usage workflows, configuration options, and field-level details.
 
 ---
 
@@ -88,7 +88,7 @@ The main checkout screen is the heart of the POS. Items are added to the cart us
 
 ### 1.3 Receipt & Printing
 
-verdix supports two printing architectures to accommodate different hardware environments:
+Alon POS supports two printing architectures to accommodate different hardware environments:
 
 | Mode | How It Works |
 |------|-------------|
@@ -167,7 +167,7 @@ When a guard is triggered, a modal dialog appears asking for the authorized user
 
 ### 1.7 POS Function Buttons & Keyboard Shortcuts
 
-verdix's POS interface is designed for speed. Every common action has a dedicated **on-screen button** and a corresponding **keyboard shortcut** so cashiers never need to use a mouse. The shortcuts are grouped into three zones:
+Alon POS's POS interface is designed for speed. Every common action has a dedicated **on-screen button** and a corresponding **keyboard shortcut** so cashiers never need to use a mouse. The shortcuts are grouped into three zones:
 
 1. **Header Bar (F-Key Buttons)** — the primary action row at the top of the POS screen
 2. **Footer Bar (Ctrl+Key Buttons)** — secondary management actions at the bottom of the POS screen
@@ -307,7 +307,7 @@ The Products module is the central catalog that defines every item sold in the s
 
 ### 3.1 Product Attributes
 
-Every product in verdix carries the following data fields:
+Every product in Alon POS carries the following data fields:
 
 | Field | Description |
 |-------|-------------|
@@ -333,7 +333,7 @@ Every product in verdix carries the following data fields:
 
 ### 3.2 Product Family (Parent–Child Hierarchy)
 
-verdix supports a **three-level product tree** to handle unit-of-measure conversions automatically:
+Alon POS supports a **three-level product tree** to handle unit-of-measure conversions automatically:
 
 ```
 Bulk (Parent)
@@ -842,7 +842,7 @@ A **Statement of Account (SOA)** view for each customer showing all outstanding 
 
 ### 7.4 Customer Loyalty Points
 
-verdix includes a built-in loyalty program:
+Alon POS includes a built-in loyalty program:
 
 | Feature | Description |
 |---------|-------------|
@@ -1203,7 +1203,7 @@ Price Levels are assigned to customers in the Customer module and applied automa
 
 ### 12.3 Tax Rates (`/settings/tax-rates`)
 
-Define the tax rates applicable to products. verdix currently distinguishes:
+Define the tax rates applicable to products. Alon POS currently distinguishes:
 
 | VAT Type | Description |
 |----------|-------------|
@@ -1252,11 +1252,11 @@ Tools for bulk data operations and database maintenance:
 
 ### 12.7 External API (`/settings/external-api`)
 
-verdix can push data to an external system (e.g., an ERP, e-commerce platform, or analytics service) via outbound webhooks.
+Alon POS can push data to an external system (e.g., an ERP, e-commerce platform, or analytics service) via outbound webhooks.
 
 | Feature | Description |
 |---------|-------------|
-| **Endpoint URL** | The target URL where verdix will POST data events. |
+| **Endpoint URL** | The target URL where Alon POS will POST data events. |
 | **Authentication** | Configure API key or Bearer token for securing the outbound request. |
 | **Test Connection** | Sends a ping to the configured endpoint to verify connectivity and authentication before enabling live delivery. |
 | **Webhook Delivery Log** | Shows a history of all outbound webhook calls: timestamp, event type, HTTP status code, and response body. |

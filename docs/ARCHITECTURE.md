@@ -1,8 +1,8 @@
-# verdix — Architecture Reference
+# Alon POS — Architecture Reference
 
 ## Overview
 
-verdix is a **Next.js 16** web application that runs inside an **Electron 33** desktop shell. The web layer handles all UI and API logic; Electron provides the native windowing, printer access, and offline packaging.
+Alon POS is a **Next.js 16** web application that runs inside an **Electron 33** desktop shell. The web layer handles all UI and API logic; Electron provides the native windowing, printer access, and offline packaging.
 
 ---
 
@@ -32,7 +32,7 @@ verdix is a **Next.js 16** web application that runs inside an **Electron 33** d
 ## Directory Structure
 
 ```
-verdix/
+Alon_POS_System/
 ├── app/                        # Next.js App Router root
 │   ├── (app)/                  # Authenticated application shell
 │   │   ├── layout.tsx          # Sidebar, breadcrumbs, notif bell, auth guard
@@ -91,7 +91,7 @@ verdix/
 │   ├── ui/                     # shadcn/ui primitives
 │   ├── approvals/              # Approval drawer & workflow settings drawer
 │   ├── app-breadcrumbs.tsx     # Auto-generated breadcrumbs
-│   ├── logo.tsx                # verdix logo component
+│   ├── logo.tsx                # Alon POS logo component
 │   └── window-controls.tsx     # Electron window min/max/close buttons
 ├── lib/                        # Server-side utilities & shared logic
 │   ├── mysql.ts                # Database connection pool
@@ -176,7 +176,7 @@ updateStock(productId, delta)
 
 ## Authentication
 
-verdix uses a **localStorage session** approach (suitable for a single-machine desktop app):
+Alon POS uses a **localStorage session** approach (suitable for a single-machine desktop app):
 
 1. On login, the server validates credentials and returns a user object.
 2. The client stores `mock-user-session` in `localStorage`.
@@ -190,13 +190,13 @@ verdix uses a **localStorage session** approach (suitable for a single-machine d
 
 ## Database
 
-verdix uses **MySQL** (configured via `.env`):
+Alon POS uses **MySQL** (configured via `.env`):
 
 ```env
 MYSQL_HOST=localhost
-MYSQL_USER=verdix
+MYSQL_USER=alon_pos
 MYSQL_PASSWORD=<password>
-MYSQL_DATABASE=verdix_db
+MYSQL_DATABASE=alon_pos
 MYSQL_PORT=3306
 ```
 

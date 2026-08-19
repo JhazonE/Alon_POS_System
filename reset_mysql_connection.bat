@@ -10,11 +10,11 @@ echo If you want a different password, edit this script.
 USE mysql;
 ALTER USER 'root'@'localhost' IDENTIFIED BY '';
 FLUSH PRIVILEGES;
-CREATE DATABASE IF NOT EXISTS verdix;
-CREATE USER IF NOT EXISTS 'verdix'@'localhost' IDENTIFIED BY 'stock2025';
-GRANT ALL PRIVILEGES ON verdix.* TO 'verdix'@'localhost';
+CREATE DATABASE IF NOT EXISTS alon_pos;
+CREATE USER IF NOT EXISTS 'alon_pos'@'localhost' IDENTIFIED BY 'stock2025';
+GRANT ALL PRIVILEGES ON alon_pos.* TO 'alon_pos'@'localhost';
 FLUSH PRIVILEGES;
-SELECT User, Host FROM mysql.user WHERE User IN ('root', 'verdix');
+SELECT User, Host FROM mysql.user WHERE User IN ('root', 'alon_pos');
 "
 
 if %errorlevel% neq 0 (
@@ -25,7 +25,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo Root password reset successfully!
-echo verdix user created.
+echo alon_pos user created.
 echo You can now close the safe mode window (Ctrl+C) and run the normal setup.
 
 pause

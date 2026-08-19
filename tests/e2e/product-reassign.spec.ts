@@ -15,7 +15,7 @@ import {
 
 /**
  * Child reassignment (DB-backed) — i-drive ang view-product dialog "Reassign Parent"
- * batok sa verdix_test. Verify pinaagi sa API nga na-usab ang parent_id.
+ * batok sa alon_pos_test. Verify pinaagi sa API nga na-usab ang parent_id.
  */
 
 /**

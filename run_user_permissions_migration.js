@@ -8,7 +8,7 @@ async function runUserPermissionsMigration() {
       port: 3306,
       user: 'root',
       password: 'rootpassword',
-      database: 'verdix'
+      database: 'alon_pos'
     });
 
     console.log('Connected to MySQL');

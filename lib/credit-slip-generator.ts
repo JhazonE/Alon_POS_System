@@ -72,7 +72,7 @@ export class CreditSlipGenerator {
 
         const enc = this.encoder.initialize().codepage('cp437');
 
-        const bizName = settings?.businessName?.trim() || 'verdix';
+        const bizName = settings?.businessName?.trim() || 'ALON POS SYSTEM';
         const address = settings?.address?.trim() || 'General Merchandise';
         const minNumber = settings?.minNumber || '1234567890';
         const serialNumber = settings?.serialNumber || '0987654321-11';

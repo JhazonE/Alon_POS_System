@@ -6,7 +6,7 @@ const dbConfig = {
   port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'verdix',
+  database: process.env.DB_NAME || 'alon_pos',
   multipleStatements: true
 };
 

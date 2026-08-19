@@ -1,5 +1,5 @@
 'use strict';
-// verdix - Database Initializer
+// Alon POS - Database Initializer
 // Creates the database (if missing) and applies schema.sql, which contains
 // CREATE TABLE IF NOT EXISTS for every table. Safe to run on both fresh and
 // existing installs: it never drops tables and never touches existing data.
@@ -35,10 +35,10 @@ try {
 }
 
 async function run() {
-  console.log('verdix - Database Initialization');
+  console.log('Alon POS - Database Initialization');
   console.log('=======================================');
 
-  const dbName = process.env.DB_NAME || 'verdix';
+  const dbName = process.env.DB_NAME || 'alon_pos';
 
   const schemaPath = path.join(__dirname, 'schema.sql');
   if (!fs.existsSync(schemaPath)) {

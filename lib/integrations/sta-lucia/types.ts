@@ -4,7 +4,7 @@
  * docs/superpowers/specs/2026-07-31-sta-lucia-sales-consolidator-design.md
  */
 
-/** Credentials issued by the mall for the tenant account. NOT a Verdix login. */
+/** Credentials issued by the mall for the tenant account. NOT a Alon POS login. */
 export interface StaLuciaCredentials {
   email: string;
   password: string;
@@ -31,12 +31,12 @@ export interface StaLuciaSalesPayload {
   vat_amount: number;
   other_taxes: number;
   net_sales: number;
-  /** true = hourly sale, false = end-of-day. Verdix only ever submits full-day Z-readings, so always false. */
+  /** true = hourly sale, false = end-of-day. Alon POS only ever submits full-day Z-readings, so always false. */
   sale_type: boolean;
 }
 
 /**
- * The subset of a Verdix Z-reading the mapper needs. Declared structurally so
+ * The subset of a Alon POS Z-reading the mapper needs. Declared structurally so
  * the mapper stays a pure function with no dependency on the Z-reading route.
  */
 export interface ZReadingLike {

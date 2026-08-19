@@ -22,13 +22,13 @@ export function PoHeaderInfo({ order, profile }: PoHeaderInfoProps) {
           </div>
           <div className="space-y-1">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              {profile?.businessName || 'verdix Inc.'}
+              {profile?.businessName || 'Alon POS Inc.'}
             </h2>
             <div className="text-zinc-700 space-y-0.5 text-xs">
               <p>{profile?.address || '123 Business Avenue, Tech District'}</p>
               <p>
                 {profile?.contactNumber || '+63 900 000 0000'} •{' '}
-                {profile?.email || 'contact@verdix.app'}
+                {profile?.email || 'contact@alonpos.app'}
               </p>
             </div>
           </div>

@@ -4,7 +4,7 @@ import { fetchEJournalData } from './ejournal-data';
 import { buildFiles } from './ejournal-build';
 
 export function ejournalRoot(): string {
-  return process.env.VERDIX_EJOURNAL_DIR || path.join(process.cwd(), 'EJournals');
+  return process.env.ALON_EJOURNAL_DIR || path.join(process.cwd(), 'EJournals');
 }
 
 export async function saveEJournalFiles(

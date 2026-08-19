@@ -12,7 +12,7 @@ async function createWarehousesTable() {
       host: process.env.DB_HOST || 'localhost',
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'verdix',
+      database: process.env.DB_NAME || 'alon_pos',
       port: process.env.DB_PORT || 3307,
     });
 

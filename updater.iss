@@ -1,24 +1,27 @@
-; Vendix Updater — Inno Setup Script
+; Alon POS System Updater — Inno Setup Script
 ;
-; Patches an EXISTING Vendix install in place: overwrites app files and
-; applies any pending database migrations. Deliberately does NOT touch:
+; Patches an EXISTING Alon POS System install in place: overwrites app files
+; and applies any pending database migrations. Deliberately does NOT touch:
 ;   - .env (the site's real DB credentials/config — see [Files] below)
 ;   - The MySQL service, verdix_install.sql, or the data directory
 ;     (C:\ProgramData\Verdix\mysql-data) — the database and its data are
-;     never part of this installer at all.
+;     never part of this installer at all. (Directory kept at its original
+;     Verdix-era path/service name intentionally; renaming it would orphan
+;     already-installed machines' live MySQL data — see start_server.bat.)
 ;   - Add/Remove Programs (Uninstallable=no — this is a patch, not a
 ;     separately-tracked application; see setup.iss for the real installer).
 ;
-; Must be run on a PC that already has Vendix installed via setup.iss (same
-; {autopf}\Vendix directory, same bundled node.exe, same MySQL service).
-#define AppName "Vendix"
+; Must be run on a PC that already has Alon POS System installed via
+; setup.iss (same {autopf}\Alon POS System directory, same bundled node.exe,
+; same MySQL service).
+#define AppName "Alon POS System"
 ; Version comes from package.json via `npm run build:updater`
 ; (iscc /DAppVersion=x.y.z). The fallback below is only for direct iscc runs.
 #ifndef AppVersion
   #define AppVersion "1.19.8"
 #endif
 #define AppPublisher "BHAGOH SYSTEMS"
-#define AppExeName "verdix.exe"
+#define AppExeName "AlonPOSSystem.exe"
 
 [Setup]
 ; No AppId: Uninstallable=no below means Inno never writes an Add/Remove
@@ -30,8 +33,8 @@ VersionInfoVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\{#AppName}
 DisableProgramGroupPage=yes
-SetupIconFile=public\verdix_logo.ico
-OutputBaseFilename=VendixUpdater_{#AppVersion}
+SetupIconFile=public\alon_logo.ico
+OutputBaseFilename=AlonPOSSystemUpdater_{#AppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -40,8 +43,9 @@ DisableFinishedPage=yes
 DisableReadyPage=yes
 DisableWelcomePage=no
 ; Patch only — do not register as its own entry in Add/Remove Programs and
-; do not create an uninstaller. Uninstalling Vendix itself (setup.iss) still
-; removes everything this installer writes, since it all lands under {app}.
+; do not create an uninstaller. Uninstalling Alon POS System itself
+; (setup.iss) still removes everything this installer writes, since it all
+; lands under {app}.
 Uninstallable=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -117,7 +121,7 @@ Source: "node_modules\seq-queue\*"; DestDir: "{app}\updater\node_modules\seq-que
 Source: "run_update.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
-; Applies pending migrations, then relaunches verdix.exe. The app/server were
+; Applies pending migrations, then relaunches AlonPOSSystem.exe. The app/server were
 ; already stopped in [Code]'s PrepareToInstall, before [Files] copied over
 ; any locked files — see below.
 Filename: "{app}\run_update.bat"; Flags: runhidden waituntilterminated; StatusMsg: "Applying database updates..."
@@ -125,10 +129,11 @@ Filename: "{app}\{#AppExeName}"; Flags: nowait skipifsilent
 
 [Code]
 // Runs BEFORE [Files] copies anything — the whole reason this exists is to
-// release locks on verdix.exe/server.js/DLLs so the file overwrite below
-// doesn't fail or leave a half-updated install. server.js is the persistent
-// background process (boot-launched via start_server_hidden.vbs); verdix.exe
-// is the Electron shell, which may or may not be open at the same time.
+// release locks on AlonPOSSystem.exe/server.js/DLLs so the file overwrite
+// below doesn't fail or leave a half-updated install. server.js is the
+// persistent background process (boot-launched via start_server_hidden.vbs);
+// AlonPOSSystem.exe is the Electron shell, which may or may not be open at
+// the same time.
 // Neither the MySQL service nor mysqld.exe are touched here.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
@@ -136,15 +141,15 @@ var
   NodeExePath: String;
   PsCommand: String;
 begin
-  // verdix.exe only ever runs from {app}, so a plain /IM filter is already
-  // precise for it. node.exe is NOT — it's a generic binary name other
-  // software (or a dev machine) may also be running — so kill only the
+  // AlonPOSSystem.exe only ever runs from {app}, so a plain /IM filter is
+  // already precise for it. node.exe is NOT — it's a generic binary name
+  // other software (or a dev machine) may also be running — so kill only the
   // specific copy bundled at {app}\node.exe by matching its exact
   // executable path via PowerShell (available on every supported Windows
   // version, unlike wmic.exe which is deprecated/removed on newer builds
   // and whose WQL string-quoting is brittle here), not every node.exe on
   // the system.
-  Exec('taskkill.exe', '/F /IM verdix.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill.exe', '/F /IM AlonPOSSystem.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   NodeExePath := ExpandConstant('{app}\node.exe');
   PsCommand := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter ''Name=\"node.exe\"'' | ' +
     'Where-Object { $_.ExecutablePath -eq ''' + NodeExePath + ''' } | ' +

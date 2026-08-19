@@ -102,7 +102,7 @@ export default function RecordPaymentDialog({ sale, children, onSuccess }: Recor
       printWindow.document.write(`
         <div class="header">
           <div class="title">OFFICIAL RECEIPT</div>
-          <div class="subtitle">verdix POS System</div>
+          <div class="subtitle">Alon POS System</div>
         </div>
 
         <div class="content">

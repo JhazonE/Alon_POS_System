@@ -1,4 +1,4 @@
-# verdix API Endpoints
+# Alon POS API Endpoints
 
 All endpoints are prefixed with `/api`. The base URL in development is `http://localhost:3000`.  
 All responses return `{ success: boolean, data?: any, error?: string }`.
@@ -258,7 +258,7 @@ Stand-ins for the mall's API, for development and E2E only; all four 404 when `N
 
 Set the config's endpoint to `http://127.0.0.1:3000/api/dev/mock-sta-lucia` (the base, with **no** trailing `/api`) and the client resolves e.g. `http://127.0.0.1:3000/api/dev/mock-sta-lucia/api/get-sales`.
 
-Configured at Settings → External API Integrations with Provider set to "Sta. Lucia Tenant System". The credentials are the mall-issued tenant account (an email), not a Verdix login (a username).
+Configured at Settings → External API Integrations with Provider set to "Sta. Lucia Tenant System". The credentials are the mall-issued tenant account (an email), not an Alon POS login (a username).
 
 Submission is **at least once, not exactly once** — see the Error handling section of `docs/superpowers/specs/2026-07-31-sta-lucia-sales-consolidator-design.md`.
 

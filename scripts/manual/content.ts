@@ -1,5 +1,5 @@
 /**
- * Verdix POS User Manual — content data.
+ * Alon POS User Manual — content data.
  *
  * All manual prose lives here as structured data. A later task renders this
  * into a Word document with screenshots (see `screens.ts` for the figure
@@ -22,7 +22,7 @@ export type Section = { heading: string; blocks: Block[] };
 
 export type Chapter = { number: number; title: string; intro: string; sections: Section[] };
 
-export const MANUAL_TITLE = 'Verdix POS — User Manual';
+export const MANUAL_TITLE = 'Alon POS — User Manual';
 export const MANUAL_SUBTITLE = 'A step-by-step guide for cashiers and back-office staff';
 
 export const CHAPTERS: Chapter[] = [
@@ -33,18 +33,18 @@ export const CHAPTERS: Chapter[] = [
     number: 1,
     title: 'Getting Started',
     intro:
-      'This chapter covers the very first things you need to do before you can use Verdix POS: activating the software on a new computer, and logging in to the back office. If your store already has Verdix running and you only work the cashier counter, you can skip ahead to Chapter 2 — Cashier / POS.',
+      'This chapter covers the very first things you need to do before you can use Alon POS: activating the software on a new computer, and logging in to the back office. If your store already has Alon POS running and you only work the cashier counter, you can skip ahead to Chapter 2 — Cashier / POS.',
     sections: [
       {
-        heading: 'Activating Verdix on a new computer',
+        heading: 'Activating Alon POS on a new computer',
         blocks: [
           {
             kind: 'para',
-            text: 'The first time Verdix POS is installed on a computer, it will not let you use the system until it has been activated with a license key. This is a one-time step per computer — once activation succeeds, that computer stays activated. If you see a card titled "Verdix POS — License Activation" instead of the app you expect, follow the steps below.',
+            text: 'The first time Alon POS is installed on a computer, it will not let you use the system until it has been activated with a license key. This is a one-time step per computer — once activation succeeds, that computer stays activated. If you see a card titled "Alon POS — License Activation" instead of the app you expect, follow the steps below.',
           },
           {
             kind: 'para',
-            text: 'The license is tied to that specific computer through its Machine ID, a unique code generated from the computer\'s own hardware. A license activated on one computer will not work on another — if you move Verdix to a new or replacement computer, it needs to be activated again with a new key for that machine.',
+            text: 'The license is tied to that specific computer through its Machine ID, a unique code generated from the computer\'s own hardware. A license activated on one computer will not work on another — if you move Alon POS to a new or replacement computer, it needs to be activated again with a new key for that machine.',
           },
           {
             kind: 'steps',
@@ -90,7 +90,7 @@ export const CHAPTERS: Chapter[] = [
           { kind: 'figure', slug: 'login' },
           {
             kind: 'para',
-            text: 'If your account is set up as a Cashier or Employee user type, Verdix will send you straight to the POS screen instead of the back office dashboard — this is expected. Back-office pages are for Admin and Manager accounts.',
+            text: 'If your account is set up as a Cashier or Employee user type, Alon POS will send you straight to the POS screen instead of the back office dashboard — this is expected. Back-office pages are for Admin and Manager accounts.',
           },
         ],
       },
@@ -118,7 +118,7 @@ export const CHAPTERS: Chapter[] = [
     number: 2,
     title: 'Cashier / POS',
     intro:
-      'This chapter is for cashiers working the checkout counter. The POS screen is a separate, full-screen part of Verdix designed to be fast to use with a barcode scanner and keyboard. It has its own login, separate from the back-office login in Chapter 1, and it manages its own shift and cash drawer.',
+      'This chapter is for cashiers working the checkout counter. The POS screen is a separate, full-screen part of Alon POS designed to be fast to use with a barcode scanner and keyboard. It has its own login, separate from the back-office login in Chapter 1, and it manages its own shift and cash drawer.',
     sections: [
       {
         heading: 'Cashier login',
@@ -348,7 +348,7 @@ export const CHAPTERS: Chapter[] = [
         blocks: [
           {
             kind: 'para',
-            text: 'Verdix supports product families: a parent product (for example a 1kg bag) can be broken down into smaller child units (for example 250g sachets) using a conversion factor. Any stock change to the parent or a child automatically syncs the stock of every other member of the family, so the whole family always reflects the same underlying physical stock.',
+            text: 'Alon POS supports product families: a parent product (for example a 1kg bag) can be broken down into smaller child units (for example 250g sachets) using a conversion factor. Any stock change to the parent or a child automatically syncs the stock of every other member of the family, so the whole family always reflects the same underlying physical stock.',
           },
           {
             kind: 'note',
@@ -444,7 +444,7 @@ export const CHAPTERS: Chapter[] = [
         blocks: [
           {
             kind: 'para',
-            text: 'Every stock change in Verdix — a sale, a purchase received, a transfer, an adjustment, or a repackaging — writes a record so it can be traced later. The "Stock Movement" page lists these movements per product with the date, type (sale, purchase, transfer, and so on), and quantity change. The "Adjustment History" page focuses specifically on manual stock adjustments, showing the reason for each one and whether it is still pending approval.',
+            text: 'Every stock change in Alon POS — a sale, a purchase received, a transfer, an adjustment, or a repackaging — writes a record so it can be traced later. The "Stock Movement" page lists these movements per product with the date, type (sale, purchase, transfer, and so on), and quantity change. The "Adjustment History" page focuses specifically on manual stock adjustments, showing the reason for each one and whether it is still pending approval.',
           },
           { kind: 'figure', slug: 'inventory-movement' },
           { kind: 'figure', slug: 'inventory-history' },
@@ -494,7 +494,7 @@ export const CHAPTERS: Chapter[] = [
         blocks: [
           {
             kind: 'para',
-            text: 'When you receive a delivery, Verdix does not simply overwrite the product\'s cost and retail price with whatever is on the new purchase order. It follows one simple rule, which applies to the cost and the retail price separately: the higher value always wins.',
+            text: 'When you receive a delivery, Alon POS does not simply overwrite the product\'s cost and retail price with whatever is on the new purchase order. It follows one simple rule, which applies to the cost and the retail price separately: the higher value always wins.',
           },
           {
             kind: 'para',
@@ -716,7 +716,7 @@ export const CHAPTERS: Chapter[] = [
     number: 7,
     title: 'Approvals',
     intro:
-      'Certain changes in Verdix — purchase orders, stock counts, stock transfers, bad orders, and bulk adjustments — do not take effect immediately. They go through an approvals queue first, so a second person can review and confirm the change before it becomes final.',
+      'Certain changes in Alon POS — purchase orders, stock counts, stock transfers, bad orders, and bulk adjustments — do not take effect immediately. They go through an approvals queue first, so a second person can review and confirm the change before it becomes final.',
     sections: [
       {
         heading: 'Working the Approvals board',
@@ -770,7 +770,7 @@ export const CHAPTERS: Chapter[] = [
     number: 8,
     title: 'Reports',
     intro:
-      'Verdix includes a large library of reports covering sales, inventory, purchases, and compliance. Rather than walking through each one individually, this chapter shows you how to get to the Reports hub and gives you an index of every available report and what it is for.',
+      'Alon POS includes a large library of reports covering sales, inventory, purchases, and compliance. Rather than walking through each one individually, this chapter shows you how to get to the Reports hub and gives you an index of every available report and what it is for.',
     sections: [
       {
         heading: 'The Reports hub',
@@ -815,7 +815,7 @@ export const CHAPTERS: Chapter[] = [
         blocks: [
           {
             kind: 'para',
-            text: 'The table below lists every report available in Verdix POS, with the menu path and a one-line description of what it shows.',
+            text: 'The table below lists every report available in Alon POS, with the menu path and a one-line description of what it shows.',
           },
           {
             kind: 'table',
@@ -859,7 +859,7 @@ export const CHAPTERS: Chapter[] = [
     number: 9,
     title: 'Settings & Users',
     intro:
-      'This chapter covers store-wide configuration — POS terminals, tax rates, and general settings — plus managing the user accounts allowed to log in to Verdix. These pages are for admins only and change how the whole system behaves, so treat them carefully.',
+      'This chapter covers store-wide configuration — POS terminals, tax rates, and general settings — plus managing the user accounts allowed to log in to Alon POS. These pages are for admins only and change how the whole system behaves, so treat them carefully.',
     sections: [
       {
         heading: 'The Settings hub',
@@ -917,7 +917,7 @@ export const CHAPTERS: Chapter[] = [
         blocks: [
           {
             kind: 'para',
-            text: 'Each physical checkout counter in your store is registered as a terminal. This lets Verdix track which terminal a sale happened on and which warehouse it draws stock from.',
+            text: 'Each physical checkout counter in your store is registered as a terminal. This lets Alon POS track which terminal a sale happened on and which warehouse it draws stock from.',
           },
           {
             kind: 'steps',
@@ -959,7 +959,7 @@ export const CHAPTERS: Chapter[] = [
         blocks: [
           {
             kind: 'para',
-            text: 'User Management controls who can log in to Verdix, what permissions they have, and lets you review an activity log of what every user has done across the system.',
+            text: 'User Management controls who can log in to Alon POS, what permissions they have, and lets you review an activity log of what every user has done across the system.',
           },
           {
             kind: 'steps',

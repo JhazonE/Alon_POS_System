@@ -7,7 +7,7 @@ const WORKFLOW_ID = 'wf-priceupdate-e2e';
 
 /**
  * Bulk Price Update (DB-backed) — drives the "Bulk Update Price" drawer and its
- * Excel upload path on /products against the seeded verdix_test DB.
+ * Excel upload path on /products against the seeded alon_pos_test DB.
  *
  * Uses BULK_PRICE_PRODUCT, the only seeded product with a non-NULL warehouse_id
  * (see fixtures/test-data.ts) — the drawer's product picker filters by warehouse,
@@ -87,7 +87,7 @@ test.describe('Bulk Price Update', () => {
   test('drawer: approval ON queues instead of applying', async ({ page, request }) => {
     // checkApprovalRequired('PRICE_UPDATE') needs BOTH the pos_settings switch AND
     // an approval_workflows row for the type (see lib/approvals.ts) — the schema
-    // clone carries no data, so verdix_test has no workflow rows out of the box.
+    // clone carries no data, so alon_pos_test has no workflow rows out of the box.
     // Assign the step to a non-Admin role so the seeded admin session can't
     // auto-skip it as "creator can approve their own step".
     await testQuery('DELETE FROM approval_workflows WHERE id=?', [WORKFLOW_ID]);

@@ -49,7 +49,14 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export function getLicenseFilePath(): string {
   if (process.env.LICENSE_FILE) return process.env.LICENSE_FILE;
   const base = process.env.PROGRAMDATA || process.env.APPDATA || os.homedir();
-  return path.join(base, 'Verdix', 'license.dat');
+  const currentPath = path.join(base, 'Alon', 'license.dat');
+  if (fs.existsSync(currentPath)) return currentPath;
+  // Pre-rebrand machines activated before the Verdix -> Alon POS rename; keep
+  // reading their existing license.dat until they reactivate (which writes
+  // to currentPath above).
+  const legacyPath = path.join(base, 'Verdix', 'license.dat');
+  if (fs.existsSync(legacyPath)) return legacyPath;
+  return currentPath;
 }
 
 export function readLicenseKey(): string | null {

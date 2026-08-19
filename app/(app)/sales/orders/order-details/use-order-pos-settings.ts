@@ -15,7 +15,7 @@ export function useOrderPosSettings() {
         const data = await res.json();
         if (data.success && data.data) {
           setSettings({
-            businessName: data.data.businessName || 'verdix',
+            businessName: data.data.businessName || 'ALON POS SYSTEM',
             logoPath: data.data.logoPath,
             address: data.data.address || '',
             contactNumber: data.data.contactNumber || '',

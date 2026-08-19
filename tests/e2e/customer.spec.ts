@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 
 /**
- * Customer management (DB-backed) batok sa verdix_test.
+ * Customer management (DB-backed) batok sa alon_pos_test.
  *
  * Coverage:
  *  1. POST /api/customers → na-create ug na-persist sa DB.

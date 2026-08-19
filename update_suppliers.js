@@ -8,7 +8,7 @@ async function updateSuppliersTable() {
       port: 3306,
       user: 'root',
       password: 'rootpassword',
-      database: 'verdix'
+      database: 'alon_pos'
     });
 
     console.log('Connected to MySQL');
@@ -25,7 +25,7 @@ async function updateSuppliersTable() {
         // Check if column exists
         const [rows] = await connection.execute(
           'SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
-          ['verdix', 'suppliers', column.name]
+          ['alon_pos', 'suppliers', column.name]
         );
 
         if (rows.length === 0) {

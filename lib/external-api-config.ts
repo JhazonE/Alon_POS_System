@@ -49,7 +49,7 @@ export type ExternalApi = {
   onErrorAction: 'retry' | 'queue' | 'log_only';
   role: ApiRole;
   provider: ApiProvider;
-  /** Sta. Lucia tenant-account email. Not a Verdix login. */
+  /** Sta. Lucia tenant-account email. Not a Alon POS login. */
   loginEmail?: string;
   loginPassword?: string;
   createdAt?: string;

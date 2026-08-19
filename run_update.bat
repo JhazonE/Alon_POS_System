@@ -6,10 +6,10 @@ set "LOG_FILE=C:\ProgramData\Verdix\update.log"
 
 if not exist "C:\ProgramData\Verdix" mkdir "C:\ProgramData\Verdix" >nul 2>&1
 
-echo [%date% %time%] Starting Vendix update in %APP_DIR% >> "%LOG_FILE%"
+echo [%date% %time%] Starting Alon POS System update in %APP_DIR% >> "%LOG_FILE%"
 
 :: ── Apply any pending schema migrations ────────────────────────────────────
-:: verdix.exe/server.js were already stopped by [Code]'s PrepareToInstall,
+:: AlonPOSSystem.exe/server.js were already stopped by [Code]'s PrepareToInstall,
 :: before [Files] even copied anything (see updater.iss) — that's what let
 :: this app's files be overwritten safely. The MySQL service itself is
 :: untouched — the database and its data directory are never part of this
@@ -36,5 +36,5 @@ if not "%MIGRATE_RESULT%"=="0" (
 )
 
 echo [%date% %time%] Update complete. >> "%LOG_FILE%"
-echo [ok] Vendix update applied successfully.
+echo [ok] Alon POS System update applied successfully.
 exit /b 0

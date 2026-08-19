@@ -1,4 +1,4 @@
-# verdix — Installation & Setup Guide
+# Alon POS — Installation & Setup Guide
 
 ## Requirements
 
@@ -19,8 +19,8 @@
 
 ```bash
 # If using Git
-git clone <repo-url> verdix
-cd verdix
+git clone <repo-url> alon-pos-system
+cd alon-pos-system
 ```
 
 Or extract the project archive into a folder of your choice.
@@ -43,8 +43,8 @@ Create a `.env` file in the project root (copy from `.env.example` if available)
 # MySQL Connection
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
-MYSQL_DATABASE=verdix_db
-MYSQL_USER=verdix
+MYSQL_DATABASE=alon_pos
+MYSQL_USER=alon_pos
 MYSQL_PASSWORD=your_secure_password
 
 # Application
@@ -59,16 +59,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ### 4.1 Create the Database and User
 
 ```sql
-CREATE DATABASE verdix_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'verdix'@'localhost' IDENTIFIED BY 'your_secure_password';
-GRANT ALL PRIVILEGES ON verdix_db.* TO 'verdix'@'localhost';
+CREATE DATABASE alon_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'alon_pos'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON alon_pos.* TO 'alon_pos'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
 Or run the provided helper:
 
 ```bash
-mysql -u root -p < create_verdix_user.sql
+mysql -u root -p < create_alon_pos_user.sql
 ```
 
 ### 4.2 Run Migrations

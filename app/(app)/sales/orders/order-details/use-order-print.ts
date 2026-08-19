@@ -84,7 +84,7 @@ export function useOrderPrint({ order, settings, mode }: Props) {
                   : '<div style="width:100%;height:100%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:24px">📄</div>'
                 }
               </div>
-              <div class="business-name">${settings.businessName || 'verdix'}</div>
+              <div class="business-name">${settings.businessName || 'ALON POS SYSTEM'}</div>
             </div>
             <div>
               <div class="doc-title">${documentTitle}</div>
@@ -192,7 +192,7 @@ export function useOrderPrint({ order, settings, mode }: Props) {
         </head>
         <body>
           <div class="header">
-            <div class="business-name">${settings.businessName || 'verdix'}</div>
+            <div class="business-name">${settings.businessName || 'ALON POS SYSTEM'}</div>
             ${settings.address ? `<div class="address">${settings.address}</div>` : ''}
             ${settings.contactNumber ? `<div class="address">${settings.contactNumber}</div>` : ''}
             ${settings.tin ? `<div class="address">TIN: ${settings.tin}</div>` : ''}

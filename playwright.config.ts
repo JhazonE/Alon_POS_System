@@ -1,14 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright config para sa Verdix POS (Next.js web app).
+ * Playwright config para sa Alon POS System (Next.js web app).
  *
  * Isolation: ang tests modagan batok sa usa ka dedicated nga dev server sa port
- * 3100 nga naka-point sa `verdix_test` database (DILI sa dev `verdix` sa 3000).
+ * 3100 nga naka-point sa `alon_pos_test` database (DILI sa dev `alon_pos` sa 3000).
  * Mao nga luwas modagan bisan naa'y dev server nga gigamit sa port 3000.
  *
  * Global setup (tests/e2e/setup/global-setup.ts) mo-recreate + mo-seed sa
- * verdix_test kada run para deterministic.
+ * alon_pos_test kada run para deterministic.
  */
 const TEST_PORT = 3100;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
@@ -50,7 +50,7 @@ export default defineConfig({
     // logActivity (nga naka-hardcode sa 3000 gikan sa .env).
     env: {
       ...process.env,
-      DB_NAME: 'verdix_test',
+      DB_NAME: 'alon_pos_test',
       NEXT_PUBLIC_API_BASE_URL: `${BASE_URL}/api`,
       // Separate dist dir aron makasabay sa usa ka running nga dev server (3000)
       // nga adunay kaugalingong Next dev singleton lock sa `.next`.

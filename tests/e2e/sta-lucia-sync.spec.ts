@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 import { testQuery } from './helpers/db';
 
 /**
- * Sta. Lucia sales submission against verdix_test.
+ * Sta. Lucia sales submission against alon_pos_test.
  *
  * NOTE: do NOT import from `lib/` here — the test process points at the dev
- * `verdix` database while the test server runs against `verdix_test`. All
+ * `alon_pos` database while the test server runs against `alon_pos_test`. All
  * database access goes through testQuery.
  */
 

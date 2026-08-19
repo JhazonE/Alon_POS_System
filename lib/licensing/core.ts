@@ -11,7 +11,7 @@
 //   3. The token layout: <prefix>.<base64url payload>.<base64url signature>.
 
 /**
- * Verdix POS — License Cryptography Core
+ * Alon POS — License Cryptography Core
  * ----------------------------------------------------------------------------
  * SINGLE SOURCE OF TRUTH for the license format. Imported by BOTH:
  *   - the POS verifier  (lib/licensing/verify.ts)        → uses the PUBLIC key

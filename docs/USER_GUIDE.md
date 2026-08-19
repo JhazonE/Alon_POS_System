@@ -1,4 +1,4 @@
-# verdix — User Guide
+# Alon POS — User Guide
 
 This guide walks through everyday tasks for both **Admin/Manager** users (backoffice dashboard) and **Cashier** users (POS terminal).
 
@@ -31,7 +31,7 @@ This guide walks through everyday tasks for both **Admin/Manager** users (backof
 
 ### Logging In
 
-1. Open the verdix admin app (browser at `http://localhost:3000` or Electron admin window).
+1. Open the Alon POS admin app (browser at `http://localhost:3000` or Electron admin window).
 2. Enter your **email** and **password**.
 3. Click **Sign In**.
 

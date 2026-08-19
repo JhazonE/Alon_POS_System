@@ -11,8 +11,8 @@ import { processSyncQueue } from '@/lib/scheduler';
  * This exists for the E2E suite. The sweep is otherwise only reachable from a
  * two-minute cron inside the server process, and a spec cannot call
  * `processSyncQueue()` directly: the Playwright process resolves `lib/mysql`
- * against the dev `verdix` database while the server under test runs against
- * `verdix_test`, so importing it from a spec would sweep the wrong database.
+ * against the dev `alon_pos` database while the server under test runs against
+ * `alon_pos_test`, so importing it from a spec would sweep the wrong database.
  * Going over HTTP is what puts the sweep in the right process.
  *
  * Guarded by the same `blockedInProduction()` helper the Sta Lucia mocks use —

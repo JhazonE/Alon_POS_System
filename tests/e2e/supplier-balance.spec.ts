@@ -3,7 +3,7 @@ import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { TEST_SUPPLIER } from './fixtures/test-data';
 
 /**
- * Supplier Balance (DB-backed) batok sa verdix_test.
+ * Supplier Balance (DB-backed) batok sa alon_pos_test.
  *
  * Coverage:
  *  1. GET /api/suppliers/[id]/balance → mo-balik ug valid supplier data (balance fields).

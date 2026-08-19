@@ -211,7 +211,7 @@ function ActivationScreen({
               )}
             </div>
             <div>
-              <CardTitle className="text-xl">Verdix POS — License Activation</CardTitle>
+              <CardTitle className="text-xl">Alon POS — License Activation</CardTitle>
               <CardDescription>{meta.title}</CardDescription>
             </div>
           </div>
@@ -322,7 +322,7 @@ function ActivationScreen({
             </Button>
           )}
           <p className="text-center text-[11px] text-muted-foreground">
-            Verdix POS is protected by per-machine licensing. Keys are cryptographically signed and
+            Alon POS is protected by per-machine licensing. Keys are cryptographically signed and
             cannot be transferred between computers.
           </p>
         </CardFooter>

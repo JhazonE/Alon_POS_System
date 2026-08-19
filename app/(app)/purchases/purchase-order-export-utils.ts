@@ -32,7 +32,7 @@ export async function exportToPDF(data: any[], fileName: string, profile: any) {
   
   // Header
   doc.setFontSize(18);
-  doc.text(profile?.businessName || 'verdix', 14, 20);
+  doc.text(profile?.businessName || 'ALON POS SYSTEM', 14, 20);
   doc.setFontSize(12);
   doc.text('Purchase Orders Report', 14, 30);
   doc.setFontSize(10);

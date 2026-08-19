@@ -5,7 +5,7 @@ import { INVENTORY_PRODUCT, PERISHABLE_PRODUCT, PERISHABLE_FAMILY_PARENT, PERISH
 
 /**
  * Expiration date sa stock adjustment — i-drive ang Adjust Stock dialog ug ang
- * bulk endpoint batok sa verdix_test.
+ * bulk endpoint batok sa alon_pos_test.
  *
  * Ang mga assert mo-adto sa DATABASE, dili lang sa UI, kay ang batch INSERT naa
  * sulod sa silent try/catch (pre-migration guard) — kung maguba ang write,

@@ -159,12 +159,12 @@ Result: Consistent, padded 6-digit display (001234) across all interfaces
 ### Step 1: Database Backup
 ```bash
 # Backup your database before deployment
-mysqldump -u root -p verdix > verdix_backup_$(date +%Y%m%d_%H%M%S).sql
+mysqldump -u root -p alon_pos > alon_pos_backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### Step 2: Run Migrations
 ```bash
-cd /path/to/VERDIX_POS
+cd /path/to/Alon_POS_System
 npm run migrate
 ```
 

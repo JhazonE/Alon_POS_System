@@ -5,7 +5,7 @@ import { EDITABLE_PRODUCT, DELETABLE_PRODUCT } from './fixtures/test-data';
 
 /**
  * Edit / Delete product (DB-backed) — i-drive ang products table row actions batok
- * sa verdix_test. Naggamit ug dedicated seeded products (EDIT-ME / DELETE-ME) aron
+ * sa alon_pos_test. Naggamit ug dedicated seeded products (EDIT-ME / DELETE-ME) aron
  * dili maapektuhan ang ubang specs.
  */
 

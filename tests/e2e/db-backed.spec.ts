@@ -4,7 +4,7 @@ import { TEST_USERS, TEST_PRODUCTS, TEST_PASSWORD, BUSINESS_NAME } from './fixtu
 
 /**
  * DB-backed tests — WALAY mock. Kini mo-agi sa tinuod nga API batok sa isolated
- * `verdix_test` database nga gi-seed sa global setup. Gi-prove niini nga ang
+ * `alon_pos_test` database nga gi-seed sa global setup. Gi-prove niini nga ang
  * tibuok stack (UI → API → MySQL) nagdagan gamit ang known fixtures.
  */
 test.describe('DB-backed: real authentication', () => {

@@ -41,8 +41,8 @@ async function setupDatabase() {
 
   try {
     // Create database
-    await connection.query("CREATE DATABASE IF NOT EXISTS verdix;");
-    console.log('✅ Database "verdix" created or already exists.');
+    await connection.query("CREATE DATABASE IF NOT EXISTS alon_pos;");
+    console.log('✅ Database "alon_pos" created or already exists.');
     
     await connection.end();
     
@@ -51,7 +51,7 @@ async function setupDatabase() {
     
     // We can run create_pos_tables.js by spawning it or requiring it if it doesn't self-execute with hardcoded env.
     // create_pos_tables.js self-executes and uses src/lib/mysql which reads .env.
-    // Since we verified .env has DB_PASSWORD=rootpassword and DB_NAME=verdix, it should work.
+    // Since we verified .env has DB_PASSWORD=rootpassword and DB_NAME=alon_pos, it should work.
     
     const { exec } = require('child_process');
     exec('node create_pos_tables.js', (error, stdout, stderr) => {

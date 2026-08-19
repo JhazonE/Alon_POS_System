@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   return NextResponse.json({
     success: true,
-    service: 'verdix-pos',
+    service: 'alon-pos',
     timestamp: new Date().toISOString(),
   });
 }

@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { TransferBoard } from './TransferBoard';
 
 export const metadata: Metadata = {
-  title: 'Warehouse Transfer Board | verdix',
+  title: 'Warehouse Transfer Board | Alon POS',
   description: 'Manage and transfer products between warehouses.',
 };
 

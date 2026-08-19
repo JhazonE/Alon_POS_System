@@ -1,6 +1,6 @@
-# Verdix POS User Manual — Regeneration
+# Alon POS User Manual — Regeneration
 
-This directory contains the Verdix POS User Manual and the build system for regenerating it.
+This directory contains the Alon POS User Manual and the build system for regenerating it.
 
 ## Scripts
 
@@ -26,7 +26,7 @@ npm run manual:build
 npm run manual:build
 ```
 
-This reads `scripts/manual/content.ts` and the existing PNGs in `docs/manual/images/`, assembles them into a Word document, and writes `VerdixPOS-User-Manual.docx`. **No database or server needed.**
+This reads `scripts/manual/content.ts` and the existing PNGs in `docs/manual/images/`, assembles them into a Word document, and writes `AlonPOS-User-Manual.docx`. **No database or server needed.**
 
 On first open in Microsoft Word, the document will prompt you to update the table of contents. Accept the prompt (or press **F9**) so page numbers populate correctly. This is normal and expected.
 
@@ -34,7 +34,7 @@ On first open in Microsoft Word, the document will prompt you to update the tabl
 
 To capture fresh screenshots — for example, after a major UI redesign — you need:
 
-1. **MySQL running** with the local `verdix` database
+1. **MySQL running** with the local `alon_pos` database
 2. **The test database seeded** with fixtures
 3. **A dev server running on port 3100** (separate from your own dev server on port 3000)
 
@@ -50,12 +50,12 @@ Then, in a separate terminal, start a dev server on port 3100 against the test d
 
 **PowerShell:**
 ```powershell
-$env:DB_NAME='verdix_test'; $env:NEXT_PUBLIC_API_BASE_URL='http://localhost:3100/api'; $env:NEXT_DIST_DIR='.next-test'; npx next dev -p 3100
+$env:DB_NAME='alon_pos_test'; $env:NEXT_PUBLIC_API_BASE_URL='http://localhost:3100/api'; $env:NEXT_DIST_DIR='.next-test'; npx next dev -p 3100
 ```
 
 **Bash:**
 ```bash
-DB_NAME='verdix_test' NEXT_PUBLIC_API_BASE_URL='http://localhost:3100/api' NEXT_DIST_DIR='.next-test' npx next dev -p 3100
+DB_NAME='alon_pos_test' NEXT_PUBLIC_API_BASE_URL='http://localhost:3100/api' NEXT_DIST_DIR='.next-test' npx next dev -p 3100
 ```
 
 ### Capture
@@ -97,8 +97,8 @@ The DOCX is now fresh. Screenshots are committed on purpose — the next develop
 ## Important Notes
 
 - **Port 3000 is your own dev server.** Your personal edits and database go there. Never point screenshot capture at port 3000, or the manual will contain your real store data.
-- **Port 3100 is the test database server.** Screenshot capture always runs against port 3100 and the seeded fixtures (`verdix_test` database).
-- **Screenshots show test data.** Figures feature test products like "Test Coffee 3-in-1" and the store name "Verdix Test Store" — intentional, to avoid leaking real customer/inventory data into a published manual.
+- **Port 3100 is the test database server.** Screenshot capture always runs against port 3100 and the seeded fixtures (`alon_pos_test` database).
+- **Screenshots show test data.** Figures feature test products like "Test Coffee 3-in-1" and the store name "Alon Test Store" — intentional, to avoid leaking real customer/inventory data into a published manual.
 - **Committed PNGs are the source of truth.** The build process depends on them. Do not delete `docs/manual/images/`.
 
 ## Adding a New Screen
@@ -143,7 +143,7 @@ To document a new feature or interface:
 → The screen may have changed or the selector is stale. Check the app, update `screens.ts`, and re-run capture.
 
 **Word document won't open**  
-→ If the build fails mid-document, try deleting `docs/manual/VerdixPOS-User-Manual.docx` and rebuilding.
+→ If the build fails mid-document, try deleting `docs/manual/AlonPOS-User-Manual.docx` and rebuilding.
 
 ## References
 

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         aq.*,
         COALESCE(u.display_name, 'System') as requester_name,
-        COALESCE(u.username, 'system@verdix.com') as requester_email
+        COALESCE(u.username, 'system@alonpos.com') as requester_email
       FROM approval_queue aq
       LEFT JOIN users u ON aq.created_by = u.uid
       WHERE 1=1

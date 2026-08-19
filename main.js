@@ -382,7 +382,7 @@ app.whenReady().then(async () => {
         res.on('data', (chunk) => { body += chunk; });
         res.on('end', () => {
           try {
-            resolve(JSON.parse(body).service === 'verdix-pos');
+            resolve(JSON.parse(body).service === 'alon-pos');
           } catch {
             resolve(false);
           }
@@ -451,7 +451,7 @@ app.whenReady().then(async () => {
           // the poll below times out at 30s even though startup succeeded.
           PORT: String(SERVER_PORT),
           // Where the Next.js server writes BIR e-journal .txt files (per date/terminal).
-          VERDIX_EJOURNAL_DIR: path.join(app.getPath('userData'), 'EJournals'),
+          ALON_EJOURNAL_DIR: path.join(app.getPath('userData'), 'EJournals'),
         },
         detached: true,
         windowsHide: true,

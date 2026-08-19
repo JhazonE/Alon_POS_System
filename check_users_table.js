@@ -8,7 +8,7 @@ async function checkUsersTable() {
       host: 'localhost',
       user: 'root',
       password: 'rootpassword',
-      database: 'verdix'
+      database: 'alon_pos'
     });
 
     console.log('Connected to database');

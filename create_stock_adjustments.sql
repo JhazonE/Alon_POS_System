@@ -1,4 +1,4 @@
-USE verdix;
+USE alon_pos;
 
 CREATE TABLE IF NOT EXISTS stock_adjustments (
   id VARCHAR(50) PRIMARY KEY,

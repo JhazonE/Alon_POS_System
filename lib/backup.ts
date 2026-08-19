@@ -41,7 +41,7 @@ export async function performBackup(): Promise<string> {
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbUser = process.env.DB_USER || 'root';
   const dbPass = process.env.DB_PASSWORD || '';
-  const dbName = process.env.DB_NAME || 'verdix';
+  const dbName = process.env.DB_NAME || 'alon_pos';
   
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `backup-${dbName}-${timestamp}.sql`;
@@ -71,7 +71,7 @@ export async function restoreBackup(filename: string): Promise<void> {
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbUser = process.env.DB_USER || 'root';
   const dbPass = process.env.DB_PASSWORD || '';
-  const dbName = process.env.DB_NAME || 'verdix';
+  const dbName = process.env.DB_NAME || 'alon_pos';
 
   const passwordArg = dbPass ? `-p${dbPass}` : '';
   // Note: Using < to direct the SQL file into mysql command

@@ -10,7 +10,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=rootpassword
-      - DB_NAME=verdix
+      - DB_NAME=alon_pos
     depends_on:
       - db
     restart: always
@@ -21,7 +21,7 @@ services:
       - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=verdix
+      - MYSQL_DATABASE=alon_pos
     volumes:
       - mysql_data:/var/lib/mysql
     restart: always

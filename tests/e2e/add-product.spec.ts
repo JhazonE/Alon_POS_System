@@ -4,7 +4,7 @@ import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, NEW_PRODUCT } from './fixtures/te
 
 /**
  * Add Product (DB-backed) — i-drive ang tinuod nga Add Product dialog batok sa
- * verdix_test. Nagsalig sa seeded brand/category/unit + category markup (ang form
+ * alon_pos_test. Nagsalig sa seeded brand/category/unit + category markup (ang form
  * walay standalone price input; ang price mo-auto-calculate gikan sa cost × markup).
  */
 

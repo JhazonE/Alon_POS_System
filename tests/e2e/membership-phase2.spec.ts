@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { resetPosState, testQuery } from './helpers/db';
 
 /**
- * Membership Phase 2 (report API + Z-reading line), DB-backed on verdix_test.
+ * Membership Phase 2 (report API + Z-reading line), DB-backed on alon_pos_test.
  * Uses the same POST /api/pos/membership-payment endpoint the drawer calls.
  */
 

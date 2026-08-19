@@ -134,7 +134,7 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
             {/* Header */}
             <div className="doc-header flex justify-between items-end border-b-2 border-black pb-2 mb-5">
               <div>
-                <h1 className="company-title m-0 text-3xl font-black uppercase tracking-tighter">verdix</h1>
+                <h1 className="company-title m-0 text-3xl font-black uppercase tracking-tighter">Alon POS</h1>
               </div>
               <div>
                 <h2 className="doc-type m-0 text-xl font-semibold text-zinc-600">TRANSACTION AUTHORIZATION</h2>
@@ -755,7 +755,7 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
             </div>
 
             <div className="footer mt-12 pt-4 border-t border-zinc-100 text-[8pt] text-zinc-400 text-center">
-                OFFICIAL DOCUMENT - verdix ERP SYSTEM - REF: {item.id}<br />
+                OFFICIAL DOCUMENT - ALON POS ERP SYSTEM - REF: {item.id}<br />
                 Printed: {format(new Date(), 'yyyy-MM-dd HH:mm:ss')} (EST)
             </div>
           </div>

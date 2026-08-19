@@ -1,7 +1,15 @@
-# Verdix POS — Deployment & Operations Runbook
+# Alon POS — Deployment & Operations Runbook
 
-How to license and cloud-enable Verdix POS for many customers. Covers the
+How to license and cloud-enable Alon POS for many customers. Covers the
 desktop POS, per-customer cloud sync, and the hosted web deployment.
+
+> **Note:** the Railway project/service names, DB names, and `%PROGRAMDATA%`
+> paths below (e.g. `Vendix-LMS`, `Vendix_Pos`, `verdix`/`verdix_c_<id>`,
+> `ProgramData\Verdix`) describe **real existing infrastructure** from before
+> this app's Verdix → Alon POS rename and were deliberately left as-is here —
+> renaming the text wouldn't rename the actual Railway projects/DBs. Update
+> this note (and the names below) only after actually renaming that
+> infrastructure.
 
 > **Secrets:** every `<...>` below is a placeholder. Never commit real
 > passwords or tokens — set them only in `.env` (gitignored) or the Railway
@@ -190,9 +198,9 @@ build (`NODE_ENV` is inlined at build time), so there is nothing to disable.
 
 1. **Get the tenant account from the mall.** The Sta. Lucia mall (via MediaOne)
    issues the store a login **email + password** for the Tenant Management
-   System, alongside the lease. This is *not* a Verdix POS login.
+   System, alongside the lease. This is *not* an Alon POS login.
 
-2. **In Verdix, go to Settings → External API Integrations → edit the Sta.
+2. **In Alon POS, go to Settings → External API Integrations → edit the Sta.
    Lucia entry** (or add one if none exists, Provider = "Sta. Lucia Tenant
    System") and set:
 
@@ -213,14 +221,14 @@ build (`NODE_ENV` is inlined at build time), so there is nothing to disable.
    submission — there is no dry-run for the sales payload itself.
 
 5. **Confirm the credit/debit interpretation with MediaOne before relying on
-   it for reconciliation.** Verdix sends `credit` (non-cash tender) and
+   it for reconciliation.** Alon POS sends `credit` (non-cash tender) and
    `debit` (cash tender) as the true amounts collected, which sum to **net**
    sales. The source PDF's own example has them summing to **gross**. If
    MediaOne expects gross reconciliation, the fix is one line in
    `lib/integrations/sta-lucia/payload.ts` (`buildSalesPayload`).
 
 **Known limitation — at-least-once, not exactly-once delivery.** A crash
-between the mall accepting a submission and Verdix recording that success, or
+between the mall accepting a submission and Alon POS recording that success, or
 a timeout on a request the mall actually processed, can cause a Z-reading to
 be resubmitted once by the automatic recovery logic. This requires either a
 crash or a >30s timeout to trigger, and is documented in

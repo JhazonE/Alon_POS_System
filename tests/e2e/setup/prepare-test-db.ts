@@ -1,14 +1,14 @@
 /**
  * Prepare-test-db — gi-tawag sa Playwright global setup (via tsx child process).
  *
- * Approach: i-clone ang SCHEMA gikan sa working dev `verdix` DB (structure ra,
- * walay data) ngadto sa pristine `verdix_test`, dayon i-seed ang deterministic
+ * Approach: i-clone ang SCHEMA gikan sa working dev `alon_pos` DB (structure ra,
+ * walay data) ngadto sa pristine `alon_pos_test`, dayon i-seed ang deterministic
  * fixtures. Gigamit nato ang schema-clone imbes migration-replay tungod kay ang
  * migrations dili clean modagan gikan sa zero (out-of-band table deps + nagsumpaki
  * nga users-table definitions). Ang dev DB mao ang tinuod nga source of truth.
  *
- * IMPORTANTE: kini nga script kinahanglan modagan nga naka-set ang DB_NAME=verdix_test
- * sa environment aron ang fixtures mo-adto sa test DB, DILI sa dev `verdix`.
+ * IMPORTANTE: kini nga script kinahanglan modagan nga naka-set ang DB_NAME=alon_pos_test
+ * sa environment aron ang fixtures mo-adto sa test DB, DILI sa dev `alon_pos`.
  */
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
@@ -58,14 +58,14 @@ const DB_HOST = process.env.DB_HOST || '127.0.0.1';
 const DB_PORT = parseInt(process.env.DB_PORT || '3306');
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
-const SOURCE_DB = process.env.SOURCE_DB_NAME || 'verdix';
+const SOURCE_DB = process.env.SOURCE_DB_NAME || 'alon_pos';
 // Ang target kay TINUYO nga decoupled gikan sa DB_NAME (nga gi-set sa .env ngadto
-// sa dev `verdix`). Gamiton ang TEST_DB_NAME aron luwas modagan bisan asa.
-const TEST_DB_NAME = process.env.TEST_DB_NAME || 'verdix_test';
+// sa dev `alon_pos`). Gamiton ang TEST_DB_NAME aron luwas modagan bisan asa.
+const TEST_DB_NAME = process.env.TEST_DB_NAME || 'alon_pos_test';
 
 // Hard guard: ayaw gyud tugoti nga mo-drop/seed batok sa dev/prod DB.
-if (TEST_DB_NAME === SOURCE_DB || TEST_DB_NAME === 'verdix') {
-  throw new Error(`Refusing to run test-db setup against "${TEST_DB_NAME}". Set TEST_DB_NAME=verdix_test.`);
+if (TEST_DB_NAME === SOURCE_DB || TEST_DB_NAME === 'alon_pos') {
+  throw new Error(`Refusing to run test-db setup against "${TEST_DB_NAME}". Set TEST_DB_NAME=alon_pos_test.`);
 }
 
 /** mysql/mysqldump CLI args nga walay password (gamiton ang MYSQL_PWD env). */
@@ -87,7 +87,7 @@ async function recreateDatabase(): Promise<void> {
 /** I-clone ang schema (walay data) gikan sa dev DB padulong sa test DB. */
 function cloneSchema(): void {
   const env = { ...process.env, MYSQL_PWD: DB_PASSWORD };
-  const dumpFile = path.join(os.tmpdir(), `verdix_test_schema_${Date.now()}.sql`);
+  const dumpFile = path.join(os.tmpdir(), `alon_pos_test_schema_${Date.now()}.sql`);
 
   // Structure-only dump sa source DB.
   execFileSync(

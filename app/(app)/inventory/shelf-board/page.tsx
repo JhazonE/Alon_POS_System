@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import ShelfBoard from './ShelfBoard';
 
 export const metadata: Metadata = {
-  title: 'Shelf Transfer Board | verdix',
+  title: 'Shelf Transfer Board | Alon POS',
   description: 'Manage and transfer product shelf locations using a Kanban-style board.',
 };
 

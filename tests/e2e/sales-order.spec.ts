@@ -3,7 +3,7 @@ import { testQuery } from './helpers/db';
 import { SO_CUSTOMER, SO_PRODUCT, SO_SERVICE } from './fixtures/test-data';
 
 /**
- * Sales Order flow (DB-backed) batok sa verdix_test.
+ * Sales Order flow (DB-backed) batok sa alon_pos_test.
  *
  * Coverage:
  *  1. SO number gikan sa shared counter — sequential, DILI random, ug ang

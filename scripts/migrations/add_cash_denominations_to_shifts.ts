@@ -10,7 +10,7 @@ const dbConfig = {
   host: 'localhost',
   user: 'root',
   password: 'rootpassword',
-  database: 'verdix',
+  database: 'alon_pos',
 };
 
 async function migrate() {

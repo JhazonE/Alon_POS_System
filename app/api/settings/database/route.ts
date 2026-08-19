@@ -47,7 +47,7 @@ export async function GET() {
     host: config.DB_HOST || 'localhost',
     port: config.DB_PORT || '3306',
     user: config.DB_USER || 'root',
-    database: config.DB_NAME || 'verdix',
+    database: config.DB_NAME || 'alon_pos',
     // Don't send the actual password for security, or send a placeholder if it exists
     hasPassword: !!config.DB_PASSWORD
   });

@@ -53,7 +53,7 @@ npm run test:e2e:db          # Re-seed the test database only
 
 | Variable | Purpose |
 |---|---|
-| `DB_HOST/PORT/USER/PASSWORD/DB_NAME` | Local MySQL (default: `verdix`) |
+| `DB_HOST/PORT/USER/PASSWORD/DB_NAME` | Local MySQL (default: `alon_pos`) |
 | `CLOUD_DB_HOST/PORT/USER/PASSWORD/DB_NAME` | Railway MySQL (optional — enables cloud sync) |
 | `NEXT_PUBLIC_API_BASE_URL` | Used by the browser to call API routes |
 | `LICENSE_DB_*` | Separate DB for the license server (`verdix_license`) |
@@ -116,7 +116,7 @@ A completely standalone HTTP server (no Next.js), in its own git repository. Man
 
 ### E2E Tests
 
-Playwright tests run on port 3100 against a separate `verdix_test` database. `tests/e2e/setup/global-setup.ts` creates and seeds this DB before any test runs. Tests are sequential (workers: 1) to avoid concurrent DB mutations. Run `npm run test:e2e:db` to reset the test DB without re-running tests.
+Playwright tests run on port 3100 against a separate `alon_pos_test` database. `tests/e2e/setup/global-setup.ts` creates and seeds this DB before any test runs. Tests are sequential (workers: 1) to avoid concurrent DB mutations. Run `npm run test:e2e:db` to reset the test DB without re-running tests.
 
 ---
 

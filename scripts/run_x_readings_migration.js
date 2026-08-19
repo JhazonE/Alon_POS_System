@@ -6,9 +6,9 @@ require('dotenv').config();
 async function runMigration() {
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'verdix',
-    password: process.env.DB_PASSWORD || 'verdix123',
-    database: process.env.DB_NAME || 'verdix',
+    user: process.env.DB_USER || 'alon_pos',
+    password: process.env.DB_PASSWORD || 'alon123',
+    database: process.env.DB_NAME || 'alon_pos',
     multipleStatements: true,
   });
 

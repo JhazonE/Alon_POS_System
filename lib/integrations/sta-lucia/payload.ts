@@ -20,13 +20,13 @@ function discountPercent(discounts: number, grossSales: number): string {
 }
 
 /**
- * Convert a Verdix Z-reading into the Sta. Lucia sales payload.
+ * Convert a Alon POS Z-reading into the Sta. Lucia sales payload.
  *
- * `credit` is non-cash tender and `debit` is cash tender. Note that in Verdix
+ * `credit` is non-cash tender and `debit` is cash tender. Note that in Alon POS
  * these sum to NET sales, not gross: tender is recorded after discounts, since
  * the customer never hands over the undiscounted amount. The source PDF's
  * example has them summing to gross. Sending true tender is the only figure
- * Verdix can state honestly; confirm the expectation with MediaOne before
+ * Alon POS can state honestly; confirm the expectation with MediaOne before
  * production cutover. If they want gross reconciliation, change it here.
  */
 export function buildSalesPayload(z: ZReadingLike): StaLuciaSalesPayload {

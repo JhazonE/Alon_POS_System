@@ -6,11 +6,11 @@ dotenv.config();
 /**
  * Test-DB helpers para sa per-test isolation.
  *
- * Gi-target ang `verdix_test` (hardcoded) — DILI ang dev `verdix`. Gamiton sa
+ * Gi-target ang `alon_pos_test` (hardcoded) — DILI ang dev `alon_pos`. Gamiton sa
  * beforeEach aron limpyo ang transactional state (shifts/sales) kada test, kay ang
  * POS mo-resume ug existing active shift nga makaguba sa test isolation.
  */
-const TEST_DB = 'verdix_test';
+const TEST_DB = 'alon_pos_test';
 
 async function getConn() {
   return mysql.createConnection({
@@ -50,7 +50,7 @@ export async function resetPosState(): Promise<void> {
   }
 }
 
-/** Modagan ug usa ka statement batok sa `verdix_test`. Para sa seed/assert sa specs. */
+/** Modagan ug usa ka statement batok sa `alon_pos_test`. Para sa seed/assert sa specs. */
 export async function testQuery(sql: string, params: any[] = []): Promise<any> {
   const conn = await getConn();
   try {

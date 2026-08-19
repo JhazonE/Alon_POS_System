@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 /**
  * Customer write-API behavior nga gikinahanglan sa inline add/rename.
- * Tanan API-level (walay UI), batok sa verdix_test.
+ * Tanan API-level (walay UI), batok sa alon_pos_test.
  */
 
 test.describe('Customer inline write API', () => {

@@ -5,7 +5,7 @@ async function main() {
     host: '127.0.0.1',
     user: 'root',
     password: 'rootpassword',
-    database: 'verdix'
+    database: 'alon_pos'
   });
 
   // Update pending logs to use the new endpoint

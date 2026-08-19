@@ -62,7 +62,7 @@ export function useCustomerDisplay(enabled: boolean) {
   const openOnSecondScreen = useCallback(async () => {
     if (!enabled) return;
 
-    // Electron path: frameless fullscreen BrowserWindow on second monitor with verdix icon
+    // Electron path: frameless fullscreen BrowserWindow on second monitor with Alon icon
     if (typeof window !== 'undefined' && window.electronAPI?.openCustomerDisplay) {
       try {
         await window.electronAPI.openCustomerDisplay();

@@ -61,11 +61,11 @@ async function setupDatabase() {
 
   try {
     // Create database
-    await connection.query("CREATE DATABASE IF NOT EXISTS verdix;");
-    console.log('✅ Database "verdix" created or already exists.');
+    await connection.query("CREATE DATABASE IF NOT EXISTS alon_pos;");
+    console.log('✅ Database "alon_pos" created or already exists.');
     
     // Switch to database
-    await connection.query("USE verdix;");
+    await connection.query("USE alon_pos;");
     
     console.log('Importing database dump from Dump20260122...');
     const dumpDir = path.join(__dirname, 'Dump20260122');

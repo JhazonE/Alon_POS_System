@@ -23,7 +23,7 @@ function buildPoolConfig(connectionLimit: number): mysql.PoolOptions {
     port: parseInt(process.env.DB_PORT || '3306'),
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'verdix',
+    database: process.env.DB_NAME || 'alon_pos',
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
     waitForConnections: true,
     connectionLimit: parseInt(process.env.DB_POOL_LIMIT || '') || connectionLimit,

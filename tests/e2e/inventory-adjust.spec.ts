@@ -4,7 +4,7 @@ import { INVENTORY_PRODUCT } from './fixtures/test-data';
 
 /**
  * Inventory stock adjustment (DB-backed) — i-drive ang Adjust Stock dialog sa
- * /inventory batok sa verdix_test. Naggamit ug dedicated INV-ADJ product.
+ * /inventory batok sa alon_pos_test. Naggamit ug dedicated INV-ADJ product.
  */
 test.describe('Inventory adjustment', () => {
   test('admin makadugang ug stock pinaagi sa Adjust Stock dialog', async ({ page, request }) => {

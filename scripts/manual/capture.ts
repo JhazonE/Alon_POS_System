@@ -12,7 +12,7 @@ import { resetPosState } from '../../tests/e2e/helpers/db';
  * into `docs/manual/images/<slug>.png` for the user manual generator.
  *
  * Run: `npm run manual:capture` — expects a dev server already running on
- * http://localhost:3100 against the `verdix_test` database (see
+ * http://localhost:3100 against the `alon_pos_test` database (see
  * tests/e2e/setup/prepare-test-db.ts / playwright.config.ts webServer block).
  */
 

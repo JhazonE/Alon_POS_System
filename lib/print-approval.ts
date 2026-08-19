@@ -351,7 +351,7 @@ export const printApproval = (data: ApprovalItem) => {
     </div>
 
     <div class="footer">
-      OFFICIAL DOCUMENT - verdix ERP SYSTEM - REF: ${data.id}<br>
+      OFFICIAL DOCUMENT - ALON POS ERP SYSTEM - REF: ${data.id}<br>
       Printed: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')} (EST)
     </div>
   `);

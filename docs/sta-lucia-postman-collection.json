@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Verdix POS - Sta. Lucia Integration",
-    "description": "Requests against Verdix POS's OWN API routes for the Sta. Lucia mall Sale Consolidator integration (EOD + hourly). None of these call the mall directly — they call our Next.js server, which in turn talks to the mall using the credentials stored in the `external_apis` table.\n\nSet `baseUrl` to wherever the Verdix dev/prod server is running (default: http://localhost:3000). Set `apiId` to the id of the `external_apis` row configured with `provider = 'sta_lucia'` — check with:\n\n```sql\nSELECT id, name, enabled, api_endpoint FROM external_apis WHERE provider = 'sta_lucia';\n```",
+    "name": "Alon POS - Sta. Lucia Integration",
+    "description": "Requests against Alon POS's OWN API routes for the Sta. Lucia mall Sale Consolidator integration (EOD + hourly). None of these call the mall directly — they call our Next.js server, which in turn talks to the mall using the credentials stored in the `external_apis` table.\n\nSet `baseUrl` to wherever the Alon POS dev/prod server is running (default: http://localhost:3000). Set `apiId` to the id of the `external_apis` row configured with `provider = 'sta_lucia'` — check with:\n\n```sql\nSELECT id, name, enabled, api_endpoint FROM external_apis WHERE provider = 'sta_lucia';\n```",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

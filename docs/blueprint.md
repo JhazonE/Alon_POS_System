@@ -1,4 +1,4 @@
-# **App Name**: verdix
+# **App Name**: Alon POS System
 
 ## Core Features:
 

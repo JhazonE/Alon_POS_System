@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 import { testQuery } from './helpers/db';
 
 /**
- * External API sync-log behavior batok sa verdix_test.
+ * External API sync-log behavior batok sa alon_pos_test.
  *
  * NOTE: DILI mag-import ug `lib/` diri — ang test process naka-point sa dev
- * `verdix`, ang test server ra ang naa sa `verdix_test`. Gamiton ang testQuery.
+ * `alon_pos`, ang test server ra ang naa sa `alon_pos_test`. Gamiton ang testQuery.
  */
 
 const TXN_ID = 'po_idem_test_1';

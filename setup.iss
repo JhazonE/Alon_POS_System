@@ -35,8 +35,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Dirs]
 ; License store — lives OUTSIDE {app} so it survives uninstall/updates.
 ; Pre-created with user-modify rights so the POS server (running as the
-; logged-in user) can write C:\ProgramData\Verdix\license.dat after activation.
-Name: "{commonappdata}\Verdix"; Permissions: users-modify
+; logged-in user) can write C:\ProgramData\Alon\license.dat after activation.
+; (lib/licensing/verify.ts also reads a pre-rebrand C:\ProgramData\Verdix\
+; license.dat as a fallback, so that dir isn't pre-created here — only
+; machines that already have one from before the rename will have it.)
+Name: "{commonappdata}\Alon"; Permissions: users-modify
 
 [Files]
 ; Electron app binary

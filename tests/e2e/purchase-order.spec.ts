@@ -4,7 +4,7 @@ import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { TEST_SUPPLIER, TEST_WAREHOUSE, TEST_PAYMENT_METHOD, PO_PRODUCT } from './fixtures/test-data';
 
 /**
- * Purchase Order (DB-backed) batok sa verdix_test.
+ * Purchase Order (DB-backed) batok sa alon_pos_test.
  *
  * Coverage:
  *  1. PO creation pinaagi sa API (POST /api/purchase-orders) → na-persist sa DB.
