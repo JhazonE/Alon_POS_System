@@ -55,7 +55,7 @@ Non-Goals). HSL triplets match the file's existing `H S% L%` format so
 | `--secondary` | `180 33% 92%` | `#E3F1F1` | secondary buttons/pills bg |
 | `--secondary-foreground` | `185 61% 11%` | `#0B2B2E` | |
 | `--muted` | `180 33% 92%` | `#E3F1F1` | same as secondary |
-| `--muted-foreground` | `182 25% 39%` | `#4B7A7C` | labels, secondary text |
+| `--muted-foreground` | `182 25% 33%` | `#3F6869` | labels, secondary text (darkened from the original 39% for WCAG AA contrast — see ledger) |
 | `--accent` | `36 88% 59%` | `#F2A93B` | warm amber — highlights, brand mark |
 | `--accent-foreground` | `185 61% 11%` | `#0B2B2E` | dark text on amber for contrast |
 | `--destructive` | `9 73% 41%` | `#B4321C` | delete/void |

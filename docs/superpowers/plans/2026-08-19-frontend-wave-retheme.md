@@ -73,7 +73,7 @@ Open `app/globals.css`. Replace the entire `:root { ... }` block (currently line
     --secondary-foreground: 185 61% 11%;
 
     --muted: 180 33% 92%;
-    --muted-foreground: 182 25% 39%;
+    --muted-foreground: 182 25% 33%; /* darkened from the original 39% for WCAG AA contrast — see ledger */
 
     --accent: 36 88% 59%;           /* Warm amber */
     --accent-foreground: 185 61% 11%;

@@ -23,7 +23,7 @@
     --muted: 180 33% 92%;
     --muted-foreground: 182 25% 33%;
 
-    --accent: 36 88% 59%;           /* Warm amber */
+    --accent: 180 33% 92%;
     --accent-foreground: 185 61% 11%;
 
     --destructive: 9 73% 41%;
@@ -39,6 +39,9 @@
     --success-bg: 150 45% 91%;
     --warning: 42 87% 31%;
     --warning-bg: 43 95% 92%;
+
+    --brand-amber: 36 88% 59%;
+    --brand-amber-foreground: 185 61% 11%;
 
     --chart-1: 185 81% 29%;
     --chart-2: 36 88% 59%;

@@ -46,6 +46,10 @@ export default {
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
+  			'brand-amber': {
+  				DEFAULT: 'hsl(var(--brand-amber))',
+  				foreground: 'hsl(var(--brand-amber-foreground))'
+  			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'

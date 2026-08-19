@@ -47,7 +47,7 @@ export function BrandRow({
                 <span className="sr-only">Delete</span>
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="!rounded-3xl">
+            <AlertDialogContent className="!rounded-lg">
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
