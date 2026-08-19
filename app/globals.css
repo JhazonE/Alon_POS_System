@@ -4,52 +4,57 @@
 
 @layer base {
   :root {
-    /* Premium Slate/Indigo Palette - Light Mode */
-    --background: 210 35% 94%;      /* Soft white/blue-grey tint */
-    --foreground: 222 47% 11%;      /* Deep Slate for text */
+    /* Wave Palette (Alon-branded) - Light Mode */
+    --background: 180 37% 97%;      /* Very light teal-white */
+    --foreground: 185 61% 11%;      /* Deep teal-slate for text */
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 185 61% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 185 61% 11%;
 
-    --primary: 221 83% 53%;         /* Modern Bright Blue/Indigo */
-    --primary-foreground: 210 40% 98%;
+    --primary: 185 81% 29%;         /* Deep teal */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 35% 92%;
-    --secondary-foreground: 222 47% 11.2%;
+    --secondary: 180 33% 92%;
+    --secondary-foreground: 185 61% 11%;
 
-    --muted: 210 35% 92%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 180 33% 92%;
+    --muted-foreground: 182 25% 39%;
 
-    --accent: 210 35% 92%;
-    --accent-foreground: 222 47% 11.2%;
+    --accent: 36 88% 59%;           /* Warm amber */
+    --accent-foreground: 185 61% 11%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 9 73% 41%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 28% 86%;
-    --input: 214.3 28% 86%;
-    --ring: 221 83% 53%;
+    --border: 180 33% 92%;
+    --input: 180 33% 92%;
+    --ring: 185 81% 29%;
 
-    --radius: 0.75rem;              /* Increased radius for modern feel */
+    --radius: 0.75rem;
 
-    --chart-1: 221 83% 53%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --success: 153 78% 27%;
+    --success-bg: 150 45% 91%;
+    --warning: 42 87% 31%;
+    --warning-bg: 43 95% 92%;
 
-    /* Sidebar - Deep Slate/Navy */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 221 83% 53%;
+    --chart-1: 185 81% 29%;
+    --chart-2: 36 88% 59%;
+    --chart-3: 153 78% 27%;
+    --chart-4: 217 60% 55%;
+    --chart-5: 9 73% 55%;
+
+    /* Sidebar - Deep Teal-Slate */
+    --sidebar-background: 185 61% 11%;
+    --sidebar-foreground: 177 46% 83%;
+    --sidebar-primary: 185 81% 29%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-accent: 185 50% 16%;
+    --sidebar-accent-foreground: 177 46% 83%;
+    --sidebar-border: 185 50% 18%;
+    --sidebar-ring: 185 81% 29%;
   }
 
   .dark {
