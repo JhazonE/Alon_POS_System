@@ -69,13 +69,13 @@ focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 
 | `default` | `h-10 px-[18px]` |
 | `sm` | `h-8 px-[13px] text-xs rounded-lg gap-1.5` |
 | `lg` | `h-[46px] px-6 text-[15px]` |
-| `icon` | `h-10 w-10 p-0` (or `h-8 w-8` when combined with `size="sm"`) |
+| `icon` | `h-10 w-10 p-0` |
 
 Full interactive reference: https://claude.ai/code/artifact/89f24d6c-8be2-4204-8f97-c11a8f4b35db
 
 ## Migration mechanics
 
-Given 671 usages, this is not hand-edited file by file. Approach:
+Given 1000 usages, this is not hand-edited file by file. Approach:
 
 1. **AST codemod** (ts-morph script, run locally, not committed) walks each `.tsx` file, finds `<Button ...>` JSX elements, and for each one:
    - Reads `variant` and `size` prop literals (string values only) and looks up the corresponding class fragments from the tables above.
@@ -94,7 +94,7 @@ Given 671 usages, this is not hand-edited file by file. Approach:
 |---|---|---|
 | 1 | `purchases` | 11 |
 | 2 | `suppliers` | 12 |
-| 3 | `dashboard` + `restock` + `developer` + `user-management` | 13 |
+| 3 | `dashboard` + `restock` + `developer` + `user-management` + `NotificationsBell.tsx` | 14 |
 | 4 | `customer` | 19 |
 | 5 | `inventory` | 28 |
 | 6 | `reports` | 23 |
@@ -102,7 +102,7 @@ Given 671 usages, this is not hand-edited file by file. Approach:
 | 8 | `settings` | 36 |
 | 9 | `pos` | 46 |
 | 10 | `sales` | 57 |
-| 11 | shared: `components/ui`, `components/approvals`, `theme-toggle`, `license-gate`, `import-wizard`, `app/login`, `app/signup`, `app/activate` | ~17 |
+| 11 | shared: `components/ui`, `components/approvals`, `theme-toggle`, `license-gate`, `import-wizard`, `app/login`, `app/signup`, `app/activate` | 16 |
 | 12 | Delete `components/ui/button.tsx` + `buttonVariants` export; full-project `typecheck` | — |
 
 `pos` and `sales` are deliberately late: highest interaction density (checkout flow, shift management) and the most existing `data-*`/analytics hooks on buttons, so the pattern should already be well-proven by the time they're touched. Batch 11 (shared components) goes right before the final deletion so any shared-component edge cases surface after 290 files' worth of precedent already exists.
