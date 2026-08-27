@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { 
   Table, 
   TableBody, 
@@ -257,19 +256,18 @@ export default function LowStockReportPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => handlePrint()} variant="outline" className="gap-2">
+          <button onClick={() => handlePrint()} className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2">
               <Printer className="h-4 w-4" />
               Print Report
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={() => exportToExcel()}
-            variant="outline"
-            className="gap-2 border-emerald-700 text-emerald-700 hover:bg-emerald-50"
+            className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2 border-emerald-700 text-emerald-700 hover:bg-emerald-50"
             disabled={isExporting || products.length === 0}
           >
             {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
             Export to Excel
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -286,14 +284,14 @@ export default function LowStockReportPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
-          <Button onClick={handleSearch} className="gap-2">
+          <button onClick={handleSearch} className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] gap-2">
             Search
-          </Button>
+          </button>
           {(searchTerm || searchQuery) && (
-            <Button variant="ghost" onClick={handleClearSearch} className="gap-2 text-muted-foreground">
+            <button onClick={handleClearSearch} className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] gap-2 text-muted-foreground">
               <X className="h-4 w-4" />
               Clear
-            </Button>
+            </button>
           )}
         </div>
       </div>

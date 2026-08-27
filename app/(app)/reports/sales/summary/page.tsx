@@ -17,7 +17,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Button } from '@/components/ui/button';
 import { CalendarIcon, FileDown, FileSpreadsheet, DollarSign, TrendingUp, Receipt, Percent, ShoppingCart, LayoutGrid, Table as TableIcon, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PhilippinePeso } from 'lucide-react';
 import {
   Select,
@@ -34,6 +33,18 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { getApiUrl } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
+
+/**
+ * View-switcher button classes: the shared `sm` button recipe plus this
+ * control's compact sizing, with the active/inactive halves split out.
+ * Written as cn() arguments so tailwind-merge resolves px-3 over the
+ * recipe's px-[13px].
+ */
+const VIEW_TOGGLE_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 px-[13px] text-xs rounded-lg gap-1.5 h-8 px-3';
+const VIEW_TOGGLE_ACTIVE =
+  'bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55';
+const VIEW_TOGGLE_INACTIVE = 'hover:bg-accent focus-visible:ring-ring';
 
 interface SalesTransaction {
   id: string;
@@ -234,16 +245,12 @@ export default function SalesSummaryPage() {
               <label className="text-sm font-medium">From Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-[180px] justify-start text-left font-normal",
-                      !fromDate && "text-muted-foreground"
-                    )}
+                  <button
+                    className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", "w-[180px] justify-start text-left font-normal", !fromDate && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {fromDate ? format(fromDate, "PPP") : "Select date"}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
@@ -260,16 +267,12 @@ export default function SalesSummaryPage() {
               <label className="text-sm font-medium">To Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-[180px] justify-start text-left font-normal",
-                      !toDate && "text-muted-foreground"
-                    )}
+                  <button
+                    className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", "w-[180px] justify-start text-left font-normal", !toDate && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {toDate ? format(toDate, "PPP") : "Select date"}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
@@ -282,32 +285,30 @@ export default function SalesSummaryPage() {
               </Popover>
             </div>
 
-            <Button 
+            <button 
               onClick={fetchReport} 
-              disabled={isLoading}
+              disabled={isLoading} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]"
             >
               {isLoading ? 'Loading...' : 'Show Report'}
-            </Button>
+            </button>
 
-            <Button 
+            <button 
               onClick={exportToPDF} 
               disabled={isLoading || records.length === 0}
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] border-blue-600 text-blue-600 hover:bg-blue-50"
             >
               <FileDown className="mr-2 h-4 w-4" />
               Export to PDF
-            </Button>
+            </button>
 
-            <Button
+            <button
               onClick={exportToExcel}
               disabled={isLoading || records.length === 0}
-              variant="outline"
-              className="border-emerald-700 text-emerald-700 hover:bg-emerald-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] border-emerald-700 text-emerald-700 hover:bg-emerald-50"
             >
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export to Excel
-            </Button>
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -382,24 +383,20 @@ export default function SalesSummaryPage() {
                 />
               </div>
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
-                size="sm"
+              <button
                 onClick={() => setViewMode('table')}
-                className="h-8 px-3"
+                className={cn(VIEW_TOGGLE_CLASSES, viewMode === 'table' ? VIEW_TOGGLE_ACTIVE : VIEW_TOGGLE_INACTIVE)}
               >
                 <TableIcon className="h-4 w-4 mr-1" />
                 Table
-              </Button>
-              <Button
-                variant={viewMode === 'card' ? 'default' : 'ghost'}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setViewMode('card')}
-                className="h-8 px-3"
+                className={cn(VIEW_TOGGLE_CLASSES, viewMode === 'card' ? VIEW_TOGGLE_ACTIVE : VIEW_TOGGLE_INACTIVE)}
               >
                 <LayoutGrid className="h-4 w-4 mr-1" />
                 Cards
-              </Button>
+              </button>
               </div>
             </div>
           </div>
@@ -597,24 +594,20 @@ export default function SalesSummaryPage() {
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8"
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
                   >
                     <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                  </Button>
+                  </button>
                   
                   <div className="flex items-center gap-1 px-2">
                     <span className="text-sm font-medium">
@@ -622,24 +615,20 @@ export default function SalesSummaryPage() {
                     </span>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
                   >
                     <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8"
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
                   >
                     <ChevronsRight className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>

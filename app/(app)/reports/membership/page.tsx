@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Button } from '@/components/ui/button';
 import { CalendarIcon, FileDown, FileSpreadsheet, CreditCard, UserPlus, RefreshCw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -157,9 +156,9 @@ export default function MembershipReportPage() {
               <label className="text-sm font-medium">From Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn('w-[180px] justify-start text-left font-normal', !fromDate && 'text-muted-foreground')}>
+                  <button className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", 'w-[180px] justify-start text-left font-normal', !fromDate && 'text-muted-foreground')}>
                     <CalendarIcon className="mr-2 h-4 w-4" />{fromDate ? format(fromDate, 'PPP') : 'Select date'}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={fromDate} onSelect={setFromDate} initialFocus /></PopoverContent>
               </Popover>
@@ -168,26 +167,25 @@ export default function MembershipReportPage() {
               <label className="text-sm font-medium">To Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn('w-[180px] justify-start text-left font-normal', !toDate && 'text-muted-foreground')}>
+                  <button className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", 'w-[180px] justify-start text-left font-normal', !toDate && 'text-muted-foreground')}>
                     <CalendarIcon className="mr-2 h-4 w-4" />{toDate ? format(toDate, 'PPP') : 'Select date'}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={toDate} onSelect={setToDate} initialFocus /></PopoverContent>
               </Popover>
             </div>
-            <Button onClick={fetchReport} disabled={isLoading}>{isLoading ? 'Loading...' : 'Show Report'}</Button>
-            <Button onClick={exportToPDF} disabled={isLoading || rows.length === 0} variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50">
+            <button onClick={fetchReport} disabled={isLoading} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">{isLoading ? 'Loading...' : 'Show Report'}</button>
+            <button onClick={exportToPDF} disabled={isLoading || rows.length === 0} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] border-amber-600 text-amber-600 hover:bg-amber-50">
               <FileDown className="mr-2 h-4 w-4" />Export to PDF
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={exportToExcel}
               disabled={isLoading || rows.length === 0}
-              variant="outline"
-              className="border-emerald-700 text-emerald-700 hover:bg-emerald-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] border-emerald-700 text-emerald-700 hover:bg-emerald-50"
             >
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export to Excel
-            </Button>
+            </button>
           </div>
         </CardContent>
       </Card>

@@ -6,7 +6,6 @@ import { format } from 'date-fns';
 import { FileSpreadsheet } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -116,15 +115,14 @@ export default function ExpiringSoonPage() {
               <SelectItem value="90">Next 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button
+          <button
             onClick={exportToExcel}
-            variant="outline"
-            className="gap-2 border-emerald-700 text-emerald-700 hover:bg-emerald-50"
+            className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2 border-emerald-700 text-emerald-700 hover:bg-emerald-50"
             disabled={filteredItems.length === 0}
           >
             <FileSpreadsheet className="h-4 w-4" />
             Export to Excel
-          </Button>
+          </button>
         </div>
       </div>
 

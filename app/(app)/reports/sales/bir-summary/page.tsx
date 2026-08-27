@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Button } from '@/components/ui/button';
 import { CalendarIcon, FileDown, Landmark, FileText, FileSpreadsheet } from 'lucide-react';
 import {
   DropdownMenu,
@@ -398,26 +397,22 @@ export default function BirSalesSummaryPage() {
   // Compact inline export controls for an individual tab's card header.
   const TabExport = ({ tabKey }: { tabKey: TabKey }) => (
     <div className="flex items-center gap-2 shrink-0">
-      <Button
-        size="sm"
-        variant="outline"
+      <button
         disabled={isLoading || !tabHasData(tabKey)}
         onClick={() => exportTab(tabKey, 'pdf')}
-        className="border-red-200 text-red-600 hover:bg-red-50"
+        className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
       >
         <FileText className="h-4 w-4 mr-1.5" />
         PDF
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
+      </button>
+      <button
         disabled={isLoading || !tabHasData(tabKey)}
         onClick={() => exportTab(tabKey, 'excel')}
-        className="border-green-200 text-green-700 hover:bg-green-50"
+        className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 border-green-200 text-green-700 hover:bg-green-50"
       >
         <FileSpreadsheet className="h-4 w-4 mr-1.5" />
         Excel
-      </Button>
+      </button>
     </div>
   );
 
@@ -527,10 +522,10 @@ export default function BirSalesSummaryPage() {
               <label className="text-sm font-medium">From Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn('w-[180px] justify-start text-left font-normal', !fromDate && 'text-muted-foreground')}>
+                  <button className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", 'w-[180px] justify-start text-left font-normal', !fromDate && 'text-muted-foreground')}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {fromDate ? format(fromDate, 'PPP') : 'Select date'}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar mode="single" selected={fromDate} onSelect={setFromDate} initialFocus />
@@ -542,10 +537,10 @@ export default function BirSalesSummaryPage() {
               <label className="text-sm font-medium">To Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn('w-[180px] justify-start text-left font-normal', !toDate && 'text-muted-foreground')}>
+                  <button className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", 'w-[180px] justify-start text-left font-normal', !toDate && 'text-muted-foreground')}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {toDate ? format(toDate, 'PPP') : 'Select date'}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar mode="single" selected={toDate} onSelect={setToDate} initialFocus />
@@ -553,20 +548,19 @@ export default function BirSalesSummaryPage() {
               </Popover>
             </div>
 
-            <Button onClick={fetchReport} disabled={isLoading}>
+            <button onClick={fetchReport} disabled={isLoading} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
               {isLoading ? 'Loading...' : 'Show Report'}
-            </Button>
+            </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
+                <button
                   disabled={isLoading || data.dailySummary.length === 0}
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] border-blue-600 text-blue-600 hover:bg-blue-50"
                 >
                   <FileDown className="mr-2 h-4 w-4" />
                   Export
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel className="truncate">Current tab: {SECTION_LABELS[activeTab]}</DropdownMenuLabel>
