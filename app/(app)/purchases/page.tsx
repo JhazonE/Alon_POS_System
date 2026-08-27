@@ -34,7 +34,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, X, Download, ChevronDown, PlusCircle } from 'lucide-react';
 
@@ -106,11 +105,11 @@ export default function PurchasesPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                   <Download className="mr-2 h-4 w-4" />
                   Export
                   <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleExport('csv')}>Export as CSV</DropdownMenuItem>
@@ -121,10 +120,10 @@ export default function PurchasesPage() {
             <AddPurchaseOrderDialog
               onAddOrder={addPurchaseOrder}
               trigger={
-                <Button size="sm">
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add New Purchase Order
-                </Button>
+                </button>
               }
             />
 
@@ -195,9 +194,9 @@ export default function PurchasesPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <Button variant="secondary" onClick={handleSearch}>
+            <button onClick={handleSearch} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring h-10 px-[18px]">
               Search
-            </Button>
+            </button>
 
             <PurchasesFilterDialog
               status={statusFilter}
@@ -213,10 +212,10 @@ export default function PurchasesPage() {
 
           <div className="flex items-center gap-2 non-printable">
             {hasActiveFilters && (
-              <Button variant="ghost" onClick={resetFilters} size="sm" className="h-8 px-2 text-xs">
+              <button onClick={resetFilters} className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring rounded-lg gap-1.5 h-8 px-2 text-xs">
                 <X className="mr-1 h-3 w-3" />
                 Reset
-              </Button>
+              </button>
             )}
           </div>
         </div>

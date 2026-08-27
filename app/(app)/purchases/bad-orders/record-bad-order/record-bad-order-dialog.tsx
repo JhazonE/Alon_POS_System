@@ -41,7 +41,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Search, Trash2, AlertTriangle } from 'lucide-react';
@@ -75,10 +74,10 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <Button>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
           <AlertTriangle className="mr-2 h-4 w-4" />
           Record Bad Order
-        </Button>
+        </button>
       </SheetTrigger>
 
       <SheetContent side="top" className="h-screen w-full flex flex-col p-0 gap-0 bg-background border-none rounded-none shadow-none">
@@ -354,15 +353,13 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
                               </TableCell>
 
                               <TableCell className="py-2 flex items-center justify-end gap-1">
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                   onClick={() => remove(index)}
                                 >
                                   <Trash2 className="h-4 w-4" />
-                                </Button>
+                                </button>
                               </TableCell>
                             </TableRow>
                           ))
@@ -414,14 +411,13 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Ready to process
                 </span>
               </div>
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              <button type="button" onClick={() => handleOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 Cancel
-              </Button>
-              <Button
+              </button>
+              <button
                 type="submit"
-                variant="destructive"
                 disabled={isSubmitting || fields.length === 0}
-                className="w-48 font-semibold shadow-lg shadow-destructive/20"
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-[0_6px_18px_hsl(var(--destructive)/0.28)] focus-visible:ring-destructive/55 h-10 px-[18px] w-48 font-semibold shadow-lg shadow-destructive/20"
               >
                 {isSubmitting ? (
                   <>
@@ -434,7 +430,7 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
                     Record Bad Order
                   </>
                 )}
-              </Button>
+              </button>
             </SheetFooter>
           </form>
         </Form>

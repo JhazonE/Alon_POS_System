@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -50,7 +48,7 @@ import { InlinePaymentMethodSelect } from '../../components/inline-selects/inlin
 import { InlineSupplierSelect } from '../../components/inline-selects/inline-supplier-select';
 
 import { calculateMarkupPercentage, calculateSuggestedPrice } from '@/lib/purchase-utils';
-import { formatQuantity } from '@/lib/utils';
+import { formatQuantity, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 import { useAddPurchaseOrder, type UseAddPurchaseOrderProps } from './use-add-purchase-order';
@@ -429,11 +427,9 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                       <span className="text-sm font-bold text-blue-600 font-mono">
                                         ₱{suggestedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </span>
-                                      <Button
+                                      <button
                                         type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-full"
+                                        className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-full"
                                         onClick={() => {
                                           form.setValue(`items.${index}.sellingPrice`, parseFloat(suggestedPrice.toFixed(2)));
                                           toast({
@@ -444,7 +440,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                         title={`Apply suggested price (Markup: ${markup}% from ${source})`}
                                       >
                                         <Wand2 className="h-4 w-4" />
-                                      </Button>
+                                      </button>
                                     </div>
                                     <span className="text-[9px] text-blue-500/70 uppercase font-medium">
                                       {source}: {markup}%
@@ -537,11 +533,9 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                       const rop = fields[index].reorderPoint || 0;
                                       const hasRop = rop > 0;
                                       return (
-                                        <Button
+                                        <button
                                           type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className={`h-8 w-8 transition-colors ${hasRop ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}`}
+                                          className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0", `h-8 w-8 transition-colors ${hasRop ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}`)}
                                           title={hasRop ? `Suggest Order Qty: ${rop}` : 'No Reorder Point set'}
                                           onClick={(e) => {
                                             e.preventDefault();
@@ -566,17 +560,15 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                           }}
                                         >
                                           <Wand2 className="h-4 w-4" />
-                                        </Button>
+                                        </button>
                                       );
                                     })()}
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                    <button
+                                      className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                       onClick={() => remove(index)}
                                     >
                                       <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    </button>
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -631,13 +623,13 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   <span className="w-2 h-2 rounded-full bg-emerald-600" /> Ready to process
                 </span>
               </div>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <button type="button" onClick={() => setOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 Cancel
-              </Button>
-              <Button
+              </button>
+              <button
                 type="submit"
                 disabled={isSubmitting || fields.length === 0}
-                className="w-40 font-semibold shadow-lg shadow-primary/20"
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-40 font-semibold shadow-lg shadow-primary/20"
               >
                 {isSubmitting ? (
                   <>
@@ -650,7 +642,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
-              </Button>
+              </button>
             </SheetFooter>
           </form>
         </Form>
