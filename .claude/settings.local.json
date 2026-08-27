@@ -82,7 +82,9 @@
       "Bash(bash __TRACKED_VAR__/scripts/review-package 513f155 HEAD)",
       "Bash(git merge --no-ff feat/web-hosted-license -m 'Merge feat/web-hosted-license: web/hosted license mode *)",
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
-      "Bash(railway logs *)"
+      "Bash(railway logs *)",
+      "Bash(node .superpowers/shot-login.js)",
+      "Bash(npx playwright *)"
     ]
   }
 }

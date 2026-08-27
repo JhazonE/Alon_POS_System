@@ -179,6 +179,22 @@ export function evaluateLicenseKey(key: string | null): LicenseInfo {
 
 /** Status of the currently installed license. */
 export function getLicenseInfo(): LicenseInfo {
+  // Dev-only bypass: `next dev` always sets NODE_ENV=development; `next
+  // build`/`next start` and the packaged Electron app never do, so this
+  // can't leak into a shipped build. Lets developers browse the app on
+  // localhost without activating a real license key.
+  if (process.env.NODE_ENV === 'development') {
+    return {
+      status: 'active',
+      licensed: true,
+      machineId: getMachineId(),
+      reason: 'Development mode — license check bypassed',
+      customer: 'Local Dev',
+      edition: 'dev',
+      expires: null,
+      daysRemaining: null,
+    };
+  }
   return evaluateLicenseKey(readLicenseKey());
 }
 
