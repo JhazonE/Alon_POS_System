@@ -6,7 +6,6 @@ import {
   SortingState,
 } from '@tanstack/react-table';
 import { Customer } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, MoreHorizontal, CreditCard, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
@@ -142,15 +141,13 @@ export function useCustomerList({
     {
       accessorKey: 'name',
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-3 h-8 font-semibold"
+        <button
+          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8 font-semibold"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Name
           <SortIcon isSorted={column.getIsSorted()} />
-        </Button>
+        </button>
       ),
       cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
     },
@@ -162,15 +159,13 @@ export function useCustomerList({
     {
       accessorKey: 'paymentTerms',
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-3 h-8 font-semibold"
+        <button
+          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8 font-semibold"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Payment Terms
           <SortIcon isSorted={column.getIsSorted()} />
-        </Button>
+        </button>
       ),
       cell: ({ getValue }) => getValue<string>() || '-',
     },
@@ -187,30 +182,26 @@ export function useCustomerList({
     {
       accessorKey: 'discount',
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-3 h-8 font-semibold"
+        <button
+          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8 font-semibold"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Discount (%)
           <SortIcon isSorted={column.getIsSorted()} />
-        </Button>
+        </button>
       ),
       cell: ({ getValue }) => `${getValue<number>()}%`,
     },
     {
       accessorKey: 'creditLimit',
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-3 h-8 font-semibold"
+        <button
+          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8 font-semibold"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Credit Limit
           <SortIcon isSorted={column.getIsSorted()} />
-        </Button>
+        </button>
       ),
       cell: ({ getValue }) =>
         `₱${Number(getValue<number>() || 0).toLocaleString(undefined, {
@@ -228,10 +219,10 @@ export function useCustomerList({
           <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-8 w-8 p-0">
                   <span className="sr-only">Open menu</span>
                   <MoreHorizontal className="h-4 w-4" />
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>

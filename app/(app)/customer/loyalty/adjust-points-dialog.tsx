@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -234,9 +233,8 @@ export function AdjustPointsForm({
                   <span>THIS LOYALTY CARD IS EXPIRED. ACTIONS DISABLED.</span>
                 </div>
               )}
-              <Button 
-                className="h-16 justify-between px-6 text-base font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-900 group transition-all"
-                variant="outline"
+              <button 
+                className="inline-flex items-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-16 justify-between px-6 text-base font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-900 group transition-all"
                 onClick={() => handleActionClick('add')}
                 disabled={customer?.isExpired}
               >
@@ -247,11 +245,10 @@ export function AdjustPointsForm({
                   <span>Add Points</span>
                 </div>
                 <TrendingUp className="w-5 h-5 opacity-40" />
-              </Button>
+              </button>
 
-              <Button 
-                className="h-16 justify-between px-6 text-base font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-900 group transition-all"
-                variant="outline"
+              <button 
+                className="inline-flex items-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-16 justify-between px-6 text-base font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-900 group transition-all"
                 onClick={() => handleActionClick('withdraw')}
                 disabled={customer?.isExpired}
               >
@@ -262,13 +259,12 @@ export function AdjustPointsForm({
                   <span>Withdraw Points</span>
                 </div>
                 <TrendingDown className="w-5 h-5 opacity-40" />
-              </Button>
+              </button>
             </>
           )}
 
-          <Button 
-            className="h-16 justify-between px-6 text-base font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-900 group transition-all"
-            variant="outline"
+          <button 
+            className="inline-flex items-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-16 justify-between px-6 text-base font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-900 group transition-all"
             onClick={() => handleActionClick('balance')}
           >
             <div className="flex items-center gap-4">
@@ -278,13 +274,13 @@ export function AdjustPointsForm({
               <span>Check Points Balance</span>
             </div>
             <History className="w-5 h-5 opacity-40" />
-          </Button>
+          </button>
         </div>
 
         <DialogFooter className="sm:justify-center">
-          <Button variant="ghost" onClick={onFinished} className="text-slate-400 text-xs">
+          <button onClick={onFinished} className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] text-slate-400 text-xs">
             Close Rewards
-          </Button>
+          </button>
         </DialogFooter>
       </div>
     );
@@ -295,9 +291,9 @@ export function AdjustPointsForm({
       <div className="space-y-6">
          <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="ghost" size="icon" onClick={() => setView('menu')} className="h-8 w-8">
+            <button onClick={() => setView('menu')} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8">
               <ArrowLeft className="w-4 h-4" />
-            </Button>
+            </button>
             <DialogTitle>Identify Customer</DialogTitle>
           </div>
           <DialogDescription>
@@ -328,9 +324,9 @@ export function AdjustPointsForm({
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full h-12 text-lg" disabled={isCardSubmitting}>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] w-full h-12 text-lg" disabled={isCardSubmitting}>
               {isCardSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Customer"}
-            </Button>
+            </button>
           </form>
         </Form>
       </div>
@@ -342,9 +338,9 @@ export function AdjustPointsForm({
       <div className="space-y-6">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="ghost" size="icon" onClick={() => setView('menu')} className="h-8 w-8">
+            <button onClick={() => setView('menu')} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8">
               <ArrowLeft className="w-4 h-4" />
-            </Button>
+            </button>
             <DialogTitle>Point Balance</DialogTitle>
           </div>
         </DialogHeader>
@@ -366,7 +362,7 @@ export function AdjustPointsForm({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" className="w-full" onClick={() => setView('menu')}>Back to Menu</Button>
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] w-full" onClick={() => setView('menu')}>Back to Menu</button>
         </DialogFooter>
       </div>
     );
@@ -377,9 +373,9 @@ export function AdjustPointsForm({
     <>
       <DialogHeader>
         <div className="flex items-center gap-2 mb-2">
-          <Button variant="ghost" size="icon" onClick={() => setView('menu')} className="h-8 w-8">
+          <button onClick={() => setView('menu')} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8">
             <ArrowLeft className="w-4 h-4" />
-          </Button>
+          </button>
           <DialogTitle>{view === 'add' ? 'Add' : 'Withdraw'} Points</DialogTitle>
         </div>
         <DialogDescription>
@@ -442,12 +438,9 @@ export function AdjustPointsForm({
             )}
           />
           <div className="pt-2">
-            <Button
+            <button
               type="submit"
-              className={cn(
-                "w-full h-14 text-lg font-black shadow-lg",
-                view === 'add' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
-              )}
+              className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]", "w-full h-14 text-lg font-black shadow-lg", view === 'add' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-200')}
               disabled={isPointsSubmitting}
             >
               {isPointsSubmitting ? (
@@ -458,7 +451,7 @@ export function AdjustPointsForm({
               ) : (
                 `Confirm ${view === 'add' ? 'Addition' : 'Withdrawal'}`
               )}
-            </Button>
+            </button>
           </div>
         </form>
       </Form>

@@ -45,7 +45,6 @@ import { AddPaymentDialog } from './add-payment-dialog';
 import { printPaymentReceipt } from '@/lib/print-payment-receipt';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, TrendingUp, AlertCircle, FileText, Search, MoreHorizontal, Printer, FileDown, Banknote, Eye, Check, ChevronsUpDown, Receipt, FileSpreadsheet, Loader2, Filter, X } from 'lucide-react';
@@ -186,10 +185,10 @@ function OutstandingInvoices() {
                         <Input placeholder="Search customer..." value={searchCustomer} onChange={(e) => setSearchCustomer(e.target.value)} className="max-w-sm" />
                          <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className={cn("w-[240px] pl-3 text-left font-normal", !dateRange.from && "text-muted-foreground")}>
+                                <button className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", "w-[240px] pl-3 text-left font-normal", !dateRange.from && "text-muted-foreground")}>
                                     {dateRange.from ? (dateRange.to ? `${format(dateRange.from, "PPP")} - ${format(dateRange.to, "PPP")}` : format(dateRange.from, "PPP")) : <span>Pick a date range</span>}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
+                                </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar mode="range" selected={dateRange} onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })} numberOfMonths={2} />
@@ -228,14 +227,14 @@ function OutstandingInvoices() {
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <RecordPaymentDialog sale={invoice}>
-                                                    <Button variant="ghost" size="icon" title="Record Payment">
+                                                    <button title="Record Payment" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
                                                         <Banknote className="h-4 w-4 text-green-600" />
-                                                    </Button>
+                                                    </button>
                                                 </RecordPaymentDialog>
                                                 <ViewInvoiceDialog invoiceId={invoice.id}>
-                                                    <Button variant="ghost" size="icon" title="View Details">
+                                                    <button title="View Details" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
                                                         <Eye className="h-4 w-4 text-blue-600" />
-                                                    </Button>
+                                                    </button>
                                                 </ViewInvoiceDialog>
                                             </div>
                                         </TableCell>
@@ -494,7 +493,7 @@ function PaymentHistory() {
 
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="relative h-9">
+                            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 relative h-9">
                                 <Filter className="mr-2 h-4 w-4" />
                                 Filter
                                 {((date?.from || date?.to) || (paymentType !== 'All')) && (
@@ -505,25 +504,23 @@ function PaymentHistory() {
                                         {(date?.from || date?.to ? 1 : 0) + (paymentType !== 'All' ? 1 : 0)}
                                     </Badge>
                                 )}
-                            </Button>
+                            </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-4" align="start">
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between border-b pb-2 mb-2">
                                     <h4 className="font-semibold text-sm">Filters</h4>
                                     {((date?.from || date?.to) || (paymentType !== 'All')) && (
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
+                                        <button 
                                             onClick={() => {
                                                 setDate(undefined);
                                                 setPaymentType('All');
                                             }}
-                                            className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring rounded-lg gap-1.5 h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                                         >
                                             <X className="mr-1 h-3 w-3" />
                                             Clear all
-                                        </Button>
+                                        </button>
                                     )}
                                 </div>
                                 <div className="grid gap-4">
@@ -531,14 +528,9 @@ function PaymentHistory() {
                                         <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Date Range</label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button
+                                                <button
                                                 id="date"
-                                                variant={"outline"}
-                                                size="sm"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-9",
-                                                    !date && "text-muted-foreground"
-                                                )}
+                                                className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5", "w-full justify-start text-left font-normal h-9", !date && "text-muted-foreground")}
                                                 >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                                 {date?.from ? (
@@ -553,7 +545,7 @@ function PaymentHistory() {
                                                 ) : (
                                                     <span>Pick a date range</span>
                                                 )}
-                                                </Button>
+                                                </button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
                                                 <Calendar
@@ -588,10 +580,10 @@ function PaymentHistory() {
                 <div className="flex gap-2 sm:ml-auto">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9" disabled={isExporting}>
+                            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-9" disabled={isExporting}>
                                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4"/>}
                                 Export
-                            </Button>
+                            </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={exportToCSV}>
@@ -648,10 +640,8 @@ function PaymentHistory() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                <button 
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-foreground"
                                                     onClick={() => printPaymentReceipt({
                                                         id: payment.id,
                                                         customerName: payment.customerName,
@@ -663,7 +653,7 @@ function PaymentHistory() {
                                                     title="Print Receipt"
                                                 >
                                                     <Printer className="h-4 w-4" />
-                                                </Button>
+                                                </button>
                                                 <ViewPaymentDialog payment={payment} />
                                             </div>
                                         </TableCell>
@@ -942,17 +932,16 @@ function StatementOfAccount() {
                                 <label className="text-sm font-medium">Customer</label>
                                 <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
+                                        <button
                                             role="combobox"
                                             aria-expanded={openCustomer}
-                                            className="w-full justify-between"
+                                            className="inline-flex items-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] w-full justify-between"
                                         >
                                             {selectedCustomer
                                                 ? customers.find((customer) => customer.id === selectedCustomer)?.name
                                                 : "Select customer..."}
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
+                                        </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[400px] p-0">
                                         <Command>
@@ -988,13 +977,9 @@ function StatementOfAccount() {
                                  <label className="text-sm font-medium">Date Range</label>
                                  <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
+                                        <button
                                             id="date"
-                                            variant={"outline"}
-                                            className={cn(
-                                            "w-full justify-start text-left font-normal",
-                                            !dateRange && "text-muted-foreground"
-                                            )}
+                                            className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", "w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
                                             {dateRange?.from ? (
@@ -1009,7 +994,7 @@ function StatementOfAccount() {
                                             ) : (
                                             <span>Pick a date</span>
                                             )}
-                                        </Button>
+                                        </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar
@@ -1025,9 +1010,9 @@ function StatementOfAccount() {
                             </div>
                         </div>
                         <div className="flex justify-end">
-                            <Button onClick={generateSOA} disabled={isLoading} className="w-full md:w-auto">
+                            <button onClick={generateSOA} disabled={isLoading} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full md:w-auto">
                                 {isLoading ? 'Generating...' : 'Generate Statement'}
-                            </Button>
+                            </button>
                         </div>
                     </div>
                 </CardContent>
@@ -1049,9 +1034,9 @@ function StatementOfAccount() {
                                     For <span className="font-medium text-foreground">{customerName}</span> · {format(new Date(soaData.period.from), 'PP')} – {format(new Date(soaData.period.to), 'PP')}
                                 </CardDescription>
                             </div>
-                            <Button variant="outline" onClick={handlePrint} className="shadow-sm hover:bg-primary hover:text-white transition-all">
+                            <button onClick={handlePrint} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] shadow-sm hover:bg-primary hover:text-white transition-all">
                                 <Printer className="mr-2 h-4 w-4" /> Print
-                            </Button>
+                            </button>
                         </CardHeader>
                         <CardContent className="p-6">
                             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between rounded-xl border bg-primary/5 p-6">
@@ -1101,9 +1086,9 @@ function StatementOfAccount() {
                                     <CardHeader className="flex flex-row items-start justify-between gap-4 border-b bg-muted/20 py-4">
                                         <div className="space-y-0.5">
                                             <ViewInvoiceDialog invoiceId={inv.id}>
-                                                <Button variant="link" className="h-auto p-0 text-base font-bold text-foreground hover:text-primary">
+                                                <button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary underline-offset-4 decoration-primary/35 hover:decoration-primary focus-visible:ring-ring h-auto p-0 text-base font-bold text-foreground hover:text-primary">
                                                     Invoice {inv.reference || inv.id.substring(0, 8)}
-                                                </Button>
+                                                </button>
                                             </ViewInvoiceDialog>
                                             <p className="text-xs text-muted-foreground">
                                                 Issued {format(new Date(inv.date), 'PP')}
@@ -1127,7 +1112,7 @@ function StatementOfAccount() {
                                                         <span>{format(new Date(p.date), 'PP')} · Payment</span>
                                                         <Badge variant="outline" className="font-normal">{p.type}</Badge>
                                                         <ViewPaymentDialog payment={{id: p.id, reference: p.reference, amount: p.credit, paymentDate: p.date, customerName, paymentType: p.type}}>
-                                                            <Button variant="link" className="h-auto p-0 font-mono text-[11px] text-green-600 hover:text-green-800">{p.reference || p.id.substring(0, 8)}</Button>
+                                                            <button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary underline-offset-4 decoration-primary/35 hover:decoration-primary focus-visible:ring-ring h-auto p-0 font-mono text-[11px] text-green-600 hover:text-green-800">{p.reference || p.id.substring(0, 8)}</button>
                                                         </ViewPaymentDialog>
                                                     </div>
                                                     <span className="font-medium text-green-600">−{formatCurrency(Number(p.credit))}</span>
@@ -1161,7 +1146,7 @@ function StatementOfAccount() {
                                                 <span>{format(new Date(p.date), 'PP')} · Payment</span>
                                                 <Badge variant="outline" className="font-normal">{p.type}</Badge>
                                                 <ViewPaymentDialog payment={{id: p.id, reference: p.reference, amount: p.credit, paymentDate: p.date, customerName, paymentType: p.type}}>
-                                                    <Button variant="link" className="h-auto p-0 font-mono text-[11px] text-green-600 hover:text-green-800">{p.reference || p.id.substring(0, 8)}</Button>
+                                                    <button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary underline-offset-4 decoration-primary/35 hover:decoration-primary focus-visible:ring-ring h-auto p-0 font-mono text-[11px] text-green-600 hover:text-green-800">{p.reference || p.id.substring(0, 8)}</button>
                                                 </ViewPaymentDialog>
                                             </div>
                                             <span className="font-medium text-green-600">−{formatCurrency(Number(p.credit))}</span>
