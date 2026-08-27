@@ -16,9 +16,28 @@ const queryConfig: DefaultOptions = {
 
 export const queryClient = new QueryClient({ defaultOptions: queryConfig });
 
+// Overview — single-page top-level links, no submenu.
 export const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: 'view_dashboard' },
+];
+
+// Sell — flat "Products" link plus the Sales collapsible (operational items
+// only; the reporting/analysis items live under Insights, see below).
+export const sellNavItems = [
   { href: '/products', icon: Package, label: 'Products', permission: 'manage_products' },
+];
+
+export const salesNavItems = [
+  { href: '/sales', label: 'POS Sales Transaction' },
+  { href: '/sales/details', label: 'POS Sales Detail' },
+  { href: '/sales/orders', label: 'Sales Order' },
+  { href: '/sales/invoices', label: 'Sales Invoice/Delivery' },
+  { href: '/sales/cash-transfer', label: 'POS Cash Transfer' },
+  { href: '/sales/returns', label: 'Merchandise Credits' },
+  { href: '/sales/voids', label: 'Post Void' },
+  { href: '/sales/z-reading', label: 'POS Z-Reading' },
+  { href: '/sales/x-reading', label: 'POS X-Reading' },
+  { href: '/sales/overall-reading', label: 'POS Overall Reading' },
 ];
 
 export const inventoryNavItems = [
@@ -29,27 +48,18 @@ export const inventoryNavItems = [
   { href: '/inventory/movement', label: 'Stock Movement' },
 ];
 
-export const salesNavItems = [
-  { href: '/sales', label: 'POS Sales Transaction' },
-  { href: '/sales/details', label: 'POS Sales Detail' },
-  { href: '/sales/by-product', label: 'Sales by Product/Service' },
-  { href: '/sales/by-date', label: 'Sales by Date' },
-  { href: '/sales/orders', label: 'Sales Order' },
-  { href: '/sales/invoices', label: 'Sales Invoice/Delivery' },
-  { href: '/sales/cash-transfer', label: 'POS Cash Transfer' },
-  { href: '/sales/returns', label: 'Merchandise Credits' },
-  { href: '/sales/voids', label: 'Post Void' },
-  { href: '/sales/z-reading', label: 'POS Z-Reading' },
-  { href: '/sales/x-reading', label: 'POS X-Reading' },
-  { href: '/sales/overall-reading', label: 'POS Overall Reading' },
-  { href: '/sales/analysis', label: 'Sales Analysis' },
-];
-
 export const customerNavItems = [
   { href: '/customer', label: 'Customer List' },
   { href: '/customer/payment', label: 'Customer Payment' },
   { href: '/customer/balances', label: 'Customer Balances' },
   { href: '/customer/loyalty', label: 'Customer Loyalty Points' },
+];
+
+// Purchasing — Purchase Orders and Suppliers grouped together, since
+// suppliers only matter in the context of buying from them.
+export const purchasesNavItems = [
+  { href: '/purchases', label: 'Purchase Orders' },
+  { href: '/purchases/bad-orders', label: 'Bad Orders' },
 ];
 
 export const suppliersNavItems = [
@@ -58,15 +68,22 @@ export const suppliersNavItems = [
   { href: '/suppliers/payment', label: 'Payment Suppliers' },
 ];
 
-export const purchasesNavItems = [
-  { href: '/purchases', label: 'Purchase Orders' },
-  { href: '/purchases/bad-orders', label: 'Bad Orders' },
+// Insights — analytics/reporting hub. The Sales-specific report pages move
+// here from the Sales collapsible so that collapsible stays operational.
+export const insightsNavItems = [
+  { href: '/reports', icon: BarChart3, label: 'Reports', permission: 'view_reports' },
 ];
 
-export const otherNavItems = [
+export const salesReportsNavItems = [
+  { href: '/sales/by-product', label: 'Sales by Product/Service' },
+  { href: '/sales/by-date', label: 'Sales by Date' },
+  { href: '/sales/analysis', label: 'Sales Analysis' },
+];
+
+// Admin — approvals/workflow config, users, and store settings.
+export const adminNavItems = [
   { href: '/approvals', icon: ClipboardCheck, label: 'Approvals Board', permission: 'view_approvals' },
   { href: '/approvals/settings', icon: Settings, label: 'Workflow Settings', permission: 'manage_approval_settings' },
-  { href: '/reports', icon: BarChart3, label: 'Reports', permission: 'view_reports' },
   { href: '/user-management', icon: Users, label: 'User Management', permission: 'manage_users' },
   { href: '/settings', icon: Settings, label: 'Settings', permission: 'manage_settings' },
 ];

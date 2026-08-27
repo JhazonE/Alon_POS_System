@@ -1,27 +1,27 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Alon POS System">
   <defs>
-    <linearGradient id="vx-bg" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4F46E5"/>
-      <stop offset="1" stop-color="#2563EB"/>
+    <linearGradient id="alon-bg" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E7C86"/>
+      <stop offset="1" stop-color="#2FB8A6"/>
     </linearGradient>
-    <linearGradient id="vx-arm" x1="312" y1="352" x2="356" y2="160" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#34D399"/>
-      <stop offset="1" stop-color="#22D3EE"/>
+    <linearGradient id="alon-arm" x1="312" y1="352" x2="356" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#F2A93B"/>
     </linearGradient>
-    <radialGradient id="vx-gloss" cx="0.28" cy="0.22" r="0.9">
+    <radialGradient id="alon-gloss" cx="0.28" cy="0.22" r="0.9">
       <stop stop-color="#FFFFFF" stop-opacity="0.16"/>
       <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
   <!-- App tile -->
-  <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#vx-bg)"/>
-  <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#vx-gloss)"/>
+  <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#alon-bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#alon-gloss)"/>
 
   <!-- V monogram (base, gives a clean rounded vertex) -->
   <path d="M156 172 L256 352 L356 172" stroke="#FFFFFF" stroke-width="52"
         stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   <!-- Rising right stroke recolored as a growth accent -->
-  <path d="M256 352 L356 172" stroke="url(#vx-arm)" stroke-width="52"
+  <path d="M256 352 L356 172" stroke="url(#alon-arm)" stroke-width="52"
         stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getApiUrl } from '@/lib/api-config';
 import {
-  navItems, otherNavItems,
-  inventoryNavItems, salesNavItems, customerNavItems,
+  navItems, sellNavItems, adminNavItems, insightsNavItems,
+  inventoryNavItems, salesNavItems, salesReportsNavItems, customerNavItems,
   suppliersNavItems, purchasesNavItems,
 } from './layout-nav-config';
 import { pageKeyForHref } from '@/lib/page-registry';
@@ -28,8 +28,26 @@ export function useAppLayout() {
   useEffect(() => {
     if (isPOSPage) { setIsUserLoading(false); return; }
     const session = localStorage.getItem('mock-user-session');
-    if (session) setUser(JSON.parse(session));
-    else router.push('/login');
+    if (session) {
+      setUser(JSON.parse(session));
+    } else if (process.env.NODE_ENV === 'development') {
+      // Dev-only: skip the login redirect so the back office UI can be
+      // reviewed without real credentials. Never runs in a production build.
+      const devSession = {
+        uid: 'dev-preview',
+        email: 'dev-preview',
+        username: 'dev-preview',
+        displayName: 'Dev Preview (no login)',
+        userType: 'Admin',
+        roleId: null,
+        permissions: ['super_admin'],
+        photoURL: null,
+      };
+      localStorage.setItem('mock-user-session', JSON.stringify(devSession));
+      setUser(devSession);
+    } else {
+      router.push('/login');
+    }
     setIsUserLoading(false);
   }, [router, pathname]);
 
@@ -85,12 +103,19 @@ export function useAppLayout() {
   const filteredNavItems = navItems.filter(
     item => hasPermission(item.permission) && isEnabled(item.href),
   );
-  const filteredOtherNavItems = otherNavItems.filter(
+  const filteredSellItems = sellNavItems.filter(
+    item => hasPermission(item.permission) && isEnabled(item.href),
+  );
+  const filteredInsightsNavItems = insightsNavItems.filter(
+    item => hasPermission(item.permission) && isEnabled(item.href),
+  );
+  const filteredAdminNavItems = adminNavItems.filter(
     item => hasPermission(item.permission) && isEnabled(item.href),
   );
 
   const filteredInventoryNavItems = inventoryNavItems.filter(i => isEnabled(i.href));
   const filteredSalesNavItems = salesNavItems.filter(i => isEnabled(i.href));
+  const filteredSalesReportsNavItems = salesReportsNavItems.filter(i => isEnabled(i.href));
   const filteredCustomerNavItems = customerNavItems.filter(i => isEnabled(i.href));
   const filteredSuppliersNavItems = suppliersNavItems.filter(i => isEnabled(i.href));
   const filteredPurchasesNavItems = purchasesNavItems.filter(i => isEnabled(i.href));
@@ -99,8 +124,8 @@ export function useAppLayout() {
     user, isUserLoading, isPOSPage,
     businessName,
     hasPermission, getInitials,
-    filteredNavItems, filteredOtherNavItems,
-    filteredInventoryNavItems, filteredSalesNavItems,
+    filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems,
+    filteredInventoryNavItems, filteredSalesNavItems, filteredSalesReportsNavItems,
     filteredCustomerNavItems, filteredSuppliersNavItems,
     filteredPurchasesNavItems,
     disabledKeys, disabledLoaded,

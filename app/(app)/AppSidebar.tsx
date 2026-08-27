@@ -16,7 +16,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
 import {
   Warehouse, ChartNoAxesCombined, User as UserIcon,
-  ShoppingCart, Users, ChevronDown, LogOut, Search,
+  ShoppingCart, Users, ChevronDown, LogOut, Search, BarChart3,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { handleSignOut } from '../auth-actions';
@@ -56,9 +56,12 @@ type Props = {
   user: AppUser;
   hasPermission: (permission?: string) => boolean;
   filteredNavItems: { href: string; icon: any; label: string; permission?: string }[];
-  filteredOtherNavItems: { href: string; icon: any; label: string; permission?: string }[];
+  filteredSellItems: { href: string; icon: any; label: string; permission?: string }[];
+  filteredInsightsNavItems: { href: string; icon: any; label: string; permission?: string }[];
+  filteredAdminNavItems: { href: string; icon: any; label: string; permission?: string }[];
   inventoryNavItems: { href: string; label: string }[];
   salesNavItems: { href: string; label: string }[];
+  salesReportsNavItems: { href: string; label: string }[];
   customerNavItems: { href: string; label: string }[];
   suppliersNavItems: { href: string; label: string }[];
   purchasesNavItems: { href: string; label: string }[];
@@ -68,19 +71,20 @@ type Props = {
 
 export function AppSidebar({
   user, hasPermission,
-  filteredNavItems, filteredOtherNavItems,
-  inventoryNavItems, salesNavItems, customerNavItems,
+  filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems,
+  inventoryNavItems, salesNavItems, salesReportsNavItems, customerNavItems,
   suppliersNavItems, purchasesNavItems,
   pathname, getInitials,
 }: Props) {
-  const isSalesPage = pathname.startsWith('/sales');
+  const isSalesPage = pathname.startsWith('/sales') && !pathname.startsWith('/sales/by-') && pathname !== '/sales/analysis';
+  const isSalesReportsPage = pathname.startsWith('/sales/by-') || pathname === '/sales/analysis';
   const isInventoryPage = pathname.startsWith('/inventory');
   const isCustomerPage = pathname.startsWith('/customer');
   const isSuppliersPage = pathname.startsWith('/suppliers');
   const isPurchasesPage = pathname.startsWith('/purchases');
 
-  const hasOperations = hasPermission('manage_inventory') || hasPermission('view_sales') ||
-    hasPermission('manage_customers') || hasPermission('manage_purchases') || hasPermission('manage_suppliers');
+  const hasSell = filteredSellItems.length > 0 || hasPermission('view_sales');
+  const hasPurchasing = hasPermission('manage_purchases') || hasPermission('manage_suppliers');
 
   const { state: sidebarState, setOpen } = useSidebar();
   const isCollapsed = sidebarState === 'collapsed';
@@ -89,13 +93,16 @@ export function AppSidebar({
 
   const navIndex = useMemo(() => buildNavIndex([
     { section: null, items: filteredNavItems },
-    { section: 'Inventory', items: inventoryNavItems },
+    { section: null, items: filteredSellItems },
     { section: 'Sales', items: salesNavItems },
-    { section: 'Customers', items: customerNavItems },
     { section: 'Purchases', items: purchasesNavItems },
     { section: 'Suppliers', items: suppliersNavItems },
-    { section: null, items: filteredOtherNavItems },
-  ]), [filteredNavItems, filteredOtherNavItems]);
+    { section: 'Inventory', items: inventoryNavItems },
+    { section: 'Customers', items: customerNavItems },
+    { section: null, items: filteredInsightsNavItems },
+    { section: 'Sales Reports', items: salesReportsNavItems },
+    { section: null, items: filteredAdminNavItems },
+  ]), [filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems]);
 
   const matches = filterNavIndex(navIndex, query);
   const isSearching = query.trim().length > 0;
@@ -114,7 +121,7 @@ export function AppSidebar({
   }, [setOpen]);
 
   return (
-    <Sidebar className="non-printable border-r" collapsible="icon">
+    <Sidebar className="non-printable" collapsible="icon" variant="floating">
       <SidebarHeader className="h-20 border-b border-sidebar-border sticky top-0 bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-xl z-10 px-6 group-data-[collapsible=icon]:px-0 justify-center shadow-sm">
         <div className="flex items-center gap-3 transition-all duration-300 group-data-[collapsible=icon]:justify-center">
           <Logo variant="icon" size={36} />
@@ -186,37 +193,31 @@ export function AppSidebar({
           <>
             {filteredNavItems.length > 0 && (
               <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Platform</SidebarGroupLabel>
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Overview</SidebarGroupLabel>
                 <SidebarMenu>
-                  {filteredNavItems.map(item => (
-                    <SidebarMenuItem key={item.href}>
-                      <Link href={item.href}>
-                        <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className="relative gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:left-0 data-[active=true]:before:top-1/2 data-[active=true]:before:h-5 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary data-[active=true]:text-primary">
-                          <item.icon />
-                          <span className="text-[14px]">{item.label}</span>
-                        </SidebarMenuButton>
-                      </Link>
-                    </SidebarMenuItem>
-                  ))}
+                  <FlatNavLinks items={filteredNavItems} pathname={pathname} />
                 </SidebarMenu>
               </SidebarGroup>
             )}
 
-            {hasOperations && (
+            {hasSell && (
               <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Operations</SidebarGroupLabel>
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Sell</SidebarGroupLabel>
                 <SidebarMenu>
-                  {hasPermission('manage_inventory') && (
-                    <CollapsibleNavSection label="Inventory" icon={Warehouse} isActive={isInventoryPage} items={inventoryNavItems} pathname={pathname} />
-                  )}
+                  <FlatNavLinks items={filteredSellItems} pathname={pathname} />
                   {hasPermission('view_sales') && (
                     <CollapsibleNavSection label="Sales" icon={ChartNoAxesCombined} isActive={isSalesPage} items={salesNavItems} pathname={pathname} />
                   )}
-                  {hasPermission('manage_customers') && (
-                    <CollapsibleNavSection label="Customers" icon={UserIcon} isActive={isCustomerPage} items={customerNavItems} pathname={pathname} />
-                  )}
+                </SidebarMenu>
+              </SidebarGroup>
+            )}
+
+            {hasPurchasing && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Purchasing</SidebarGroupLabel>
+                <SidebarMenu>
                   {hasPermission('manage_purchases') && (
-                    <CollapsibleNavSection label="Purchases" icon={ShoppingCart} isActive={isPurchasesPage} items={purchasesNavItems} pathname={pathname} />
+                    <CollapsibleNavSection label="Purchase Orders" icon={ShoppingCart} isActive={isPurchasesPage} items={purchasesNavItems} pathname={pathname} />
                   )}
                   {hasPermission('manage_suppliers') && (
                     <CollapsibleNavSection label="Suppliers" icon={Users} isActive={isSuppliersPage} items={suppliersNavItems} pathname={pathname} />
@@ -225,20 +226,39 @@ export function AppSidebar({
               </SidebarGroup>
             )}
 
-            {filteredOtherNavItems.length > 0 && (
+            {hasPermission('manage_inventory') && (
               <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Management</SidebarGroupLabel>
                 <SidebarMenu>
-                  {filteredOtherNavItems.map(item => (
-                    <SidebarMenuItem key={item.href}>
-                      <Link href={item.href}>
-                        <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className="relative gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:left-0 data-[active=true]:before:top-1/2 data-[active=true]:before:h-5 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary data-[active=true]:text-primary">
-                          <item.icon />
-                          <span className="text-[14px]">{item.label}</span>
-                        </SidebarMenuButton>
-                      </Link>
-                    </SidebarMenuItem>
-                  ))}
+                  <CollapsibleNavSection label="Inventory" icon={Warehouse} isActive={isInventoryPage} items={inventoryNavItems} pathname={pathname} />
+                </SidebarMenu>
+              </SidebarGroup>
+            )}
+
+            {hasPermission('manage_customers') && (
+              <SidebarGroup>
+                <SidebarMenu>
+                  <CollapsibleNavSection label="Customers" icon={UserIcon} isActive={isCustomerPage} items={customerNavItems} pathname={pathname} />
+                </SidebarMenu>
+              </SidebarGroup>
+            )}
+
+            {(filteredInsightsNavItems.length > 0 || hasPermission('view_sales')) && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Insights</SidebarGroupLabel>
+                <SidebarMenu>
+                  <FlatNavLinks items={filteredInsightsNavItems} pathname={pathname} />
+                  {hasPermission('view_sales') && (
+                    <CollapsibleNavSection label="Sales Reports" icon={BarChart3} isActive={isSalesReportsPage} items={salesReportsNavItems} pathname={pathname} />
+                  )}
+                </SidebarMenu>
+              </SidebarGroup>
+            )}
+
+            {filteredAdminNavItems.length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Admin</SidebarGroupLabel>
+                <SidebarMenu>
+                  <FlatNavLinks items={filteredAdminNavItems} pathname={pathname} />
                 </SidebarMenu>
               </SidebarGroup>
             )}
@@ -276,6 +296,26 @@ export function AppSidebar({
         </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function FlatNavLinks({ items, pathname }: {
+  items: { href: string; icon: any; label: string }[];
+  pathname: string;
+}) {
+  return (
+    <>
+      {items.map(item => (
+        <SidebarMenuItem key={item.href}>
+          <Link href={item.href}>
+            <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className="relative gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:left-0 data-[active=true]:before:top-1/2 data-[active=true]:before:h-5 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary data-[active=true]:text-primary">
+              <item.icon />
+              <span className="text-[14px]">{item.label}</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+      ))}
+    </>
   );
 }
 
