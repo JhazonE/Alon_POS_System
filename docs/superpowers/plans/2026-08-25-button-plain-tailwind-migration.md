@@ -15,6 +15,7 @@
 - Visual output for **every existing usage** must match the approved design exactly — variant/size class recipes are fixed by the spec's tables, not to be improvised per file.
 - `components/ui/button.tsx` is not deleted, and its `Button` import must keep compiling, until Task 13 (the last task).
 - The `link` variant never carries size classes (no `h-*`/`px-*` from the size table) — mixing them risks the exact class-cascade-order bug already hit and fixed in the Sheet/drawer conversion.
+- **The same cascade hazard applies to every pre-existing `className`, not just `link`.** Appending the old value after the computed classes expresses intent but does not enforce it: without `tailwind-merge`, the generated CSS order decides which of `h-10` (recipe) and `h-8` (pre-existing) wins, and it is not the string order. The codemod therefore resolves the merge statically — when a pre-existing class competes with a recipe class on the same utility group (`h-`, `w-`, `p-`/`px-`, `rounded`, `gap-`, `font-`, `tracking-`, `bg-`, `shadow`, text-size, display), the **recipe class is dropped from the output** so the page-specific class stands alone. Every such override is printed per run under "Recipe classes overridden by a pre-existing className" and must be eyeballed as part of that batch's review.
 - `components/ui/carousel.tsx` is out of scope (unused, not imported anywhere under `app/`) — do not touch it in this plan.
 - After each batch task: `npm run typecheck` must show no NEW errors introduced by that batch (pre-existing unrelated errors, e.g. in `add-product/tabs/*.tsx`, are not this plan's concern and are not to be fixed here).
 - Every batch commit is its own commit — do not squash batches together.
@@ -38,7 +39,12 @@ Expected: `package.json` gains a `"ts-morph"` entry under `devDependencies`; `pa
 
 - [ ] **Step 2: Write the codemod script**
 
-Create `scripts/codemods/migrate-button.ts`:
+Create `scripts/codemods/migrate-button.ts`. The sketch below is the starting point; the committed script is the source of truth and diverges from it in two ways found during Step 3's dry-run:
+
+1. `computeClassName` drops recipe classes that a pre-existing `className` overrides, instead of appending blindly (see Global Constraints) — the dry-run file's `size="icon"` + `className="h-8 w-8"` button proved the blind append renders the wrong size.
+2. An existing `className` attribute is rewritten in place rather than removed and re-added, so it keeps its position in the prop list and the diff stays reviewable.
+
+It also reports overridden recipe classes and merged dynamic `className` expressions, so each batch's review has something concrete to check.
 
 ```ts
 /**
@@ -673,13 +679,52 @@ git commit -m "refactor: migrate shared components and auth pages buttons to pla
 
 ---
 
+## Task 12b: Inline the recipes into the three `buttonVariants` consumers
+
+**Files:**
+- Modify: `components/ui/alert-dialog.tsx`, `components/ui/pagination.tsx`, `components/ui/calendar.tsx`
+
+**Interfaces:**
+- Consumes: the same recipe tables. Produces: three files that no longer import anything from `@/components/ui/button`.
+
+**Why this task exists:** the codemod rewrites `<Button>` *JSX* only. These three files instead call the exported `buttonVariants()` *function* to style a non-button element (`<a>`, react-day-picker's nav slots, `AlertDialogAction`/`Cancel`), so they survive every batch untouched and would break Task 13's `rm`. All three are live and widely imported — none is dead code like `carousel.tsx`. Their host components (Dialog-family, Calendar, Pagination) stay Radix-backed per the spec's "out of scope"; only their dependency on `button.tsx` is removed.
+
+- [ ] **Step 1: `alert-dialog.tsx`**
+
+Both calls are static — `buttonVariants()` at line 107 and `buttonVariants({ variant: "outline" })` at line 120. Replace each with the literal recipe string (base + variant + `default` size) inside the existing `cn(...)`, and drop the `buttonVariants` import.
+
+- [ ] **Step 2: `pagination.tsx`**
+
+`PaginationLink` calls `buttonVariants({ variant: isActive ? "outline" : "ghost", size })` with a *dynamic* size. Add a file-local `const BUTTON_BASE`, `const BUTTON_VARIANT: Record<...>`, and `const BUTTON_SIZE: Record<...>` holding the recipe strings, and build the class list from them. Keep `cn(...)` — this file legitimately needs tailwind-merge because callers pass overriding `className`s (`PaginationPrevious` passes `gap-1 pl-2.5`). Also drop the now-unused `ButtonProps` import, replacing the `size` prop's type with the local size union.
+
+- [ ] **Step 3: `calendar.tsx`**
+
+`buttonVariants({ variant: buttonVariant })` at lines 55 and 60, where `buttonVariant` is a component prop. Same file-local map approach as Step 2. This file also imports `Button` for JSX — that part is already handled by Task 12's codemod run over `components/ui/*.tsx`; this step only removes the remaining `buttonVariants` import.
+
+- [ ] **Step 4: Typecheck**
+
+Run: `npm run typecheck` — expect no new errors.
+
+- [ ] **Step 5: Visual spot-check**
+
+Open a page with a paginated table (`http://localhost:3000/purchases`), a date-picker popover (`http://localhost:3000/inventory/history`), and a delete confirmation (`customer/list` row actions). Confirm the pagination page numbers, calendar prev/next arrows, and alert-dialog action/cancel buttons all still look like buttons.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add components/ui/alert-dialog.tsx components/ui/pagination.tsx components/ui/calendar.tsx
+git commit -m "refactor: inline Button recipes into buttonVariants consumers"
+```
+
+---
+
 ## Task 13: Delete the Button component
 
 **Files:**
 - Delete: `components/ui/button.tsx`
 
 **Interfaces:**
-- Consumes: nothing — this is the final verification that Tasks 2–12 covered every usage.
+- Consumes: nothing — this is the final verification that Tasks 2–12b covered every usage, of both the `Button` component and its `buttonVariants` export.
 
 - [ ] **Step 1: Confirm zero remaining references**
 
