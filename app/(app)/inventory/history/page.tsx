@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -163,12 +162,8 @@ export default function AdjustmentHistoryPage() {
           <div className="flex items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
+                <button
+                  className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", "w-[280px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateRange?.from ? (
@@ -183,7 +178,7 @@ export default function AdjustmentHistoryPage() {
                   ) : (
                     <span>Pick a date range</span>
                   )}
-                </Button>
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar
@@ -197,10 +192,10 @@ export default function AdjustmentHistoryPage() {
               </PopoverContent>
             </Popover>
             {(searchTerm || dateRange) && (
-              <Button variant="ghost" onClick={resetFilters} size="icon">
+              <button onClick={resetFilters} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Reset filters</span>
-              </Button>
+              </button>
             )}
           </div>
         </div>
@@ -240,25 +235,21 @@ export default function AdjustmentHistoryPage() {
             Showing {filteredAdjustments.length === 0 ? 0 : ((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredAdjustments.length)} of {filteredAdjustments.length} entries
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
+              disabled={page === 1} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Previous
-            </Button>
+            </button>
             <span className="text-sm">Page {page} of {totalPages || 1}</span>
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages || totalPages === 0}
+              disabled={page === totalPages || totalPages === 0} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
             >
               Next
               <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+            </button>
           </div>
         </div>
       </CardContent>

@@ -1,8 +1,6 @@
 'use client';
 
 import { ChevronsUpDown, Plus, X } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,9 +36,9 @@ export function NewCountDialog({ onCreated }: { onCreated: () => void }) {
 
   return (
     <>
-      <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}>
+      <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full sm:w-auto" onClick={() => setOpen(true)}>
         <Plus className="mr-2 h-4 w-4" /> Start New Count
-      </Button>
+      </button>
 
       {/* ── Mobile bottom-sheet: only mounts when truly on a small screen ── */}
       <MobileNewCountSheet
@@ -95,7 +93,7 @@ export function NewCountDialog({ onCreated }: { onCreated: () => void }) {
                   <Label>Shelves <span className="text-muted-foreground text-xs">(Optional)</span></Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className="w-full justify-between h-auto min-h-[40px] px-3 py-2 font-normal">
+                      <button role="combobox" className="inline-flex items-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring w-full justify-between h-auto min-h-[40px] px-3 py-2 font-normal">
                         <div className="flex flex-wrap gap-1 items-center">
                           {shelfLocationIds.length > 0
                             ? shelfLocationIds.map((id) => {
@@ -111,7 +109,7 @@ export function NewCountDialog({ onCreated }: { onCreated: () => void }) {
                             : <span className="text-muted-foreground">All Shelves</span>}
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
+                      </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[260px] p-0" align="start">
                       <Command>
@@ -152,10 +150,10 @@ export function NewCountDialog({ onCreated }: { onCreated: () => void }) {
 
             <div className="border-t px-6 py-4">
               <DialogFooter className="flex-row gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <button type="button" onClick={handleClose} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
                   {isSubmitting ? 'Taking Snapshot…' : 'Take Snapshot'}
-                </Button>
+                </button>
               </DialogFooter>
             </div>
           </form>

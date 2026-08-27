@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -74,15 +73,13 @@ export function BatchInventoryDrawer({ open, onOpenChange }: BatchInventoryDrawe
                 </SheetDescription>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={loadBatches}
               disabled={isLoading}
             >
               <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-            </Button>
+            </button>
           </div>
         </SheetHeader>
 
@@ -238,29 +235,25 @@ export function BatchInventoryDrawer({ open, onOpenChange }: BatchInventoryDrawe
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-7 w-7"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
                 <ChevronLeft className="h-4 w-4" />
-              </Button>
+              </button>
               <div className="flex items-center gap-1 min-w-[70px] justify-center">
                 <span className="text-xs font-semibold tabular-nums">{currentPage}</span>
                 <span className="text-[10px] text-muted-foreground font-medium">of</span>
                 <span className="text-xs font-semibold tabular-nums">{totalPages}</span>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-7 w-7"
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               >
                 <ChevronRight className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
           </div>
         )}

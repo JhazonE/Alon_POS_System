@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -57,9 +55,9 @@ export function CountDetailClient({ countId }: { countId: string }) {
       <div className="flex flex-col items-center justify-center py-24 gap-3">
         <AlertTriangle className="h-10 w-10 text-muted-foreground opacity-50" />
         <p className="text-muted-foreground">Count not found.</p>
-        <Button variant="outline" size="sm" onClick={() => router.push('/inventory/stock-counts')}>
+        <button onClick={() => router.push('/inventory/stock-counts')} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">
           <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
-        </Button>
+        </button>
       </div>
     );
   }
@@ -74,14 +72,12 @@ export function CountDetailClient({ countId }: { countId: string }) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           {/* Back + Title */}
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              className="flex-shrink-0 h-9 w-9 rounded-xl"
+            <button
+              className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 flex-shrink-0 h-9 w-9 rounded-xl"
               onClick={() => router.push('/inventory/stock-counts')}
             >
               <ArrowLeft className="h-4 w-4" />
-            </Button>
+            </button>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold leading-tight">{count.name}</h2>
               <div className="flex items-center gap-2 mt-0.5">
@@ -97,30 +93,27 @@ export function CountDetailClient({ countId }: { countId: string }) {
 
           {/* Action buttons – full-width on mobile, auto on sm+ */}
           <div className="flex flex-wrap gap-2 w-full sm:w-auto non-printable">
-            <Button variant="outline" size="sm" onClick={handlePrint} className="flex-1 sm:flex-none">
+            <button onClick={handlePrint} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 flex-1 sm:flex-none">
               <Printer className="h-4 w-4 mr-1.5" />
               <span className="sm:inline">Print</span>
-            </Button>
+            </button>
             {!isCompleted && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={handleSaveProgress}
                   disabled={isSaving}
-                  className="flex-1 sm:flex-none"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 flex-1 sm:flex-none"
                 >
                   <Save className="h-4 w-4 mr-1.5" />
                   {isSaving ? 'Saving…' : 'Save'}
-                </Button>
-                <Button
-                  size="sm"
+                </button>
+                <button
                   onClick={() => setShowReviewDialog(true)}
-                  className="flex-1 sm:flex-none"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5 flex-1 sm:flex-none"
                 >
                   <CheckCircle className="h-4 w-4 mr-1.5" />
                   Review &amp; Complete
-                </Button>
+                </button>
               </>
             )}
           </div>

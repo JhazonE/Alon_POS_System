@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -281,18 +279,14 @@ export default function BulkAdjustmentClient() {
         </div>
 
         <div className="flex items-center gap-3 px-4 md:px-6 py-3">
-          <Button
-            variant="outline"
-            className="h-11 font-semibold text-muted-foreground hover:text-foreground md:w-auto w-1/3"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-11 font-semibold text-muted-foreground hover:text-foreground md:w-auto w-1/3"
             onClick={() => router.push('/inventory')}
           >
             Cancel
-          </Button>
-          <Button
-            className={cn(
-              "h-11 font-bold flex-1 gap-2 transition-all",
-              hasNegativeStock && "opacity-80"
-            )}
+          </button>
+          <button
+            className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]", "h-11 font-bold flex-1 gap-2 transition-all", hasNegativeStock && "opacity-80")}
             onClick={handleProcessAdjustments}
             disabled={adjustments.length === 0 || isProcessing || hasNegativeStock}
           >
@@ -301,7 +295,7 @@ export default function BulkAdjustmentClient() {
             ) : (
               <><CheckCircle2 className="h-4 w-4" /> Apply {adjustments.length > 0 ? adjustments.length : ''} Adjustment{adjustments.length !== 1 ? 's' : ''}</>
             )}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

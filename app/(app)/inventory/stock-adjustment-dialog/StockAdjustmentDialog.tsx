@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +29,19 @@ import { cn, formatQuantity } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 
 import { useStockAdjustment } from './use-stock-adjustment';
+
+/**
+ * Confirm-button classes: the shared default-size button recipe plus this
+ * footer's sizing, with the add/remove halves split out. Written as cn()
+ * arguments so tailwind-merge resolves h-11 over the recipe's h-10 and px-8
+ * over its px-[18px].
+ */
+const CONFIRM_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-[18px] flex-1 sm:flex-none px-8 h-11';
+const CONFIRM_ADD =
+  'bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55';
+const CONFIRM_REMOVE =
+  'bg-destructive text-destructive-foreground shadow-[0_1px_3px_hsl(var(--destructive)/0.25)] hover:bg-destructive/90 hover:shadow-[0_6px_18px_hsl(var(--destructive)/0.28)] focus-visible:ring-destructive/55';
 
 export function StockAdjustmentDialog({ product, children, defaultReason, onSuccess, requireConfirmation, open, onOpenChange }: { product: Product, children?: React.ReactNode, defaultReason?: string, onSuccess?: () => void, requireConfirmation?: boolean, open?: boolean, onOpenChange?: (open: boolean) => void }) {
   const {
@@ -126,14 +138,14 @@ export function StockAdjustmentDialog({ product, children, defaultReason, onSucc
         </div>
 
         <DialogFooter className="pt-2">
-          <Button variant="ghost" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
-          <Button
+          <button onClick={() => setIsOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] flex-1 sm:flex-none">Cancel</button>
+          <button
             onClick={handleAdjustStock}
             disabled={physicalCount === null}
-            className="flex-1 sm:flex-none px-8"
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 flex-1 sm:flex-none px-8"
           >
             Submit Physical Count
-          </Button>
+          </button>
         </DialogFooter>
     </div>
   );
@@ -260,15 +272,14 @@ export function StockAdjustmentDialog({ product, children, defaultReason, onSucc
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="ghost" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
-            <Button
+            <button onClick={() => setIsOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] flex-1 sm:flex-none">Cancel</button>
+            <button
               onClick={handleAdjustStock}
               disabled={quantity === 0 || !(reason === 'Other' ? customReason.trim() : reason.trim())}
-              variant={adjustmentType === 'add' ? 'default' : 'destructive'}
-              className="flex-1 sm:flex-none px-8 h-11"
+              className={cn(CONFIRM_CLASSES, adjustmentType === 'add' ? CONFIRM_ADD : CONFIRM_REMOVE)}
             >
               Confirm Adjustment
-            </Button>
+            </button>
           </DialogFooter>
       </div>
     );

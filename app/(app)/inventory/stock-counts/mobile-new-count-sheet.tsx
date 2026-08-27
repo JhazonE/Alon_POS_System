@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -222,17 +220,17 @@ export function MobileNewCountSheet({
           {/* Sticky footer */}
           <div className="flex-shrink-0 border-t border-border/60 px-5 py-4 space-y-2">
             {step === 1 ? (
-              <Button type="button" className="w-full h-11 text-base" disabled={!canGoNext} onClick={() => setStep(2)}>
+              <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] w-full h-11 text-base" disabled={!canGoNext} onClick={() => setStep(2)}>
                 Next: Set Location <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
+              </button>
             ) : (
               <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setStep(1)}>
+                <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] flex-1 h-11" onClick={() => setStep(1)}>
                   <ChevronLeft className="h-4 w-4 mr-1.5" /> Back
-                </Button>
-                <Button type="submit" className="flex-1 h-11 text-base" disabled={isSubmitting}>
+                </button>
+                <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] flex-1 h-11 text-base" disabled={isSubmitting}>
                   {isSubmitting ? 'Taking Snapshot…' : 'Take Snapshot'}
-                </Button>
+                </button>
               </div>
             )}
             <button type="button" onClick={onClose}

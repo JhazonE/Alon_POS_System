@@ -3,7 +3,6 @@
 import { Box, Rows3 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,20 +44,19 @@ export function SourcePane({
             <Box className="h-4 w-4" /> Stock Pool
           </h2>
           <div className="flex gap-1">
-            <Button
-              size="sm"
-              className="h-7 text-[11px] font-bold"
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[13px] rounded-lg gap-1.5 h-7 text-[11px] font-bold"
               onClick={onStageSelected}
               disabled={selectedSourceIds.size === 0}
             >
               Stage Selected
-            </Button>
+            </button>
             <ManageWarehousesDialog
               onChange={onWarehouseChange}
               trigger={
-                <Button variant="outline" size="sm" className="h-7 px-1.5">
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-7 px-1.5">
                   <Rows3 className="h-4 w-4" />
-                </Button>
+                </button>
               }
             />
           </div>
@@ -105,14 +103,12 @@ export function SourcePane({
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-1.5 text-xs font-black"
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring rounded-lg gap-1.5 h-8 px-1.5 text-xs font-black"
                   onClick={e => { e.stopPropagation(); onStageItem(item.uniqueId); }}
                 >
                   {formatStockQuantity(item.quantity)}
-                </Button>
+                </button>
               </div>
             </div>
           ))}

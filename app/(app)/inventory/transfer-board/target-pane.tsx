@@ -1,8 +1,6 @@
 'use client';
 
 import { ArrowRightLeft, CheckCircle2, Loader2, Trash2 } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -47,14 +45,12 @@ export function TargetPane({
           <h2 className="font-bold text-sm flex items-center gap-1.5 text-primary">
             <ArrowRightLeft className="h-4 w-4" /> Transfer Destination
           </h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-[10px] text-destructive uppercase font-bold"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-7 text-[10px] text-destructive uppercase font-bold"
             onClick={onClearAll}
           >
             Clear All
-          </Button>
+          </button>
         </div>
         <Select value={targetWarehouseId} onValueChange={onTargetWarehouseChange}>
           <SelectTrigger className={cn("h-9 text-xs font-bold transition-all", !targetWarehouseId ? "border-primary/50 bg-primary/5" : "bg-card")}>
@@ -92,14 +88,12 @@ export function TargetPane({
                   onChange={e => onUpdateQuantity(item.stagedId, e.target.value)}
                   className="h-7 w-12 text-center text-xs p-1"
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground"
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-7 w-7 text-muted-foreground"
                   onClick={() => onRemoveItem(item.stagedId)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                </button>
               </div>
             </div>
           ))}
@@ -110,8 +104,8 @@ export function TargetPane({
       </ScrollArea>
 
       <div className="p-3 border-t bg-background/80 backdrop-blur shrink-0">
-        <Button
-          className="w-full h-11 font-black shadow-lg shadow-primary/20"
+        <button
+          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] w-full h-11 font-black shadow-lg shadow-primary/20"
           disabled={!targetWarehouseId || stagedItems.length === 0 || isTransferring}
           onClick={onExecuteTransfer}
         >
@@ -120,7 +114,7 @@ export function TargetPane({
             : <CheckCircle2 className="h-4 w-4 mr-2" />
           }
           Confirm Transfer
-        </Button>
+        </button>
       </div>
     </div>
   );

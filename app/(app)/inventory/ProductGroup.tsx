@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import type { ProductWithChildren } from './product-list-types';
@@ -29,14 +27,12 @@ export function ProductGroup({ productGroup, onSuccess, requireAdjustmentConfirm
           lowStockThreshold={lowStockThreshold}
         />
         {hasChildren && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute right-10 top-4 z-10 h-8 w-8 p-0"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 absolute right-10 top-4 z-10 h-8 w-8 p-0"
             onClick={() => setIsExpanded(!isExpanded)}
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform duration-500", isExpanded && "rotate-180")} />
-          </Button>
+          </button>
         )}
       </div>
 

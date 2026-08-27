@@ -1,7 +1,6 @@
 import { ArrowRight, Trash2, Warehouse as WarehouseIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { cn, formatQuantity } from '@/lib/utils';
@@ -102,14 +101,12 @@ export function AdjustmentTableRow({
         />
       </TableCell>
       <TableCell className="py-4 pr-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors rounded-lg"
+        <button
+          className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors rounded-lg"
           onClick={() => onRemove(adj.product.id)}
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        </button>
       </TableCell>
     </TableRow>
   );

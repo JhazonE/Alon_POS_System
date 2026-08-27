@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,6 +8,18 @@ import { cn, formatQuantity } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 import { useRepackagingForm } from './use-repackaging-form';
+
+/**
+ * Segmented-toggle button classes: the shared `sm` button recipe plus this
+ * control's pill shape, with the active/inactive halves split out. Written as
+ * cn() arguments so tailwind-merge resolves rounded-full over the recipe's
+ * rounded-lg and px-4 over its px-[13px].
+ */
+const TOGGLE_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 px-[13px] text-xs rounded-lg gap-1.5 rounded-full px-4';
+const TOGGLE_ACTIVE =
+  'bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring';
+const TOGGLE_INACTIVE = 'hover:bg-accent focus-visible:ring-ring';
 
 export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
   const {
@@ -119,7 +130,7 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
                       <h4 className="text-xl font-bold text-primary">{selectedSource.name}</h4>
                       <p className="text-sm text-muted-foreground">{selectedSource.sku}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedSource(null)}>Change</Button>
+                    <button onClick={() => setSelectedSource(null)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">Change</button>
                   </div>
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary/10">
                     <div className="space-y-1">
@@ -142,15 +153,14 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
 
             <div className="flex justify-end pt-4">
-              <Button
-                size="lg"
+              <button
                 disabled={!selectedSource || !qtyToUse || parseFloat(qtyToUse) <= 0}
                 onClick={() => setStep('target')}
-                className="rounded-full px-8 h-12 text-lg"
+                className="inline-flex items-center justify-center gap-2 font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 rounded-full px-8 h-12 text-lg"
               >
                 Next: Select Target
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              </button>
             </div>
           </div>
         )}
@@ -162,22 +172,18 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
               <div className="flex items-center justify-between">
                 <Label className="text-lg font-semibold">Step 2: Destination Product</Label>
                 <div className="flex gap-1 p-1 bg-muted rounded-full">
-                  <Button
-                    variant={targetType === 'search' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="rounded-full px-4"
+                  <button
+                    className={cn(TOGGLE_CLASSES, targetType === 'search' ? TOGGLE_ACTIVE : TOGGLE_INACTIVE)}
                     onClick={() => setTargetType('search')}
                   >
                     Search Existing
-                  </Button>
-                  <Button
-                    variant={targetType === 'create' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="rounded-full px-4"
+                  </button>
+                  <button
+                    className={cn(TOGGLE_CLASSES, targetType === 'create' ? TOGGLE_ACTIVE : TOGGLE_INACTIVE)}
                     onClick={() => setTargetType('create')}
                   >
                     Quick Create
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -220,7 +226,7 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
                         <h4 className="text-xl font-bold">{selectedTarget.name}</h4>
                         <p className="text-sm text-muted-foreground">{selectedTarget.sku} · {selectedTarget.unitOfMeasure}</p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedTarget(null)}>Change</Button>
+                      <button onClick={() => setSelectedTarget(null)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">Change</button>
                     </div>
                   )}
                 </div>
@@ -249,15 +255,13 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
                     <Label>Barcode</Label>
                     <div className="relative">
                       <Input value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} placeholder="Barcode" className="pr-10" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
                         onClick={generateBarcode}
                         type="button"
                       >
                         <Wand2 className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -273,18 +277,17 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="ghost" onClick={() => setStep('source')} className="rounded-full">
+              <button onClick={() => setStep('source')} className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] rounded-full">
                 Back to Source
-              </Button>
-              <Button
-                size="lg"
+              </button>
+              <button
                 disabled={targetType === 'search' ? !selectedTarget : (!newName || !newUnit || !newPrice)}
                 onClick={() => setStep('calculate')}
-                className="rounded-full px-8 h-12 text-lg"
+                className="inline-flex items-center justify-center gap-2 font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 rounded-full px-8 h-12 text-lg"
               >
                 Next: Count Output
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              </button>
             </div>
           </div>
         )}
@@ -336,17 +339,16 @@ export function RepackagingForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="ghost" onClick={() => setStep('target')} className="rounded-full" disabled={isLoading}>
+              <button onClick={() => setStep('target')} className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] rounded-full" disabled={isLoading}>
                 Go Back
-              </Button>
-              <Button
-                size="lg"
+              </button>
+              <button
                 disabled={!packsProduced || parseFloat(packsProduced) <= 0 || isLoading}
                 onClick={handleProcess}
-                className="rounded-full px-12 h-14 text-xl font-black bg-emerald-600 hover:bg-emerald-700"
+                className="inline-flex items-center justify-center gap-2 tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 rounded-full px-12 h-14 text-xl font-black bg-emerald-600 hover:bg-emerald-700"
               >
                 {isLoading ? 'Processing...' : 'Complete Repackaging'}
-              </Button>
+              </button>
             </div>
           </div>
         )}

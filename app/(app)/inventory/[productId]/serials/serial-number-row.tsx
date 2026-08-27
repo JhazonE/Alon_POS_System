@@ -2,7 +2,6 @@
 
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -60,9 +59,9 @@ export function SerialNumberRow({ serial, productId }: { serial: SerialNumber, p
       </TableCell>
       <TableCell>{format(new Date(serial.dateAdded), 'PP p')}</TableCell>
       <TableCell className="text-right">
-        <Button variant="ghost" size="icon" onClick={handleDelete} disabled={serial.status === 'Sold'}>
+        <button onClick={handleDelete} disabled={serial.status === 'Sold'} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
           <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        </button>
       </TableCell>
     </TableRow>
   );

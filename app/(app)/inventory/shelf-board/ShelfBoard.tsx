@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Search,
@@ -164,8 +163,8 @@ export default function ShelfBoard() {
               <div className="flex items-center justify-between gap-2">
                   <h2 className="font-bold text-sm flex items-center gap-1.5 truncate"><Box className="h-4 w-4" /> Inventory</h2>
                   <div className="flex gap-1">
-                      <Button size="sm" className="h-7 text-[11px] font-bold" onClick={() => stageItems(selectedSourceIds)} disabled={selectedSourceIds.size === 0}>Stage All</Button>
-                      <ManageShelfLocationsDialog onLocationAdded={fetchData} trigger={<Button variant="outline" size="sm" className="h-7 px-1.5"><Rows3 className="h-4 w-4" /></Button>} />
+                      <button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[13px] rounded-lg gap-1.5 h-7 text-[11px] font-bold" onClick={() => stageItems(selectedSourceIds)} disabled={selectedSourceIds.size === 0}>Stage All</button>
+                      <ManageShelfLocationsDialog onLocationAdded={fetchData} trigger={<button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-7 px-1.5"><Rows3 className="h-4 w-4" /></button>} />
                   </div>
               </div>
               <Input placeholder="Search..." value={sourceSearch} onChange={e => setSourceSearch(e.target.value)} className="h-8 text-sm" />
@@ -184,7 +183,7 @@ export default function ShelfBoard() {
                               <p className="text-xs font-bold truncate leading-tight">{item.product.name}</p>
                               <div className="flex items-center gap-1.5 opacity-70"><Badge variant="outline" className="text-[9px] px-1 h-3.5 truncate max-w-[60px]">{item.shelfName}</Badge><span className="text-[9px] truncate font-mono">{item.product.sku}</span></div>
                           </div>
-                          <div className="flex justify-end"><Button variant="ghost" size="sm" className="h-8 px-1.5 text-xs font-bold" onClick={() => stageItems(item.uniqueId)}>{formatStockQuantity(item.quantity)}</Button></div>
+                          <div className="flex justify-end"><button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring rounded-lg gap-1.5 h-8 px-1.5 text-xs font-bold" onClick={() => stageItems(item.uniqueId)}>{formatStockQuantity(item.quantity)}</button></div>
                       </div>
                   ))}
               </div>
@@ -197,7 +196,7 @@ export default function ShelfBoard() {
           <div className="p-3 border-b space-y-2 shrink-0">
               <div className="flex items-center justify-between">
                   <h2 className="font-bold text-sm flex items-center gap-1.5 text-primary"><ArrowRightLeft className="h-4 w-4" /> Destination</h2>
-                  <Button variant="ghost" size="sm" className="h-7 text-[10px] text-destructive" onClick={() => setStagedItems([])}>Clear</Button>
+                  <button className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-7 text-[10px] text-destructive" onClick={() => setStagedItems([])}>Clear</button>
               </div>
               <Select value={targetShelfId} onValueChange={setTargetShelfId}>
                   <SelectTrigger className="h-9 text-xs font-bold"><SelectValue placeholder="Target Shelf..." /></SelectTrigger>
@@ -215,7 +214,7 @@ export default function ShelfBoard() {
                           </div>
                           <div className="flex items-center gap-1">
                               <Input type="number" step="1" value={item.transferQuantity} onChange={e => { const v = parseInt(e.target.value) || 1; setStagedItems(prev => prev.map(i => i.stagedId === item.stagedId ? { ...i, transferQuantity: Math.min(i.maxQuantity, Math.max(1, v)) } : i)); }} className="h-7 w-12 text-center text-xs p-1" />
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setStagedItems(prev => prev.filter(i => i.stagedId !== item.stagedId))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                              <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-7 w-7 text-muted-foreground" onClick={() => setStagedItems(prev => prev.filter(i => i.stagedId !== item.stagedId))}><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                       </div>
                   ))}
@@ -223,14 +222,14 @@ export default function ShelfBoard() {
               </div>
           </ScrollArea>
           <div className="p-3 border-t bg-background/80 backdrop-blur shrink-0">
-               <Button 
-                className="w-full h-11 font-black shadow-lg shadow-primary/20" 
+               <button 
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] w-full h-11 font-black shadow-lg shadow-primary/20" 
                 disabled={!targetShelfId || stagedItems.length === 0 || isTransferring} 
                 onClick={executeTransfer}
                >
                  {isTransferring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                  Confirm Transfer
-               </Button>
+               </button>
           </div>
       </div>
   );

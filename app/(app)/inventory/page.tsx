@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -85,49 +84,47 @@ export default function InventoryPage() {
 
             <div className="flex items-center gap-1 p-1.5 bg-muted/30 rounded-xl border border-border/50 shadow-sm ml-2 overflow-x-auto whitespace-nowrap scrollbar-none w-full md:w-auto">
                 <Link href="/inventory/transfer-board">
-                  <Button variant="ghost" size="sm" className="h-8 gap-2 hover:bg-muted font-medium px-3 flex-shrink-0">
+                  <button className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 hover:bg-muted font-medium px-3 flex-shrink-0">
                       <Kanban className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs">Transfer Board</span>
-                  </Button>
+                  </button>
                 </Link>
 
                 <div className="h-4 w-px bg-border/60 mx-1 flex-shrink-0" />
 
                 <Link href="/inventory/shelf-board">
-                  <Button variant="ghost" size="sm" className="h-8 gap-2 hover:bg-muted font-medium px-3 flex-shrink-0">
+                  <button className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 hover:bg-muted font-medium px-3 flex-shrink-0">
                       <Rows3 className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs">Shelf Board</span>
-                  </Button>
+                  </button>
                 </Link>
 
                 <div className="h-4 w-px bg-border/60 mx-1 flex-shrink-0" />
 
                 <Link href="/inventory/bulk-adjustment">
-                  <Button variant="ghost" size="sm" className="h-8 gap-2 font-bold text-primary hover:text-primary hover:bg-primary/10 px-3 transition-colors flex-shrink-0">
+                  <button className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 font-bold text-primary hover:text-primary hover:bg-primary/10 px-3 transition-colors flex-shrink-0">
                       <Layers className="h-4 w-4" />
                       <span className="text-xs">Bulk Adjustment</span>
-                  </Button>
+                  </button>
                 </Link>
 
                 <div className="h-4 w-px bg-border/60 mx-1 flex-shrink-0" />
 
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={() => setIsBatchDrawerOpen(true)}
-                  className="h-8 gap-2 hover:bg-muted font-medium px-3 text-muted-foreground hover:text-foreground flex-shrink-0"
+                  className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 hover:bg-muted font-medium px-3 text-muted-foreground hover:text-foreground flex-shrink-0"
                 >
                     <PackageOpen className="h-4 w-4" />
                     <span className="text-xs">Stock Batches</span>
-                </Button>
+                </button>
 
                 <div className="h-4 w-px bg-border/60 mx-1 flex-shrink-0" />
 
                 <Link href="/inventory/history">
-                    <Button variant="ghost" size="sm" className="h-8 gap-2 hover:bg-muted font-medium px-3 text-muted-foreground hover:text-foreground flex-shrink-0">
+                    <button className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 hover:bg-muted font-medium px-3 text-muted-foreground hover:text-foreground flex-shrink-0">
                         <History className="h-4 w-4" />
                         <span className="text-xs">History</span>
-                    </Button>
+                    </button>
                 </Link>
             </div>
         </div>
@@ -185,9 +182,9 @@ export default function InventoryPage() {
           <CardDescription>
             Try adjusting your search or filters to find what you're looking for.
           </CardDescription>
-          <Button variant="outline" className="mt-4" onClick={handleClearSearch}>
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] mt-4" onClick={handleClearSearch}>
             Clear Search
-          </Button>
+          </button>
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -238,25 +235,21 @@ export default function InventoryPage() {
                 Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalProducts)} of {totalProducts} products
             </p>
             <div className="flex items-center gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
+                <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
+                    disabled={currentPage === 1} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
                 >
                     Previous
-                </Button>
+                </button>
                 <span className="text-sm font-medium">
                     Page {currentPage} of {Math.ceil(totalProducts / pageSize)}
                 </span>
-                <Button
-                    variant="outline"
-                    size="sm"
+                <button
                     onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalProducts / pageSize), prev + 1))}
-                    disabled={currentPage === Math.ceil(totalProducts / pageSize)}
+                    disabled={currentPage === Math.ceil(totalProducts / pageSize)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
                 >
                     Next
-                </Button>
+                </button>
             </div>
         </div>
       )}

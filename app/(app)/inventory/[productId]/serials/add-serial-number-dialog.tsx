@@ -9,13 +9,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Loader2, PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 
 import { useAddSerialForm } from './use-add-serial-form';
+
+/**
+ * Mode-toggle button classes: the shared `sm` button recipe plus this row's
+ * flex sizing, with the active/inactive halves split out.
+ */
+const MODE_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 px-[13px] text-xs rounded-lg gap-1.5 flex-1';
+const MODE_ACTIVE =
+  'bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55';
+const MODE_INACTIVE =
+  'border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring';
 
 export function AddSerialNumberDialog({ product }: { product: Product }) {
   const {
@@ -37,10 +48,10 @@ export function AddSerialNumberDialog({ product }: { product: Product }) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Serial Number
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -52,22 +63,18 @@ export function AddSerialNumberDialog({ product }: { product: Product }) {
 
         {/* Mode Selection */}
         <div className="flex gap-2 mb-4">
-          <Button
-            variant={mode === 'single' ? 'default' : 'outline'}
-            size="sm"
+          <button
             onClick={() => setMode('single')}
-            className="flex-1"
+            className={cn(MODE_CLASSES, mode === 'single' ? MODE_ACTIVE : MODE_INACTIVE)}
           >
             Single Serial
-          </Button>
-          <Button
-            variant={mode === 'batch' ? 'default' : 'outline'}
-            size="sm"
+          </button>
+          <button
             onClick={() => setMode('batch')}
-            className="flex-1"
+            className={cn(MODE_CLASSES, mode === 'batch' ? MODE_ACTIVE : MODE_INACTIVE)}
           >
             Batch Serials
-          </Button>
+          </button>
         </div>
 
         {/* Single Serial Mode */}
@@ -128,12 +135,12 @@ export function AddSerialNumberDialog({ product }: { product: Product }) {
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <button onClick={() => setIsOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={mode === 'single' ? handleAddSingleSerial : handleAddBatchSerials}
-            disabled={isSubmitting}
+            disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]"
           >
             {isSubmitting ? (
               <>
@@ -144,7 +151,7 @@ export function AddSerialNumberDialog({ product }: { product: Product }) {
             ) : (
               `Add ${quantity} Serials`
             )}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

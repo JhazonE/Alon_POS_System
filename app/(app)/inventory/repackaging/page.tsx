@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Scissors, RefreshCw, History, Scissors as ScissorsIcon, ArrowRight, Clock, CheckCircle2, PackagePlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { RepackagingForm } from './repackaging-form';
 import { ConsolidationForm } from './consolidation-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,9 +54,9 @@ function RepackagingHistoryTable() {
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted-foreground">{logs.length} total sessions recorded</p>
-        <Button variant="outline" size="sm" onClick={fetchLogs} className="h-7 gap-1.5 text-xs">
+        <button onClick={fetchLogs} className="inline-flex items-center justify-center rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] rounded-lg h-7 gap-1.5 text-xs">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
-        </Button>
+        </button>
       </div>
 
       {/* Header */}

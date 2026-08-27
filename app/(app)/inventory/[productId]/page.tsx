@@ -23,7 +23,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { EditProductDialog } from '../../products/edit-product/edit-product-dialog';
@@ -81,10 +80,10 @@ export default function ProductDetailPage() {
         </CardHeader>
         <CardContent>
           <p>The product you are looking for does not exist.</p>
-           <Button onClick={() => router.back()} className="mt-4">
+           <button onClick={() => router.back()} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] mt-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
-          </Button>
+          </button>
         </CardContent>
       </Card>
     );
@@ -94,9 +93,9 @@ export default function ProductDetailPage() {
     <div className="flex flex-col gap-6">
         <div className="flex items-center gap-4">
             <Link href="/products">
-                <Button variant="outline" size="icon">
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 w-10 p-0">
                     <ArrowLeft className="h-4 w-4" />
-                </Button>
+                </button>
             </Link>
             <h1 className="text-2xl font-bold">{product.name}</h1>
         </div>

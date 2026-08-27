@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ChevronDown, CornerDownRight } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   TableCell,
   TableRow,
@@ -33,14 +32,12 @@ export function ProductTableRowGroup({ productGroup, onSuccess, requireAdjustmen
         <TableCell className="font-medium">
           <div className="flex items-center gap-2">
             {hasChildren && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-6 w-6"
                 onClick={() => setIsExpanded(!isExpanded)}
               >
                 <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
-              </Button>
+              </button>
             )}
             {!hasChildren && <div className="w-6" />}
             {productGroup.name}
