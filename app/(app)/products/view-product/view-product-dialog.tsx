@@ -11,7 +11,6 @@ import {
   SheetTrigger,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -281,7 +280,7 @@ export function ViewProductDialog({
                 <SheetFooter className="sticky bottom-0 bg-background p-6 border-t sm:justify-between flex items-center gap-4">
                      <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">ID: {product.id}</p>
                      <div className="flex items-center gap-3">
-                        <Button variant="ghost" onClick={() => setIsOpen(false)} className="hover:bg-muted">Close</Button>
+                        <button onClick={() => setIsOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] hover:bg-muted">Close</button>
                         {!product.parentId && (product.conversionFactors?.length ?? 0) > 0 && products && (
                           <TooltipProvider>
                             <Tooltip>
@@ -341,10 +340,10 @@ export function ViewProductDialog({
                           productOptions={productOptions}
                           onOptionsRefresh={onOptionsRefresh}
                           trigger={
-                            <Button className="gap-2">
+                            <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] gap-2">
                               <Pencil className="h-4 w-4" />
                               Edit Product
-                            </Button>
+                            </button>
                           }
                         />
                      </div>

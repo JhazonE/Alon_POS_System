@@ -1,8 +1,6 @@
 'use client';
 
 import { PlusCircle, Wand2, X } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,30 +44,26 @@ export function ConversionTab() {
               Define how other units convert to the base unit (e.g., 1 Box = 12 Pieces).
             </p>
           </div>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => appendConversionFactor({ unit: '', factor: 1 })}
+            onClick={() => appendConversionFactor({ unit: '', factor: 1 })} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Unit
-          </Button>
+          </button>
         </div>
 
         {conversionFactorFields.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center border-2 border-dashed rounded-lg bg-muted/50">
             <Wand2 className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No conversion factors added yet.</p>
-            <Button
+            <button
               type="button"
-              variant="link"
-              size="sm"
               onClick={() => appendConversionFactor({ unit: '', factor: 1 })}
-              className="mt-1"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary underline-offset-4 decoration-primary/35 hover:decoration-primary h-auto px-0 focus-visible:ring-ring mt-1"
             >
               Add your first conversion
-            </Button>
+            </button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -137,16 +131,14 @@ export function ConversionTab() {
                   {selectedUnitOfMeasure || 'Base Unit'}
                 </div>
                 <div className="pb-1 self-center mt-5">
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                     onClick={() => removeConversionFactor(index)}
                   >
                     <X className="h-4 w-4" />
                     <span className="sr-only">Remove</span>
-                  </Button>
+                  </button>
                 </div>
               </div>
             ))}

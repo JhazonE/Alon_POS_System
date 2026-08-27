@@ -40,7 +40,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { cn, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ViewProductDialog } from './view-product/view-product-dialog';
 import { getProducts, getProductsCount, deleteProduct, getDepartments } from './actions';
@@ -133,9 +132,9 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
       <TableRow className={cn(depth > 0 && "bg-muted/20")}>
         <TableCell className="hidden sm:table-cell" style={indentStyle}>
           {hasChildren ? (
-            <Button variant="ghost" size="icon" className="group" onClick={() => setIsOpen(!isOpen)}>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 group" onClick={() => setIsOpen(!isOpen)}>
               <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
-            </Button>
+            </button>
           ) : depth > 0 ? (
             <div className="text-sm text-muted-foreground">└</div>
           ) : (
@@ -178,10 +177,10 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
         <TableCell className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
                 <MoreVertical className="h-4 w-4" />
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -489,10 +488,10 @@ function ProductsContent() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="bg-background/50 backdrop-blur-sm">
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] bg-background/50 backdrop-blur-sm">
                   <Settings className="mr-2 h-4 w-4" />
                   Manage
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 glass-card">
                 <DropdownMenuLabel>Product Settings</DropdownMenuLabel>
@@ -590,7 +589,7 @@ function ProductsContent() {
             />
             <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2" onClick={() => {
+                <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2" onClick={() => {
                    // Sync temp with actual when opening
                    setTempBrand(selectedBrand);
                    setTempCategory(selectedCategory);
@@ -610,7 +609,7 @@ function ProductsContent() {
                            }
                        </Badge>
                    )}
-                </Button>
+                </button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
@@ -737,7 +736,7 @@ function ProductsContent() {
                   </div>
                 </div>
                 <DialogFooter className="flex justify-between sm:justify-between">
-                   <Button variant="ghost" onClick={() => {
+                   <button onClick={() => {
                        setTempBrand('all');
                        setTempCategory('all');
                        setTempSupplier('all');
@@ -745,8 +744,8 @@ function ProductsContent() {
                        setTempShelfLocation('all');
                        setTempStatus('all');
                        setTempDepartment('all');
-                   }}>Reset</Button>
-                   <Button onClick={() => {
+                   }} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">Reset</button>
+                   <button onClick={() => {
                        setSelectedBrand(tempBrand);
                        setSelectedCategory(tempCategory);
                        setSelectedSupplier(tempSupplier);
@@ -755,13 +754,13 @@ function ProductsContent() {
                        setSelectedStatus(tempStatus);
                        setSelectedDepartment(tempDepartment);
                        setIsFilterDialogOpen(false);
-                   }}>Apply Filters</Button>
+                   }} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">Apply Filters</button>
                 </DialogFooter>
               </DialogContent>
            </Dialog>
-            <Button variant="outline" className="bg-background/50 backdrop-blur-sm" onClick={() => setIsBulkPriceUpdateOpen(true)}>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] bg-background/50 backdrop-blur-sm" onClick={() => setIsBulkPriceUpdateOpen(true)}>
               Bulk Update Price
-            </Button>
+            </button>
             <AddProductDialog
               onProductAdded={() => loadProducts(currentPage, pageSize)}
               productOptions={productOptions}
@@ -778,70 +777,68 @@ function ProductsContent() {
                  {selectedBrand !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Brand: {selectedBrand}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedBrand('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedBrand('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
                  {selectedCategory !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Category: {selectedCategory}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedCategory('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedCategory('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
                  {selectedSupplier !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Supplier: {productOptions?.suppliers?.find((s:any) => s.id === selectedSupplier)?.name || 'Unknown'}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedSupplier('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedSupplier('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
                  {selectedWarehouse !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Warehouse: {productOptions?.warehouses?.find((w:any) => w.id === selectedWarehouse)?.name || 'Unknown'}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedWarehouse('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedWarehouse('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
                  {selectedShelfLocation !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Shelf: {productOptions?.shelfLocations?.find((sl:any) => sl.id === selectedShelfLocation)?.name || 'Unknown'}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedShelfLocation('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedShelfLocation('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
                  {selectedStatus !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Status: {selectedStatus === 'in-stock' ? 'In Stock' : selectedStatus === 'low-stock' ? 'Low Stock' : 'Out of Stock'}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedStatus('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedStatus('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
                  {selectedDepartment !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Department: {selectedDepartment}
-                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedDepartment('all')}>
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedDepartment('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
-                         </Button>
+                         </button>
                      </Badge>
                  )}
 
-                 <Button 
-                    variant="ghost" 
-                    size="sm" 
+                 <button 
                     onClick={() => {
                         setSelectedBrand('all');
                         setSelectedCategory('all');
@@ -852,10 +849,10 @@ function ProductsContent() {
                         setSelectedDepartment('all');
                         setSearchTerm('');
                     }}
-                    className="h-8 text-xs text-muted-foreground"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-8 text-xs text-muted-foreground"
                 >
                     Clear All
-                </Button>
+                </button>
             </div>
         )}
       </div>
@@ -945,25 +942,21 @@ function ProductsContent() {
                 </Select>
               </div>
               <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
                 >
                   Previous
-                </Button>
+                </button>
                 <div className="text-sm font-medium">
                   Page {currentPage} of {Math.ceil(totalProducts / pageSize)}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalProducts / pageSize), prev + 1))}
-                  disabled={currentPage === Math.ceil(totalProducts / pageSize)}
+                  disabled={currentPage === Math.ceil(totalProducts / pageSize)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
                 >
                   Next
-                </Button>
+                </button>
               </div>
             </div>
           </div>

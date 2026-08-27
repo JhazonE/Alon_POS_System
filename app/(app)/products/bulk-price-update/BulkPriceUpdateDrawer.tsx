@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -57,10 +56,8 @@ export function BulkPriceUpdateDrawer({ open, onOpenChange, productOptions, onUp
           {bp.warehouseId && (
             <>
               <div className="flex gap-2">
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={() => downloadPriceListTemplate(
                     bp.products.slice(0, 3).map((p: any) => ({
                       sku: p.sku, barcode: p.barcode || '', name: p.name,
@@ -68,13 +65,13 @@ export function BulkPriceUpdateDrawer({ open, onOpenChange, productOptions, onUp
                       price: Number(p.price), cost: Number(p.cost || 0),
                     })),
                     productOptions.warehouses?.find(w => w.id === bp.warehouseId)?.name || 'warehouse',
-                  )}
+                  )} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
                 >
                   Download Template
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setIsUploadOpen(true)}>
+                </button>
+                <button type="button" onClick={() => setIsUploadOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">
                   Upload Excel
-                </Button>
+                </button>
               </div>
               <UploadPriceListDialog
                 open={isUploadOpen}
@@ -203,12 +200,12 @@ export function BulkPriceUpdateDrawer({ open, onOpenChange, productOptions, onUp
         </div>
 
         <SheetFooter>
-          <Button
+          <button
             disabled={bp.preview.length === 0 || bp.isSubmitting}
-            onClick={() => bp.submit(getCurrentUserId())}
+            onClick={() => bp.submit(getCurrentUserId())} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]"
           >
             {bp.isSubmitting ? 'Submitting...' : `Update ${bp.preview.length} Product(s)`}
-          </Button>
+          </button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

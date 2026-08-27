@@ -1,7 +1,6 @@
 'use client';
 
 import type { Product } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,18 @@ import { Scissors, Package, ArrowRight, Search, PlusCircle, Link2, CheckCircle2,
 import { cn, formatQuantity } from '@/lib/utils';
 
 import { useBreakPack } from './use-break-pack';
+
+/**
+ * Segmented-toggle button classes: the shared `sm` button recipe plus this
+ * control's pill shape and compact height, with the active/inactive halves
+ * split out. Written as cn() arguments so tailwind-merge resolves
+ * rounded-full over the recipe's rounded-lg and h-7 over its h-8.
+ */
+const TOGGLE_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 px-[13px] text-xs rounded-lg gap-1.5 rounded-full text-xs h-7';
+const TOGGLE_ACTIVE =
+  'bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring';
+const TOGGLE_INACTIVE = 'hover:bg-accent focus-visible:ring-ring';
 
 export function BreakPackDialog({ parentProduct, onPackBroken, trigger }: {
   parentProduct: Product,
@@ -54,10 +65,10 @@ export function BreakPackDialog({ parentProduct, onPackBroken, trigger }: {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger ? trigger : (
-          <Button variant="outline" className="gap-2">
+          <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2">
             <Scissors className="h-4 w-4" />
             Repackage
-          </Button>
+          </button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg overflow-hidden">
@@ -135,22 +146,18 @@ export function BreakPackDialog({ parentProduct, onPackBroken, trigger }: {
                 <div className="flex items-center justify-between">
                   <Label className="font-bold">Destination Product</Label>
                   <div className="flex gap-1 p-1 bg-muted rounded-full">
-                    <Button
-                      variant={targetMode === 'search' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="rounded-full text-xs h-7"
+                    <button
+                      className={cn(TOGGLE_CLASSES, targetMode === 'search' ? TOGGLE_ACTIVE : TOGGLE_INACTIVE)}
                       onClick={() => setTargetMode('search')}
                     >
                       Search
-                    </Button>
-                    <Button
-                      variant={targetMode === 'create' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="rounded-full text-xs h-7"
+                    </button>
+                    <button
+                      className={cn(TOGGLE_CLASSES, targetMode === 'create' ? TOGGLE_ACTIVE : TOGGLE_INACTIVE)}
                       onClick={() => setTargetMode('create')}
                     >
                       Quick Create
-                    </Button>
+                    </button>
                   </div>
                 </div>
 
@@ -196,7 +203,7 @@ export function BreakPackDialog({ parentProduct, onPackBroken, trigger }: {
                             <p className="text-xs text-muted-foreground">{selectedTarget.unitOfMeasure}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedTarget(null)}>Change</Button>
+                        <button onClick={() => setSelectedTarget(null)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">Change</button>
                       </div>
                     )}
                   </div>
@@ -262,34 +269,34 @@ export function BreakPackDialog({ parentProduct, onPackBroken, trigger }: {
         <DialogFooter className="mt-6 flex-row justify-between sm:justify-between items-center bg-muted/20 -mx-6 -mb-6 p-6">
           <div className="flex gap-2">
             {step !== 'source' ? (
-              <Button variant="ghost" onClick={() => setStep(step === 'count' ? 'target' : 'source')} disabled={isBreaking}>
+              <button onClick={() => setStep(step === 'count' ? 'target' : 'source')} disabled={isBreaking} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">
                 <ChevronLeft className="mr-2 h-4 w-4" /> Back
-              </Button>
+              </button>
             ) : (
-              <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isBreaking}>Cancel</Button>
+              <button onClick={() => setIsOpen(false)} disabled={isBreaking} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
             )}
           </div>
 
           {step === 'count' ? (
-            <Button
+            <button
               disabled={!packsProduced || parseFloat(packsProduced) <= 0 || isBreaking}
               onClick={handleFinish}
-              className="px-8 font-bold bg-emerald-600 hover:bg-emerald-700"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-8 font-bold bg-emerald-600 hover:bg-emerald-700"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {isBreaking ? 'Processing...' : 'Complete Repackage'}
-            </Button>
+            </button>
           ) : (
-            <Button
+            <button
               disabled={
                 (step === 'source' && (!quantityToBreak || parseFloat(quantityToBreak) <= 0)) ||
                 (step === 'target' && (targetMode === 'search' ? !selectedTarget : (!newName || !newUnit || !newPrice)))
               }
               onClick={() => setStep(step === 'source' ? 'target' : 'count')}
-              className="px-8 font-bold"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-8 font-bold"
             >
               Next Step <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            </button>
           )}
         </DialogFooter>
       </DialogContent>

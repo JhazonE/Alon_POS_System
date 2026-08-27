@@ -1,8 +1,6 @@
 'use client';
 
 import { PlusCircle, X } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,15 +27,13 @@ export function PriceLevelsTab() {
               Override the base price for specific customer segments.
             </p>
           </div>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => appendPriceLevel({ levelId: '', price: 0 })}
+            onClick={() => appendPriceLevel({ levelId: '', price: 0 })} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Level Price
-          </Button>
+          </button>
         </div>
 
         {priceLevelFields.length === 0 ? (
@@ -150,15 +146,13 @@ export function PriceLevelsTab() {
                     )}
                   />
                 </div>
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive h-10 w-10 hover:text-destructive hover:bg-destructive/10"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 text-destructive h-10 w-10 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => removePriceLevel(index)}
                 >
                   <X className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             ))}
           </div>

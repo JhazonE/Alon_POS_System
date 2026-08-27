@@ -21,8 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-
 import { CategoryDialog } from './category-dialog';
 import { CategoryRow } from './category-row';
 import { CategorySkeleton } from './category-skeleton';
@@ -38,10 +36,10 @@ export function ManageCategoriesDialog({ trigger, onCategoryAdded, open, onOpenC
 
   const showTrigger = trigger !== null;
   const dialogTrigger = trigger || (
-    <Button variant="outline">
+    <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
       <ListTree className="mr-2 h-4 w-4" />
       Manage Categories
-    </Button>
+    </button>
   );
 
   return (
@@ -61,10 +59,10 @@ export function ManageCategoriesDialog({ trigger, onCategoryAdded, open, onOpenC
         <div className="mt-4">
             <div className="flex justify-end mb-4">
                 <CategoryDialog onSave={handleAddCategory}>
-                    <Button size="sm">
+                    <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add Category
-                    </Button>
+                    </button>
                 </CategoryDialog>
             </div>
             <Card>
@@ -98,7 +96,7 @@ export function ManageCategoriesDialog({ trigger, onCategoryAdded, open, onOpenC
         </div>
         <DialogFooter>
           <DialogTrigger asChild>
-            <Button variant="outline">Close</Button>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Close</button>
           </DialogTrigger>
         </DialogFooter>
       </DialogContent>

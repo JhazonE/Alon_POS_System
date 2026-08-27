@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { PlusCircle, Pencil, Check, X, Loader2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormControl } from '@/components/ui/form';
 import {
@@ -155,25 +154,21 @@ export function InlineEditableSelect<T>({
                     }}
                     className="h-8"
                   />
-                  <Button
+                  <button
                     type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 shrink-0 text-green-600"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 shrink-0 text-green-600"
                     disabled={isSaving || !renameDraft.trim()}
                     onClick={(e) => { e.preventDefault(); commitRename(); }}
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 shrink-0 text-muted-foreground"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 shrink-0 text-muted-foreground"
                     onClick={(e) => { e.preventDefault(); resetRename(); }}
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               );
             }
@@ -222,31 +217,26 @@ export function InlineEditableSelect<T>({
                 }}
                 className="h-8"
               />
-              <Button
+              <button
                 type="button"
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 shrink-0 text-green-600"
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 shrink-0 text-green-600"
                 disabled={isSaving || !addDraft.trim()}
                 onClick={(e) => { e.preventDefault(); commitAdd(); }}
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 shrink-0 text-muted-foreground"
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 shrink-0 text-muted-foreground"
                 onClick={(e) => { e.preventDefault(); resetAdd(); }}
               >
                 <X className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
           ) : (
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              className="w-full justify-start h-8 px-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              className="inline-flex items-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring w-full justify-start h-8 px-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -256,7 +246,7 @@ export function InlineEditableSelect<T>({
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               {addLabel}
-            </Button>
+            </button>
           )}
         </div>
       </SelectContent>

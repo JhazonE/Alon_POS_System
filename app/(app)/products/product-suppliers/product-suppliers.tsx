@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,10 +51,10 @@ export function ProductSuppliers({ productId, onUpdate }: { productId: string, o
             Manage suppliers, lead times, and reorder points for this product.
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()} size="sm" type="button">
+        <button onClick={() => handleOpenDialog()} type="button" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Supplier
-        </Button>
+        </button>
       </div>
 
       <div className="border rounded-md">
@@ -98,9 +97,9 @@ export function ProductSuppliers({ productId, onUpdate }: { productId: string, o
                          </Tooltip>
                       </TooltipProvider>
                     ) : (
-                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-20 hover:opacity-100" onClick={() => initiateSetPrimary(mapping.id)} type="button">
+                       <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-6 w-6 p-0 opacity-20 hover:opacity-100" onClick={() => initiateSetPrimary(mapping.id)} type="button">
                            <Star className="h-4 w-4" />
-                       </Button>
+                       </button>
                     )}
                   </TableCell>
                   <TableCell className="font-medium">
@@ -113,12 +112,12 @@ export function ProductSuppliers({ productId, onUpdate }: { productId: string, o
                   <TableCell className="text-right">₱{mapping.supplierCost?.toFixed(2) || '-'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(mapping)} type="button">
+                      <button onClick={() => handleOpenDialog(mapping)} type="button" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">
                         Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(mapping.id)} type="button">
+                      </button>
+                      <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 text-destructive hover:text-destructive" onClick={() => handleDelete(mapping.id)} type="button">
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>
