@@ -10,6 +10,23 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-25-button-plain-tailwind-migration-design.md`
 
+## Progress (as of 2026-08-27)
+
+Running on branch `refactor/button-plain-tailwind`, one commit per task.
+
+- **Done:** Tasks 1–10 — codemod built, then `purchases`, `suppliers`,
+  `dashboard/restock/developer/user-management/NotificationsBell`, `customer`,
+  `inventory`, `reports`, `products`, `settings`, `pos`. All 22 hand-fixed
+  dynamic-variant usages in those modules are done. `npm run typecheck` shows
+  the same 10 pre-existing errors it showed before the migration started, and
+  no others.
+- **Next:** Task 11 (`sales`, 5 hand-fixes), then Task 12, **Task 12b**, Task 13.
+- **Verification gap:** this environment has no `.env`, so the app cannot reach
+  MySQL. Page shells and their buttons were checked in the browser per batch,
+  but table row actions and dialogs that need data were not. Where a hand-fixed
+  toggle sits behind such a screen, its active/inactive classes were verified by
+  running the project's own `cn()` over both branches instead.
+
 ## Global Constraints
 
 - Visual output for **every existing usage** must match the approved design exactly — variant/size class recipes are fixed by the spec's tables, not to be improvised per file.
