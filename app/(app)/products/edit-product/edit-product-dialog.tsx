@@ -4,14 +4,14 @@ import { PlusCircle, Pencil, Loader2, Wand2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Form } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -61,33 +61,33 @@ export function EditProductDialog({
 
   return (
     <TooltipProvider>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
         {trigger ? (
-          <DialogTrigger asChild>
+          <SheetTrigger asChild>
             {trigger}
-          </DialogTrigger>
+          </SheetTrigger>
         ) : externalOpen !== undefined ? null : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <DialogTrigger asChild>
+              <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                   <Pencil className="h-4 w-4" />
                   <span className="sr-only">Edit product</span>
                 </Button>
-              </DialogTrigger>
+              </SheetTrigger>
             </TooltipTrigger>
             <TooltipContent>
               <p>Edit this product</p>
             </TooltipContent>
           </Tooltip>
         )}
-        <DialogContent className="sm:max-w-3xl h-[85vh] flex flex-col overflow-hidden !rounded-lg !duration-500 ease-in-out data-[state=open]:!animate-in data-[state=closed]:!animate-out data-[state=closed]:!fade-out-0 data-[state=open]:!fade-in-0 data-[state=closed]:!zoom-out-95 data-[state=open]:!zoom-in-90 data-[state=closed]:!slide-out-to-top-[5%] data-[state=open]:!slide-in-from-top-[5%]">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogDescription>
+        <SheetContent side="right" className="w-full sm:max-w-2xl h-full flex flex-col overflow-hidden p-0 gap-0">
+          <SheetHeader className="flex-shrink-0 px-6 py-4 border-b space-y-1.5">
+            <SheetTitle>Edit Product</SheetTitle>
+            <SheetDescription>
               Update the details for {product.name}.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           <EditProductFormProvider controller={controller}>
             <div className="flex-1 overflow-y-auto px-4 py-1">
               <Form {...form}>
@@ -155,7 +155,7 @@ export function EditProductDialog({
               </Form>
             </div>
           </EditProductFormProvider>
-          <DialogFooter className="flex-shrink-0">
+          <SheetFooter className="flex-shrink-0 px-6 py-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
@@ -175,9 +175,9 @@ export function EditProductDialog({
                 'Save Changes'
               )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </TooltipProvider>
   );
 }

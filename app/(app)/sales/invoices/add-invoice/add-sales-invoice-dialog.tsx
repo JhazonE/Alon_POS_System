@@ -2,9 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import {
-  Dialog, DialogContent, DialogDescription,
-  DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet, SheetContent, SheetDescription,
+  SheetFooter, SheetHeader, SheetTitle, SheetTrigger,
+} from '@/components/ui/sheet';
 import { Form } from '@/components/ui/form';
 import { PlusCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useAddInvoice } from './use-add-invoice';
@@ -25,20 +25,20 @@ export function AddSalesInvoiceDialog({ onSuccess }: AddSalesInvoiceDialogProps 
   } = useAddInvoice({ onSuccess });
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <Button size="sm">
           <PlusCircle className="mr-2 h-4 w-4" />
           New Sales Invoice
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-none max-w-full w-full h-screen max-h-screen flex flex-col p-0 gap-0 bg-background border-none rounded-none m-0 shadow-none">
-        <DialogHeader className="px-6 py-4 border-b bg-background">
-          <DialogTitle>New Sales Invoice</DialogTitle>
-          <DialogDescription>
+      </SheetTrigger>
+      <SheetContent side="top" className="h-screen w-full flex flex-col p-0 gap-0 bg-background border-none rounded-none shadow-none">
+        <SheetHeader className="px-6 py-4 border-b bg-background space-y-1.5">
+          <SheetTitle>New Sales Invoice</SheetTitle>
+          <SheetDescription>
             Create a transaction. Reference: <span className="font-mono font-medium text-primary">Auto-generated</span>
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
@@ -65,7 +65,7 @@ export function AddSalesInvoiceDialog({ onSuccess }: AddSalesInvoiceDialogProps 
 
             </div>
 
-            <DialogFooter className="p-4 bg-background border-t">
+            <SheetFooter className="p-4 bg-background border-t">
               <div className="flex items-center text-xs text-muted-foreground mr-auto">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Ready to process
@@ -85,10 +85,10 @@ export function AddSalesInvoiceDialog({ onSuccess }: AddSalesInvoiceDialogProps 
                   <>Create Invoice <ArrowRight className="ml-2 h-4 w-4" /></>
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

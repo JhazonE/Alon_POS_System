@@ -2,14 +2,14 @@
 
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,17 +86,17 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
   const { toast } = useToast();
 
   return (
-    <Dialog open={isOpen} onOpenChange={(val) => setOpen(val)}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+    <Sheet open={isOpen} onOpenChange={(val) => setOpen(val)}>
+      {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
 
-      <DialogContent className="sm:max-w-none max-w-full w-full h-screen max-h-screen flex flex-col p-0 gap-0 bg-background border-none rounded-none m-0 shadow-none">
-        <DialogHeader className="px-6 py-4 border-b bg-background">
-          <DialogTitle>{hookProps.editOrder ? 'Edit' : 'New'} Purchase Order</DialogTitle>
-          <DialogDescription>
+      <SheetContent side="top" className="h-screen w-full flex flex-col p-0 gap-0 bg-background border-none rounded-none shadow-none">
+        <SheetHeader className="px-6 py-4 border-b bg-background space-y-1.5">
+          <SheetTitle>{hookProps.editOrder ? 'Edit' : 'New'} Purchase Order</SheetTitle>
+          <SheetDescription>
             Create a purchase transaction. Reference:{' '}
             <span className="font-mono font-medium text-primary">{form.watch('reference')}</span>
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
@@ -625,7 +625,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
               </div>
             </div>
 
-            <DialogFooter className="p-4 bg-background border-t">
+            <SheetFooter className="p-4 bg-background border-t">
               <div className="flex items-center text-xs text-muted-foreground font-bold mr-auto">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-600" /> Ready to process
@@ -651,10 +651,10 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   </>
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
+      </SheetContent>
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
@@ -678,6 +678,6 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </Sheet>
   );
 }

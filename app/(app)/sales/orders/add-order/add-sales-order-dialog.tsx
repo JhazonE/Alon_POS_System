@@ -4,14 +4,14 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Form } from '@/components/ui/form';
 import { PlusCircle, Loader2, ArrowRight } from 'lucide-react';
 import type { Sale } from '@/lib/types';
@@ -46,19 +46,19 @@ export function AddSalesOrderDialog({ initialData, isOpen: controlledIsOpen, onO
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       {!initialData && !hideTrigger && (
-        <DialogTrigger asChild>
+        <SheetTrigger asChild>
           <Button size="sm">
             <PlusCircle className="mr-2 h-4 w-4" />
             New Sales Order
           </Button>
-        </DialogTrigger>
+        </SheetTrigger>
       )}
-      <DialogContent className="sm:max-w-none max-w-full w-full h-screen max-h-screen flex flex-col p-0 gap-0 bg-background border-none rounded-none m-0 shadow-none">
-        <DialogHeader className="px-6 py-4 border-b bg-background">
-          <DialogTitle>New Sales Order</DialogTitle>
-          <DialogDescription>
+      <SheetContent side="top" className="h-screen w-full flex flex-col p-0 gap-0 bg-background border-none rounded-none shadow-none">
+        <SheetHeader className="px-6 py-4 border-b bg-background space-y-1.5">
+          <SheetTitle>New Sales Order</SheetTitle>
+          <SheetDescription>
             {/* On a new order the number is allocated by the server at save
                 time, so there is nothing to show yet. Editing an existing
                 order still displays its assigned number. */}
@@ -66,8 +66,8 @@ export function AddSalesOrderDialog({ initialData, isOpen: controlledIsOpen, onO
             <span className="font-mono font-medium text-primary">
               {formHook.form.watch('reference') || 'assigned on save'}
             </span>
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...formHook.form}>
           <form onSubmit={formHook.form.handleSubmit(formHook.onSubmit, formHook.onInvalid)} className="flex-1 flex flex-col overflow-hidden">
@@ -102,7 +102,7 @@ export function AddSalesOrderDialog({ initialData, isOpen: controlledIsOpen, onO
               </div>
             </div>
 
-            <DialogFooter className="p-4 bg-background border-t">
+            <SheetFooter className="p-4 bg-background border-t">
               <div className="flex items-center text-xs text-muted-foreground mr-auto">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Ready to process
@@ -118,10 +118,10 @@ export function AddSalesOrderDialog({ initialData, isOpen: controlledIsOpen, onO
                   <>{initialData ? 'Update Order' : 'Create Order'} <ArrowRight className="ml-2 h-4 w-4" /></>
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

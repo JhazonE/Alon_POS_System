@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -64,17 +64,17 @@ export function ViewProductDialog({
 
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
             {trigger && (
-                <DialogTrigger asChild>
+                <SheetTrigger asChild>
                     {trigger}
-                </DialogTrigger>
+                </SheetTrigger>
             )}
-            <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0">
-                 <DialogHeader className="sr-only">
-                    <DialogTitle>{product.name}</DialogTitle>
-                    <DialogDescription>{product.description}</DialogDescription>
-                 </DialogHeader>
+            <SheetContent side="right" className="w-full sm:max-w-3xl h-full overflow-y-auto overflow-x-hidden p-0 gap-0">
+                 <SheetHeader className="sr-only">
+                    <SheetTitle>{product.name}</SheetTitle>
+                    <SheetDescription>{product.description}</SheetDescription>
+                 </SheetHeader>
 
                  <div className="bg-gradient-to-r from-primary/5 via-background to-background p-6 border-b sticky top-0 bg-background z-10">
                     <div className="flex flex-col gap-4">
@@ -278,7 +278,7 @@ export function ViewProductDialog({
                     </div>
                 </div>
 
-                <DialogFooter className="sticky bottom-0 bg-background p-6 border-t sm:justify-between flex items-center gap-4">
+                <SheetFooter className="sticky bottom-0 bg-background p-6 border-t sm:justify-between flex items-center gap-4">
                      <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">ID: {product.id}</p>
                      <div className="flex items-center gap-3">
                         <Button variant="ghost" onClick={() => setIsOpen(false)} className="hover:bg-muted">Close</Button>
@@ -348,8 +348,8 @@ export function ViewProductDialog({
                           }
                         />
                      </div>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
     );
 }

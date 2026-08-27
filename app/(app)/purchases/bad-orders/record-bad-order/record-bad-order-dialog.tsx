@@ -1,14 +1,14 @@
 'use client';
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,21 +73,21 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
   } = controller;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetTrigger asChild>
         <Button>
           <AlertTriangle className="mr-2 h-4 w-4" />
           Record Bad Order
         </Button>
-      </DialogTrigger>
+      </SheetTrigger>
 
-      <DialogContent className="sm:max-w-none max-w-full w-full h-screen max-h-screen flex flex-col p-0 gap-0 bg-background border-none rounded-none m-0 shadow-none">
-        <DialogHeader className="px-6 py-4 border-b bg-background">
-          <DialogTitle>Record Bad Order</DialogTitle>
-          <DialogDescription>
+      <SheetContent side="top" className="h-screen w-full flex flex-col p-0 gap-0 bg-background border-none rounded-none shadow-none">
+        <SheetHeader className="px-6 py-4 border-b bg-background space-y-1.5">
+          <SheetTitle>Record Bad Order</SheetTitle>
+          <SheetDescription>
             Record defective, damaged, or expired items to remove them from inventory properly.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
@@ -408,7 +408,7 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
               </div>
             </div>
 
-            <DialogFooter className="p-4 bg-background border-t">
+            <SheetFooter className="p-4 bg-background border-t">
               <div className="flex items-center text-xs text-muted-foreground mr-auto">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Ready to process
@@ -435,10 +435,10 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
                   </>
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
+      </SheetContent>
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
@@ -493,6 +493,6 @@ export function RecordBadOrderDialog({ onSuccess }: UseRecordBadOrderProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </Sheet>
   );
 }

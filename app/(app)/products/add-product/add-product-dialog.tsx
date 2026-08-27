@@ -4,14 +4,14 @@ import { PlusCircle, Loader2, Wand2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Form } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -36,27 +36,27 @@ export function AddProductDialog(props: UseAddProductFormProps) {
   } = controller;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <Button size="sm">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Product
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl h-[85vh] flex flex-col overflow-hidden !rounded-lg !duration-500 ease-in-out data-[state=open]:!animate-in data-[state=closed]:!animate-out data-[state=closed]:!fade-out-0 data-[state=open]:!fade-in-0 data-[state=closed]:!zoom-out-95 data-[state=open]:!zoom-in-90 data-[state=closed]:!slide-out-to-top-[5%] data-[state=open]:!slide-in-from-top-[5%]">
-        <DialogHeader className="flex-shrink-0">
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full sm:max-w-2xl h-full flex flex-col overflow-hidden p-0 gap-0">
+        <SheetHeader className="flex-shrink-0 px-6 py-4 border-b space-y-0">
           {/* The type choice sits in the header, outside the scroll area: it
               decides which form you are filling in, so it must stay visible
               while you scroll. The description doubles as the hint slot so
               switching type never shifts the layout. */}
           <div className="flex items-start justify-between gap-4 pr-8">
             <div className="space-y-1.5">
-              <DialogTitle>Add New Product</DialogTitle>
-              <DialogDescription>
+              <SheetTitle>Add New Product</SheetTitle>
+              <SheetDescription>
                 {itemType === 'service'
                   ? 'No stock tracking — always available for sale.'
                   : 'Fill in the details below to add a new product.'}
-              </DialogDescription>
+              </SheetDescription>
             </div>
             <div
               role="group"
@@ -83,7 +83,7 @@ export function AddProductDialog(props: UseAddProductFormProps) {
               ))}
             </div>
           </div>
-        </DialogHeader>
+        </SheetHeader>
         <AddProductFormProvider controller={controller}>
           <div className="flex-1 overflow-y-auto px-4 py-1">
             <Form {...form}>
@@ -151,7 +151,7 @@ export function AddProductDialog(props: UseAddProductFormProps) {
             </Form>
           </div>
         </AddProductFormProvider>
-        <DialogFooter className="flex-shrink-0">
+        <SheetFooter className="flex-shrink-0 px-6 py-4 border-t">
           <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
@@ -171,8 +171,8 @@ export function AddProductDialog(props: UseAddProductFormProps) {
               'Add Product'
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
