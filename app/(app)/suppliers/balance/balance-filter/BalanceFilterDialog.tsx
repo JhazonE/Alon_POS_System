@@ -3,7 +3,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,7 +21,7 @@ export function BalanceFilterDialog({ filters, onFilterChange, onReset }: Props)
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9">
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-9">
           <Filter className="mr-2 h-4 w-4" />
           Filter
           {activeFiltersCount > 0 && (
@@ -30,7 +29,7 @@ export function BalanceFilterDialog({ filters, onFilterChange, onReset }: Props)
               {activeFiltersCount}
             </span>
           )}
-        </Button>
+        </button>
       </AlertDialogTrigger>
       <AlertDialogContent className="sm:max-w-[425px]">
         <AlertDialogHeader>
@@ -102,7 +101,7 @@ export function BalanceFilterDialog({ filters, onFilterChange, onReset }: Props)
         </div>
         <AlertDialogFooter>
           <div className="flex w-full items-center justify-between">
-            <Button variant="ghost" onClick={onReset}>Reset</Button>
+            <button onClick={onReset} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">Reset</button>
             <div className="flex gap-2">
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction>Apply Filters</AlertDialogAction>

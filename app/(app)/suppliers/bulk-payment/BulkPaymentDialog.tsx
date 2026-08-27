@@ -3,7 +3,6 @@
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
@@ -85,12 +84,12 @@ export function BulkPaymentDialog({ suppliers, open, onOpenChange, onComplete }:
           <span className="text-xs text-muted-foreground flex-1">
             {activeRows.length} of {rows.length} suppliers will receive payment
           </span>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleFillAll} disabled={isSubmitting}>
+          <button className="inline-flex items-center justify-center rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] rounded-lg h-7 text-xs gap-1" onClick={handleFillAll} disabled={isSubmitting}>
             <RefreshCw className="h-3 w-3" /> Fill All
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={handleClearAll} disabled={isSubmitting}>
+          </button>
+          <button className="inline-flex items-center justify-center rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg h-7 text-xs gap-1 text-muted-foreground" onClick={handleClearAll} disabled={isSubmitting}>
             <Eraser className="h-3 w-3" /> Clear All
-          </Button>
+          </button>
         </div>
 
         {/* Supplier rows */}
@@ -168,19 +167,19 @@ export function BulkPaymentDialog({ suppliers, open, onOpenChange, onComplete }:
             <span className="text-xs text-muted-foreground">Total to pay: </span>
             <span className="text-sm font-bold text-red-600">₱{fmt(total)}</span>
           </div>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <button onClick={() => onOpenChange(false)} disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={handleSubmit}
             disabled={isSubmitting || activeRows.length === 0 || isDone}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isSubmitting
               ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing…</>
               : `Pay ${activeRows.length} Supplier${activeRows.length !== 1 ? 's' : ''}`
             }
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

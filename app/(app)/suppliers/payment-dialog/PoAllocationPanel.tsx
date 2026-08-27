@@ -1,7 +1,6 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,17 +30,15 @@ export function PoAllocationPanel({
     <div className="space-y-2 border rounded-md p-3 bg-muted/20">
       <div className="flex items-center justify-between">
         <Label className="text-xs font-semibold">PO Allocations</Label>
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs"
+          className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-7 text-xs"
           onClick={handleAutoAllocate}
           disabled={amountValue <= 0 || loadingPOs}
         >
           <Calculator className="h-3 w-3 mr-1" />
           Auto-Allocate
-        </Button>
+        </button>
       </div>
 
       <div className="relative">

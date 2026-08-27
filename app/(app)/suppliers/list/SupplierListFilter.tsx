@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,7 +18,7 @@ export function SupplierListFilter({ filters, setFilters }: Props) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9">
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-9">
           <Filter className="mr-2 h-4 w-4" />
           Filter
           {Object.keys(filters).length > 0 && (
@@ -28,7 +26,7 @@ export function SupplierListFilter({ filters, setFilters }: Props) {
               {Object.keys(filters).length}
             </span>
           )}
-        </Button>
+        </button>
       </AlertDialogTrigger>
       <AlertDialogContent className="sm:max-w-[425px]">
         <AlertDialogHeader>
@@ -87,7 +85,7 @@ export function SupplierListFilter({ filters, setFilters }: Props) {
           </div>
         </div>
         <AlertDialogFooter>
-          <Button variant="ghost" onClick={() => setFilters({})} className="mr-auto">Reset</Button>
+          <button onClick={() => setFilters({})} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] mr-auto">Reset</button>
           <AlertDialogAction>Apply Filters</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,7 +1,6 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -45,7 +44,7 @@ export function SupplierPaymentsFilter({
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="relative h-9">
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 relative h-9">
               <Filter className="mr-2 h-4 w-4" />
               Filter
               {hasFilters && (
@@ -53,21 +52,19 @@ export function SupplierPaymentsFilter({
                   {filterCount}
                 </Badge>
               )}
-            </Button>
+            </button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-4" align="start">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-2 mb-2">
                 <h4 className="font-semibold text-sm">Filters</h4>
                 {hasFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={() => { setDateRange(undefined); setPaymentMethod('All'); }}
-                    className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring rounded-lg gap-1.5 h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     <X className="mr-1 h-3 w-3" /> Clear all
-                  </Button>
+                  </button>
                 )}
               </div>
               <div className="grid gap-4">
@@ -75,11 +72,9 @@ export function SupplierPaymentsFilter({
                   <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Date Range</label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
+                      <button
                         id="date"
-                        variant="outline"
-                        size="sm"
-                        className={cn('w-full justify-start text-left font-normal h-9', !dateRange && 'text-muted-foreground')}
+                        className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5", 'w-full justify-start text-left font-normal h-9', !dateRange && 'text-muted-foreground')}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {dateRange?.from ? (
@@ -89,7 +84,7 @@ export function SupplierPaymentsFilter({
                         ) : (
                           <span>Pick a date range</span>
                         )}
-                      </Button>
+                      </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar

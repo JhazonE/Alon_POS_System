@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -86,22 +85,19 @@ export function SupplierBalanceTable({
                 <Badge variant="secondary" className="text-xs">
                   {selectedCount} selected
                 </Badge>
-                <Button
-                  size="sm"
-                  className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
+                <button
+                  className="inline-flex items-center justify-center rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[13px] rounded-lg h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
                   onClick={onBulkPayment}
                 >
                   <BulkPayIcon className="h-3 w-3" />
                   Pay Selected ({selectedCount})
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground"
+                </button>
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-7 text-xs text-muted-foreground"
                   onClick={onClearSelection}
                 >
                   <X className="h-3 w-3 mr-1" />Clear
-                </Button>
+                </button>
               </div>
             )}
           </div>
@@ -118,9 +114,9 @@ export function SupplierBalanceTable({
             <div className="flex items-center gap-2">
               <BalanceFilterDialog filters={filters} onFilterChange={onFilterChange} onReset={onResetFilters} />
               {Object.keys(filters).length > 0 && (
-                <Button variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground" onClick={onResetFilters}>
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-9 px-2 text-muted-foreground" onClick={onResetFilters}>
                   Clear <X className="ml-1 h-3 w-3" />
-                </Button>
+                </button>
               )}
             </div>
           </div>
@@ -204,10 +200,10 @@ export function SupplierBalanceTable({
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Open menu</span>
-                        </Button>
+                        </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[200px]">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
