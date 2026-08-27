@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Truck, Calendar, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
 import { getSuppliers } from '../products/actions';
 import { AddPurchaseOrderDialog } from '../purchases/add-purchase-order/add-purchase-order-dialog';
@@ -104,10 +103,8 @@ export function SupplierScheduleCard() {
                     <span className="font-semibold text-sm">{s.name}</span>
                     <span className="text-xs text-muted-foreground">{s.orderSchedule}</span>
                 </div>
-                <Button 
-                    size="sm" 
-                    variant="secondary" 
-                    className="h-8 text-xs"
+                <button 
+                    className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-8 text-xs"
                     onClick={() => {
                         setSelectedSupplierId(s.id);
                         setIsOrderDialogOpen(true);
@@ -115,7 +112,7 @@ export function SupplierScheduleCard() {
                 >
                     <ShoppingCart className="w-3 h-3 mr-1" />
                     Order
-                </Button>
+                </button>
                 </div>
             ))
           )}

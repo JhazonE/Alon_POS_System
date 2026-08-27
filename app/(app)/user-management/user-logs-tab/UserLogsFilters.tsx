@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, X, RefreshCw } from 'lucide-react';
@@ -44,20 +42,18 @@ export function UserLogsFilters({
           className="pr-8"
         />
         {searchQuery && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-0 top-0 h-full px-2 hover:bg-transparent"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring w-10 p-0 absolute right-0 top-0 h-full px-2 hover:bg-transparent"
             onClick={() => { setSearchQuery(''); onClear(); }}
           >
             <X className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
+          </button>
         )}
       </div>
 
-      <Button size="icon" variant="secondary" onClick={onSearch}>
+      <button onClick={onSearch} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring h-10 w-10 p-0">
         <Search className="h-4 w-4" />
-      </Button>
+      </button>
 
       <Select value={moduleFilter} onValueChange={v => { setModuleFilter(v); onPageReset(); }}>
         <SelectTrigger className="w-[140px]">
@@ -97,14 +93,14 @@ export function UserLogsFilters({
         />
       </div>
 
-      <Button size="icon" variant="ghost" onClick={onRefresh} title="Refresh">
+      <button onClick={onRefresh} title="Refresh" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
         <RefreshCw className="h-4 w-4" />
-      </Button>
+      </button>
 
       {hasActiveFilters && (
-        <Button variant="outline" size="sm" onClick={onClear}>
+        <button onClick={onClear} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">
           <X className="mr-1.5 h-3.5 w-3.5" /> Clear
-        </Button>
+        </button>
       )}
     </div>
   );

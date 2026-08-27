@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { API_BASE_URL, getApiUrl } from '@/lib/api-config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -103,17 +102,16 @@ export default function ApiDashboardPage() {
                   <div className="space-y-2">
                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Predefined</h3>
                      {endpoints.map((ep) => (
-                       <Button 
+                       <button 
                          key={ep.path} 
-                         variant="ghost" 
-                         className="w-full justify-start text-left h-auto py-3 px-4 border"
+                         className="inline-flex items-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring w-full justify-start text-left h-auto py-3 px-4 border"
                          onClick={() => setCustomPath(ep.path)}
                        >
                          <div className="flex flex-col items-start w-full gap-1">
                            <span className="font-semibold text-primary">{ep.path}</span>
                            <span className="text-xs text-muted-foreground font-normal">{ep.description}</span>
                          </div>
-                       </Button>
+                       </button>
                      ))}
                   </div>
                 </div>
@@ -135,23 +133,21 @@ export default function ApiDashboardPage() {
                    placeholder="/path/to/resource"
                    className="font-mono text-sm"
                  />
-                 <Button onClick={() => handleTest(customPath)} disabled={loading || !customPath}>
+                 <button onClick={() => handleTest(customPath)} disabled={loading || !customPath} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
                     {loading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
                     Send
-                 </Button>
+                 </button>
               </div>
 
               <div className="flex-1 bg-slate-950 text-slate-50 rounded-lg p-4 font-mono text-xs overflow-auto border shadow-inner relative group">
                  {testResult ? (
                     <>
-                       <Button 
-                         variant="ghost" 
-                         size="icon" 
-                         className="absolute top-2 right-2 h-6 w-6 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                       <button 
+                         className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute top-2 right-2 h-6 w-6 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
                          onClick={() => copyToClipboard(testResult)}
                        >
                          <Copy className="h-3 w-3" />
-                       </Button>
+                       </button>
                        <pre className="whitespace-pre-wrap break-all">
                           {testResult}
                        </pre>

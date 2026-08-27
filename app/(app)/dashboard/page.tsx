@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/chart';
 import { CartesianGrid, XAxis, Area, AreaChart } from 'recharts';
 import { Package, ShoppingCart, AlertCircle, Boxes, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getApiUrl } from '@/lib/api-config';
 import { formatFiscalYear } from '@/lib/fiscal-utils';
@@ -108,10 +107,10 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-semibold">Failed to load dashboard</h2>
                   <p className="text-sm text-muted-foreground max-w-md">{error}</p>
               </div>
-              <Button onClick={fetchData} variant="outline">
+              <button onClick={fetchData} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Retry
-              </Button>
+              </button>
           </div>
       );
   }
