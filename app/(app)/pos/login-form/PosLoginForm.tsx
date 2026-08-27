@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,15 +22,13 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
       <Card className="mx-auto w-full max-w-md overflow-hidden border-0 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
         {/* Brand Banner */}
         <div className="relative bg-gradient-to-br from-primary via-primary to-primary/80 px-8 py-9 text-center text-white">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-3 top-3 h-9 w-9 text-white/70 hover:bg-white/15 hover:text-white"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-3 top-3 h-9 w-9 text-white/70 hover:bg-white/15 hover:text-white"
             onClick={() => setIsSettingsOpen(true)}
             title="Connection Settings"
           >
             <Settings className="h-4 w-4" />
-          </Button>
+          </button>
           <div className="mx-auto mb-3 h-16 w-16 overflow-hidden rounded-2xl shadow-lg ring-1 ring-white/25">
             <Image src="/alon-icon.svg" alt="Alon POS System" width={64} height={64} className="h-full w-full object-contain" priority />
           </div>
@@ -86,31 +82,29 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
                   className="h-11 pl-10 pr-10"
                   {...form.register('password')}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowPassword(prev => !prev)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
-                </Button>
+                </button>
               </div>
               {form.formState.errors.password && (
                 <p className="text-sm font-medium text-destructive">{form.formState.errors.password.message}</p>
               )}
             </div>
 
-            <Button
-              className="h-12 w-full text-base font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-[0.99]"
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] h-12 w-full text-base font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-[0.99]"
               type="submit"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Logging In...</>
               ) : 'Login to POS'}
-            </Button>
+            </button>
           </form>
 
           <div className="mt-6 flex flex-col items-center gap-2">

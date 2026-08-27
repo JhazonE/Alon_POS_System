@@ -8,7 +8,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -90,13 +89,13 @@ export function StartShiftDialog({ isOpen, onShiftStart, onCancel }: StartShiftD
             <span className="text-2xl font-bold text-primary">₱{totalCash.toFixed(2)}</span>
         </div>
         <DialogFooter className="flex flex-col gap-2">
-          <Button
+          <button
             type="button"
             onClick={handleStartShift}
-            className="w-full py-6 h-auto text-lg"
+            className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] w-full py-6 h-auto text-lg"
           >
             Start Shift {totalCash > 0 ? `(₱${totalCash.toFixed(2)})` : ''}
-          </Button>
+          </button>
         </DialogFooter>
 
       </DialogContent>

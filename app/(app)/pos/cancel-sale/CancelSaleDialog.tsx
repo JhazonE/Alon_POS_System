@@ -1,7 +1,6 @@
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, XCircle, Minus, Plus } from 'lucide-react';
 import { useCancelSale } from './use-cancel-sale';
@@ -44,34 +43,33 @@ export function CancelSaleDialog({ isOpen, onOpenChange, onCancelSelected, onCan
               <div className="flex items-center justify-between gap-4 pl-12">
                 <div className="text-sm font-medium text-slate-600">Quantity to Void:</div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDecrement} disabled={quantity <= 1}>
+                  <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8" onClick={handleDecrement} disabled={quantity <= 1}>
                     <Minus className="h-4 w-4" />
-                  </Button>
+                  </button>
                   <Input
                     type="number"
                     value={quantity}
                     onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)}
                     className="w-16 h-8 text-center"
                   />
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleIncrement} disabled={selectedItem && quantity >= selectedItem.quantity}>
+                  <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8" onClick={handleIncrement} disabled={selectedItem && quantity >= selectedItem.quantity}>
                     <Plus className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
 
-            <Button
-              className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white"
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full mt-4 bg-red-600 hover:bg-red-700 text-white"
               disabled={!selectedItem}
               onClick={() => { onCancelSelected(quantity); onOpenChange(false); }}
             >
               Confirm Void ({quantity})
-            </Button>
+            </button>
           </div>
 
-          <Button
-            variant="outline"
-            className="h-16 justify-start gap-4 text-sm border-slate-200 hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all group"
+          <button
+            className="inline-flex items-center rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-16 justify-start gap-4 text-sm border-slate-200 hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all group"
             onClick={() => { onCancelAll(); onOpenChange(false); }}
           >
             <div className="p-2 bg-slate-100 rounded-md group-hover:bg-destructive/10">
@@ -81,11 +79,11 @@ export function CancelSaleDialog({ isOpen, onOpenChange, onCancelSelected, onCan
               <div className="font-bold text-base">Clear Entire Sale</div>
               <div className="text-xs text-slate-500">Reset cart and clear all items</div>
             </div>
-          </Button>
+          </button>
         </div>
 
         <DialogFooter className="sm:justify-end mt-4">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-sm">Keep Items</Button>
+          <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] text-sm">Keep Items</button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

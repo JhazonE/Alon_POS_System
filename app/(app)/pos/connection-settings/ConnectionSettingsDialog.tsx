@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Server, Settings, CheckCircle2, XCircle, RefreshCw, Network, Monitor, Printer, ScanLine } from 'lucide-react';
@@ -75,9 +74,9 @@ export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSetti
                     onChange={(e) => setServerIp(e.target.value)}
                     className="h-8 text-sm"
                   />
-                  <Button type="button" variant="outline" size="sm" onClick={testConnection} disabled={isTesting} className="h-8 shrink-0 px-3 text-xs">
+                  <button type="button" onClick={testConnection} disabled={isTesting} className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring rounded-lg gap-1.5 h-8 shrink-0 px-3 text-xs">
                     {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Test'}
-                  </Button>
+                  </button>
                 </div>
                 <div className="flex items-center gap-2 min-h-[18px]">
                   {testResult === 'success' && (
@@ -105,9 +104,9 @@ export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSetti
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                   <Monitor className="h-3.5 w-3.5" /> POS Terminal
                 </p>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={fetchTerminals} disabled={isLoadingTerminals}>
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-6 w-6" onClick={fetchTerminals} disabled={isLoadingTerminals}>
                   <RefreshCw className={`h-3.5 w-3.5 ${isLoadingTerminals ? 'animate-spin' : ''}`} />
-                </Button>
+                </button>
               </div>
 
               <div className="flex flex-col gap-1">
@@ -200,9 +199,9 @@ export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSetti
                       className="h-8 text-sm flex-1"
                     />
                   )}
-                  <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={discoverPrinters} disabled={isDiscoveringPrinters} title="Scan for printers">
+                  <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8 shrink-0" onClick={discoverPrinters} disabled={isDiscoveringPrinters} title="Scan for printers">
                     {isDiscoveringPrinters ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-                  </Button>
+                  </button>
                 </div>
                 {availablePrinters.length > 0 && (
                   <p className="text-[10px] text-muted-foreground">{availablePrinters.length} printer(s) found.</p>
@@ -238,8 +237,8 @@ export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSetti
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-3 border-t bg-muted/30">
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleSave}>Save & Apply</Button>
+          <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">Cancel</button>
+          <button onClick={handleSave} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">Save & Apply</button>
         </div>
       </DialogContent>
     </Dialog>

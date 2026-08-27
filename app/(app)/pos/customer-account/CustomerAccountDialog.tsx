@@ -37,7 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { User, Loader2, Search, CreditCard, Printer, Hash, StickyNote, Phone, MapPin, Tag, Wallet, TrendingUp, Landmark, Coins } from 'lucide-react';
@@ -45,10 +44,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { format, differenceInDays } from 'date-fns';
 import { useCustomerAccount } from './use-customer-account';
+import { cn } from '@/lib/utils';
 import type { CustomerAccountDialogProps } from './customer-account-types';
 import { MembershipPaymentDialog } from '../membership/MembershipPaymentDialog';
 
 export { WALK_IN_CUSTOMER } from './customer-account-types';
+
+/**
+ * Overpayment-choice button classes: the shared default-size button recipe,
+ * with the selected/unselected halves split out. Each half also carries this
+ * control's own sizing and accent colour, appended after the variant classes
+ * so tailwind-merge lets amber/emerald beat the recipe's bg-primary, exactly
+ * as the original className-after-variant ordering did.
+ */
+const CHOICE_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-[18px]';
+const CHOICE_SELECTED =
+  'bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55';
+const CHOICE_UNSELECTED =
+  'border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring';
 
 export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, initialCustomer, printMode = 'native', settings, posUserId, posCashierName, posShiftId, posTerminalId }: CustomerAccountDialogProps) {
   const {
@@ -105,16 +119,14 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                         onKeyDown={(e) => { if (e.key === 'Enter') handleRfidSearch(); }}
                         className="w-full"
                       />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-10 w-10 shrink-0"
                         onClick={handleRfidSearch}
                         disabled={isRfidSearching || !rfidInput.trim()}
                         title="Search by RFID"
                       >
                         {isRfidSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                      </Button>
+                      </button>
                     </div>
                     {rfidError && <p className="text-xs text-destructive mt-1">{rfidError}</p>}
                   </div>
@@ -211,13 +223,12 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                         ) : (
                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-muted text-muted-foreground">No Card</span>
                         )}
-                        <Button
-                          size="sm"
-                          className="w-full h-8 bg-amber-600 hover:bg-amber-700"
+                        <button
+                          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[13px] text-xs rounded-lg gap-1.5 w-full h-8 bg-amber-600 hover:bg-amber-700"
                           onClick={() => setIsMembershipDialogOpen(true)}
                         >
                           {membershipCard ? (membershipCard.isExpired ? 'Renew Membership' : 'Renew Membership') : 'Activate Membership'}
-                        </Button>
+                        </button>
                       </CardContent>
                     </Card>
                   </div>
@@ -330,7 +341,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                             </TableCell>
                             <TableCell className="text-right">
                               {balance > 0 && sale.status !== 'Voided' && (
-                                <Button variant="ghost" size="sm" className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => handlePaySpecific(sale)}>Pay</Button>
+                                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => handlePaySpecific(sale)}>Pay</button>
                               )}
                             </TableCell>
                           </TableRow>
@@ -368,7 +379,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handlePaySpecific(sale)}>Pay</Button>
+                              <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handlePaySpecific(sale)}>Pay</button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -402,7 +413,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                               <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-700">{sale.status}</span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => handlePaySpecific(sale)}>Pay</Button>
+                              <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => handlePaySpecific(sale)}>Pay</button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -417,8 +428,8 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
           </div>
 
           <SheetFooter className="mt-6">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSelect}>Confirm Selection</Button>
+            <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
+            <button onClick={handleSelect} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">Confirm Selection</button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -456,28 +467,36 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                   </p>
                   <p className="text-xs text-amber-700">Choose how to handle the excess:</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button
+                    <button
                       type="button"
-                      variant={overpaymentMode === 'change' ? 'default' : 'outline'}
-                      className={overpaymentMode === 'change' ? 'bg-amber-600 hover:bg-amber-700 h-auto py-2' : 'h-auto py-2'}
+                      className={cn(
+                        CHOICE_CLASSES,
+                        overpaymentMode === 'change'
+                          ? `${CHOICE_SELECTED} bg-amber-600 hover:bg-amber-700 h-auto py-2`
+                          : `${CHOICE_UNSELECTED} h-auto py-2`
+                      )}
                       onClick={() => setOverpaymentMode('change')}
                     >
                       <div className="flex flex-col items-center">
                         <Coins className="h-4 w-4 mb-1" />
                         <span className="text-xs font-medium">Give Change</span>
                       </div>
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                       type="button"
-                      variant={overpaymentMode === 'credit' ? 'default' : 'outline'}
-                      className={overpaymentMode === 'credit' ? 'bg-emerald-600 hover:bg-emerald-700 h-auto py-2' : 'h-auto py-2'}
+                      className={cn(
+                        CHOICE_CLASSES,
+                        overpaymentMode === 'credit'
+                          ? `${CHOICE_SELECTED} bg-emerald-600 hover:bg-emerald-700 h-auto py-2`
+                          : `${CHOICE_UNSELECTED} h-auto py-2`
+                      )}
                       onClick={() => setOverpaymentMode('credit')}
                     >
                       <div className="flex flex-col items-center">
                         <Wallet className="h-4 w-4 mb-1" />
                         <span className="text-xs font-medium">Keep as Credit</span>
                       </div>
-                    </Button>
+                    </button>
                   </div>
                   <p className="text-xs text-amber-700">
                     {overpaymentMode === 'change'
@@ -517,11 +536,11 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitPayment} disabled={isSubmittingPayment} className="bg-emerald-600 hover:bg-emerald-700">
+            <button onClick={() => setIsPaymentDialogOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
+            <button onClick={handleSubmitPayment} disabled={isSubmittingPayment} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-emerald-600 hover:bg-emerald-700">
               {isSubmittingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Payment
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -540,17 +559,14 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
             <p className="text-sm text-muted-foreground">{lastPaymentData?.paymentType}</p>
           </div>
           <DialogFooter className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="lg"
+            <button
               ref={noButtonRef}
-              onClick={() => { setShowPrintPrompt(false); onOpenChange(true); }}
+              onClick={() => { setShowPrintPrompt(false); onOpenChange(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-[46px] px-6 text-[15px]"
             >
               No
-            </Button>
-            <Button
-              size="lg"
-              className="bg-emerald-600 hover:bg-emerald-700"
+            </button>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-[46px] px-6 text-[15px] bg-emerald-600 hover:bg-emerald-700"
               ref={yesButtonRef}
               autoFocus
               onClick={async () => {
@@ -560,7 +576,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
               }}
             >
               <Printer className="mr-2 h-4 w-4" /> Yes, Print
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

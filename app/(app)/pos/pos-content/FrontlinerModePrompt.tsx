@@ -3,7 +3,6 @@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { FlaskConical, SendToBack, ShoppingCart, Ban, Store, ShieldX } from 'lucide-react';
 
 type Props = {
@@ -65,13 +64,12 @@ export function FrontlinerModePrompt({ open, onOpenChange, blocked = false, user
               </div>
             </div>
 
-            <Button
-              variant="outline"
-              className="w-full"
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] w-full"
               onClick={() => onOpenChange(false)}
             >
               Back to Login
-            </Button>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
@@ -128,12 +126,12 @@ export function FrontlinerModePrompt({ open, onOpenChange, blocked = false, user
             </div>
           </div>
 
-          <Button
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full bg-violet-600 hover:bg-violet-700 text-white"
             onClick={() => onOpenChange(false)}
           >
             Got it, start tagging
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>

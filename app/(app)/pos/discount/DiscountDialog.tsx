@@ -8,7 +8,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -21,6 +20,7 @@ import {
 import { Percent, Banknote, UserRound, Accessibility, CreditCard, User, ShieldCheck } from 'lucide-react';
 import { useDiscount } from './use-discount';
 import type { DiscountDialogProps, DiscountType } from './discount-types';
+import { cn } from "@/lib/utils";
 
 export type { DiscountDetails } from './discount-types';
 
@@ -59,31 +59,21 @@ export function DiscountDialog({ isOpen, onOpenChange, item, onApplyDiscount, ha
           <div className="space-y-5">
             {/* Scope Toggle */}
             <div className="flex bg-slate-100/80 dark:bg-slate-800/80 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                className={`flex-1 h-10 text-xs uppercase font-bold tracking-wider transition-all duration-200 rounded-lg ${
-                  scope === 'selected'
-                    ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 ring-1 ring-slate-200 dark:ring-slate-600'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
-                }`}
+                className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]", `flex-1 h-10 text-xs uppercase font-bold tracking-wider transition-all duration-200 rounded-lg ${ scope === 'selected' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 ring-1 ring-slate-200 dark:ring-slate-600' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50' }`)}
                 onClick={() => setScope('selected')}
                 disabled={!item}
               >
                 Selected
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                variant="ghost"
-                className={`flex-1 h-10 text-xs uppercase font-bold tracking-wider transition-all duration-200 rounded-lg ${
-                  scope === 'all'
-                    ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 ring-1 ring-slate-200 dark:ring-slate-600'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
-                }`}
+                className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]", `flex-1 h-10 text-xs uppercase font-bold tracking-wider transition-all duration-200 rounded-lg ${ scope === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 ring-1 ring-slate-200 dark:ring-slate-600' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50' }`)}
                 onClick={() => { setScope('all'); setDiscountType('percent'); }}
               >
                 All Items
-              </Button>
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -217,20 +207,19 @@ export function DiscountDialog({ isOpen, onOpenChange, item, onApplyDiscount, ha
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              className="flex-1 h-12 rounded-xl font-bold text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            <button
+              className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] flex-1 h-12 rounded-xl font-bold text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               onClick={() => onOpenChange(false)}
             >
               Cancel
-            </Button>
-            <Button
-              className="flex-1 h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+            </button>
+            <button
+              className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] flex-1 h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
               onClick={handleApply}
               disabled={statutoryInvalid}
             >
               Apply Discount
-            </Button>
+            </button>
           </div>
         </div>
       </SheetContent>

@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { ShoppingCart, User, X, ChevronRight, SendToBack } from 'lucide-react';
 import { WALK_IN_CUSTOMER } from '../customer-account/CustomerAccountDialog';
 import type { SaleItem } from './pos-types';
@@ -173,9 +171,8 @@ export function PosTotalsPanel({
       {/* Action Button */}
       <div className="p-5 bg-muted/10 border-t">
         {isFrontliner ? (
-          <Button
-            size="lg"
-            className="w-full h-20 text-2xl font-bold shadow-lg bg-violet-600 hover:bg-violet-700 shadow-violet-400/20 hover:shadow-violet-400/40 hover:-translate-y-1 transition-all rounded-xl"
+          <button
+            className="inline-flex items-center justify-center gap-2 tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-6 w-full h-20 text-2xl font-bold shadow-lg bg-violet-600 hover:bg-violet-700 shadow-violet-400/20 hover:shadow-violet-400/40 hover:-translate-y-1 transition-all rounded-xl"
             onClick={handleSendToQueue}
             disabled={items.length === 0}
           >
@@ -183,11 +180,10 @@ export function PosTotalsPanel({
             <div className="bg-white/20 rounded-lg p-2 mr-2">
               <SendToBack className="w-8 h-8" />
             </div>
-          </Button>
+          </button>
         ) : (
-          <Button
-            size="lg"
-            className="w-full h-20 text-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all rounded-xl"
+          <button
+            className="inline-flex items-center justify-center gap-2 tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-6 w-full h-20 text-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all rounded-xl"
             onClick={handleDefaultTender}
             disabled={items.length === 0}
           >
@@ -195,7 +191,7 @@ export function PosTotalsPanel({
             <div className="bg-white/20 rounded-lg p-2 mr-2">
               <ChevronRight className="w-8 h-8" />
             </div>
-          </Button>
+          </button>
         )}
       </div>
     </div>

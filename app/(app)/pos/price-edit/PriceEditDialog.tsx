@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tag } from 'lucide-react';
 import { usePriceEdit } from './use-price-edit';
@@ -76,19 +75,18 @@ export function PriceEditDialog({
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button 
-              variant="outline" 
-              className="flex-1 h-12 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
+            <button 
+              className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] flex-1 h-12 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
               onClick={() => onOpenChange(false)}
             >
               Cancel
-            </Button>
-            <Button 
-              className="flex-1 h-12 rounded-xl font-bold text-white shadow-lg transition-all active:scale-[0.98] bg-purple-600 hover:bg-purple-700 shadow-purple-200/50"
+            </button>
+            <button 
+              className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] flex-1 h-12 rounded-xl font-bold text-white shadow-lg transition-all active:scale-[0.98] bg-purple-600 hover:bg-purple-700 shadow-purple-200/50"
               onClick={save}
             >
               Update Price
-            </Button>
+            </button>
           </div>
         </div>
       </DialogContent>

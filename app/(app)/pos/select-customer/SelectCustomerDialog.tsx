@@ -16,7 +16,6 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { AddCustomerDialog } from '../add-customer/AddCustomerDialog';
@@ -97,15 +96,15 @@ export function SelectCustomerDialog({
             </CommandList>
           </Command>
           <DialogFooter className="sm:justify-between">
-            <Button variant="outline" onClick={() => setIsAddCustomerOpen(true)}>
+            <button onClick={() => setIsAddCustomerOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Customer
-            </Button>
+            </button>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => handleSelect(WALK_IN_CUSTOMER)}>Select Walk-in</Button>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <button onClick={() => handleSelect(WALK_IN_CUSTOMER)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring h-10 px-[18px]">Select Walk-in</button>
+              <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 Close
-              </Button>
+              </button>
             </div>
           </DialogFooter>
         </DialogContent>

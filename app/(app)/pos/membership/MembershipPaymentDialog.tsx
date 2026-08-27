@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CreditCard, Loader2, Coins, Wallet } from 'lucide-react';
@@ -24,7 +23,19 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { usePrinter } from '@/lib/use-printer';
 import { useMembershipPayment } from './use-membership-payment';
+import { cn } from '@/lib/utils';
 import type { MembershipPaymentDialogProps, MembershipResult } from './membership-types';
+
+/**
+ * Payment-method button classes: the shared default-size button recipe plus
+ * this control's auto height, with the selected/unselected halves split out.
+ */
+const METHOD_CLASSES =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-[18px] h-auto py-2';
+const METHOD_SELECTED =
+  'bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55';
+const METHOD_UNSELECTED =
+  'border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring';
 
 function addMonths(base: Date, months: number): Date {
   const d = new Date(base);
@@ -178,12 +189,12 @@ export function MembershipPaymentDialog({
 
           {/* Payment method */}
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant={paymentMethod === 'cash' ? 'default' : 'outline'} className="h-auto py-2" onClick={() => setPaymentMethod('cash')}>
+            <button type="button" className={cn(METHOD_CLASSES, paymentMethod === 'cash' ? METHOD_SELECTED : METHOD_UNSELECTED)} onClick={() => setPaymentMethod('cash')}>
               <Coins className="h-4 w-4 mr-1.5" />Cash
-            </Button>
-            <Button type="button" variant={paymentMethod === 'card' ? 'default' : 'outline'} className="h-auto py-2" onClick={() => setPaymentMethod('card')}>
+            </button>
+            <button type="button" className={cn(METHOD_CLASSES, paymentMethod === 'card' ? METHOD_SELECTED : METHOD_UNSELECTED)} onClick={() => setPaymentMethod('card')}>
               <CreditCard className="h-4 w-4 mr-1.5" />Card
-            </Button>
+            </button>
           </div>
 
           {paymentMethod === 'cash' && (
@@ -202,11 +213,11 @@ export function MembershipPaymentDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={confirmDisabled} className="bg-emerald-600 hover:bg-emerald-700">
+          <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
+          <button onClick={handleConfirm} disabled={confirmDisabled} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-emerald-600 hover:bg-emerald-700">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm Payment
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

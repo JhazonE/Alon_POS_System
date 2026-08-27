@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Printer, User, Clock, Ban, Undo, Search, Banknote, ArrowRight } from 'lucide-react';
 
 function CashTransferIcon({ className }: { className?: string }) {
@@ -48,16 +46,15 @@ export function PosFooterActions({
   return (
     <div className={`grid gap-2 shrink-0 ${isFrontliner ? 'grid-cols-2' : 'grid-cols-8'}`}>
       {footerActions.map(({ icon: Icon, label, shortcut, action, tint }) => (
-        <Button
+        <button
           key={label}
-          variant="ghost"
           onClick={action}
-          className="group flex h-16 flex-col items-center justify-center gap-1 rounded-xl border border-border/60 bg-background px-1 text-xs font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/50 hover:shadow-md"
+          className="tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring group flex h-16 flex-col items-center justify-center gap-1 rounded-xl border border-border/60 bg-background px-1 text-xs font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/50 hover:shadow-md"
         >
           <Icon className={`h-5 w-5 transition-transform group-hover:scale-110 ${tint}`} />
           <span className="leading-tight text-center text-[11px] text-foreground">{label}</span>
           {shortcut && <kbd className="rounded bg-muted px-1 py-px text-[8px] font-mono font-semibold leading-none text-muted-foreground">{shortcut}</kbd>}
-        </Button>
+        </button>
       ))}
     </div>
   );

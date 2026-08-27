@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -113,11 +112,11 @@ export function SendToQueueDialog({
             </div>
 
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <button onClick={() => onOpenChange(false)} disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 Cancel
-              </Button>
-              <Button
-                className="bg-violet-600 hover:bg-violet-700 text-white flex-1"
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-violet-600 hover:bg-violet-700 text-white flex-1"
                 onClick={handleSubmit}
                 disabled={isSubmitting || items.length === 0}
               >
@@ -125,7 +124,7 @@ export function SendToQueueDialog({
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
                   : <><SendToBack className="h-4 w-4 mr-2" />Send to Queue</>
                 }
-              </Button>
+              </button>
             </DialogFooter>
           </>
         ) : (
@@ -146,9 +145,9 @@ export function SendToQueueDialog({
                 Order sent — cashier will process your payment.
               </p>
             </div>
-            <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white h-12 text-base font-bold" onClick={handleClose}>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] w-full bg-violet-600 hover:bg-violet-700 text-white h-12 text-base font-bold" onClick={handleClose}>
               Done — Next Customer
-            </Button>
+            </button>
           </div>
         )}
       </DialogContent>

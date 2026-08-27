@@ -6,12 +6,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tag, Pencil } from 'lucide-react';
 import { useEditItem } from './use-edit-item';
 import type { EditItemDialogProps } from './edit-item-types';
+import { cn } from "@/lib/utils";
 
 export function EditItemDialog({ isOpen, onOpenChange, item, onUpdate, mode = 'full', activeLevelId, defaultLevelId = 'retail-level', product }: EditItemDialogProps) {
   const { name, setName, quantity, price, setPrice, discount, handleQuantityChange, save } =
@@ -99,23 +99,18 @@ export function EditItemDialog({ isOpen, onOpenChange, item, onUpdate, mode = 'f
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              className="flex-1 h-12 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
+            <button
+              className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] flex-1 h-12 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
               onClick={() => onOpenChange(false)}
             >
               Cancel
-            </Button>
-            <Button
-              className={`flex-1 h-12 rounded-xl font-bold text-white shadow-lg transition-all active:scale-[0.98] ${
-                mode === 'price-only'
-                  ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200/50'
-                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200/50'
-              }`}
+            </button>
+            <button
+              className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]", `flex-1 h-12 rounded-xl font-bold text-white shadow-lg transition-all active:scale-[0.98] ${ mode === 'price-only' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200/50' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200/50' }`)}
               onClick={save}
             >
               {mode === 'price-only' ? 'Update Price' : 'Save Changes'}
-            </Button>
+            </button>
           </div>
         </div>
       </SheetContent>

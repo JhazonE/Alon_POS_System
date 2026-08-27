@@ -8,7 +8,6 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Undo, Trash2, Clock, Package, FileText } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -77,22 +76,18 @@ export function HeldTransactionsDialog({ isOpen, onOpenChange, heldTransactions,
                         {calculateTotal(transaction.items).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg font-bold text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        <button
+                          className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs gap-1.5 h-8 rounded-lg font-bold text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                           onClick={(e) => { e.stopPropagation(); onRestore(index); }}
                         >
                           <Undo className="mr-1.5 h-3.5 w-3.5" /> Restore
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 rounded-lg font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                        </button>
+                        <button
+                          className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs gap-1.5 h-8 rounded-lg font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                           onClick={(e) => { e.stopPropagation(); onDelete(index); }}
                         >
                           <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -109,7 +104,7 @@ export function HeldTransactionsDialog({ isOpen, onOpenChange, heldTransactions,
         </ScrollArea>
 
         <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Close</button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

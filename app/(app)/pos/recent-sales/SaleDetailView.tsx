@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -33,10 +31,10 @@ export function SaleDetailView({ sale, onReprint }: SaleDetailViewProps) {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b pb-3 shrink-0">
         <h2 className="text-sm font-semibold">Transaction Details</h2>
-        <Button size="sm" className="gap-1.5" onClick={onReprint}>
+        <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5" onClick={onReprint}>
           <Printer className="h-4 w-4" />
           Reprint Receipt
-        </Button>
+        </button>
       </div>
 
       <div className="mt-4 rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-4 shrink-0">

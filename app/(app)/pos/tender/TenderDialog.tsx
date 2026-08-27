@@ -9,7 +9,6 @@ import {
     SheetTitle,
     SheetDescription,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -53,13 +52,13 @@ function ReceiptActionView({
                 </div>
             </div>
             <div className="mt-4 flex justify-center gap-4 print:hidden">
-                 <Button onClick={onPrint} size="lg" className="w-40">
+                 <button onClick={onPrint} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-[46px] px-6 text-[15px] w-40">
                     <Printer className="mr-2 h-4 w-4" />
                     Reprint
-                </Button>
-                <Button onClick={onNewSale} size="lg" className="w-40" variant="secondary">
+                </button>
+                <button onClick={onNewSale} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring h-[46px] px-6 text-[15px] w-40">
                     New Sale
-                </Button>
+                </button>
             </div>
         </div>
     );
@@ -342,9 +341,9 @@ export function TenderDialog(props: TenderDialogProps) {
                             </div>
                         </div>
                         <div className="p-5 border-t bg-background">
-                            <Button size="lg" className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20" onClick={handleCompleteChange} autoFocus>
+                            <button className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-6 w-full h-14 text-lg font-bold shadow-md shadow-primary/20" onClick={handleCompleteChange} autoFocus>
                                 Next
-                            </Button>
+                            </button>
                         </div>
                     </div>
                 ) : view === 'print_prompt' && completedSale ? (
@@ -370,25 +369,22 @@ export function TenderDialog(props: TenderDialogProps) {
                         {/* Actions */}
                         <div className="p-4 border-t bg-background space-y-3">
                             <div className="grid grid-cols-2 gap-3">
-                                <Button
-                                    variant="outline"
-                                    size="lg"
-                                    className="h-14 text-base font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                                <button
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-6 h-14 text-base font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                                     onClick={() => handleConfirmPrint(false)}
                                     ref={noButtonRef}
                                 >
                                     No, Skip
-                                </Button>
-                                <Button
-                                    size="lg"
-                                    className="h-14 text-base font-bold shadow-md shadow-primary/20 transition-all active:scale-95"
+                                </button>
+                                <button
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-6 h-14 text-base font-bold shadow-md shadow-primary/20 transition-all active:scale-95"
                                     onClick={() => handleConfirmPrint(true)}
                                     ref={yesButtonRef}
                                     autoFocus
                                 >
                                     <Printer className="mr-2 h-5 w-5" />
                                     Yes, Print
-                                </Button>
+                                </button>
                             </div>
                             <p className="text-center text-[10px] text-muted-foreground uppercase tracking-wider">
                                 Arrow keys to navigate • Y for Yes • N for No
@@ -495,7 +491,7 @@ export function TenderDialog(props: TenderDialogProps) {
                                     {totalDue > 0 && selectedMethod === 'CASH' && (
                                         <div className="grid grid-cols-4 gap-2 pt-1">
                                             {getQuickAmounts(balanceRemaining || totalDue).map(amount => (
-                                                <Button key={amount} variant="outline" onClick={() => handleQuickAmount(amount)} className="h-10 font-bold text-sm">₱{amount}</Button>
+                                                <button key={amount} onClick={() => handleQuickAmount(amount)} className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-10 font-bold text-sm">₱{amount}</button>
                                             ))}
                                         </div>
                                     )}
@@ -561,16 +557,15 @@ export function TenderDialog(props: TenderDialogProps) {
                                                 className="h-11 text-lg font-bold border-purple-300 focus-visible:ring-purple-500 bg-white text-purple-900 placeholder:text-purple-400 pl-4"
                                             />
                                         </div>
-                                        <Button
-                                            variant="secondary"
-                                            className="bg-purple-600 text-white hover:bg-purple-700 h-11 px-5 font-bold shadow-md shadow-purple-100 transition-all active:scale-95"
+                                        <button
+                                            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring bg-purple-600 text-white hover:bg-purple-700 h-11 px-5 font-bold shadow-md shadow-purple-100 transition-all active:scale-95"
                                             onClick={() => {
                                                 const maxPossibleValue = Math.min(totalDue, customerPoints);
                                                 setPointsToRedeemInput(maxPossibleValue.toFixed(2));
                                             }}
                                         >
                                             Redeem All
-                                        </Button>
+                                        </button>
                                     </div>
                                     <p className="text-[10px] text-purple-600 font-bold px-1 flex items-center gap-1">
                                         <Info className="h-3 w-3" />
@@ -590,12 +585,12 @@ export function TenderDialog(props: TenderDialogProps) {
                                                 <p className="font-bold text-orange-900">Charge to Account requires a Customer</p>
                                                 <p className="text-sm text-orange-600/70">Please select a customer to proceed with charging.</p>
                                             </div>
-                                            <Button
+                                            <button
                                                 onClick={onTriggerCustomerSelection}
-                                                className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 shadow-lg shadow-orange-200"
+                                                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 shadow-lg shadow-orange-200"
                                             >
                                                 Select Customer
-                                            </Button>
+                                            </button>
                                         </div>
                                     ) : (
                                         <div className="space-y-3 bg-orange-50 p-4 rounded-xl border border-orange-200 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -637,9 +632,9 @@ export function TenderDialog(props: TenderDialogProps) {
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-black text-gray-900 tabular-nums">₱{p.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                    <Button variant="ghost" size="sm" onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-2">
+                                                    <button onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-2">
                                                         Remove
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -648,15 +643,14 @@ export function TenderDialog(props: TenderDialogProps) {
                             )}
 
                             {/* Add Split Payment */}
-                            <Button
+                            <button
                                 type="button"
-                                variant="outline"
                                 onClick={handleAddPayment}
                                 disabled={amountTenderedNum <= 0 && !isChargePayment}
-                                className="w-full border-dashed font-bold text-muted-foreground hover:text-foreground"
+                                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] w-full border-dashed font-bold text-muted-foreground hover:text-foreground"
                             >
                                 + Add Split Payment
-                            </Button>
+                            </button>
                         </div>
 
                         {/* Sticky Footer with live Change / Balance */}
@@ -670,16 +664,15 @@ export function TenderDialog(props: TenderDialogProps) {
                                 </span>
                             </div>
                             <div className="grid grid-cols-[1fr_2fr] gap-3">
-                                <Button
-                                    variant="outline"
+                                <button
                                     onClick={() => onOpenChange(false)}
                                     disabled={isProcessing || (selectedMethod === 'POINTS' && (customer as any)?.isExpired)}
-                                    className="h-12 font-bold text-muted-foreground hover:text-foreground"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-12 font-bold text-muted-foreground hover:text-foreground"
                                     ref={cancelButtonRef}
                                 >
                                     Cancel
-                                </Button>
-                                <Button
+                                </button>
+                                <button
                                     onClick={handleConfirmPayment}
                                     ref={confirmButtonRef}
                                     disabled={
@@ -690,7 +683,7 @@ export function TenderDialog(props: TenderDialogProps) {
                                         (payments.length === 0 && isReferenceRequired && !referenceInput.trim()) ||
                                         (isChargePayment && (!customer || (customer as any).id === 'walk-in'))
                                     }
-                                    className="h-12 min-w-[140px] font-bold text-lg shadow-md shadow-primary/20"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] h-12 min-w-[140px] font-bold text-lg shadow-md shadow-primary/20"
                                 >
                                     {isProcessing ? (
                                         <>
@@ -702,7 +695,7 @@ export function TenderDialog(props: TenderDialogProps) {
                                             Confirm Payment
                                         </>
                                     )}
-                                </Button>
+                                </button>
                             </div>
                         </div>
                     </>

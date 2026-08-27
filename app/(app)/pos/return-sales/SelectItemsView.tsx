@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, Minus, Plus, Undo } from 'lucide-react';
@@ -137,9 +136,9 @@ export function SelectItemsView({ sale, onReturnItems, onBack }: SelectItemsView
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b pb-3 shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onBack}>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
-        </Button>
+        </button>
         <div className="min-w-0">
           <h2 className="text-base font-semibold">Select Items to Return</h2>
           <p className="truncate text-xs text-muted-foreground">SI No.: <span className="font-mono">{sale.siNumber ? formatSINumber(sale.siNumber) : (sale.orderNumber || sale.id)}</span></p>
@@ -187,9 +186,9 @@ export function SelectItemsView({ sale, onReturnItems, onBack }: SelectItemsView
                   <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">Fully returned</span>
                 ) : checked ? (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={rQty <= 1} onClick={() => step(item, -1)}>
+                    <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-7 w-7" disabled={rQty <= 1} onClick={() => step(item, -1)}>
                       <Minus className="h-3 w-3" />
-                    </Button>
+                    </button>
                     <Input
                       type="number"
                       min="1"
@@ -198,9 +197,9 @@ export function SelectItemsView({ sale, onReturnItems, onBack }: SelectItemsView
                       value={returnQuantities[item.product.id] || ''}
                       onChange={(e) => handleQuantityChange(item, e.target.value)}
                     />
-                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={rQty >= remaining} onClick={() => step(item, 1)}>
+                    <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-7 w-7" disabled={rQty >= remaining} onClick={() => step(item, 1)}>
                       <Plus className="h-3 w-3" />
-                    </Button>
+                    </button>
                   </div>
                 ) : (
                   <span className="shrink-0 text-xs text-muted-foreground">Not returning</span>
@@ -223,17 +222,17 @@ export function SelectItemsView({ sale, onReturnItems, onBack }: SelectItemsView
       </div>
 
       <SheetFooter className="mt-4 shrink-0">
-        <Button variant="outline" onClick={onBack}>
+        <button onClick={onBack} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
           Cancel
-        </Button>
-        <Button
-          className="bg-amber-600 hover:bg-amber-700 text-white"
+        </button>
+        <button
+          className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-amber-600 hover:bg-amber-700 text-white"
           disabled={selectedItems.size === 0}
           onClick={handleConfirmReturn}
         >
           <Undo className="mr-2 h-4 w-4" />
           Issue Credit ({selectedItems.size})
-        </Button>
+        </button>
       </SheetFooter>
     </div>
   );

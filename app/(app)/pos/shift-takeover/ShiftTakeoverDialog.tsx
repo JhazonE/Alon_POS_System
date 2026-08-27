@@ -8,7 +8,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { AlertCircle, History, Play } from 'lucide-react';
 import type { ShiftTakeoverDialogProps } from './shift-takeover-types';
 
@@ -38,9 +37,9 @@ export function ShiftTakeoverDialog({
         </div>
 
         <DialogFooter className="flex flex-col gap-3 sm:flex-col">
-          <Button
+          <button
             type="button"
-            className="w-full h-16 text-lg flex items-center justify-between px-6 bg-primary hover:bg-primary/90"
+            className="gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 w-full h-16 text-lg flex items-center justify-between px-6 bg-primary hover:bg-primary/90"
             onClick={onContinue}
           >
             <div className="flex items-center gap-3">
@@ -50,12 +49,11 @@ export function ShiftTakeoverDialog({
                 <div className="text-xs font-normal opacity-90">Resume {previousCashierName}'s session</div>
               </div>
             </div>
-          </Button>
+          </button>
 
-          <Button
+          <button
             type="button"
-            variant="outline"
-            className="w-full h-16 text-lg flex items-center justify-between px-6 border-2"
+            className="gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring w-full h-16 text-lg flex items-center justify-between px-6 border-2"
             onClick={onStartNew}
           >
             <div className="flex items-center gap-3">
@@ -65,7 +63,7 @@ export function ShiftTakeoverDialog({
                 <div className="text-xs font-normal text-muted-foreground">End current session and start fresh</div>
               </div>
             </div>
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -9,7 +9,6 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { CheckCircle2, Files, BookOpen } from 'lucide-react';
 import type { EndShiftReportDialogProps } from './end-shift-report-types';
 
@@ -47,18 +46,18 @@ export function EndShiftReportDialog({
         </AlertDialogHeader>
 
         <div className="grid grid-cols-3 gap-3 py-2">
-          <Button type="button" variant="outline" className="h-auto flex-col gap-2 py-4" onClick={openThen(onOpenOverallReading)}>
+          <button type="button" className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-auto flex-col gap-2 py-4" onClick={openThen(onOpenOverallReading)}>
             <Files className="h-5 w-5 text-purple-600" />
             <span className="text-xs font-semibold">Overall</span>
-          </Button>
-          <Button type="button" variant="outline" className="h-auto flex-col gap-2 py-4" onClick={openThen(onOpenXReading)}>
+          </button>
+          <button type="button" className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-auto flex-col gap-2 py-4" onClick={openThen(onOpenXReading)}>
             <BookOpen className="h-5 w-5 text-purple-600" />
             <span className="text-xs font-semibold">X-Reading</span>
-          </Button>
-          <Button type="button" variant="outline" className="h-auto flex-col gap-2 py-4" onClick={openThen(onOpenZReadingWarning)}>
+          </button>
+          <button type="button" className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-auto flex-col gap-2 py-4" onClick={openThen(onOpenZReadingWarning)}>
             <BookOpen className="h-5 w-5 text-purple-600" />
             <span className="text-xs font-semibold">Z-Reading</span>
-          </Button>
+          </button>
         </div>
 
         <AlertDialogFooter>

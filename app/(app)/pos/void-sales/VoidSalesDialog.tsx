@@ -10,7 +10,6 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -67,9 +66,9 @@ function ConfirmVoidView({ sale, voidReason, onVoidReasonChange, onVoidTransacti
         <div className="flex h-full flex-col">
             {/* Header */}
             <div className="flex items-center gap-2 border-b pb-3 shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onBack} disabled={isVoiding}>
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8" onClick={onBack} disabled={isVoiding}>
                     <ArrowLeft className="h-4 w-4" />
-                </Button>
+                </button>
                 <div>
                     <h2 className="text-base font-semibold">Confirm Void</h2>
                     <p className="text-xs text-muted-foreground">Review the transaction before voiding</p>
@@ -173,13 +172,13 @@ function ConfirmVoidView({ sale, voidReason, onVoidReasonChange, onVoidTransacti
             )}
 
             <SheetFooter className="mt-4 shrink-0">
-                <Button variant="outline" onClick={onBack} disabled={isVoiding}>
+                <button onClick={onBack} disabled={isVoiding} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                     Cancel
-                </Button>
-                <Button variant="destructive" onClick={onVoidTransaction} disabled={isVoiding || !canVoid}>
+                </button>
+                <button onClick={onVoidTransaction} disabled={isVoiding || !canVoid} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-destructive text-destructive-foreground shadow-[0_1px_3px_hsl(var(--destructive)/0.25)] hover:bg-destructive/90 hover:shadow-[0_6px_18px_hsl(var(--destructive)/0.28)] focus-visible:ring-destructive/55 h-10 px-[18px]">
                     {isVoiding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
                     {isVoiding ? 'Voiding...' : 'Void Transaction'}
-                </Button>
+                </button>
             </SheetFooter>
         </div>
     );
@@ -339,9 +338,9 @@ export function VoidSalesDialog(props: VoidSalesDialogProps) {
                     </div>
 
                     <SheetFooter className="mt-4 shrink-0">
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                             Cancel
-                        </Button>
+                        </button>
                     </SheetFooter>
                 </div>
             )}
