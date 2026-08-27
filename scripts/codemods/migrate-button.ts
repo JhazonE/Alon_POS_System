@@ -3,7 +3,8 @@
  * to a raw `<button className="...">` per the recipes in
  * docs/superpowers/specs/2026-08-25-button-plain-tailwind-migration-design.md
  *
- * Usage: npx tsx scripts/codemods/migrate-button.ts "app/(app)/purchases/**\/*.tsx"
+ * Usage: npx tsx scripts/codemods/migrate-button.ts "app/(app)/purchases"
+ *        (arguments are directories, walked recursively, or single files)
  *
  * Usages whose `variant`/`size` is not a plain string literal, or that carry
  * `asChild`, are left untouched and reported at the end for manual fixing.
@@ -15,7 +16,33 @@
  * computed one on the same utility group; those must be eyeballed per batch
  * (see the spec's "Migration mechanics" step 1).
  */
-import { Project, SyntaxKind, JsxAttribute, JsxOpeningElement, JsxSelfClosingElement, Node } from "ts-morph";
+import * as fs from "fs";
+import * as path from "path";
+import { Project, SyntaxKind, JsxAttribute, JsxOpeningElement, JsxSelfClosingElement, Node, SourceFile } from "ts-morph";
+
+/**
+ * Collects `.tsx` files from a directory (recursively) or takes a single file
+ * path as-is. Deliberately not glob-based: every app path in this project sits
+ * under the `(app)` route group, and fast-glob reads those parentheses as
+ * extglob syntax while Windows reads the escaping backslash as a path
+ * separator, so `app/(app)/purchases/**\/*.tsx` silently matches nothing.
+ */
+function collectTsxFiles(target: string): string[] {
+  const stat = fs.statSync(target);
+  if (stat.isFile()) return [target];
+
+  const out: string[] = [];
+  for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
+    const full = path.join(target, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      out.push(...collectTsxFiles(full));
+    } else if (entry.isFile() && entry.name.endsWith(".tsx")) {
+      out.push(full);
+    }
+  }
+  return out;
+}
 
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold " +
@@ -85,9 +112,10 @@ function computeClassName(variant: string, size: string, existing: string | null
   return [...kept, existing].join(" ");
 }
 
-/** Text-size utilities are a cascade hazard against the size recipes;
- * text-<color> utilities are not, so they are grouped separately. */
+/** Text-size and text-align utilities are cascade hazards against the recipes;
+ * text-<color> utilities are not, so they must not be grouped with either. */
 const TEXT_SIZE = /^text-(xs|sm|base|lg|xl|\d?xl|\[)/;
+const TEXT_ALIGN = /^text-(left|center|right|justify|start|end)$/;
 
 /** Maps a bare (unprefixed) Tailwind class to the utility group it competes
  * in, or null when it can't collide with anything the recipes emit. */
@@ -105,7 +133,15 @@ function utilityGroup(cls: string): string | null {
   if (/^tracking-/.test(cls)) return "tracking";
   if (/^bg-/.test(cls)) return "background";
   if (/^shadow/.test(cls)) return "shadow";
+  if (/^justify-/.test(cls)) return "justify";
+  if (/^items-/.test(cls)) return "items";
+  if (/^whitespace-/.test(cls)) return "whitespace";
+  if (/^transition(-|$)/.test(cls)) return "transition";
+  // Only border *width* competes with the outline recipe's bare `border`;
+  // `border-input` and friends are colors and must be left alone.
+  if (/^border(-\d+|-none)?$/.test(cls)) return "border-width";
   if (TEXT_SIZE.test(cls)) return "text-size";
+  if (TEXT_ALIGN.test(cls)) return "text-align";
   if (/^(inline-flex|flex|block|inline-block|grid|hidden|inline)$/.test(cls)) return "display";
   return null;
 }
@@ -129,7 +165,9 @@ function readStaticString(attr: JsxAttribute | undefined): string | null | undef
 /** Reads an existing className's source text to splice into the new value:
  * a string literal's raw text (no quotes), or a dynamic expression's full
  * source text (to be re-wrapped in a template literal). */
-function readClassNameSource(attr: JsxAttribute | undefined): { text: string; dynamic: boolean } | null {
+function readClassNameSource(
+  attr: JsxAttribute | undefined
+): { text: string; dynamic: boolean; node?: Node } | null {
   if (!attr) return null;
   const init = attr.getInitializer();
   if (!init) return null;
@@ -137,9 +175,24 @@ function readClassNameSource(attr: JsxAttribute | undefined): { text: string; dy
   if (Node.isJsxExpression(init)) {
     const expr = init.getExpression();
     if (expr && Node.isStringLiteral(expr)) return { text: expr.getLiteralText(), dynamic: false };
-    if (expr) return { text: expr.getText(), dynamic: true };
+    if (expr) return { text: expr.getText(), dynamic: true, node: expr };
   }
   return null;
+}
+
+/** Renders a dynamic className expression as arguments to a fresh `cn(...)`.
+ * An expression that is already a `cn(...)` call is unwrapped to its own
+ * arguments rather than nested, and its indentation is flattened -- the
+ * original leading whitespace is meaningless once the call moves. */
+function asCnArguments(existing: { text: string; node?: Node }): string {
+  const node = existing.node;
+  if (node && Node.isCallExpression(node) && node.getExpression().getText() === "cn") {
+    return node
+      .getArguments()
+      .map((a) => a.getText().replace(/\s*\r?\n\s*/g, " "))
+      .join(", ");
+  }
+  return existing.text.replace(/\s*\r?\n\s*/g, " ");
 }
 
 function findAttr(el: JsxOpeningElement | JsxSelfClosingElement, name: string): JsxAttribute | undefined {
@@ -149,15 +202,42 @@ function findAttr(el: JsxOpeningElement | JsxSelfClosingElement, name: string): 
     .find((a) => a.getNameNode().getText() === name);
 }
 
+/** Adds `import { cn } from "@/lib/utils"` unless the file already has it. */
+function ensureCnImport(sf: SourceFile): void {
+  const existing = sf
+    .getImportDeclarations()
+    .find((d) => d.getModuleSpecifierValue() === "@/lib/utils");
+
+  if (!existing) {
+    sf.addImportDeclaration({ moduleSpecifier: "@/lib/utils", namedImports: ["cn"] });
+    return;
+  }
+  if (!existing.getNamedImports().some((ni) => ni.getName() === "cn")) {
+    existing.addNamedImport("cn");
+  }
+}
+
 function main() {
-  const patterns = process.argv.slice(2);
-  if (patterns.length === 0) {
-    console.error("Usage: npx tsx scripts/codemods/migrate-button.ts <glob...>");
+  const targets = process.argv.slice(2);
+  if (targets.length === 0) {
+    console.error("Usage: npx tsx scripts/codemods/migrate-button.ts <dir-or-file...>");
     process.exit(1);
   }
 
-  const project = new Project({ tsConfigFilePath: "tsconfig.json" });
-  const sourceFiles = project.addSourceFilesAtPaths(patterns);
+  const paths = [...new Set(targets.flatMap(collectTsxFiles))];
+  if (paths.length === 0) {
+    console.error(`No .tsx files found under: ${targets.join(" ")}`);
+    process.exit(1);
+  }
+
+  // skipAddingFilesFromTsConfig: tsconfig's `include` is `**/*.tsx`, so the
+  // constructor would otherwise pre-load every file in the repo. The rewrite
+  // is purely syntactic, so no type information is needed.
+  const project = new Project({
+    tsConfigFilePath: "tsconfig.json",
+    skipAddingFilesFromTsConfig: true,
+  });
+  const sourceFiles = paths.map((p) => project.addSourceFileAtPath(p));
 
   let migrated = 0;
   const skipped: string[] = [];
@@ -166,6 +246,8 @@ function main() {
 
   for (const sf of sourceFiles) {
     if (!sf.getFullText().includes("<Button")) continue;
+
+    let needsCn = false;
 
     const elements: (JsxOpeningElement | JsxSelfClosingElement)[] = [
       ...sf.getDescendantsOfKind(SyntaxKind.JsxOpeningElement),
@@ -212,13 +294,19 @@ function main() {
       if (variantAttr) variantAttr.remove();
       if (sizeAttr) sizeAttr.remove();
 
-      // A dynamic className keeps its expression, re-wrapped in a template
-      // literal after the computed classes. Rewriting an existing attribute
+      // A dynamic className can't be resolved against the recipe at codemod
+      // time -- its classes aren't known until render -- so those usages, and
+      // only those, keep `cn()` (clsx + tailwind-merge, no Radix) to do the
+      // same override resolution at runtime. Rewriting an existing attribute
       // in place (rather than remove + re-add) keeps it where the author put
       // it, so the diff stays readable.
-      const initializer = existing?.dynamic
-        ? `{\`${staticClasses} \${${existing.text}}\`}`
-        : JSON.stringify(staticClasses);
+      let initializer: string;
+      if (existing?.dynamic) {
+        initializer = `{cn(${JSON.stringify(staticClasses)}, ${asCnArguments(existing)})}`;
+        needsCn = true;
+      } else {
+        initializer = JSON.stringify(staticClasses);
+      }
 
       if (classNameAttr) {
         classNameAttr.setInitializer(initializer);
@@ -235,11 +323,13 @@ function main() {
       migrated++;
     }
 
+    if (needsCn) ensureCnImport(sf);
+
     // Drop the Button import if nothing in the file still references it.
-    const stillUsed = sf
-      .getDescendantsOfKind(SyntaxKind.JsxOpeningElement)
-      .concat(sf.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement))
-      .some((el) => el.getTagNameNode().getText() === "Button");
+    const stillUsed = [
+      ...sf.getDescendantsOfKind(SyntaxKind.JsxOpeningElement),
+      ...sf.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement),
+    ].some((el) => el.getTagNameNode().getText() === "Button");
 
     if (!stillUsed) {
       const importDecl = sf
@@ -267,7 +357,7 @@ function main() {
     collisions.forEach((c) => console.log("  " + c));
   }
   if (dynamicClassNames.length) {
-    console.log(`\nDynamic className expressions merged as template literals (${dynamicClassNames.length}) -- review:`);
+    console.log(`\nDynamic className expressions wrapped in cn() (${dynamicClassNames.length}) -- review:`);
     dynamicClassNames.forEach((d) => console.log("  " + d));
   }
 }

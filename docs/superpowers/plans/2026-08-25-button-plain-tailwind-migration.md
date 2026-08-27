@@ -29,7 +29,7 @@
 - Modify: `package.json` (add `ts-morph` devDependency)
 
 **Interfaces:**
-- Produces: a CLI script invoked as `npx tsx scripts/codemods/migrate-button.ts <glob...>`. Prints a summary (`migrated: N, skipped (dynamic variant): M`) and a list of skipped `file:line` locations to stdout. Exits 0 always (skips are expected and handled by later tasks, not failures).
+- Produces: a CLI script invoked as `npx tsx scripts/codemods/migrate-button.ts <dir-or-file...>`. Prints a summary (`migrated: N, skipped (dynamic variant): M`) and a list of skipped `file:line` locations to stdout. Exits 0 always (skips are expected and handled by later tasks, not failures).
 
 - [ ] **Step 1: Install ts-morph**
 
@@ -52,7 +52,7 @@ It also reports overridden recipe classes and merged dynamic `className` express
  * to a raw `<button className="...">` per the recipes in
  * docs/superpowers/specs/2026-08-25-button-plain-tailwind-migration-design.md
  *
- * Usage: npx tsx scripts/codemods/migrate-button.ts "app/(app)/purchases/**/*.tsx"
+ * Usage: npx tsx scripts/codemods/migrate-button.ts "app/(app)/purchases"
  *
  * Usages whose `variant` is not a plain string literal are left untouched
  * and reported at the end for manual fixing.
@@ -137,7 +137,7 @@ function findAttr(el: JsxOpeningElement | JsxSelfClosingElement, name: string): 
 function main() {
   const patterns = process.argv.slice(2);
   if (patterns.length === 0) {
-    console.error("Usage: npx tsx scripts/codemods/migrate-button.ts <glob...>");
+    console.error("Usage: npx tsx scripts/codemods/migrate-button.ts <dir-or-file...>");
     process.exit(1);
   }
 
@@ -268,7 +268,7 @@ Verified against a single real file; batches applied in follow-up commits."
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/purchases/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/purchases"`
 
 Expected: summary line reports `skipped: 0` (no dynamic-variant Button usages live under `purchases/` per the spec's exact list).
 
@@ -300,7 +300,7 @@ Note: there is a *separate*, nested `app/(app)/products/suppliers/` folder (3 fi
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/suppliers/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/suppliers"`
 
 Expected: `skipped: 0`.
 
@@ -328,7 +328,7 @@ git commit -m "refactor: migrate suppliers module buttons to plain Tailwind"
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/dashboard/**/*.tsx" "app/(app)/restock/**/*.tsx" "app/(app)/developer/**/*.tsx" "app/(app)/user-management/**/*.tsx" "app/(app)/NotificationsBell.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/dashboard" "app/(app)/restock" "app/(app)/developer" "app/(app)/user-management" "app/(app)/NotificationsBell.tsx"`
 
 Expected: `skipped: 0`.
 
@@ -359,7 +359,7 @@ git commit -m "refactor: migrate dashboard/restock/developer/user-management/Not
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/customer/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/customer"`
 
 Expected: `skipped: 0`.
 
@@ -392,7 +392,7 @@ git commit -m "refactor: migrate customer module buttons to plain Tailwind"
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/inventory/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/inventory"`
 
 Expected: summary reports `skipped: 7`, listing exactly the 7 locations above (2 in `consolidation-form.tsx` + 2 in `repackaging-form.tsx` + 1 in `StockAdjustmentDialog.tsx` + 2 in `add-serial-number-dialog.tsx` = 7 total). If the count or locations differ from this list, stop and re-read the diff before continuing — it means the file has changed since the spec was written.
 
@@ -452,7 +452,7 @@ repackaging-form, StockAdjustmentDialog, and add-serial-number-dialog."
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/reports/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/reports"`
 
 Expected: summary reports `skipped: 4` at exactly the 4 locations above.
 
@@ -502,7 +502,7 @@ reports/sales/returns and reports/sales/summary."
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/products/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/products"`
 
 Expected: summary reports `skipped: 2` at `break-pack-dialog.tsx:139,147`.
 
@@ -536,7 +536,7 @@ Includes hand-fixed search/create toggle in break-pack-dialog."
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/settings/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/settings"`
 
 Expected: `skipped: 0` (the only dynamic-variant usage found under `settings/` during spec research, `ApiCard.tsx:38`, is on a `Badge`, not a `Button`).
 
@@ -567,7 +567,7 @@ git commit -m "refactor: migrate settings module buttons to plain Tailwind"
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/pos/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/pos"`
 
 Expected: summary reports `skipped: 4` at exactly the locations above.
 
@@ -610,7 +610,7 @@ MembershipPaymentDialog."
 
 - [ ] **Step 1: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/sales/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "app/(app)/sales"`
 
 Expected: summary reports `skipped: 5` at exactly the locations above (`DetailsPagination.tsx` has one, the other two files have two each = 5 total).
 
@@ -658,7 +658,9 @@ Expected: only files under `components/ui/carousel.tsx` (out of scope, skip) and
 
 - [ ] **Step 2: Run the codemod**
 
-Run: `npx tsx scripts/codemods/migrate-button.ts "components/ui/*.tsx" "components/approvals/**/*.tsx" "components/theme-toggle.tsx" "components/license-gate.tsx" "components/import-wizard/**/*.tsx" "app/login/**/*.tsx" "app/signup/**/*.tsx" "app/activate/**/*.tsx"`
+Run: `npx tsx scripts/codemods/migrate-button.ts "components/ui" "components/approvals" "components/theme-toggle.tsx" "components/license-gate.tsx" "components/import-wizard" "app/login" "app/signup" "app/activate"`
+
+Then immediately: `git checkout -- components/ui/carousel.tsx` — the codemod walks whole directories, so it will have rewritten `carousel.tsx` too, and that file is out of scope per the spec.
 
 Expected: `skipped: 0` (all dynamic-variant cases were in the `app/(app)/*` modules already handled).
 
