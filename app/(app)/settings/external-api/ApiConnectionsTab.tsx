@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Globe, PlusCircle } from 'lucide-react';
 import { ApiCard } from './ApiCard';
@@ -33,7 +31,7 @@ export function ApiConnectionsTab({ apis, isLoading, testingId, onAddApi, onTogg
           <Globe className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-1">No APIs configured</h3>
           <p className="text-sm text-muted-foreground mb-4">Add your first external API to start sending or receiving data.</p>
-          <Button onClick={onAddApi}><PlusCircle className="mr-2 h-4 w-4" />Add API</Button>
+          <button onClick={onAddApi} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]"><PlusCircle className="mr-2 h-4 w-4" />Add API</button>
         </CardContent>
       </Card>
     );

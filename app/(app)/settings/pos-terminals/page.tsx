@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Monitor, Loader2 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -40,13 +39,12 @@ export default function PosTerminalsPage() {
         </div>
         <div className="flex gap-2">
           {currentTerminalId && (
-            <Button
-              variant="outline"
+            <button
               onClick={handleReset}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
             >
               Reset Connection
-            </Button>
+            </button>
           )}
           <AddPosTerminalDialog onTerminalAdded={fetchTerminals} />
         </div>

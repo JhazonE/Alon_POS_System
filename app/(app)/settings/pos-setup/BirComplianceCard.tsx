@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { getApiUrl } from '@/lib/api-config';
 import type { PosSettings } from './pos-setup-types';
@@ -67,9 +66,9 @@ export function BirComplianceCard({ settings, set }: Props) {
           </div>
           <div className="flex gap-2">
             <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-[150px] bg-white dark:bg-blue-500/10 dark:border-blue-500/30" id="ejournal-date" />
-            <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-100 dark:border-blue-500/30 dark:text-blue-300 dark:hover:bg-blue-500/20" onClick={downloadEJournal}>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-100 dark:border-blue-500/30 dark:text-blue-300 dark:hover:bg-blue-500/20" onClick={downloadEJournal}>
               Save E-Journal
-            </Button>
+            </button>
           </div>
         </div>
       </CardContent>

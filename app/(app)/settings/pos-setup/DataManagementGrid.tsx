@@ -2,7 +2,6 @@
 
 import { forwardRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { FileText, CreditCard, Users } from 'lucide-react';
 import { ManageTransactionReferenceDialog } from './manage-transaction-reference/ManageTransactionReferenceDialog';
 import { ManagePaymentTermsDialog } from './manage-payment-terms/ManagePaymentTermsDialog';
@@ -11,11 +10,11 @@ import { ManageSalesPersonsDialog } from './manage-sales-persons/ManageSalesPers
 
 interface Props { onRefresh: () => void; }
 
-const ManageBtn = forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(
+const ManageBtn = forwardRef<HTMLButtonElement, React.ComponentProps<'button'>>(
   (props, ref) => (
-    <Button ref={ref} variant="ghost" size="sm" className="h-8 px-2 text-primary hover:text-primary/80" {...props}>
+    <button ref={ref} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-8 px-2 text-primary hover:text-primary/80" {...props}>
       <span className="text-xs font-medium">Manage</span>
-    </Button>
+    </button>
   )
 );
 ManageBtn.displayName = 'ManageBtn';

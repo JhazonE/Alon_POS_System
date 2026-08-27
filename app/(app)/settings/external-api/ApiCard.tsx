@@ -2,7 +2,6 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Pencil, Send, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { METHODS_BADGE, type ExternalApi } from './external-api-types';
@@ -57,18 +56,18 @@ export function ApiCard({ api, testingId, onToggle, onEdit, onDelete, onTest }: 
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={() => onTest(api)} disabled={testingId === api.id}>
+            <button onClick={() => onTest(api)} disabled={testingId === api.id} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">
               {testingId === api.id
                 ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 : <Send className="mr-1.5 h-3.5 w-3.5" />}
               Test
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => onEdit(api)}>
+            </button>
+            <button onClick={() => onEdit(api)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
               <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(api)}>
+            </button>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(api)}>
               <Trash2 className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </CardContent>

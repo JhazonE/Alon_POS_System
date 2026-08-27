@@ -326,10 +326,13 @@ function main() {
     if (needsCn) ensureCnImport(sf);
 
     // Drop the Button import if nothing in the file still references it.
-    const stillUsed = [
-      ...sf.getDescendantsOfKind(SyntaxKind.JsxOpeningElement),
-      ...sf.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement),
-    ].some((el) => el.getTagNameNode().getText() === "Button");
+    // Checking identifiers rather than only JSX matters: a file can name
+    // Button in a type position (`React.ComponentProps<typeof Button>`),
+    // which no JSX walk would see, and removing the import under it breaks
+    // the build in a way the batch's own diff doesn't show.
+    const stillUsed = sf
+      .getDescendantsOfKind(SyntaxKind.Identifier)
+      .some((id) => id.getText() === "Button" && !Node.isImportSpecifier(id.getParent()));
 
     if (!stillUsed) {
       const importDecl = sf

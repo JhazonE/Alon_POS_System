@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { Monitor } from 'lucide-react';
 import type { PosSettings } from './pos-setup-types';
 
@@ -46,10 +45,10 @@ export function CustomerDisplayCard({ settings, set }: Props) {
             </div>
 
             <div className="pt-1">
-              <Button variant="outline" size="sm" onClick={() => window.open('/pos/customer-display', 'customer-display', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no')}>
+              <button onClick={() => window.open('/pos/customer-display', 'customer-display', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no')} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5">
                 <Monitor className="h-4 w-4 mr-2" />
                 Open Customer Display Window
-              </Button>
+              </button>
             </div>
           </div>
         )}

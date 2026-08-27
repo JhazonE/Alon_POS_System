@@ -2,7 +2,6 @@
 
 import { SalesPerson } from '@/lib/types';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { SalesPersonFormDialog } from './SalesPersonFormDialog';
 
@@ -20,13 +19,13 @@ export function SalesPersonRow({ salesPerson, onUpdate, onDelete }: Props) {
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
           <SalesPersonFormDialog salesPerson={salesPerson} onSave={onUpdate}>
-            <Button variant="outline" size="icon" className="h-8 w-8">
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8">
               <Pencil className="h-4 w-4" />
-            </Button>
+            </button>
           </SalesPersonFormDialog>
-          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={onDelete}>
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-destructive text-destructive-foreground shadow-[0_1px_3px_hsl(var(--destructive)/0.25)] hover:bg-destructive/90 hover:shadow-[0_6px_18px_hsl(var(--destructive)/0.28)] focus-visible:ring-destructive/55 p-0 h-8 w-8" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </TableCell>
     </TableRow>
