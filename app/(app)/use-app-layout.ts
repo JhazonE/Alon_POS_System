@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { getApiUrl } from '@/lib/api-config';
 import {
   navItems, sellNavItems, adminNavItems, insightsNavItems,
-  inventoryNavItems, salesNavItems, salesReportsNavItems, customerNavItems,
+  inventoryNavItems, salesNavItems, customerNavItems,
   suppliersNavItems, purchasesNavItems,
 } from './layout-nav-config';
 import { pageKeyForHref } from '@/lib/page-registry';
@@ -115,7 +115,6 @@ export function useAppLayout() {
 
   const filteredInventoryNavItems = inventoryNavItems.filter(i => isEnabled(i.href));
   const filteredSalesNavItems = salesNavItems.filter(i => isEnabled(i.href));
-  const filteredSalesReportsNavItems = salesReportsNavItems.filter(i => isEnabled(i.href));
   const filteredCustomerNavItems = customerNavItems.filter(i => isEnabled(i.href));
   const filteredSuppliersNavItems = suppliersNavItems.filter(i => isEnabled(i.href));
   const filteredPurchasesNavItems = purchasesNavItems.filter(i => isEnabled(i.href));
@@ -125,7 +124,7 @@ export function useAppLayout() {
     businessName,
     hasPermission, getInitials,
     filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems,
-    filteredInventoryNavItems, filteredSalesNavItems, filteredSalesReportsNavItems,
+    filteredInventoryNavItems, filteredSalesNavItems,
     filteredCustomerNavItems, filteredSuppliersNavItems,
     filteredPurchasesNavItems,
     disabledKeys, disabledLoaded,

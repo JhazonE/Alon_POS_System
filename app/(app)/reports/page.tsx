@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { Package, ArrowLeftRight, AlertTriangle, TrendingUp, ClipboardList, Receipt, Package2, Percent, Undo, Users, BarChart, LineChart, PhilippinePeso, ShoppingCart, Layers, CreditCard, ShieldCheck, Landmark, Calendar, CalendarClock } from 'lucide-react';
+import { Package, ArrowLeftRight, AlertTriangle, TrendingUp, ClipboardList, Receipt, Package2, Percent, Undo, Users, BarChart, LineChart, PhilippinePeso, ShoppingCart, Layers, CreditCard, ShieldCheck, Landmark, Calendar, CalendarClock, CalendarDays, Activity } from 'lucide-react';
 
 export default function ReportsPage() {
   return (
@@ -128,6 +128,30 @@ export default function ReportsPage() {
             </Card>
           </Link>
 
+          <Link href="/sales/by-date">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-sky-600" />
+                  Sales by Date
+                </CardTitle>
+                <CardDescription>Daily sales totals across a date range, for spotting trends and slow days.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/sales/analysis">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-teal-600" />
+                  Sales Analysis
+                </CardTitle>
+                <CardDescription>Cross-cutting analysis of sales performance with configurable filters.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
           <Link href="/reports/sales/by-product">
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
               <CardHeader>
@@ -136,6 +160,18 @@ export default function ReportsPage() {
                   Sales by Product
                 </CardTitle>
                 <CardDescription>Product performance analysis with units sold and revenue breakdown.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/sales/by-product">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-green-700" />
+                  Sales by Product/Service
+                </CardTitle>
+                <CardDescription>Per-product drill-down into the individual transactions behind each line.</CardDescription>
               </CardHeader>
             </Card>
           </Link>

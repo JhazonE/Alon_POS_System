@@ -68,16 +68,12 @@ export const suppliersNavItems = [
   { href: '/suppliers/payment', label: 'Payment Suppliers' },
 ];
 
-// Insights — analytics/reporting hub. The Sales-specific report pages move
-// here from the Sales collapsible so that collapsible stays operational.
+// Insights — analytics/reporting hub. Every report reaches the user through
+// the /reports page's cards, including the three that still live under
+// app/(app)/sales/ (by-product, by-date, analysis); the sidebar deliberately
+// carries no second Sales Reports list of its own.
 export const insightsNavItems = [
   { href: '/reports', icon: BarChart3, label: 'Reports', permission: 'view_reports' },
-];
-
-export const salesReportsNavItems = [
-  { href: '/sales/by-product', label: 'Sales by Product/Service' },
-  { href: '/sales/by-date', label: 'Sales by Date' },
-  { href: '/sales/analysis', label: 'Sales Analysis' },
 ];
 
 // Admin — approvals/workflow config, users, and store settings.

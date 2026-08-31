@@ -16,7 +16,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
 import {
   Warehouse, ChartNoAxesCombined, User as UserIcon,
-  ShoppingCart, Users, ChevronDown, LogOut, Search, BarChart3,
+  ShoppingCart, Users, ChevronDown, LogOut, Search,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { handleSignOut } from '../auth-actions';
@@ -61,7 +61,6 @@ type Props = {
   filteredAdminNavItems: { href: string; icon: any; label: string; permission?: string }[];
   inventoryNavItems: { href: string; label: string }[];
   salesNavItems: { href: string; label: string }[];
-  salesReportsNavItems: { href: string; label: string }[];
   customerNavItems: { href: string; label: string }[];
   suppliersNavItems: { href: string; label: string }[];
   purchasesNavItems: { href: string; label: string }[];
@@ -72,12 +71,13 @@ type Props = {
 export function AppSidebar({
   user, hasPermission,
   filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems,
-  inventoryNavItems, salesNavItems, salesReportsNavItems, customerNavItems,
+  inventoryNavItems, salesNavItems, customerNavItems,
   suppliersNavItems, purchasesNavItems,
   pathname, getInitials,
 }: Props) {
+  // by-product/by-date/analysis are reports reached from the /reports page, not
+  // operational Sales pages, so they must not light up the Sales collapsible.
   const isSalesPage = pathname.startsWith('/sales') && !pathname.startsWith('/sales/by-') && pathname !== '/sales/analysis';
-  const isSalesReportsPage = pathname.startsWith('/sales/by-') || pathname === '/sales/analysis';
   const isInventoryPage = pathname.startsWith('/inventory');
   const isCustomerPage = pathname.startsWith('/customer');
   const isSuppliersPage = pathname.startsWith('/suppliers');
@@ -100,7 +100,6 @@ export function AppSidebar({
     { section: 'Inventory', items: inventoryNavItems },
     { section: 'Customers', items: customerNavItems },
     { section: null, items: filteredInsightsNavItems },
-    { section: 'Sales Reports', items: salesReportsNavItems },
     { section: null, items: filteredAdminNavItems },
   ]), [filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems]);
 
@@ -242,14 +241,11 @@ export function AppSidebar({
               </SidebarGroup>
             )}
 
-            {(filteredInsightsNavItems.length > 0 || hasPermission('view_sales')) && (
+            {filteredInsightsNavItems.length > 0 && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Insights</SidebarGroupLabel>
                 <SidebarMenu>
                   <FlatNavLinks items={filteredInsightsNavItems} pathname={pathname} />
-                  {hasPermission('view_sales') && (
-                    <CollapsibleNavSection label="Sales Reports" icon={BarChart3} isActive={isSalesReportsPage} items={salesReportsNavItems} pathname={pathname} />
-                  )}
                 </SidebarMenu>
               </SidebarGroup>
             )}

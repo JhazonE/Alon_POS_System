@@ -21,7 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     user, isUserLoading, isPOSPage,
     businessName, hasPermission, getInitials,
     filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems,
-    filteredInventoryNavItems, filteredSalesNavItems, filteredSalesReportsNavItems,
+    filteredInventoryNavItems, filteredSalesNavItems,
     filteredCustomerNavItems, filteredSuppliersNavItems,
     filteredPurchasesNavItems,
     disabledKeys, disabledLoaded,
@@ -76,7 +76,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           filteredAdminNavItems={filteredAdminNavItems}
           inventoryNavItems={filteredInventoryNavItems}
           salesNavItems={filteredSalesNavItems}
-          salesReportsNavItems={filteredSalesReportsNavItems}
           customerNavItems={filteredCustomerNavItems}
           suppliersNavItems={filteredSuppliersNavItems}
           purchasesNavItems={filteredPurchasesNavItems}
