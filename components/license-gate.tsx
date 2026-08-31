@@ -14,7 +14,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, ShieldAlert, Copy, Check, KeyRound, Loader2, AlertTriangle, Globe, HardDrive } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -275,9 +274,9 @@ function ActivationScreen({
                   <code className="flex-1 select-all rounded-md border bg-muted/50 px-3 py-2 font-mono text-sm break-all">
                     {machineId || '—'}
                   </code>
-                  <Button type="button" variant="outline" size="icon" onClick={copyMachineId} title="Copy">
+                  <button type="button" onClick={copyMachineId} title="Copy" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 w-10 p-0">
                     {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   Send this ID to your vendor. They will issue a license key locked to this computer.
@@ -311,15 +310,15 @@ function ActivationScreen({
 
         <CardFooter className="flex-col items-stretch gap-3">
           {mode === 'online' ? (
-            <Button onClick={activateOnline} disabled={submitting || !productKey.trim()} className="w-full">
+            <button onClick={activateOnline} disabled={submitting || !productKey.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
               Activate Online
-            </Button>
+            </button>
           ) : (
-            <Button onClick={activateOffline} disabled={submitting || !key.trim()} className="w-full">
+            <button onClick={activateOffline} disabled={submitting || !key.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
               Activate License
-            </Button>
+            </button>
           )}
           <p className="text-center text-[11px] text-muted-foreground">
             Alon POS is protected by per-machine licensing. Keys are cryptographically signed and

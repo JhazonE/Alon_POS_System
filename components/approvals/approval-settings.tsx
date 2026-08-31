@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Settings2, 
@@ -133,24 +132,22 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
             {onBack && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <button 
                 onClick={onBack}
-                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                 title="Back to Approvals"
               >
                 <ChevronLeft className="h-5 w-5" />
-              </Button>
+              </button>
             )}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Approval Settings</h1>
                 <p className="text-sm text-muted-foreground">Customize approval stages and roles for each transaction type.</p>
             </div>
         </div>
-        <Button onClick={saveWorkflow} disabled={isSaving}>
+        <button onClick={saveWorkflow} disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
             {isSaving ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Configuration</>}
-        </Button>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 flex-1 min-h-0">
@@ -185,9 +182,9 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
                   <CardTitle className="text-sm">Workflow: {TRANSACTION_TYPES.find(t => t.value === selectedTxType)?.label}</CardTitle>
                   <CardDescription className="text-[11px]">Define the sequence of roles required.</CardDescription>
                 </div>
-                <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={addStep}>
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-7 text-[10px]" onClick={addStep}>
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Step
-                </Button>
+                </button>
               </div>
             </CardHeader>
             <CardContent className="p-4 flex-1">
@@ -196,9 +193,9 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
                   <Settings2 className="h-8 w-8 text-muted-foreground/20 mb-3" />
                   <p className="text-xs font-medium text-muted-foreground">No approval steps defined.</p>
                   <p className="text-[10px] text-muted-foreground/60 mb-3">Transactions will be finalized immediately.</p>
-                  <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={addStep}>
+                  <button className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-7 text-[10px]" onClick={addStep}>
                     Define First Step
-                  </Button>
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -231,14 +228,12 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
                         </Select>
                       </div>
 
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                      <button 
+                        className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-50"
                         onClick={() => removeStep(index)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      </button>
                     </div>
                   ))}
                   

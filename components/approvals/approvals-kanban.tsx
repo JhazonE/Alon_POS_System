@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -527,9 +526,9 @@ function DetailView({
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full -ml-2">
+          <button onClick={onClose} className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 rounded-full -ml-2">
             <ArrowLeft className="size-5" />
-          </Button>
+          </button>
         )}
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-black tracking-tight truncate">
@@ -540,19 +539,17 @@ function DetailView({
           <p className="text-[10px] text-muted-foreground font-mono">ID: {item.id}</p>
         </div>
         {/* Print button — always visible */}
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={onPrint}
-          className="gap-1.5 rounded-full font-bold text-xs"
+          className="inline-flex items-center justify-center tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] gap-1.5 rounded-full font-bold text-xs"
         >
           <Printer className="size-4" />
           {!isMobile && 'Print'}
-        </Button>
+        </button>
         {!isMobile && (
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full opacity-40 hover:opacity-100">
+          <button onClick={onClose} className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 rounded-full opacity-40 hover:opacity-100">
             <XCircle className="size-5" />
-          </Button>
+          </button>
         )}
       </div>
 
@@ -655,21 +652,20 @@ function DetailView({
             </div>
           )}
           <div className="flex gap-3">
-            <Button
+            <button
               disabled={isProcessing || !canAct}
-              variant="outline"
-              className="flex-1 h-12 rounded-full border-2 text-red-600 border-red-200 hover:bg-red-50 font-black uppercase tracking-wide disabled:opacity-30"
+              className="inline-flex items-center justify-center gap-2 text-sm whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] flex-1 h-12 rounded-full border-2 text-red-600 border-red-200 hover:bg-red-50 font-black uppercase tracking-wide disabled:opacity-30"
               onClick={() => onAction('Reject', notes)}
             >
               Reject
-            </Button>
-            <Button
+            </button>
+            <button
               disabled={isProcessing || !canAct}
-              className="flex-[2] h-12 rounded-full font-black uppercase tracking-wide shadow-lg shadow-primary/20 disabled:opacity-30"
+              className="inline-flex items-center justify-center gap-2 text-sm whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] flex-[2] h-12 rounded-full font-black uppercase tracking-wide shadow-lg shadow-primary/20 disabled:opacity-30"
               onClick={() => onAction('Approve', notes)}
             >
               {isProcessing ? 'Processing…' : 'Approve'}
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -846,14 +842,12 @@ export function ApprovalsKanban({ open }: ApprovalsKanbanProps) {
                   Approval Center
                 </p>
               </div>
-              <Button
+              <button
                 onClick={fetchQueue}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full bg-secondary/50"
+                className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-9 w-9 rounded-full bg-secondary/50"
               >
                 <RefreshCcw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-              </Button>
+              </button>
             </div>
 
             {/* Search */}

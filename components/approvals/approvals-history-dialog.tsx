@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Search, 
@@ -168,13 +167,13 @@ export function ApprovalsHistoryDialog({
                 ))}
               </select>
 
-              <Button variant="outline" onClick={() => {
+              <button onClick={() => {
                 setSearchTerm('');
                 setStatusFilter('ALL');
                 setTypeFilter('ALL');
-              }}>
+              }} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 Reset
-              </Button>
+              </button>
             </div>
           </div>
         </DialogHeader>
@@ -240,9 +239,9 @@ export function ApprovalsHistoryDialog({
                       {getStatusBadge(item.status)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Eye className="h-4 w-4 text-primary" />
-                      </Button>
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))

@@ -2,7 +2,6 @@
 
 import { useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, Upload, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import type { EntityKey } from '@/lib/import/entity-schemas';
@@ -41,17 +40,17 @@ export function ImportWizard({ entity, open, onOpenChange, onImported }: Props) 
               Upload a CSV or Excel (.xlsx) file. Not sure about the columns? Download the template first.
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={w.actions.downloadTemplate}>
+              <button onClick={w.actions.downloadTemplate} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 <Download className="mr-2 h-4 w-4" /> Download template
-              </Button>
+              </button>
             </div>
             <input
               ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) w.actions.pickFile(f); e.target.value = ''; }}
             />
-            <Button className="w-full" onClick={() => fileRef.current?.click()}>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full" onClick={() => fileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Choose file
-            </Button>
+            </button>
           </div>
         )}
 
@@ -76,8 +75,8 @@ export function ImportWizard({ entity, open, onOpenChange, onImported }: Props) 
               </div>
             ))}
             <DialogFooter className="pt-2">
-              <Button variant="ghost" onClick={w.actions.back}>Back</Button>
-              <Button onClick={w.actions.toPreview} disabled={!w.requiredMapped}>Next: Preview</Button>
+              <button onClick={w.actions.back} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">Back</button>
+              <button onClick={w.actions.toPreview} disabled={!w.requiredMapped} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">Next: Preview</button>
             </DialogFooter>
             {!w.requiredMapped && <p className="text-xs text-red-600">Map all required (*) fields to continue.</p>}
           </div>
@@ -109,11 +108,11 @@ export function ImportWizard({ entity, open, onOpenChange, onImported }: Props) 
               </table>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={w.actions.back}>Back</Button>
-              <Button onClick={w.actions.confirm} disabled={w.loading || (w.counts.new + w.counts.update === 0)}>
+              <button onClick={w.actions.back} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">Back</button>
+              <button onClick={w.actions.confirm} disabled={w.loading || (w.counts.new + w.counts.update === 0)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
                 {w.loading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Import {w.counts.new + w.counts.update} rows
-              </Button>
+              </button>
             </DialogFooter>
           </div>
         )}
@@ -127,12 +126,12 @@ export function ImportWizard({ entity, open, onOpenChange, onImported }: Props) 
             </div>
             <p className="text-sm">Added: {w.result.added} · Updated: {w.result.updated} · Skipped: {w.result.skipped}</p>
             {w.result.skipped > 0 && (
-              <Button variant="outline" onClick={w.actions.downloadSkipped}>
+              <button onClick={w.actions.downloadSkipped} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
                 <Download className="mr-2 h-4 w-4" /> Download skipped rows
-              </Button>
+              </button>
             )}
             <DialogFooter>
-              <Button onClick={() => { onImported?.(); close(); }}>Done</Button>
+              <button onClick={() => { onImported?.(); close(); }} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">Done</button>
             </DialogFooter>
           </div>
         )}

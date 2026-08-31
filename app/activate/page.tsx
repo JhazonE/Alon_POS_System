@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -206,9 +205,9 @@ export default function ActivatePage() {
                 <code className="flex-1 rounded bg-muted px-3 py-2 text-xs font-mono break-all leading-relaxed">
                   {statusInfo.machineId}
                 </code>
-                <Button variant="outline" size="icon" onClick={copyMachineId} title="Copy Machine ID">
+                <button onClick={copyMachineId} title="Copy Machine ID" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 w-10 p-0">
                   {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                </Button>
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -241,8 +240,8 @@ export default function ActivatePage() {
                     <AlertDescription>{onlineError}</AlertDescription>
                   </Alert>
                 )}
-                <Button
-                  className="w-full"
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full"
                   onClick={handleOnlineActivate}
                   disabled={onlineLoading || !productKey.trim()}
                 >
@@ -251,7 +250,7 @@ export default function ActivatePage() {
                   ) : (
                     'Activate Online'
                   )}
-                </Button>
+                </button>
               </TabsContent>
 
               <TabsContent value="offline" className="space-y-4">
@@ -274,8 +273,8 @@ export default function ActivatePage() {
                     <AlertDescription>{offlineError}</AlertDescription>
                   </Alert>
                 )}
-                <Button
-                  className="w-full"
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full"
                   onClick={handleOfflineActivate}
                   disabled={offlineLoading || !signedKey.trim()}
                 >
@@ -284,7 +283,7 @@ export default function ActivatePage() {
                   ) : (
                     'Activate'
                   )}
-                </Button>
+                </button>
               </TabsContent>
             </Tabs>
           </CardContent>

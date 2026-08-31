@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Printer, X, Download, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -115,10 +114,10 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
           </DialogTitle>
           <DialogDescription className="sr-only">Preview and print the approval transaction document</DialogDescription>
           <div className="flex items-center gap-2 pr-6">
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 font-bold border-primary/20 text-primary hover:bg-primary/5">
+            <button onClick={handlePrint} className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-2 font-bold border-primary/20 text-primary hover:bg-primary/5">
               <Printer className="h-4 w-4" />
               Print Document
-            </Button>
+            </button>
           </div>
         </DialogHeader>
 
@@ -762,11 +761,11 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
         </div>
 
         <DialogFooter className="p-4 border-t bg-secondary/5">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Close Preview</Button>
-          <Button onClick={handlePrint} className="gap-2 font-bold px-8">
+          <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px]">Close Preview</button>
+          <button onClick={handlePrint} className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 gap-2 font-bold px-8">
             <Printer className="h-4 w-4" />
             Print Now
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
