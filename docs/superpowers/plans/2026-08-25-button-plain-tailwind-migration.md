@@ -10,22 +10,44 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-25-button-plain-tailwind-migration-design.md`
 
-## Progress (as of 2026-08-27)
+## Progress — COMPLETE (as of 2026-08-31)
 
-Running on branch `refactor/button-plain-tailwind`, one commit per task.
+Ran on branch `refactor/button-plain-tailwind`, one commit per task.
 
-- **Done:** Tasks 1–10 — codemod built, then `purchases`, `suppliers`,
-  `dashboard/restock/developer/user-management/NotificationsBell`, `customer`,
-  `inventory`, `reports`, `products`, `settings`, `pos`. All 22 hand-fixed
-  dynamic-variant usages in those modules are done. `npm run typecheck` shows
-  the same 10 pre-existing errors it showed before the migration started, and
-  no others.
-- **Next:** Task 11 (`sales`, 5 hand-fixes), then Task 12, **Task 12b**, Task 13.
+- **Done: Tasks 1–13, all of them.** Codemod built, then `purchases`,
+  `suppliers`, `dashboard/restock/developer/user-management/NotificationsBell`,
+  `customer`, `inventory`, `reports`, `products`, `settings`, `pos`, `sales`,
+  shared components + auth pages, the three `buttonVariants` consumers, and
+  finally the deletion of `components/ui/button.tsx`. All 27 hand-fixed
+  dynamic-variant usages are done. `npm run typecheck` shows the same 10
+  pre-existing errors it showed before the migration started, and no others.
+- **Three deviations from the plan as written:**
+  1. **`carousel.tsx` could not stay out of scope.** `tsconfig.json` includes
+     `**/*.tsx`, so its `Button` import made `tsc --noEmit` fail the moment
+     `button.tsx` was deleted. It was migrated by hand in Task 13 — its two
+     usages take `variant`/`size` as forwarded props, so it carries a
+     file-local recipe map like `pagination.tsx` and `calendar.tsx`.
+  2. **Two dead `Button` imports survived every batch.** The codemod skips any
+     file not containing `<Button` JSX, so a file whose import was already
+     unused was never opened: `customer/loyalty/delete-loyalty-card-dialog.tsx`
+     and `sales/sales-transactions/SalesTable.tsx`. Both removed in Task 12.
+  3. **`sidebar.tsx` held a type-level `typeof Button`.** The codemod rewrites
+     JSX only, so `SidebarTrigger`'s `forwardRef` generics still named the
+     component after its element became a plain `<button>`. Moved to the native
+     button types in Task 12. `calendar.tsx` had the same pattern on its
+     `buttonVariant` prop, fixed in Task 12b.
 - **Verification gap:** this environment has no `.env`, so the app cannot reach
-  MySQL. Page shells and their buttons were checked in the browser per batch,
-  but table row actions and dialogs that need data were not. Where a hand-fixed
-  toggle sits behind such a screen, its active/inactive classes were verified by
-  running the project's own `cn()` over both branches instead.
+  MySQL. Page shells and their buttons were checked in the browser per batch —
+  `/login` and `/signup` were re-checked in Chromium after the deletion, with
+  every rendered button's computed height, radius, background and weight dumped
+  and matched against the recipes. But table row actions and dialogs that need
+  data were not exercised. Where a hand-fixed toggle sits behind such a screen,
+  its active/inactive classes were verified by running the project's own `cn()`
+  over both branches instead.
+- **Unrelated pre-existing breakage, untouched:** `npm run lint` fails with
+  "Invalid project directory provided, no such directory: .../lint" — `next
+  lint` was removed in Next 16 and the script was never updated. Not caused by
+  this migration and out of its scope.
 
 ## Global Constraints
 
