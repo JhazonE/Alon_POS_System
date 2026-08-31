@@ -7,7 +7,49 @@ import useEmblaCarousel, {
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+
+/** Plain-Tailwind button recipes, inlined from the former `Button` component. */
+const BUTTON_BASE =
+  "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+
+type ButtonVariant =
+  | "default"
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "link"
+type ButtonSize = "default" | "sm" | "lg" | "icon"
+
+const BUTTON_VARIANT: Record<ButtonVariant, string> = {
+  default:
+    "bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55",
+  destructive:
+    "bg-destructive text-destructive-foreground shadow-[0_1px_3px_hsl(var(--destructive)/0.25)] hover:bg-destructive/90 hover:shadow-[0_6px_18px_hsl(var(--destructive)/0.28)] focus-visible:ring-destructive/55",
+  outline:
+    "border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring",
+  secondary:
+    "bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring",
+  ghost: "hover:bg-accent focus-visible:ring-ring",
+  link: "text-primary underline-offset-4 decoration-primary/35 hover:decoration-primary h-auto px-0 focus-visible:ring-ring",
+}
+
+const BUTTON_SIZE: Record<ButtonSize, string> = {
+  default: "h-10 px-[18px]",
+  sm: "h-8 px-[13px] text-xs rounded-lg gap-1.5",
+  lg: "h-[46px] px-6 text-[15px]",
+  icon: "h-10 w-10 p-0",
+}
+
+/** The `link` variant carries its own sizing and never takes size classes. */
+function buttonRecipe(variant: ButtonVariant, size: ButtonSize) {
+  return cn(BUTTON_BASE, BUTTON_VARIANT[variant], variant !== "link" && BUTTON_SIZE[size])
+}
+
+type CarouselButtonProps = React.ComponentProps<"button"> & {
+  variant?: ButtonVariant
+  size?: ButtonSize
+}
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -196,16 +238,15 @@ CarouselItem.displayName = "CarouselItem"
 
 const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<typeof Button>
+  CarouselButtonProps
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
 
   return (
-    <Button
+    <button
       ref={ref}
-      variant={variant}
-      size={size}
       className={cn(
+        buttonRecipe(variant, size),
         "absolute  h-8 w-8 rounded-full",
         orientation === "horizontal"
           ? "-left-12 top-1/2 -translate-y-1/2"
@@ -218,23 +259,22 @@ const CarouselPrevious = React.forwardRef<
     >
       <ArrowLeft className="h-4 w-4" />
       <span className="sr-only">Previous slide</span>
-    </Button>
+    </button>
   )
 })
 CarouselPrevious.displayName = "CarouselPrevious"
 
 const CarouselNext = React.forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<typeof Button>
+  CarouselButtonProps
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
 
   return (
-    <Button
+    <button
       ref={ref}
-      variant={variant}
-      size={size}
       className={cn(
+        buttonRecipe(variant, size),
         "absolute h-8 w-8 rounded-full",
         orientation === "horizontal"
           ? "-right-12 top-1/2 -translate-y-1/2"
@@ -247,7 +287,7 @@ const CarouselNext = React.forwardRef<
     >
       <ArrowRight className="h-4 w-4" />
       <span className="sr-only">Next slide</span>
-    </Button>
+    </button>
   )
 })
 CarouselNext.displayName = "CarouselNext"
