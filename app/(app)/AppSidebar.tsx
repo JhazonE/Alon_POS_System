@@ -21,6 +21,7 @@ import {
 import { Logo } from '@/components/logo';
 import { handleSignOut } from '../auth-actions';
 import { buildNavIndex, filterNavIndex, matchSegments } from '@/lib/sidebar-search';
+import { reportSearchItems } from '@/lib/report-catalog';
 import { useMemo, useRef, useState, useEffect } from 'react';
 
 /**
@@ -104,6 +105,9 @@ export function AppSidebar({
     { section: 'Inventory', items: inventoryNavItems },
     { section: 'Customers', items: customerNavItems },
     { section: null, items: filteredInsightsNavItems },
+    // Reports are reached from the /reports page rather than the sidebar, so
+    // they render nothing here -- but they must still be findable by search.
+    { section: 'Reports', items: reportSearchItems },
     { section: null, items: filteredAdminNavItems },
   ]), [filteredNavItems, filteredSellItems, filteredInsightsNavItems, filteredAdminNavItems]);
 
