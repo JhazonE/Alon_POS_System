@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { Package, ArrowLeftRight, AlertTriangle, TrendingUp, ClipboardList, Receipt, Package2, Percent, Undo, Users, BarChart, LineChart, PhilippinePeso, ShoppingCart, Layers, CreditCard, ShieldCheck, Landmark, Calendar, CalendarClock, CalendarDays, Activity, Store, ListOrdered, Banknote, Ban, FileText, FileCheck2, Sigma } from 'lucide-react';
+import { Package, ArrowLeftRight, AlertTriangle, TrendingUp, ClipboardList, Receipt, Package2, Percent, Undo, Users, BarChart, LineChart, PhilippinePeso, ShoppingCart, Layers, CreditCard, ShieldCheck, Landmark, Calendar, CalendarClock, CalendarDays, Activity, Store, ListOrdered, Banknote, Ban, FileText, FileCheck2, Sigma, History } from 'lucide-react';
 
 export default function ReportsPage() {
   return (
@@ -89,7 +89,19 @@ export default function ReportsPage() {
                   <ClipboardList className="h-5 w-5" />
                   Adjustment Report
                 </CardTitle>
-                <CardDescription>Log of damaged, lost, or corrected stock.</CardDescription>
+                <CardDescription>Completed adjustments for damaged, lost, or corrected stock, with barcode and printing.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/inventory/history">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-amber-600" />
+                  Adjustment History
+                </CardTitle>
+                <CardDescription>Every adjustment including those still awaiting approval, each tagged Pending or Completed.</CardDescription>
               </CardHeader>
             </Card>
           </Link>

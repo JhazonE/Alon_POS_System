@@ -79,7 +79,10 @@ export function AppSidebar({
   // Every other /sales/* route is a read-only report reached from /reports, so
   // match the two operational paths explicitly rather than the whole prefix.
   const isSalesPage = pathname.startsWith('/sales/orders') || pathname.startsWith('/sales/invoices');
-  const isInventoryPage = pathname.startsWith('/inventory');
+  // /inventory/history and /inventory/movement are reports reached from
+  // /reports; every other /inventory/* route is operational and belongs here.
+  const isInventoryPage = pathname.startsWith('/inventory')
+    && pathname !== '/inventory/history' && pathname !== '/inventory/movement';
   const isCustomerPage = pathname.startsWith('/customer');
   const isSuppliersPage = pathname.startsWith('/suppliers');
   const isPurchasesPage = pathname.startsWith('/purchases');

@@ -36,12 +36,13 @@ export const salesNavItems = [
   { href: '/sales/invoices', label: 'Sales Invoice/Delivery' },
 ];
 
+// Operational inventory pages only. The two read-only views that used to sit
+// here are reached from /reports: Stock Movement was already carded there, and
+// Adjustment History now has its own card.
 export const inventoryNavItems = [
   { href: '/inventory', label: 'Stock Levels' },
   { href: '/inventory/stock-counts', label: 'Stock Counts (Snapshots)' },
   { href: '/inventory/repackaging', label: 'Repackaging' },
-  { href: '/inventory/history', label: 'Adjustment History' },
-  { href: '/inventory/movement', label: 'Stock Movement' },
 ];
 
 export const customerNavItems = [
