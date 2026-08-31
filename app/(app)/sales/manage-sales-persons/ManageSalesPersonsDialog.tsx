@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle, Loader2 } from 'lucide-react';
@@ -55,10 +54,10 @@ export function ManageSalesPersonsDialog({ trigger, onChange, open, onOpenChange
                 onChange={(e) => m.setNewContact(e.target.value)}
               />
             </div>
-            <Button onClick={m.handleAddSalesPerson} disabled={m.isAdding || !m.newName.trim()}>
+            <button onClick={m.handleAddSalesPerson} disabled={m.isAdding || !m.newName.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
               {m.isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
               {m.isAdding ? 'Adding...' : 'Add Sales Person'}
-            </Button>
+            </button>
           </div>
 
           <Card>
@@ -94,7 +93,7 @@ export function ManageSalesPersonsDialog({ trigger, onChange, open, onOpenChange
 
         <DialogFooter>
           <DialogTrigger asChild>
-            <Button variant="outline">Close</Button>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Close</button>
           </DialogTrigger>
         </DialogFooter>
       </DialogContent>

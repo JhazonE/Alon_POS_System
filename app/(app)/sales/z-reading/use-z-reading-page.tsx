@@ -5,7 +5,6 @@ import {
   ColumnDef, SortingState, VisibilityState,
   getCoreRowModel, getSortedRowModel, useReactTable,
 } from '@tanstack/react-table';
-import { Button } from '@/components/ui/button';
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye, Printer, FileText, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -159,10 +158,10 @@ export function useZReadingPage() {
     {
       accessorKey: 'date',
       header: ({ column }) => (
-        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
           Date
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />}
-        </Button>
+        </button>
       ),
       cell: ({ row }) => format(new Date(row.getValue('date')), 'PP'),
     },
@@ -179,20 +178,20 @@ export function useZReadingPage() {
     {
       accessorKey: 'transactionCount',
       header: ({ column }) => (
-        <Button variant="ghost" size="sm" className="-ml-3 h-8 text-right" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8 text-right" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
           Transactions
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />}
-        </Button>
+        </button>
       ),
       cell: ({ row }) => <div className="text-right">{row.getValue('transactionCount')}</div>,
     },
     {
       accessorKey: 'netSales',
       header: ({ column }) => (
-        <Button variant="ghost" size="sm" className="-ml-3 h-8 text-right" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8 text-right" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
           Net Sales
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />}
-        </Button>
+        </button>
       ),
       cell: ({ row }) => <div className="text-right font-mono">₱{(row.getValue('netSales') as number).toFixed(2)}</div>,
     },
@@ -205,10 +204,10 @@ export function useZReadingPage() {
         const reading = row.original;
         return (
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" onClick={() => handleView(reading)} title="View"><Eye className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => handlePrint(reading)} title="Print"><Printer className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => handleExportPDF(reading)} title="Export PDF"><FileText className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => handleExportImage(reading)} title="Export Image"><ImageIcon className="h-4 w-4" /></Button>
+            <button onClick={() => handleView(reading)} title="View" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0"><Eye className="h-4 w-4" /></button>
+            <button onClick={() => handlePrint(reading)} title="Print" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0"><Printer className="h-4 w-4" /></button>
+            <button onClick={() => handleExportPDF(reading)} title="Export PDF" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0"><FileText className="h-4 w-4" /></button>
+            <button onClick={() => handleExportImage(reading)} title="Export Image" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0"><ImageIcon className="h-4 w-4" /></button>
           </div>
         );
       },

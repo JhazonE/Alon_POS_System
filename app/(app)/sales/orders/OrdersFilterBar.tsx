@@ -3,7 +3,6 @@
 import { Table as ReactTable } from '@tanstack/react-table';
 import { Search, Filter, X, Columns } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -48,7 +47,7 @@ export function OrdersFilterBar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2 relative">
+            <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2 relative">
               <Filter className="h-4 w-4" />
               Filters
               {activeFilterCount > 0 && (
@@ -56,7 +55,7 @@ export function OrdersFilterBar({
                   {activeFilterCount}
                 </Badge>
               )}
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[200px]">
             <DropdownMenuLabel>Filter By</DropdownMenuLabel>
@@ -80,10 +79,10 @@ export function OrdersFilterBar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
+            <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-2">
               <Columns className="h-4 w-4" />
               Columns
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {table.getAllColumns().filter(col => col.getCanHide()).map(col => (
@@ -112,7 +111,7 @@ export function OrdersFilterBar({
           {filters.salesArea && <Badge variant="outline" className="gap-1">Area: {filters.salesArea} <X className="h-3 w-3 cursor-pointer" onClick={() => handleFilterChange('salesArea', '')} /></Badge>}
           {filters.customerId && <Badge variant="outline" className="gap-1">Customer: {customers.find(c => c.id === filters.customerId)?.name || 'Selected'} <X className="h-3 w-3 cursor-pointer" onClick={() => handleFilterChange('customerId', '')} /></Badge>}
           {filters.reference && <Badge variant="outline" className="gap-1">Ref: {filters.reference} <X className="h-3 w-3 cursor-pointer" onClick={() => handleFilterChange('reference', '')} /></Badge>}
-          <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={clearFilters}>Clear all</Button>
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-6 text-xs text-muted-foreground" onClick={clearFilters}>Clear all</button>
         </div>
       )}
     </>

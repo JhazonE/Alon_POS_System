@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,7 +24,7 @@ export function XReadingFilterBar({ dateRange, setDateRange, selectedCashier, se
         <label className="text-sm font-medium leading-none">Date</label>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn('w-[300px] justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}>
+            <button className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", 'w-[300px] justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}>
               <CalendarIcon className="mr-2 h-4 w-4" />
               {dateRange?.from ? (
                 dateRange.to ? (
@@ -35,7 +33,7 @@ export function XReadingFilterBar({ dateRange, setDateRange, selectedCashier, se
               ) : (
                 <span>Pick a date range</span>
               )}
-            </Button>
+            </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar mode="range" selected={dateRange} onSelect={setDateRange} initialFocus numberOfMonths={2} />
@@ -58,9 +56,9 @@ export function XReadingFilterBar({ dateRange, setDateRange, selectedCashier, se
         </Select>
       </div>
 
-      <Button onClick={onShowReport} className="bg-white hover:bg-gray-100 text-black border border-gray-200 shadow-sm">
+      <button onClick={onShowReport} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-white hover:bg-gray-100 text-black border border-gray-200 shadow-sm">
         Show Report
-      </Button>
+      </button>
     </div>
   );
 }

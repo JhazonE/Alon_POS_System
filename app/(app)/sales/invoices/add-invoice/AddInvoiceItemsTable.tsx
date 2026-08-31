@@ -3,7 +3,6 @@
 import { UseFormReturn, FieldArrayWithId } from 'react-hook-form';
 import { FormControl, FormField } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, Search } from 'lucide-react';
 import { formatQuantity } from '@/lib/utils';
@@ -90,13 +89,12 @@ export function AddInvoiceItemsTable({ form, fields, remove, total, handleAddPro
                       ₱{(Number(form.watch(`items.${index}.price`) || 0) * Number(form.watch(`items.${index}.quantity`) || 0)).toFixed(2)}
                     </TableCell>
                     <TableCell className="py-2">
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => remove(index)}
                       >
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,7 +1,6 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
 import { Printer, FileText } from 'lucide-react';
 import type { Sale } from '@/lib/types';
 import { formatQuantity } from '@/lib/utils';
@@ -128,18 +127,18 @@ export function SalesInvoicePrintView({ order, title, settings, onBack }: Props)
       </div>
 
       <div className="flex justify-center gap-3 non-printable p-4 bg-slate-50 border-t w-full shrink-0 print:hidden">
-        <Button variant="outline" size="sm" onClick={() => window.print()} className="h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm bg-white">
+        <button onClick={() => window.print()} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring rounded-lg gap-1.5 h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm bg-white">
           <Printer className="mr-2 h-4 w-4" /> Print
-        </Button>
-        <Button variant="outline" size="sm" onClick={handlePrintPOSInvoice} className="h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm bg-white">
+        </button>
+        <button onClick={handlePrintPOSInvoice} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring rounded-lg gap-1.5 h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm bg-white">
           <Printer className="mr-2 h-4 w-4" /> Print POS Invoice
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => window.print()} className="h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm bg-white">
+        </button>
+        <button onClick={() => window.print()} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring rounded-lg gap-1.5 h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm bg-white">
           <Printer className="mr-2 h-4 w-4" /> Print to template
-        </Button>
-        <Button variant="outline" size="sm" onClick={onBack} className="h-10 px-6 font-bold text-xs uppercase tracking-tight bg-white">
+        </button>
+        <button onClick={onBack} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring rounded-lg gap-1.5 h-10 px-6 font-bold text-xs uppercase tracking-tight bg-white">
           Close
-        </Button>
+        </button>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 'use client';
 
 import { RefObject } from 'react';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Printer, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,9 +34,9 @@ export function OverallReadingPreviewModal({ isOpen, onClose, readingData, print
             <h2 className="text-lg font-bold text-slate-800">Overall Reading Receipt</h2>
             <p className="text-xs text-slate-500 mt-0.5">Preview of the printed report</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600 rounded-full" onClick={onClose}>
+          <button className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-slate-400 hover:text-slate-600 rounded-full" onClick={onClose}>
             <X className="h-5 w-5" />
-          </Button>
+          </button>
         </div>
 
         <div className="flex-1 overflow-auto bg-slate-100/50 p-6 flex justify-center">
@@ -63,20 +62,20 @@ export function OverallReadingPreviewModal({ isOpen, onClose, readingData, print
                 </Select>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" size="sm" onClick={onClose} className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700">
+                <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 bg-white border-slate-200 hover:bg-slate-50 text-slate-700">
                   Close
-                </Button>
-                <Button size="sm" onClick={handlePrint} disabled={!readingData} className="bg-primary hover:bg-primary/90 text-white gap-2">
+                </button>
+                <button onClick={handlePrint} disabled={!readingData} className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg bg-primary hover:bg-primary/90 text-white gap-2">
                   <Printer className="h-4 w-4" />
                   Print Now
-                </Button>
+                </button>
               </div>
             </>
           ) : (
             <div className="flex justify-end w-full">
-              <Button variant="outline" size="sm" onClick={onClose} className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700">
+              <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 bg-white border-slate-200 hover:bg-slate-50 text-slate-700">
                 Close
-              </Button>
+              </button>
             </div>
           )}
         </div>

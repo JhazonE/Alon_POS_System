@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { ColumnDef, SortingState, flexRender, getCoreRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -24,10 +23,10 @@ export function OverallReadingShiftsTable({ shifts, isLoading, selectedShift, se
     {
       accessorKey: 'cashier_name',
       header: ({ column }) => (
-        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 -ml-3 h-8" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
           Cashier
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3 w-3" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3 w-3" /> : <ArrowUpDown className="ml-2 h-3 w-3" />}
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5">
@@ -43,14 +42,12 @@ export function OverallReadingShiftsTable({ shifts, isLoading, selectedShift, se
       header: () => <div className="text-right text-xs">Action</div>,
       cell: ({ row }) => (
         <div className="text-right">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-primary hover:text-primary hover:bg-primary/10"
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-8 text-primary hover:text-primary hover:bg-primary/10"
             onClick={(e) => { e.stopPropagation(); setSelectedShift(row.original); }}
           >
             <span className="text-xs">View</span>
-          </Button>
+          </button>
         </div>
       ),
     },

@@ -1,7 +1,6 @@
 import { format } from 'date-fns';
 import { CalendarIcon, RefreshCcw, Eye } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,9 +41,8 @@ export function CashTransferFilterBar({
       {/* Date Range */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn('w-[240px] justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}
+          <button
+            className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]", 'w-[240px] justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {dateRange?.from ? (
@@ -56,7 +54,7 @@ export function CashTransferFilterBar({
             ) : (
               <span>Pick a date range</span>
             )}
-          </Button>
+          </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
           <Calendar
@@ -99,17 +97,17 @@ export function CashTransferFilterBar({
         </SelectContent>
       </Select>
 
-      <Button variant="ghost" size="icon" onClick={() => refetch()} title="Refresh">
+      <button onClick={() => refetch()} title="Refresh" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0">
         <RefreshCcw className="h-4 w-4" />
-      </Button>
+      </button>
 
       {/* Column Visibility */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="ml-auto">
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5 ml-auto">
             <Eye className="h-4 w-4 mr-2" />
             Columns
-          </Button>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {table.getAllColumns().filter((col) => col.getCanHide()).map((col) => (

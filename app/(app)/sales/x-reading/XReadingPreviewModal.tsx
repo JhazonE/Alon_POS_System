@@ -1,7 +1,6 @@
 'use client';
 
 import { RefObject } from 'react';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X } from 'lucide-react';
 import { XReadingPreview, XReadingData } from './x-reading-preview';
@@ -27,9 +26,9 @@ export function XReadingPreviewModal({ isOpen, onClose, selectedReading, printer
       <div className="bg-white w-full max-w-xl max-h-[90vh] flex flex-col rounded shadow-lg overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h2 className="text-lg font-medium text-gray-700">X-READING</h2>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700" onClick={onClose}>
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-gray-500 hover:text-gray-700" onClick={onClose}>
             <X className="h-5 w-5" />
-          </Button>
+          </button>
         </div>
 
         <div className="flex-1 overflow-auto bg-gray-50 p-4 flex justify-center">
@@ -52,10 +51,10 @@ export function XReadingPreviewModal({ isOpen, onClose, selectedReading, printer
             </Select>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="bg-white text-gray-900 hover:bg-gray-100 hover:text-gray-900">Close</Button>
-            <Button onClick={onPrint} disabled={!selectedReading} className="bg-[#008CCB] hover:bg-[#007cb3] text-white">
+            <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] bg-white text-gray-900 hover:bg-gray-100 hover:text-gray-900">Close</button>
+            <button onClick={onPrint} disabled={!selectedReading} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-[#008CCB] hover:bg-[#007cb3] text-white">
               POS Print
-            </Button>
+            </button>
           </div>
         </div>
       </div>

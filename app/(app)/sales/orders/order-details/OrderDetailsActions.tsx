@@ -1,6 +1,4 @@
 'use client';
-
-import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 
 type Props = {
@@ -16,18 +14,18 @@ export function OrderDetailsActions({ onPrint, onPrintPOSInvoice, onClose }: Pro
     // under `variant="outline"`'s theme-aware text, leaving white-on-white
     // labels in dark mode.
     <div className="flex justify-center gap-3 p-4 border-t non-printable bg-muted/30 shrink-0">
-      <Button variant="outline" onClick={onPrint} className="h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm">
+      <button onClick={onPrint} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm">
         <Printer className="mr-2 h-4 w-4" /> Print
-      </Button>
-      <Button variant="outline" onClick={onPrintPOSInvoice} className="h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm">
+      </button>
+      <button onClick={onPrintPOSInvoice} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm">
         <Printer className="mr-2 h-4 w-4" /> Print POS Invoice
-      </Button>
-      <Button variant="outline" onClick={onPrint} className="h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm">
+      </button>
+      <button onClick={onPrint} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-6 font-bold text-xs uppercase tracking-tight shadow-sm">
         <Printer className="mr-2 h-4 w-4" /> Print to template
-      </Button>
-      <Button variant="outline" onClick={onClose} className="h-10 px-6 font-bold text-xs uppercase tracking-tight">
+      </button>
+      <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-6 font-bold text-xs uppercase tracking-tight">
         Close
-      </Button>
+      </button>
     </div>
   );
 }

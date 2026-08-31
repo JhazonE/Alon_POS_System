@@ -5,7 +5,6 @@ import { ColumnDef, SortingState, VisibilityState, getCoreRowModel, getSortedRow
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getApiUrl } from '@/lib/api-config';
@@ -14,15 +13,13 @@ import type { Sale, SalesTotals } from './sales-types';
 
 function SortHeader({ column, label, className }: { column: any; label: string; className?: string }) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={cn('h-8 -ml-3 text-primary-foreground hover:text-primary-foreground hover:bg-primary/80 font-semibold', className)}
+    <button
+      className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5", 'h-8 -ml-3 text-primary-foreground hover:text-primary-foreground hover:bg-primary/80 font-semibold', className)}
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
     >
       {label}
       {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-1 h-3 w-3" /> : <ArrowUpDown className="ml-1 h-3 w-3 opacity-60" />}
-    </Button>
+    </button>
   );
 }
 

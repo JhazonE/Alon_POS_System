@@ -1,7 +1,6 @@
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { CalendarIcon, SlidersHorizontal, FileDown, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -49,10 +48,10 @@ export function AnalysisFilterBar({
         {/* Export */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-8">
               <FileDown className="h-4 w-4 mr-2" />
               Export
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={exportToCSV}>Export to CSV</DropdownMenuItem>
@@ -63,10 +62,8 @@ export function AnalysisFilterBar({
         {/* Date Range Picker */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn('h-8 justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}
+            <button
+              className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-8 px-[13px] text-xs rounded-lg gap-1.5", 'h-8 justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
               {dateRange?.from ? (
@@ -78,7 +75,7 @@ export function AnalysisFilterBar({
               ) : (
                 <span>Pick a date range</span>
               )}
-            </Button>
+            </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">
             <Calendar
@@ -95,13 +92,13 @@ export function AnalysisFilterBar({
         {/* Filters Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-8">
               <SlidersHorizontal className="mr-2 h-4 w-4" />
               Filters
               {hasActiveFilters && (
                 <Badge variant="secondary" className="ml-2 px-1 rounded-sm">!</Badge>
               )}
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Filter Options</DropdownMenuLabel>
@@ -129,10 +126,10 @@ export function AnalysisFilterBar({
         </DropdownMenu>
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters} className="h-8 w-8 p-0">
+          <button onClick={resetFilters} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg gap-1.5 h-8 w-8 p-0">
             <X className="h-4 w-4" />
             <span className="sr-only">Reset</span>
-          </Button>
+          </button>
         )}
       </div>
     </div>
