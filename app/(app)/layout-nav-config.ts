@@ -27,17 +27,13 @@ export const sellNavItems = [
   { href: '/products', icon: Package, label: 'Products', permission: 'manage_products' },
 ];
 
+// Only the two pages you actually create records on. Every read-only sales
+// view — POS transactions/details/cash-transfer, merchandise credits, post
+// voids, and the X/Z/Overall readings — is reached from the /reports page
+// instead; the routes still live under app/(app)/sales/.
 export const salesNavItems = [
-  { href: '/sales', label: 'POS Sales Transaction' },
-  { href: '/sales/details', label: 'POS Sales Detail' },
   { href: '/sales/orders', label: 'Sales Order' },
   { href: '/sales/invoices', label: 'Sales Invoice/Delivery' },
-  { href: '/sales/cash-transfer', label: 'POS Cash Transfer' },
-  { href: '/sales/returns', label: 'Merchandise Credits' },
-  { href: '/sales/voids', label: 'Post Void' },
-  { href: '/sales/z-reading', label: 'POS Z-Reading' },
-  { href: '/sales/x-reading', label: 'POS X-Reading' },
-  { href: '/sales/overall-reading', label: 'POS Overall Reading' },
 ];
 
 export const inventoryNavItems = [

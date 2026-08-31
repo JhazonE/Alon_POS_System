@@ -75,9 +75,10 @@ export function AppSidebar({
   suppliersNavItems, purchasesNavItems,
   pathname, getInitials,
 }: Props) {
-  // by-product/by-date/analysis are reports reached from the /reports page, not
-  // operational Sales pages, so they must not light up the Sales collapsible.
-  const isSalesPage = pathname.startsWith('/sales') && !pathname.startsWith('/sales/by-') && pathname !== '/sales/analysis';
+  // The Sales collapsible now holds only the two pages you create records on.
+  // Every other /sales/* route is a read-only report reached from /reports, so
+  // match the two operational paths explicitly rather than the whole prefix.
+  const isSalesPage = pathname.startsWith('/sales/orders') || pathname.startsWith('/sales/invoices');
   const isInventoryPage = pathname.startsWith('/inventory');
   const isCustomerPage = pathname.startsWith('/customer');
   const isSuppliersPage = pathname.startsWith('/suppliers');
