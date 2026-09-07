@@ -51,6 +51,22 @@ async function signOut() {
   }
 }
 
+/**
+ * Plain nav row — no pill, even when active.
+ *
+ * The shadcn base paints `bg-sidebar-accent` on both hover and the active item,
+ * which reads as a button rather than a nav row, so both are overridden here
+ * (these land after the base in `cn`, so they win).
+ *
+ * Active is carried by brightness and weight instead. That needs the resting
+ * state dimmed: `--sidebar-foreground` and `--sidebar-accent-foreground` are
+ * the SAME value in this theme (177 46% 83%), so the base's
+ * `data-[active=true]:text-sidebar-accent-foreground` is a no-op on its own and
+ * `font-medium` alone would be too faint. Holding rows at 65% lets the base's
+ * active and hover rules restore full strength, which is the visible cue.
+ */
+const NAV_ROW = 'text-sidebar-foreground/65 hover:bg-sidebar-accent/40 data-[active=true]:bg-transparent';
+
 type AppUser = { email: string; permissions?: string[]; userType?: string };
 
 type Props = {
@@ -330,7 +346,7 @@ function FlatNavLinks({ items, pathname }: {
       {items.map(item => (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
-            <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className="gap-3 px-4 py-2.5 rounded-lg">
+            <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className={`gap-3 px-4 py-2.5 rounded-lg ${NAV_ROW}`}>
               <item.icon />
               <span className="text-[14px]">{item.label}</span>
             </SidebarMenuButton>
@@ -361,7 +377,7 @@ function CollapsibleNavSection({ label, icon: Icon, isActive, items, pathname, o
         className="group/collapsible group-data-[collapsible=icon]:items-center"
       >
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton isActive={isActive} tooltip={{ children: label }} className="justify-between gap-3 px-4 py-2.5 rounded-lg">
+          <SidebarMenuButton isActive={isActive} tooltip={{ children: label }} className={`justify-between gap-3 px-4 py-2.5 rounded-lg ${NAV_ROW} data-[state=open]:hover:bg-sidebar-accent/40`}>
             <div className="flex items-center gap-3">
               <Icon />
               <span className="text-[14px]">{label}</span>
@@ -373,7 +389,7 @@ function CollapsibleNavSection({ label, icon: Icon, isActive, items, pathname, o
           <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
             {items.map(item => (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md">
+                <SidebarMenuSubButton asChild isActive={pathname === item.href} className={`text-[13px] h-9 rounded-md ${NAV_ROW}`}>
                   <Link href={item.href}>{item.label}</Link>
                 </SidebarMenuSubButton>
               </SidebarMenuItem>
