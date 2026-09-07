@@ -91,6 +91,24 @@ export function AppSidebar({
   const hasSell = filteredSellItems.length > 0 || hasPermission('view_sales');
   const hasPurchasing = hasPermission('manage_purchases') || hasPermission('manage_suppliers');
 
+  // One section open at a time. Sections are keyed by their label, and the
+  // section owning the current route opens itself -- on mount, and again
+  // whenever navigation moves into a different section. Closing that section by
+  // hand sticks, because activeSection has not changed and the effect below
+  // only fires when it does.
+  const activeSection =
+    isSalesPage ? 'Sales'
+    : isPurchasesPage ? 'Purchase Orders'
+    : isSuppliersPage ? 'Suppliers'
+    : isInventoryPage ? 'Inventory'
+    : isCustomerPage ? 'Customers'
+    : null;
+
+  const [openSection, setOpenSection] = useState<string | null>(activeSection);
+  useEffect(() => {
+    if (activeSection) setOpenSection(activeSection);
+  }, [activeSection]);
+
   const { state: sidebarState, setOpen } = useSidebar();
   const isCollapsed = sidebarState === 'collapsed';
   const [query, setQuery] = useState('');
@@ -213,7 +231,7 @@ export function AppSidebar({
                 <SidebarMenu>
                   <FlatNavLinks items={filteredSellItems} pathname={pathname} />
                   {hasPermission('view_sales') && (
-                    <CollapsibleNavSection label="Sales" icon={ChartNoAxesCombined} isActive={isSalesPage} items={salesNavItems} pathname={pathname} />
+                    <CollapsibleNavSection label="Sales" icon={ChartNoAxesCombined} isActive={isSalesPage} items={salesNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
                   )}
                 </SidebarMenu>
               </SidebarGroup>
@@ -224,10 +242,10 @@ export function AppSidebar({
                 <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Purchasing</SidebarGroupLabel>
                 <SidebarMenu>
                   {hasPermission('manage_purchases') && (
-                    <CollapsibleNavSection label="Purchase Orders" icon={ShoppingCart} isActive={isPurchasesPage} items={purchasesNavItems} pathname={pathname} />
+                    <CollapsibleNavSection label="Purchase Orders" icon={ShoppingCart} isActive={isPurchasesPage} items={purchasesNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
                   )}
                   {hasPermission('manage_suppliers') && (
-                    <CollapsibleNavSection label="Suppliers" icon={Users} isActive={isSuppliersPage} items={suppliersNavItems} pathname={pathname} />
+                    <CollapsibleNavSection label="Suppliers" icon={Users} isActive={isSuppliersPage} items={suppliersNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
                   )}
                 </SidebarMenu>
               </SidebarGroup>
@@ -236,7 +254,7 @@ export function AppSidebar({
             {hasPermission('manage_inventory') && (
               <SidebarGroup>
                 <SidebarMenu>
-                  <CollapsibleNavSection label="Inventory" icon={Warehouse} isActive={isInventoryPage} items={inventoryNavItems} pathname={pathname} />
+                  <CollapsibleNavSection label="Inventory" icon={Warehouse} isActive={isInventoryPage} items={inventoryNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
                 </SidebarMenu>
               </SidebarGroup>
             )}
@@ -244,7 +262,7 @@ export function AppSidebar({
             {hasPermission('manage_customers') && (
               <SidebarGroup>
                 <SidebarMenu>
-                  <CollapsibleNavSection label="Customers" icon={UserIcon} isActive={isCustomerPage} items={customerNavItems} pathname={pathname} />
+                  <CollapsibleNavSection label="Customers" icon={UserIcon} isActive={isCustomerPage} items={customerNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
                 </SidebarMenu>
               </SidebarGroup>
             )}
@@ -273,7 +291,7 @@ export function AppSidebar({
       <SidebarFooter className="sticky bottom-0 bg-gradient-to-t from-sidebar to-sidebar/95 backdrop-blur-xl border-t border-sidebar-border mt-auto shadow-lg">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-3 text-left text-sm text-sidebar-foreground outline-none ring-sidebar-ring transition-all duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 hover:shadow-sm">
+            <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-3 text-left text-sm text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2">
               <Avatar className="size-9 ring-2 ring-sidebar-border shadow-sm">
                 <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold border border-primary/20">
                   {getInitials(user.email)}
@@ -312,7 +330,7 @@ function FlatNavLinks({ items, pathname }: {
       {items.map(item => (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
-            <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className="relative gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:left-0 data-[active=true]:before:top-1/2 data-[active=true]:before:h-5 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary data-[active=true]:text-primary">
+            <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className="gap-3 px-4 py-2.5 rounded-lg">
               <item.icon />
               <span className="text-[14px]">{item.label}</span>
             </SidebarMenuButton>
@@ -329,14 +347,21 @@ type SectionProps = {
   isActive: boolean;
   items: { href: string; label: string }[];
   pathname: string;
+  /** Label of the one section currently open, or null when all are closed. */
+  openSection: string | null;
+  onOpenChange: (section: string | null) => void;
 };
 
-function CollapsibleNavSection({ label, icon: Icon, isActive, items, pathname }: SectionProps) {
+function CollapsibleNavSection({ label, icon: Icon, isActive, items, pathname, openSection, onOpenChange }: SectionProps) {
   return (
     <SidebarMenuItem>
-      <Collapsible defaultOpen={isActive} className="group/collapsible group-data-[collapsible=icon]:items-center">
+      <Collapsible
+        open={openSection === label}
+        onOpenChange={next => onOpenChange(next ? label : null)}
+        className="group/collapsible group-data-[collapsible=icon]:items-center"
+      >
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton isActive={isActive} tooltip={{ children: label }} className="relative justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:left-0 data-[active=true]:before:top-1/2 data-[active=true]:before:h-5 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary data-[active=true]:text-primary">
+          <SidebarMenuButton isActive={isActive} tooltip={{ children: label }} className="justify-between gap-3 px-4 py-2.5 rounded-lg">
             <div className="flex items-center gap-3">
               <Icon />
               <span className="text-[14px]">{label}</span>
@@ -348,7 +373,7 @@ function CollapsibleNavSection({ label, icon: Icon, isActive, items, pathname }:
           <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
             {items.map(item => (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuSubButton asChild isActive={pathname === item.href} className="relative text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 transition-colors duration-200 data-[active=true]:before:absolute data-[active=true]:before:-left-[13px] data-[active=true]:before:top-1/2 data-[active=true]:before:h-1.5 data-[active=true]:before:w-1.5 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary">
+                <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md">
                   <Link href={item.href}>{item.label}</Link>
                 </SidebarMenuSubButton>
               </SidebarMenuItem>
