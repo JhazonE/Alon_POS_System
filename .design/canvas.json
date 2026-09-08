@@ -1,0 +1,38 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Chosen" },
+    { "id": "page-2", "name": "Explored" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Segmented cards", "page": "page-1", "x": 0, "y": 0, "w": 300, "h": 980 },
+    { "file": "DirectionA.dc.html", "title": "A — Quiet rail", "page": "page-2", "x": 0, "y": 0, "w": 300, "h": 940 },
+    { "file": "DirectionC.dc.html", "title": "C — Editorial amber", "page": "page-2", "x": 400, "y": 0, "w": 300, "h": 960 }
+  ],
+  "annotations": [
+    {
+      "id": "chosen",
+      "x": 0,
+      "y": -230,
+      "w": 560,
+      "page": "page-1",
+      "text": "SEGMENTED CARDS — the build target.\n\nEach group is a #0F3336 card, 1px #17403F border, 12px radius, label set inside at 8px/0.15em. Rows 32px, icon in a 22px tinted square.\n\nRow states:\n  rest    rgba(192,232,230,0.66), weight 400\n  hover   background #143A3D\n  active  background #0E7C86, white, weight 600\n  open    background #143A3D, icon #4FC3C9, chevron up\n\nSub-items indent 19px behind a 1px #1F5155 rail, 28px tall, 12px.\n\nNOTE: the active row is a filled block again. That is a deliberate reversal of the no-pill treatment shipped in 7335b1e — this design carries state with fills rather than brightness."
+    },
+    {
+      "id": "todo-rail",
+      "x": 600,
+      "y": -230,
+      "w": 300,
+      "page": "page-1",
+      "text": "STILL TO DRAW\n\nThe 56px collapsed rail: each card shrinks to a rounded block of icon squares only, with a hand-rolled hover tooltip for labels.\n\nAnd the <768px overlay drawer.\n\nBoth are specified in the design doc but not yet mocked here."
+    },
+    {
+      "id": "explored",
+      "x": 0,
+      "y": -150,
+      "w": 620,
+      "page": "page-2",
+      "text": "Not chosen — kept for reference.\n\nA — Quiet rail: a 1px rail down the nav column, the active row thickening its segment to 2px teal. Quietest; active cue may be too subtle at arm's length.\n\nC — Editorial amber: typography-led, amber group labels with rules. Most distinctive, but spends the brand amber that signals urgency elsewhere."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

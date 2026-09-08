@@ -85,3 +85,6 @@ license.dat
 # Office lock files (created when a .docx/.xlsx is open in Word/Excel)
 ~$*
 .superpowers/
+
+# Design canvas working files (seeded output is regenerated)
+.design/alon-pos-sidebar-directions.html
