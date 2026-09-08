@@ -1,10 +1,10 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/sidebar/sidebar-context';
 
 export function AnimatedSidebarTrigger({ className, onClick, ...props }: React.ComponentProps<'button'>) {
-  const { toggleSidebar, state } = useSidebar();
+  const { toggle, state } = useSidebar();
   const expanded = state === 'expanded';
 
   return (
@@ -12,7 +12,7 @@ export function AnimatedSidebarTrigger({ className, onClick, ...props }: React.C
       type="button"
       aria-label={expanded ? 'Collapse sidebar (Ctrl+B)' : 'Expand sidebar (Ctrl+B)'}
       title={expanded ? 'Collapse (Ctrl+B)' : 'Expand (Ctrl+B)'}
-      onClick={(e) => { onClick?.(e); toggleSidebar(); }}
+      onClick={(e) => { onClick?.(e); toggle(); }}
       className={cn(
         'group relative flex h-8 w-8 items-center justify-center rounded-md',
         'text-foreground/70 transition-colors duration-200',

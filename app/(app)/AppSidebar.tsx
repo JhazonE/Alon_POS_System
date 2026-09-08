@@ -1,22 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  SidebarMenuSub, SidebarMenuSubButton,
-} from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/sidebar/sidebar-context';
+import { SidebarPanel } from '@/components/sidebar/sidebar-shell';
+import { NavCard, NavRow, NavAccordion } from '@/components/sidebar/nav-card';
 import { Input } from '@/components/ui/input';
 import {
   Warehouse, ChartNoAxesCombined, User as UserIcon,
-  ShoppingCart, Users, ChevronDown, LogOut, Search,
+  ShoppingCart, Users, LogOut, Search,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { handleSignOut } from '../auth-actions';
@@ -50,22 +46,6 @@ async function signOut() {
     window.location.href = '/login';
   }
 }
-
-/**
- * Plain nav row — no pill, even when active.
- *
- * The shadcn base paints `bg-sidebar-accent` on both hover and the active item,
- * which reads as a button rather than a nav row, so both are overridden here
- * (these land after the base in `cn`, so they win).
- *
- * Active is carried by brightness and weight instead. That needs the resting
- * state dimmed: `--sidebar-foreground` and `--sidebar-accent-foreground` are
- * the SAME value in this theme (177 46% 83%), so the base's
- * `data-[active=true]:text-sidebar-accent-foreground` is a no-op on its own and
- * `font-medium` alone would be too faint. Holding rows at 65% lets the base's
- * active and hover rules restore full strength, which is the visible cue.
- */
-const NAV_ROW = 'text-sidebar-foreground/65 hover:bg-sidebar-accent/40 data-[active=true]:bg-transparent';
 
 type AppUser = { email: string; permissions?: string[]; userType?: string };
 
@@ -162,31 +142,31 @@ export function AppSidebar({
   }, [setOpen]);
 
   return (
-    <Sidebar className="non-printable" collapsible="icon" variant="floating">
-      <SidebarHeader className="h-20 border-b border-sidebar-border sticky top-0 bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-xl z-10 px-6 group-data-[collapsible=icon]:px-0 justify-center shadow-sm">
-        <div className="flex items-center gap-3 transition-all duration-300 group-data-[collapsible=icon]:justify-center">
+    <SidebarPanel>
+      <div className="sticky top-0 z-10 flex h-20 shrink-0 items-center border-b border-[#174145] px-6">
+        <div className="flex items-center gap-3">
           <Logo variant="icon" size={36} />
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <h1 className="text-xl font-extrabold font-headline tracking-tight text-sidebar-foreground">ALON POS SYSTEM</h1>
-            <span className="text-[10px] uppercase font-bold text-primary tracking-[0.2em] mt-0.5 opacity-90">Enterprise</span>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-extrabold font-headline tracking-tight text-[#DCF2F0]">ALON POS SYSTEM</h1>
+            <span className="text-[10px] uppercase font-bold text-[#4FC3C9] tracking-[0.2em] mt-0.5 opacity-90">Enterprise</span>
           </div>
         </div>
-      </SidebarHeader>
+      </div>
 
-      <SidebarContent className="px-3 py-6 gap-2 overflow-y-auto flex-1 group-data-[collapsible=icon]:px-0">
+      <div className="shrink-0 px-3 py-3">
         {isCollapsed ? (
           <button
             type="button"
             aria-label="Search navigation"
             title="Search (Ctrl+K)"
             onClick={() => { setOpen(true); setTimeout(() => searchRef.current?.focus(), 0); }}
-            className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-[rgba(192,232,230,0.66)] transition-colors hover:bg-[#143A3D]"
           >
             <Search className="size-4" />
           </button>
         ) : (
-          <div className="relative px-1 mb-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(192,232,230,0.5)]" />
             <Input
               ref={searchRef}
               value={query}
@@ -198,124 +178,181 @@ export function AppSidebar({
                 }
               }}
               placeholder="Search... (Ctrl+K)"
-              className="h-9 pl-9 text-sm bg-sidebar-accent/40 border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:ring-1"
+              className="h-9 pl-9 text-sm bg-[#0F3336] border-[#17403F] text-[#DCF2F0] placeholder:text-[rgba(192,232,230,0.45)] focus-visible:ring-1"
             />
           </div>
         )}
+      </div>
 
+      <div className="flex flex-1 flex-col gap-[9px] overflow-y-auto px-3 pb-3">
         {isSearching ? (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">
-              Results ({matches.length})
-            </SidebarGroupLabel>
-            <SidebarMenu>
-              {matches.length === 0 && (
-                <div className="px-4 py-2 text-[13px] text-muted-foreground">No pages found.</div>
-              )}
-              {matches.map(m => (
-                <SidebarMenuItem key={m.href}>
-                  <Link href={m.href}>
-                    <SidebarMenuButton isActive={pathname === m.href} className="gap-3 px-4 py-2 font-medium rounded-lg">
-                      <span className="text-[14px]">
-                        {matchSegments(m.label, query).map((seg, i) =>
-                          seg.match
-                            ? <mark key={i} className="bg-primary/20 text-primary rounded-sm px-0.5">{seg.text}</mark>
-                            : <span key={i}>{seg.text}</span>,
-                        )}
-                        {m.section && <span className="ml-1 text-[11px] text-muted-foreground">· {m.section}</span>}
-                      </span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+          <NavCard label={`RESULTS (${matches.length})`}>
+            {matches.length === 0 && (
+              <div className="px-2 py-1.5 text-[12px] text-[rgba(192,232,230,0.5)]">No pages found.</div>
+            )}
+            {matches.map(m => (
+              <Link
+                key={m.href}
+                href={m.href}
+                data-sidebar="row"
+                data-href={m.href}
+                data-active={pathname === m.href}
+                className={`flex h-8 items-center rounded-lg px-2 text-[12.5px] transition-colors ${
+                  pathname === m.href
+                    ? 'bg-[#0E7C86] font-semibold text-white'
+                    : 'text-[rgba(192,232,230,0.66)] hover:bg-[#143A3D]'
+                }`}
+              >
+                <span className="truncate">
+                  {matchSegments(m.label, query).map((seg, i) =>
+                    seg.match
+                      ? <mark key={i} className="rounded-sm bg-[#0E7C86]/40 px-0.5 text-inherit">{seg.text}</mark>
+                      : <span key={i}>{seg.text}</span>,
+                  )}
+                  {m.section && <span className="ml-1 text-[11px] text-[rgba(192,232,230,0.45)]">· {m.section}</span>}
+                </span>
+              </Link>
+            ))}
+          </NavCard>
         ) : (
           <>
             {filteredNavItems.length > 0 && (
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Overview</SidebarGroupLabel>
-                <SidebarMenu>
-                  <FlatNavLinks items={filteredNavItems} pathname={pathname} />
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="OVERVIEW">
+                {filteredNavItems.map(item => (
+                  <NavRow
+                    key={item.href}
+                    href={item.href}
+                    icon={item.icon}
+                    label={item.label}
+                    active={pathname === item.href}
+                  />
+                ))}
+              </NavCard>
             )}
 
             {hasSell && (
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Sell</SidebarGroupLabel>
-                <SidebarMenu>
-                  <FlatNavLinks items={filteredSellItems} pathname={pathname} />
-                  {hasPermission('view_sales') && (
-                    <CollapsibleNavSection label="Sales" icon={ChartNoAxesCombined} isActive={isSalesPage} items={salesNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
-                  )}
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="SELL">
+                {filteredSellItems.map(item => (
+                  <NavRow
+                    key={item.href}
+                    href={item.href}
+                    icon={item.icon}
+                    label={item.label}
+                    active={pathname === item.href}
+                  />
+                ))}
+                {hasPermission('view_sales') && (
+                  <NavAccordion
+                    label="Sales"
+                    icon={ChartNoAxesCombined}
+                    items={salesNavItems}
+                    pathname={pathname}
+                    isActive={isSalesPage}
+                    openSection={openSection}
+                    onOpenChange={setOpenSection}
+                  />
+                )}
+              </NavCard>
             )}
 
             {hasPurchasing && (
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Purchasing</SidebarGroupLabel>
-                <SidebarMenu>
-                  {hasPermission('manage_purchases') && (
-                    <CollapsibleNavSection label="Purchase Orders" icon={ShoppingCart} isActive={isPurchasesPage} items={purchasesNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
-                  )}
-                  {hasPermission('manage_suppliers') && (
-                    <CollapsibleNavSection label="Suppliers" icon={Users} isActive={isSuppliersPage} items={suppliersNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
-                  )}
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="PURCHASING">
+                {hasPermission('manage_purchases') && (
+                  <NavAccordion
+                    label="Purchase Orders"
+                    icon={ShoppingCart}
+                    items={purchasesNavItems}
+                    pathname={pathname}
+                    isActive={isPurchasesPage}
+                    openSection={openSection}
+                    onOpenChange={setOpenSection}
+                  />
+                )}
+                {hasPermission('manage_suppliers') && (
+                  <NavAccordion
+                    label="Suppliers"
+                    icon={Users}
+                    items={suppliersNavItems}
+                    pathname={pathname}
+                    isActive={isSuppliersPage}
+                    openSection={openSection}
+                    onOpenChange={setOpenSection}
+                  />
+                )}
+              </NavCard>
             )}
 
             {hasPermission('manage_inventory') && (
-              <SidebarGroup>
-                <SidebarMenu>
-                  <CollapsibleNavSection label="Inventory" icon={Warehouse} isActive={isInventoryPage} items={inventoryNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="INVENTORY">
+                <NavAccordion
+                  label="Inventory"
+                  icon={Warehouse}
+                  items={inventoryNavItems}
+                  pathname={pathname}
+                  isActive={isInventoryPage}
+                  openSection={openSection}
+                  onOpenChange={setOpenSection}
+                />
+              </NavCard>
             )}
 
             {hasPermission('manage_customers') && (
-              <SidebarGroup>
-                <SidebarMenu>
-                  <CollapsibleNavSection label="Customers" icon={UserIcon} isActive={isCustomerPage} items={customerNavItems} pathname={pathname} openSection={openSection} onOpenChange={setOpenSection} />
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="CUSTOMERS">
+                <NavAccordion
+                  label="Customers"
+                  icon={UserIcon}
+                  items={customerNavItems}
+                  pathname={pathname}
+                  isActive={isCustomerPage}
+                  openSection={openSection}
+                  onOpenChange={setOpenSection}
+                />
+              </NavCard>
             )}
 
             {filteredInsightsNavItems.length > 0 && (
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Insights</SidebarGroupLabel>
-                <SidebarMenu>
-                  <FlatNavLinks items={filteredInsightsNavItems} pathname={pathname} />
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="INSIGHTS">
+                {filteredInsightsNavItems.map(item => (
+                  <NavRow
+                    key={item.href}
+                    href={item.href}
+                    icon={item.icon}
+                    label={item.label}
+                    active={pathname === item.href}
+                  />
+                ))}
+              </NavCard>
             )}
 
             {filteredAdminNavItems.length > 0 && (
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Admin</SidebarGroupLabel>
-                <SidebarMenu>
-                  <FlatNavLinks items={filteredAdminNavItems} pathname={pathname} />
-                </SidebarMenu>
-              </SidebarGroup>
+              <NavCard label="ADMIN">
+                {filteredAdminNavItems.map(item => (
+                  <NavRow
+                    key={item.href}
+                    href={item.href}
+                    icon={item.icon}
+                    label={item.label}
+                    active={pathname === item.href}
+                  />
+                ))}
+              </NavCard>
             )}
           </>
         )}
-      </SidebarContent>
+      </div>
 
-      <SidebarFooter className="sticky bottom-0 bg-gradient-to-t from-sidebar to-sidebar/95 backdrop-blur-xl border-t border-sidebar-border mt-auto shadow-lg">
+      <div className="mt-auto shrink-0 border-t border-[#174145] p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-3 text-left text-sm text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2">
-              <Avatar className="size-9 ring-2 ring-sidebar-border shadow-sm">
-                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold border border-primary/20">
+            <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-2 text-left text-sm text-[#DCF2F0] outline-none transition-colors hover:bg-[#143A3D] focus-visible:ring-2">
+              <Avatar className="size-9 ring-2 ring-[#174145] shadow-sm">
+                <AvatarFallback className="bg-[rgba(45,165,176,0.13)] text-[#4FC3C9] font-semibold border border-[#17403F]">
                   {getInitials(user.email)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col truncate">
                 <span className="text-sm font-semibold">{user.email || 'Anonymous'}</span>
-                <span className="text-[11px] text-muted-foreground">View Profile</span>
+                <span className="text-[11px] text-[rgba(192,232,230,0.5)]">View Profile</span>
               </div>
             </button>
           </DropdownMenuTrigger>
@@ -332,71 +369,7 @@ export function AppSidebar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
-
-function FlatNavLinks({ items, pathname }: {
-  items: { href: string; icon: any; label: string }[];
-  pathname: string;
-}) {
-  return (
-    <>
-      {items.map(item => (
-        <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
-            <SidebarMenuButton isActive={pathname === item.href} tooltip={{ children: item.label }} className={`gap-3 px-4 py-2.5 rounded-lg ${NAV_ROW}`}>
-              <item.icon />
-              <span className="text-[14px]">{item.label}</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      ))}
-    </>
-  );
-}
-
-type SectionProps = {
-  label: string;
-  icon: any;
-  isActive: boolean;
-  items: { href: string; label: string }[];
-  pathname: string;
-  /** Label of the one section currently open, or null when all are closed. */
-  openSection: string | null;
-  onOpenChange: (section: string | null) => void;
-};
-
-function CollapsibleNavSection({ label, icon: Icon, isActive, items, pathname, openSection, onOpenChange }: SectionProps) {
-  return (
-    <SidebarMenuItem>
-      <Collapsible
-        open={openSection === label}
-        onOpenChange={next => onOpenChange(next ? label : null)}
-        className="group/collapsible group-data-[collapsible=icon]:items-center"
-      >
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton isActive={isActive} tooltip={{ children: label }} className={`justify-between gap-3 px-4 py-2.5 rounded-lg ${NAV_ROW} data-[state=open]:hover:bg-sidebar-accent/40`}>
-            <div className="flex items-center gap-3">
-              <Icon />
-              <span className="text-[14px]">{label}</span>
-            </div>
-            <ChevronDown className="size-4 text-muted-foreground/60 transition-transform duration-300 group-data-[state=open]/collapsible:rotate-180" />
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
-            {items.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuSubButton asChild isActive={pathname === item.href} className={`text-[13px] h-9 rounded-md ${NAV_ROW}`}>
-                  <Link href={item.href}>{item.label}</Link>
-                </SidebarMenuSubButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </Collapsible>
-    </SidebarMenuItem>
+      </div>
+    </SidebarPanel>
   );
 }
