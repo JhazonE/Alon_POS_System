@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
-import { getFiscalYearRange, getCurrentFiscalYear, toLocalYmd } from '@/lib/fiscal-utils';
+import { getFiscalYearRange, getCurrentFiscalYear, toLocalYmd, getSamePeriodLastMonth } from '@/lib/fiscal-utils';
 
 export async function GET(request: NextRequest) {
     try {
@@ -88,6 +88,19 @@ export async function GET(request: NextRequest) {
             availableFiscalYears.push(currentFiscalYear);
         }
 
+        // `invoice_date` is a DATE column (migration 011), so a calendar-day
+        // equality match is exact and needs no time-zone handling.
+        const now = new Date();
+        const todayStr = toLocalYmd(now);
+
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = toLocalYmd(yesterday);
+
+        const lastMonth = getSamePeriodLastMonth(now);
+        const lastMonthStartStr = toLocalYmd(lastMonth.start);
+        const lastMonthEndStr = toLocalYmd(lastMonth.end);
+
         // Services are excluded: they have no stock, so they would otherwise appear
         // permanently out-of-stock and drag inventory valuation totals to zero.
         const summaryQuery = `
@@ -98,10 +111,23 @@ export async function GET(request: NextRequest) {
                 (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as products_sold_month,
                 (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as total_revenue_fiscal_ytd,
                 (SELECT COUNT(*) FROM products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
-                (SELECT COUNT(*) FROM products WHERE type = 'standard') as total_items
+                (SELECT COUNT(*) FROM products WHERE type = 'standard') as total_items,
+                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date = ?) as today_revenue,
+                (SELECT COUNT(*) FROM sales_transactions WHERE status = 'Paid' AND invoice_date = ?) as today_sales,
+                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date = ?) as yesterday_revenue,
+                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as last_month_revenue,
+                (SELECT COALESCE(SUM(si.quantity * si.cost_at_sale), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ? AND si.cost_at_sale IS NOT NULL) as cogs_month,
+                (SELECT COALESCE(SUM(CASE WHEN si.cost_at_sale IS NOT NULL THEN si.quantity * si.price ELSE 0 END), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as covered_line_revenue_month,
+                (SELECT COALESCE(SUM(si.quantity * si.price), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as total_line_revenue_month
         `;
 
-        const [summaryData] = await query(summaryQuery, [currentMonthStartStr, currentMonthStartStr, currentMonthStartStr, fiscalStartDateStr, fiscalEndDateStr]) as any[];
+        const [summaryData] = await query(summaryQuery, [
+            currentMonthStartStr, currentMonthStartStr, currentMonthStartStr,
+            fiscalStartDateStr, fiscalEndDateStr,
+            todayStr, todayStr, yesterdayStr,
+            lastMonthStartStr, lastMonthEndStr,
+            currentMonthStartStr, currentMonthStartStr, currentMonthStartStr,
+        ]) as any[];
 
 
          // Transform Sales By Day for Chart (Recharts expects specific format)
@@ -138,7 +164,21 @@ export async function GET(request: NextRequest) {
                 totalSalesMonth: parseInt(summaryData.total_sales_month),
                 productsSoldMonth: parseInt(summaryData.products_sold_month),
                 lowStockItems: parseInt(summaryData.low_stock_items),
-                totalItems: parseInt(summaryData.total_items)
+                totalItems: parseInt(summaryData.total_items),
+                todayRevenue: parseFloat(summaryData.today_revenue),
+                todaySales: parseInt(summaryData.today_sales),
+                yesterdayRevenue: parseFloat(summaryData.yesterday_revenue),
+                lastMonthRevenue: parseFloat(summaryData.last_month_revenue),
+                cogsMonth: parseFloat(summaryData.cogs_month),
+                // Share of this month's line revenue that has a recorded cost.
+                // `cost_at_sale` is nullable (added by the batch-costing
+                // migration), and an uncosted row contributes zero COGS, so it
+                // would otherwise read as pure profit. The UI shows this figure
+                // rather than silently overstating the margin. A month with no
+                // sales is fully covered by definition, not zero.
+                costCoverageMonth: parseFloat(summaryData.total_line_revenue_month) > 0
+                    ? parseFloat(summaryData.covered_line_revenue_month) / parseFloat(summaryData.total_line_revenue_month)
+                    : 1,
             }
         });
 

@@ -95,3 +95,25 @@ export function formatFiscalYear(fiscalYear: number, startMonth: number): string
   if (startMonth === 1) return `FY ${fiscalYear}`;
   return `FY ${fiscalYear}-${fiscalYear + 1}`;
 }
+
+/**
+ * The same slice of last month that has elapsed this month, for a
+ * month-over-month comparison that is not permanently negative.
+ *
+ * `new Date(y, m, 0)` is the last day of month `m - 1`, which gives the length
+ * of last month; the end day is clamped to it so Oct 31 compares against Sep 30
+ * rather than rolling forward into October.
+ *
+ * JavaScript's Date normalises a month index of -1 into December of the prior
+ * year, so January needs no special case.
+ */
+export function getSamePeriodLastMonth(now: Date): { start: Date; end: Date } {
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const daysInLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const end = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    Math.min(now.getDate(), daysInLastMonth),
+  );
+  return { start, end };
+}
