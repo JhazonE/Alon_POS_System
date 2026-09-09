@@ -101,3 +101,37 @@ test.describe('dashboard layout', () => {
     await expect(select.locator('xpath=ancestor::*[@data-matte="stat"]')).toHaveCount(0);
   });
 });
+
+test.describe('chart cards', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, ADMIN);
+  });
+
+  test('tanang dashboard cards kay matte, walay glass ug walay shadow', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.locator('[data-matte="card"]').first()).toBeVisible();
+
+    // Walay nahabilin nga glass-card sa dashboard.
+    await expect(page.locator('main .glass-card')).toHaveCount(0);
+
+    const styles = await page.locator('[data-matte="card"]').evaluateAll(els =>
+      els.map(el => {
+        const s = getComputedStyle(el);
+        return { bg: s.backgroundColor, shadow: s.boxShadow, filter: s.backdropFilter };
+      }),
+    );
+    expect(styles.length).toBeGreaterThanOrEqual(4);
+    for (const s of styles) {
+      expect(MATTE_SURFACES).toContain(s.bg);
+      expect(s.shadow).toBe('none');
+      expect(['none', '']).toContain(s.filter);
+    }
+  });
+
+  test('ang hourly chart wala nay kaugalingong col-span', async ({ page }) => {
+    await page.goto('/dashboard');
+    const card = page.locator('[data-matte="card"]').filter({ hasText: 'Hourly Sales' });
+    await expect(card).toBeVisible();
+    await expect(card).not.toHaveClass(/col-span-4/);
+  });
+});

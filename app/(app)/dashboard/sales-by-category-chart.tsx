@@ -5,14 +5,7 @@ import { getApiUrl } from "@/lib/api-config"
 import { TrendingUp, Loader2 } from "lucide-react"
 import { Pie, PieChart, Label, Cell, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
 import {
   ChartConfig,
   ChartContainer,
@@ -31,11 +24,11 @@ type CategoryData = {
 const chartConfig = {
   value: {
     label: "Sales",
-    color: "hsl(var(--primary))",
+    color: "rgb(var(--matte-chart-1))",
   },
   category: {
     label: "Category",
-    color: "hsl(var(--chart-1))",
+    color: "rgb(var(--matte-chart-1))",
   },
 } satisfies ChartConfig
 
@@ -50,7 +43,7 @@ export function SalesByCategoryChart({ data: initialData }: { data?: any[] }) {
     if (initialData) {
         const dataWithColors = initialData.map((item, index) => ({
             ...item,
-            fill: item.fill || `hsl(var(--chart-${(index % 5) + 1}))`
+            fill: item.fill || `rgb(var(--matte-chart-${(index % 5) + 1}))`
         }));
         setData(dataWithColors)
         setLoading(false)
@@ -79,30 +72,24 @@ export function SalesByCategoryChart({ data: initialData }: { data?: any[] }) {
 
   if (loading) {
      return (
-        <Card className="glass-card border-none shadow-sm flex items-center justify-center h-[350px]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </Card>
+        <MatteCard className="flex h-[350px] items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+        </MatteCard>
      )
   }
-  
+
   if (data.length === 0) {
       return (
-        <Card className="glass-card border-none shadow-sm h-[350px]">
-             <CardHeader>
-                <CardTitle>Sales by Category</CardTitle>
-                <CardDescription>No sales data available yet.</CardDescription>
-            </CardHeader>
-        </Card>
+        <MatteCard className="h-[350px]">
+            <MatteCardHeader title="Sales by Category" description="No sales data available yet." />
+        </MatteCard>
       )
   }
 
   return (
-    <Card className="flex flex-col glass-card border-none shadow-sm h-full">
-      <CardHeader className="items-center pb-0">
-        <CardTitle>Sales by Category</CardTitle>
-        <CardDescription>Breakdown of sales revenue</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 pb-0">
+    <MatteCard className="flex h-full flex-col">
+      <MatteCardHeader title="Sales by Category" description="Breakdown of sales revenue" />
+      <MatteCardBody className="flex-1 pb-0">
         {useBarChart ? (
           <ChartContainer config={chartConfig} className="h-[250px] w-full">
             <BarChart
@@ -171,14 +158,14 @@ export function SalesByCategoryChart({ data: initialData }: { data?: any[] }) {
                           <tspan
                             x={viewBox.cx}
                             y={viewBox.cy}
-                            className="fill-foreground text-2xl font-bold"
+                            className="fill-[rgb(var(--matte-value))] text-2xl font-bold"
                           >
                             ₱{totalSales.toLocaleString()}
                           </tspan>
                           <tspan
                             x={viewBox.cx}
                             y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground"
+                            className="fill-[rgb(var(--matte-label))]"
                           >
                             Total Sales
                           </tspan>
@@ -191,15 +178,15 @@ export function SalesByCategoryChart({ data: initialData }: { data?: any[] }) {
             </PieChart>
           </ChartContainer>
         )}
-      </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
+      </MatteCardBody>
+      <div className="flex flex-col gap-2 border-t border-[rgb(var(--matte-line))] px-5 py-3 text-sm">
         <div className="flex items-center gap-2 font-medium leading-none">
           Across {data.length} {data.length === 1 ? 'category' : 'categories'} <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="leading-none text-muted-foreground">
+        <div className="leading-none text-[rgb(var(--matte-label))]">
           Showing distribution of sales revenue
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </MatteCard>
   )
 }

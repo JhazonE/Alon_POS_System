@@ -5,14 +5,7 @@ import { getApiUrl } from "@/lib/api-config"
 import { TrendingUp, Loader2 } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis, LabelList, CartesianGrid } from "recharts"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
 import {
   ChartContainer,
   ChartTooltip,
@@ -31,10 +24,10 @@ type ProductData = {
 const chartConfig = {
   sales: {
     label: "Sales",
-    color: "hsl(var(--primary))",
+    color: "rgb(var(--matte-chart-1))",
   },
   label: {
-    color: "hsl(var(--foreground))",
+    color: "rgb(var(--matte-value))",
   },
 } satisfies ChartConfig
 
@@ -47,7 +40,7 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
         // Add colors if not present
         const dataWithColors = initialData.map((item, index) => ({
             ...item,
-            fill: item.fill || `hsl(var(--chart-${(index % 5) + 1}))`,
+            fill: item.fill || `rgb(var(--matte-chart-${(index % 5) + 1}))`,
             sales: item.sales || item.totalRevenue || 0 // Handle different data shapes
         }));
         setData(dataWithColors)
@@ -64,7 +57,7 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
                 const dataWithColors = result.data.map((item: any, index: number) => ({
                     name: item.name,
                     sales: item.quantity, // Default to quantity if standalone? Or revenue? User said "top selling", usually revenue. Let's stick to what passed data uses.
-                    fill: `hsl(var(--chart-${(index % 5) + 1}))`
+                    fill: `rgb(var(--matte-chart-${(index % 5) + 1}))`
                 }));
                 setData(dataWithColors)
             }
@@ -79,9 +72,9 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
 
   if (loading) {
      return (
-        <Card className="glass-card border-none shadow-sm flex items-center justify-center h-[350px]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </Card>
+        <MatteCard className="flex h-[350px] items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+        </MatteCard>
      )
   }
 
@@ -89,12 +82,9 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
   const displayData = data.slice(0, 6);
 
   return (
-    <Card className="glass-card border-none shadow-sm h-full">
-      <CardHeader>
-        <CardTitle>Top Selling Products</CardTitle>
-        <CardDescription>Best performers by revenue</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <MatteCard className="flex h-full flex-col">
+      <MatteCardHeader title="Top Selling Products" description="Best performers by revenue" />
+      <MatteCardBody className="flex-1">
         <ChartContainer config={chartConfig}>
           <BarChart
             accessibilityLayer
@@ -146,16 +136,16 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
             </Bar>
           </BarChart>
         </ChartContainer>
-      </CardContent>
-      <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none font-medium">
+      </MatteCardBody>
+      <div className="flex flex-col items-start gap-2 border-t border-[rgb(var(--matte-line))] px-5 py-3 text-sm">
+        <div className="flex gap-2 font-medium leading-none text-[rgb(var(--matte-value))]">
           Trending products <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="text-muted-foreground leading-none">
+        <div className="leading-none text-[rgb(var(--matte-label))]">
           Showing top revenue generators
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </MatteCard>
   )
 }
 

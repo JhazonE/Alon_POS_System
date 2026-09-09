@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
 import {
   ChartConfig,
   ChartContainer,
@@ -21,7 +15,7 @@ import { getApiUrl } from '@/lib/api-config';
 const chartConfig = {
   sales: {
     label: 'Sales',
-    color: 'hsl(var(--primary))',
+    color: 'rgb(var(--matte-chart-1))',
   },
 } satisfies ChartConfig;
 
@@ -61,46 +55,41 @@ export function HourlySalesChart() {
 
   if (error) {
     return (
-      <Card className="col-span-4 glass-card border-none shadow-sm h-[400px] flex items-center justify-center text-red-500">
+      <MatteCard className="flex h-[400px] items-center justify-center px-5 text-center text-[13px] text-[rgb(var(--matte-down))]">
         Error: {error}
-      </Card>
+      </MatteCard>
     );
   }
 
   return (
-    <Card className="col-span-4 glass-card border-none shadow-sm">
-      <CardHeader>
-        <CardTitle>Hourly Sales</CardTitle>
-        <CardDescription>
-          Sales distribution by hour for today.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pl-2">
+    <MatteCard className="h-full">
+      <MatteCardHeader title="Hourly Sales" description="Sales distribution by hour for today." />
+      <MatteCardBody>
         {loading ? (
           <div className="h-[300px] flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <BarChart accessibilityLayer data={data}>
               <defs>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                  <stop offset="5%" stopColor="rgb(var(--matte-chart-1))" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="rgb(var(--matte-chart-1))" stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgb(var(--matte-line))" />
               <XAxis
                 dataKey="hour"
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
                 tickFormatter={(value) => value}
-                className="text-muted-foreground text-xs"
+                className="text-[11px] fill-[rgb(var(--matte-label))]"
               />
               <ChartTooltip
                 cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                content={<ChartTooltipContent indicator="dot" className="bg-background/90 backdrop-blur border-border/50" />}
+                content={<ChartTooltipContent indicator="dot" className="border-[rgb(var(--matte-line))] bg-[rgb(var(--matte-surface))]" />}
               />
               <Bar
                 dataKey="sales"
@@ -111,7 +100,7 @@ export function HourlySalesChart() {
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+      </MatteCardBody>
+    </MatteCard>
   );
 }
