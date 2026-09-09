@@ -1,20 +1,16 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from '@/components/sidebar/sidebar-context';
 import { SidebarInset } from '@/components/sidebar/sidebar-shell';
-import { AnimatedSidebarTrigger } from '@/components/AnimatedSidebarTrigger';
-import { WindowControls } from '@/components/window-controls';
-import { AppBreadcrumbs } from '@/components/app-breadcrumbs';
 import { NavigationProgress } from '@/components/navigation-progress';
 import { pageKeyForHref, isProtectedHref } from '@/lib/page-registry';
 import { queryClient } from './layout-nav-config';
 import { useAppLayout } from './use-app-layout';
 import { AppSidebar } from './AppSidebar';
-import { NotificationsBell } from './NotificationsBell';
+import { AppHeader } from './AppHeader';
 import { useLicenseHeartbeat } from './use-license-heartbeat';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -90,28 +86,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             getInitials={getInitials}
           />
           <SidebarInset>
-            <header className="sticky top-0 z-30 flex items-center h-16 gap-4 px-4 border-b bg-background/80 backdrop-blur-sm sm:px-6 non-printable window-drag">
-              <div className="flex items-center gap-4 window-no-drag">
-                <AnimatedSidebarTrigger />
-                <AppBreadcrumbs />
-              </div>
-              <div className="flex-1" />
-              <div className="flex items-center gap-3">
-                {businessName && (
-                  <>
-                    <div className="hidden sm:flex items-center gap-2.5 rounded-full border border-border/60 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent py-1.5 pl-2 pr-4 shadow-sm">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/20">
-                        <Store className="h-3.5 w-3.5" />
-                      </span>
-                      <span className="text-sm font-bold tracking-tight text-foreground/90">{businessName}</span>
-                    </div>
-                    <div className="hidden sm:block h-6 w-px bg-border/60" />
-                  </>
-                )}
-                <NotificationsBell user={user} />
-                <WindowControls />
-              </div>
-            </header>
+            <AppHeader user={user} businessName={businessName} />
             <main className="flex-1 flex flex-col overflow-auto p-4 sm:p-6 min-h-0">
               {children}
             </main>

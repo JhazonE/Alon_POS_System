@@ -29,25 +29,25 @@ export function WindowControls() {
     (window as any).electronAPI.close();
   };
 
+  // These sit inside the header card now, not flush against the window corner,
+  // so they are rounded buttons rather than edge-to-edge square hit zones.
+  const base =
+    'flex h-[34px] w-[34px] items-center justify-center rounded-[10px] '
+    + 'text-[#3F6E71] transition-colors focus:outline-none '
+    + 'hover:bg-[rgba(45,165,176,0.14)] hover:text-[#0E7C86] '
+    + 'dark:text-[rgba(192,232,230,0.6)] dark:hover:bg-[rgba(45,165,176,0.20)] dark:hover:text-[#4FC3C9]';
+
   return (
-    <div className="flex items-center h-full window-no-drag">
-      <button
-        onClick={handleMinimize}
-        className="flex items-center justify-center w-10 h-10 transition-colors hover:bg-muted/80 focus:outline-none"
-        title="Minimize"
-      >
+    <div className="flex items-center gap-1 window-no-drag">
+      <button onClick={handleMinimize} className={base} title="Minimize">
         <Minus className="w-4 h-4" />
       </button>
-      <button
-        onClick={handleMaximize}
-        className="flex items-center justify-center w-10 h-10 transition-colors hover:bg-muted/80 focus:outline-none"
-        title="Maximize"
-      >
+      <button onClick={handleMaximize} className={base} title="Maximize">
         <Square className="w-3.5 h-3.5" />
       </button>
       <button
         onClick={handleClose}
-        className="flex items-center justify-center w-10 h-10 transition-colors hover:bg-destructive hover:text-destructive-foreground focus:outline-none"
+        className={`${base} hover:bg-destructive hover:text-destructive-foreground dark:hover:bg-destructive dark:hover:text-destructive-foreground`}
         title="Close"
       >
         <X className="w-4 h-4" />

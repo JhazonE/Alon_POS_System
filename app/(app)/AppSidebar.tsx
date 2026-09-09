@@ -184,7 +184,7 @@ export function AppSidebar({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-[9px] overflow-y-auto px-3 pb-3">
+      <div data-sidebar="scroll" className="flex flex-1 flex-col gap-[9px] overflow-y-auto px-3 pb-3">
         {isSearching ? (
           <NavCard label={`RESULTS (${matches.length})`}>
             {matches.length === 0 && (

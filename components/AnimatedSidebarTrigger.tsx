@@ -14,10 +14,13 @@ export function AnimatedSidebarTrigger({ className, onClick, ...props }: React.C
       title={expanded ? 'Collapse (Ctrl+B)' : 'Expand (Ctrl+B)'}
       onClick={(e) => { onClick?.(e); toggle(); }}
       className={cn(
-        'group relative flex h-8 w-8 items-center justify-center rounded-md',
-        'text-foreground/70 transition-colors duration-200',
-        'hover:bg-accent hover:text-foreground',
-        'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        // The tinted square from the sidebar's nav rows, at header size, so the
+        // control that opens the panel is visibly of the same family as it.
+        'group relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px]',
+        'bg-[rgba(45,165,176,0.10)] text-[#0E7C86] transition-colors duration-200',
+        'hover:bg-[rgba(45,165,176,0.20)]',
+        'dark:bg-[rgba(45,165,176,0.13)] dark:text-[#4FC3C9] dark:hover:bg-[rgba(45,165,176,0.24)]',
+        'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E7C86]/40',
         className,
       )}
       {...props}

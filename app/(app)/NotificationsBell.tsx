@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Bell } from 'lucide-react';
 import { getLowStockAlerts } from './products/actions';
 import { useLiveRefresh } from '@/hooks/use-live-refresh';
+import { HEADER_ICON_BUTTON } from './header-tokens';
 
 type AppUser = {
   email: string;
@@ -105,10 +106,10 @@ export function NotificationsBell({ user }: { user: AppUser | null }) {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <button className="inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 rounded-full relative">
-          <Bell className="h-5 w-5" />
+        <button className={`relative ${HEADER_ICON_BUTTON} active:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:shrink-0`}>
+          <Bell className="h-[17px] w-[17px]" />
           {notifications.length > 0 && (
-            <span className="absolute top-1 right-1 h-3 w-3 rounded-full bg-red-600 border-2 border-background animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-600 border-2 border-white dark:border-[#0F3336] animate-pulse" />
           )}
           <span className="sr-only">Notifications</span>
         </button>

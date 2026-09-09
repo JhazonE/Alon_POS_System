@@ -16,11 +16,15 @@ export function AppBreadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean).filter(segment => segment !== 'sales' && segment !== 'purchases');
 
+  // 12.5px is the nav-row text size from components/sidebar/nav-card.tsx --
+  // the trail reads as the horizontal continuation of the row you clicked.
+  const linkClass = 'text-[#3F6E71] transition-colors hover:text-[#0B2A2D] dark:text-[rgba(192,232,230,0.6)] dark:hover:text-[#DCF2F0]';
+
   return (
     <Breadcrumb>
-      <BreadcrumbList>
+      <BreadcrumbList className="gap-1.5 text-[12.5px] sm:gap-1.5 [&>li>svg]:text-[#9FC5C4] dark:[&>li>svg]:text-[rgba(192,232,230,0.35)]">
         <BreadcrumbItem>
-          <BreadcrumbLink href="/">Home</BreadcrumbLink>
+          <BreadcrumbLink href="/" className={linkClass}>Home</BreadcrumbLink>
         </BreadcrumbItem>
         {segments.map((segment, index) => {
           const hrefArr = pathname.split('/').filter(Boolean);
@@ -48,9 +52,11 @@ export function AppBreadcrumbs() {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage>{label}</BreadcrumbPage>
+                  <BreadcrumbPage className="font-semibold text-[#0B2A2D] dark:text-[#DCF2F0]">
+                    {label}
+                  </BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink href={href}>{label}</BreadcrumbLink>
+                  <BreadcrumbLink href={href} className={linkClass}>{label}</BreadcrumbLink>
                 )}
               </BreadcrumbItem>
             </Fragment>
