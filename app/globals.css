@@ -107,6 +107,63 @@
   }
 }
 
+/*
+  Matte palette — a second, deliberately separate namespace.
+
+  The `.dark` block above is a blue-slate ramp, but the sidebar
+  (`components/sidebar/nav-card.tsx`) and header (`app/(app)/AppHeader.tsx`)
+  hardcode teal, so a card built on `bg-card` turns blue beside a teal panel.
+  Those two files solved it with inline hex; that does not scale to a card
+  system with six surface roles, so the same hex values live here as tokens.
+
+  Values are space-separated RGB triplets, not the HSL triplets used above:
+  these are consumed directly in Tailwind arbitrary values
+  (`bg-[rgb(var(--matte-surface))]`, `bg-[rgb(var(--matte-accent)/0.10)]`),
+  not fed through tailwind.config.
+
+  Converging this with the shadcn tokens is separate work — it would touch
+  every page in the app.
+*/
+@layer base {
+  :root {
+    --matte-ground:  241 247 246;  /* #F1F7F6 */
+    --matte-surface: 255 255 255;  /* #FFFFFF */
+    --matte-line:    220 235 233;  /* #DCEBE9 */
+    --matte-inset:   244 251 250;  /* #F4FBFA — matches AppHeader's chip */
+    --matte-label:    91 123 121;  /* #5B7B79 */
+    --matte-value:    11  42  45;  /* #0B2A2D */
+    --matte-accent:   14 124 134;  /* #0E7C86 — sidebar active row */
+    --matte-up:       27 122  85;  /* #1B7A55 */
+    --matte-down:    180  71  47;  /* #B4472F */
+    --matte-warn:    166 116  30;  /* #A6741E */
+
+    --matte-chart-1:  14 124 134;  /* #0E7C86 */
+    --matte-chart-2: 217 146  43;  /* #D9922B */
+    --matte-chart-3:  27 122  85;  /* #1B7A55 */
+    --matte-chart-4:  74 127 181;  /* #4A7FB5 */
+    --matte-chart-5: 180  71  47;  /* #B4472F */
+  }
+
+  .dark {
+    --matte-ground:   11  42  45;  /* #0B2A2D */
+    --matte-surface:  15  51  54;  /* #0F3336 — sidebar nav card */
+    --matte-line:     23  64  63;  /* #17403F — sidebar nav card border */
+    --matte-inset:     8  35  38;  /* #082326 */
+    --matte-label:   140 178 176;  /* #8CB2B0 */
+    --matte-value:   220 242 240;  /* #DCF2F0 */
+    --matte-accent:   79 195 201;  /* #4FC3C9 */
+    --matte-up:       74 179 134;  /* #4AB386 */
+    --matte-down:    214 122  98;  /* #D67A62 */
+    --matte-warn:    242 169  58;  /* #F2A93A */
+
+    --matte-chart-1:  79 195 201;
+    --matte-chart-2: 242 169  58;
+    --matte-chart-3:  74 179 134;
+    --matte-chart-4: 127 168 219;  /* #7FA8DB */
+    --matte-chart-5: 214 122  98;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

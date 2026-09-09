@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Truck, Calendar, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
+import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
+import { Calendar, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
 import { getSuppliers } from '../products/actions';
 import { AddPurchaseOrderDialog } from '../purchases/add-purchase-order/add-purchase-order-dialog';
 import { Supplier } from '@/lib/types';
@@ -63,10 +63,10 @@ export function SupplierScheduleCard() {
 
   if (loading) {
     return (
-       <Card className="glass-card border-l-4 border-l-blue-500 shadow-sm relative overflow-hidden h-full flex items-center justify-center min-h-[150px]">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-       </Card>
-    )
+      <MatteCard className="flex min-h-[150px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+      </MatteCard>
+    );
   }
 
   // if (scheduledSuppliers.length === 0) return null; // Removed early return
@@ -74,36 +74,28 @@ export function SupplierScheduleCard() {
 
   return (
     <>
-    <Card className="glass-card border-l-4 border-l-blue-500 shadow-sm relative overflow-hidden">
-       <div className="absolute right-0 top-0 p-3 opacity-10">
-           <Truck className="w-16 h-16 text-blue-500" />
-       </div>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-lg">
-           <Calendar className="w-5 h-5 text-blue-600" />
-           Order Reminders
-        </CardTitle>
-        <CardDescription>
-          You have {scheduledSuppliers.length} supplier{scheduledSuppliers.length !== 1 ? 's' : ''} scheduled for today.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3 mt-2">
-        <div className="space-y-3 mt-2">
+    <MatteCard>
+      <MatteCardHeader
+        icon={Calendar}
+        title="Order Reminders"
+        description={`You have ${scheduledSuppliers.length} supplier${scheduledSuppliers.length !== 1 ? 's' : ''} scheduled for today.`}
+      />
+      <MatteCardBody>
+        <div className="mt-1 space-y-2">
           {scheduledSuppliers.length === 0 ? (
-             <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
-                <CheckCircle2 className="w-12 h-12 mb-2 text-green-500/50" />
-                <p>No supplier orders scheduled for today.</p>
-                <p className="text-xs">You're all caught up!</p>
+             <div className="flex flex-col items-center justify-center py-6 text-center text-[rgb(var(--matte-label))]">
+                <CheckCircle2 className="mb-2 h-10 w-10 text-[rgb(var(--matte-up))]" />
+                <p className="text-sm">No supplier orders scheduled for today.</p>
+                <p className="text-xs">You&apos;re all caught up!</p>
              </div>
           ) : (
             scheduledSuppliers.map(s => (
-                <div key={s.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-lg hover:bg-muted/60 transition-colors">
+                <div key={s.id} className="flex items-center justify-between rounded-xl bg-[rgb(var(--matte-inset))] p-3">
                 <div className="flex flex-col">
-                    <span className="font-semibold text-sm">{s.name}</span>
-                    <span className="text-xs text-muted-foreground">{s.orderSchedule}</span>
+                    <span className="text-sm font-semibold text-[rgb(var(--matte-value))]">{s.name}</span>
+                    <span className="text-xs text-[rgb(var(--matte-label))]">{s.orderSchedule}</span>
                 </div>
-                <button 
+                <button
                     className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-8 text-xs"
                     onClick={() => {
                         setSelectedSupplierId(s.id);
@@ -117,9 +109,8 @@ export function SupplierScheduleCard() {
             ))
           )}
         </div>
-        </div>
-      </CardContent>
-    </Card>
+      </MatteCardBody>
+    </MatteCard>
 
     {isOrderDialogOpen && (
         <AddPurchaseOrderDialog 
