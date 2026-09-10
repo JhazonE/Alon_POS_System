@@ -94,6 +94,25 @@ test.describe('dashboard layout', () => {
     await expect(page.locator('[data-stat="today"] [data-stat-value]')).toHaveText(before);
   });
 
+  test('kung mapakyas ang UNANG load, skeleton ang mapakita, dili bakak nga zero', async ({ page }) => {
+    // Kini nga higayon, ang una gyud nga fetch ang paltuson -- walay data nga
+    // na-load bisan kausa.
+    await page.route('**/api/reports/stats**', route =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Database unavailable"}' }),
+    );
+    await page.goto('/dashboard');
+
+    await expect(page.locator('[data-dashboard="error"]')).toContainText('Database unavailable');
+
+    // Walay bisan usa ka value node nga mo-render. Ang "₱0" dinhi mabasa sa
+    // tag-iya nga "walay benta karon", nga lahi kaayo sa "wala ma-load".
+    await expect(page.locator('[data-stat="today"]')).toBeVisible();
+    await expect(page.locator('[data-stat="today"] [data-stat-value]')).toHaveCount(0);
+    await expect(page.locator('[data-stat="profit"] [data-stat-value]')).toHaveCount(0);
+    await expect(page.locator('[data-stat="low-stock"] [data-stat-value]')).toHaveCount(0);
+    await expect(page.locator('[data-stat="today"]')).not.toContainText('₱');
+  });
+
   test('ang fiscal-year select naa sa page header, dili sulod sa metric card', async ({ page }) => {
     await page.goto('/dashboard');
     const select = page.locator('[data-dashboard="fiscal-year"]');

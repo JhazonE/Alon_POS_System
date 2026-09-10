@@ -82,6 +82,14 @@ export default function DashboardPage() {
 
   const { salesByDay, topProducts, salesByCategory, summary } = data || {};
 
+  // Skeletons stand in whenever there is no data to show -- the first load in
+  // flight, and also a first load that FAILED. Without the second case the
+  // cards fall through to `summary?.x` being undefined and render a confident
+  // "₱0", which an owner reads as "no sales today" rather than "could not
+  // load". Only a refetch that fails on top of existing data shows real
+  // numbers, dimmed, because those numbers were true as of the last success.
+  const showSkeleton = loading || !data;
+
   const grossProfit = (summary?.totalRevenueMonth || 0) - (summary?.cogsMonth || 0);
   const margin = summary?.totalRevenueMonth
     ? (grossProfit / summary.totalRevenueMonth) * 100
@@ -174,7 +182,7 @@ export default function DashboardPage() {
           delta={pctChange(summary?.todayRevenue || 0, summary?.yesterdayRevenue || 0)}
           deltaLabel="vs yesterday"
           note={`${count(summary?.todaySales)} transaction${summary?.todaySales === 1 ? '' : 's'}`}
-          loading={loading}
+          loading={showSkeleton}
         />
         <StatCard
           statKey="month"
@@ -183,7 +191,7 @@ export default function DashboardPage() {
           delta={pctChange(summary?.totalRevenueMonth || 0, summary?.lastMonthRevenue || 0)}
           deltaLabel="vs last month"
           note={fiscalNote}
-          loading={loading}
+          loading={showSkeleton}
         />
         <StatCard
           statKey="profit"
@@ -191,16 +199,16 @@ export default function DashboardPage() {
           value={peso(grossProfit)}
           note={profitNote}
           noteTone={coverage >= 0.99 ? 'muted' : 'warn'}
-          loading={loading}
+          loading={showSkeleton}
         />
       </div>
 
       {/* Secondary: four figures that do not deserve a card each. */}
       <StatStrip>
-        <StatTile statKey="txns" label="Transactions" value={count(summary?.totalSalesMonth)} icon={ShoppingCart} loading={loading} />
-        <StatTile statKey="items-sold" label="Items Sold" value={count(summary?.productsSoldMonth)} icon={TrendingUp} loading={loading} />
-        <StatTile statKey="products" label="Products" value={count(summary?.totalItems)} icon={Boxes} loading={loading} />
-        <StatTile statKey="low-stock" label="Low Stock" value={count(summary?.lowStockItems)} icon={AlertCircle} tone="down" href="/reports/low-stock" loading={loading} />
+        <StatTile statKey="txns" label="Transactions" value={count(summary?.totalSalesMonth)} icon={ShoppingCart} loading={showSkeleton} />
+        <StatTile statKey="items-sold" label="Items Sold" value={count(summary?.productsSoldMonth)} icon={TrendingUp} loading={showSkeleton} />
+        <StatTile statKey="products" label="Products" value={count(summary?.totalItems)} icon={Boxes} loading={showSkeleton} />
+        <StatTile statKey="low-stock" label="Low Stock" value={count(summary?.lowStockItems)} icon={AlertCircle} tone="down" href="/reports/low-stock" loading={showSkeleton} />
       </StatStrip>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
