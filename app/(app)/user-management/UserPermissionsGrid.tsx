@@ -15,7 +15,11 @@ export function UserPermissionsGrid({ form, disabledForCashier }: Props) {
   const isDisabled = disabledForCashier && watchedUserType === 'Cashier';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-4 gap-y-3 p-4 rounded-xl bg-muted/20 border border-muted-foreground/10">
+    // One column, always. The breakpoints here used to be viewport-based
+    // (sm:grid-cols-2 lg:grid-cols-1), but this grid lives inside a narrow
+    // column — so at 640-1023px it split a ~340px column in two and squeezed
+    // long labels like "POS Frontliner (Tag Orders Only)" out of sight.
+    <div className="grid grid-cols-1 gap-y-3 p-4 rounded-xl bg-muted/20 border border-muted-foreground/10">
       {ALL_PERMISSIONS.map(permission => (
         <FormField
           key={permission.id}
@@ -25,6 +29,7 @@ export function UserPermissionsGrid({ form, disabledForCashier }: Props) {
             <FormItem key={permission.id} className="flex flex-row items-start space-x-3 space-y-0">
               <FormControl>
                 <Checkbox
+                  className="mt-0.5 shrink-0"
                   checked={field.value?.includes(permission.id)}
                   disabled={isDisabled}
                   onCheckedChange={checked =>
@@ -34,7 +39,7 @@ export function UserPermissionsGrid({ form, disabledForCashier }: Props) {
                   }
                 />
               </FormControl>
-              <FormLabel className="font-normal cursor-pointer">{permission.label}</FormLabel>
+              <FormLabel className="cursor-pointer font-normal leading-snug">{permission.label}</FormLabel>
             </FormItem>
           )}
         />
