@@ -1,16 +1,16 @@
 'use client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Loader2, Eye, EyeOff, Settings, User, Lock, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Loader2, Eye, EyeOff, Settings, User, Lock, ShieldCheck, Monitor } from 'lucide-react';
 import Image from 'next/image';
 import { ConnectionSettingsDialog } from '../connection-settings/ConnectionSettingsDialog';
 import { useLoginForm } from './use-login-form';
 import type { PosLoginFormProps } from './login-form-types';
 
-export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
+export function PosLoginForm({
+  onLoginSuccess, terminalName, businessName, logoPath, currentTime,
+}: PosLoginFormProps) {
   const {
     form, error, showPassword, setShowPassword,
     isSubmitting, isSettingsOpen, setIsSettingsOpen,
@@ -19,29 +19,45 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
 
   return (
     <>
-      <Card className="mx-auto w-full max-w-md overflow-hidden border-0 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-        {/* Brand Banner */}
-        <div className="relative bg-gradient-to-br from-primary via-primary to-primary/80 px-8 py-9 text-center text-white">
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-3 top-3 h-9 w-9 text-white/70 hover:bg-white/15 hover:text-white"
-            onClick={() => setIsSettingsOpen(true)}
-            title="Connection Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-          <div className="mx-auto mb-3 h-16 w-16 overflow-hidden rounded-2xl shadow-lg ring-1 ring-white/25">
-            <Image src="/alon-icon.svg" alt="Alon POS System" width={64} height={64} className="h-full w-full object-contain" priority />
+      {/* Settings sits on the ground, not the card — it configures the terminal, not the login. */}
+      <button
+        type="button"
+        onClick={() => setIsSettingsOpen(true)}
+        title="Connection Settings"
+        className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+      >
+        <Settings className="h-5 w-5" />
+      </button>
+
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-black/5 bg-card shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)] animate-in fade-in zoom-in-95 duration-300 dark:border-white/10">
+        {/* Teal accent rule — the card's only piece of brand colour */}
+        <div className="h-1 bg-primary" />
+
+        <div className="px-8 pt-7">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-primary/15">
+              {logoPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoPath} alt={businessName || 'Business logo'} className="h-full w-full object-contain p-1.5" />
+              ) : (
+                <Image src="/alon-icon.svg" alt="Alon POS System" width={48} height={48} className="h-full w-full object-contain p-1.5" priority />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold uppercase tracking-wide text-foreground">
+                {businessName || 'Alon POS System'}
+              </h1>
+              <p className="mt-0.5 text-xs font-medium text-muted-foreground">Point of Sale Terminal</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-black tracking-tight drop-shadow-sm">ALON POS SYSTEM</h1>
-          <p className="mt-1 text-sm text-white/70">Point of Sale Terminal</p>
+
+          <div className="mt-7">
+            <h2 className="text-base font-bold text-foreground">Cashier Login</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Enter your credentials to start your shift</p>
+          </div>
         </div>
 
-        <CardContent className="px-8 py-7">
-          <div className="mb-5 text-center">
-            <h2 className="text-lg font-bold text-foreground">Cashier Login</h2>
-            <p className="text-sm text-muted-foreground">Enter your credentials to start your shift</p>
-          </div>
-
+        <div className="px-8 pb-7 pt-5">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2 duration-300">
@@ -52,7 +68,7 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-semibold">Username</Label>
+              <Label htmlFor="username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username</Label>
               <div className="relative">
                 <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -71,7 +87,7 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+              <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</Label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -84,7 +100,7 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => setShowPassword(prev => !prev)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -97,29 +113,33 @@ export function PosLoginForm({ onLoginSuccess }: PosLoginFormProps) {
             </div>
 
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] h-12 w-full text-base font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-[0.99]"
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-[18px] text-sm font-bold uppercase tracking-wider text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               type="submit"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Logging In...</>
+                <><Loader2 className="h-4 w-4 animate-spin" />Logging In…</>
               ) : 'Login to POS'}
             </button>
           </form>
+        </div>
 
-          <div className="mt-6 flex flex-col items-center gap-2">
-            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-              Secure cashier access
-            </p>
+        {/* Terminal identity strip — says which register you are signing into */}
+        <div className="flex items-center justify-between gap-3 border-t bg-muted/40 px-8 py-3">
+          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+            <Monitor className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate font-medium">{terminalName || 'Terminal not assigned'}</span>
+            {currentTime && <span className="shrink-0 font-mono text-[11px] opacity-70">{currentTime}</span>}
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="font-medium">Secure</span>
             {process.env.NEXT_PUBLIC_APP_VERSION && (
-              <Badge variant="secondary" className="text-xs font-medium text-muted-foreground">
-                v{process.env.NEXT_PUBLIC_APP_VERSION}
-              </Badge>
+              <span className="font-mono text-[11px] opacity-70">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <ConnectionSettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </>

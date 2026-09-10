@@ -9,4 +9,10 @@ export type LoginFormValues = z.infer<typeof loginSchema>;
 
 export interface PosLoginFormProps {
   onLoginSuccess: (user: any) => void;
+  /** Terminal identity shown in the card footer. Absent until terminal detection resolves. */
+  terminalName?: string;
+  /** Business name and logo from system settings; falls back to the Alon branding. */
+  businessName?: string;
+  logoPath?: string;
+  currentTime?: string;
 }

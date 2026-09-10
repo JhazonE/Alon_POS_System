@@ -7,8 +7,9 @@ import { ShiftTakeoverDialog } from './shift-takeover/ShiftTakeoverDialog';
 import { AdminAuthDialog } from './admin-auth/AdminAuthDialog';
 import { PosHeader } from './pos-content/PosHeader';
 import { PosCartTable } from './pos-content/PosCartTable';
-import { PosFooterActions } from './pos-content/PosFooterActions';
-import { PosTotalsPanel } from './pos-content/PosTotalsPanel';
+import { PosLineActionsRail } from './pos-content/PosLineActionsRail';
+import { PosTxnActionsRail } from './pos-content/PosTxnActionsRail';
+import { PosSummaryFooter } from './pos-content/PosSummaryFooter';
 import { PosDialogs } from './pos-content/PosDialogs';
 import { PosQueuePanel } from './pos-content/PosQueuePanel';
 import { SendToQueueDialog } from './pos-content/SendToQueueDialog';
@@ -34,7 +35,7 @@ function POSContent() {
 
   return (
     <>
-      <div className="flex h-screen w-screen bg-muted/30 font-sans overflow-hidden">
+      <div className="flex h-screen w-screen flex-col bg-muted/30 font-sans overflow-hidden">
         <AdminAuthDialog
           isOpen={pos.isCashCountAuthOpen}
           onOpenChange={pos.setIsCashCountAuthOpen}
@@ -53,8 +54,15 @@ function POSContent() {
           description="Please enter credentials to process a cash transfer."
         />
 
-        {/* Left: Transaction Area */}
-        <div className="flex-1 flex flex-col relative min-w-0">
+        <PosHeader
+          shiftActive={pos.shiftActive}
+          currentTime={pos.currentTime}
+          enableCustomerDisplay={pos.enableCustomerDisplay}
+          openOnSecondScreen={pos.openOnSecondScreen}
+        />
+
+        {/* Middle: action rails flanking the cart */}
+        <div className="relative flex min-h-0 flex-1">
           {pos.showOverlay && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-20 flex items-center justify-center p-8">
               <div className="max-w-md text-center space-y-4 animate-fade-in">
@@ -64,14 +72,10 @@ function POSContent() {
             </div>
           )}
 
-          <PosHeader
+          <PosLineActionsRail
             selectedItemId={pos.selectedItemId}
             shiftActive={pos.shiftActive}
             heldTransactions={pos.heldTransactions}
-            currentTerminalName={pos.currentTerminalName}
-            currentTime={pos.currentTime}
-            enableCustomerDisplay={pos.enableCustomerDisplay}
-            openOnSecondScreen={pos.openOnSecondScreen}
             handleOpenEditDialog={pos.handleOpenEditDialog}
             handleVoidLine={pos.handleVoidLine}
             handleOpenDiscountDialog={pos.handleOpenDiscountDialog}
@@ -80,13 +84,9 @@ function POSContent() {
             focusInlineQuantity={pos.focusInlineQuantity}
             handleRequestPriceEdit={pos.handleRequestPriceEdit}
             handleShutdown={pos.handleShutdown}
-            isFrontliner={pos.isFrontliner}
-            posMode={pos.businessSettings?.posMode}
-            queuedOrdersCount={pos.queuedOrders.length}
-            setIsQueuePanelOpen={pos.setIsQueuePanelOpen}
           />
 
-          <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4">
             <PosCartTable
               inputRef={pos.inputRef}
               inputValue={pos.inputValue}
@@ -117,22 +117,26 @@ function POSContent() {
               isFrontliner={pos.isFrontliner}
               handleSendToQueue={pos.handleSendToQueue}
             />
-            <PosFooterActions
-              handleOpenEndShift={pos.handleOpenEndShift}
-              handleOpenCashTransfer={pos.handleOpenCashTransfer}
-              setIsCustomerSelectOpen={pos.setIsCustomerSelectOpen}
-              handleOpenLoyalty={pos.handleOpenLoyalty}
-              setIsRecentSalesOpen={pos.setIsRecentSalesOpen}
-              setIsVoidSalesOpen={pos.setIsVoidSalesOpen}
-              setIsReturnSalesOpen={pos.setIsReturnSalesOpen}
-              setIsPriceInquiryOpen={pos.setIsPriceInquiryOpen}
-              isFrontliner={pos.isFrontliner}
-            />
           </div>
+
+          <PosTxnActionsRail
+            handleOpenEndShift={pos.handleOpenEndShift}
+            handleOpenCashTransfer={pos.handleOpenCashTransfer}
+            setIsCustomerSelectOpen={pos.setIsCustomerSelectOpen}
+            handleOpenLoyalty={pos.handleOpenLoyalty}
+            setIsRecentSalesOpen={pos.setIsRecentSalesOpen}
+            setIsVoidSalesOpen={pos.setIsVoidSalesOpen}
+            setIsReturnSalesOpen={pos.setIsReturnSalesOpen}
+            setIsPriceInquiryOpen={pos.setIsPriceInquiryOpen}
+            isFrontliner={pos.isFrontliner}
+            posMode={pos.businessSettings?.posMode}
+            queuedOrdersCount={pos.queuedOrders.length}
+            setIsQueuePanelOpen={pos.setIsQueuePanelOpen}
+          />
         </div>
 
-        {/* Right: Totals Panel */}
-        <PosTotalsPanel
+        {/* Bottom: brand, customer, totals, tax, tender */}
+        <PosSummaryFooter
           businessSettings={pos.businessSettings}
           currentTerminalName={pos.currentTerminalName}
           currentUser={pos.currentUser}
@@ -153,9 +157,17 @@ function POSContent() {
         />
       </div>
 
+      {/* Solid brand ground — deep teal in light, near-black teal in dark. No blur:
+          the terminal behind is not something a signed-out cashier should read. */}
       {!pos.isPosLoggedIn && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
-          <PosLoginForm onLoginSuccess={pos.handlePosLoginSuccess} />
+        <div className="pos-login-brand absolute inset-0 z-50 flex items-center justify-center bg-[#0D7C87] animate-fade-in dark:bg-[#0B2A2D]">
+          <PosLoginForm
+            onLoginSuccess={pos.handlePosLoginSuccess}
+            terminalName={pos.currentTerminalName}
+            businessName={pos.businessSettings?.businessName}
+            logoPath={pos.businessSettings?.logoPath}
+            currentTime={pos.currentTime}
+          />
         </div>
       )}
 

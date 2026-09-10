@@ -187,6 +187,23 @@
     -webkit-text-fill-color: hsl(var(--foreground)) !important;
     transition: background-color 5000s ease-in-out 0s;
   }
+
+  /* POS login sits on a solid deep-teal ground in both themes, but the dark
+     theme's --primary is blue — a button and focus ring in that blue clash
+     badly against the teal. Re-point the brand tokens to teal for anything
+     inside the login ground so the card stays on-brand in dark mode too. */
+  .pos-login-brand {
+    --primary: 185 81% 29%;          /* #0E7C86 */
+    --primary-foreground: 0 0% 100%;
+    --ring: 185 81% 29%;
+  }
+  .dark .pos-login-brand {
+    --primary: 184 51% 64%;          /* #4FC3C9 — lifts off the dark teal ground */
+    --primary-foreground: 187 60% 8%;
+    --ring: 184 51% 64%;
+    --card: 185 57% 14%;             /* #0F3336 — the dark matte surface; the
+                                        default navy card reads cold on teal */
+  }
 }
 
 @layer utilities {

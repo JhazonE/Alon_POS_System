@@ -1,5 +1,7 @@
 'use client';
-import { Printer, User, Clock, Ban, Undo, Search, Banknote, ArrowRight } from 'lucide-react';
+
+import { Printer, User, Clock, Ban, Undo, Search, Banknote, ArrowRight, Inbox } from 'lucide-react';
+import { PosActionRail, type RailAction } from './PosActionRail';
 
 function CashTransferIcon({ className }: { className?: string }) {
   return (
@@ -20,12 +22,16 @@ type Props = {
   setIsReturnSalesOpen: (v: boolean) => void;
   setIsPriceInquiryOpen: (v: boolean) => void;
   isFrontliner?: boolean;
+  posMode?: 'default' | 'pharmacy';
+  queuedOrdersCount?: number;
+  setIsQueuePanelOpen?: (v: boolean) => void;
 };
 
-export function PosFooterActions({
+/** Right rail: the Ctrl-key actions that operate on the shift and past transactions. */
+export function PosTxnActionsRail({
   handleOpenEndShift, handleOpenCashTransfer, setIsCustomerSelectOpen, handleOpenLoyalty,
   setIsRecentSalesOpen, setIsVoidSalesOpen, setIsReturnSalesOpen,
-  setIsPriceInquiryOpen, isFrontliner,
+  setIsPriceInquiryOpen, isFrontliner, posMode, queuedOrdersCount = 0, setIsQueuePanelOpen,
 }: Props) {
 
   const allActions = [
@@ -34,28 +40,28 @@ export function PosFooterActions({
     { icon: User, label: 'Customer', shortcut: 'Ctrl+3', action: () => setIsCustomerSelectOpen(true), tint: 'text-sky-600', cashierOnly: false },
     { icon: User, label: 'Loyalty', shortcut: 'Ctrl+4', action: handleOpenLoyalty, tint: 'text-sky-600', cashierOnly: true },
     { icon: Clock, label: 'Recent Sales', shortcut: 'Ctrl+5', action: () => setIsRecentSalesOpen(true), tint: 'text-amber-600', cashierOnly: true },
-    { icon: Ban, label: 'Post Void', shortcut: 'Ctrl+6', action: () => setIsVoidSalesOpen(true), tint: 'text-rose-600', cashierOnly: true },
-    { icon: Undo, label: 'Merch Credit', shortcut: 'Ctrl+7', action: () => setIsReturnSalesOpen(true), tint: 'text-amber-600', cashierOnly: true },
+    { icon: Ban, label: 'Void Sales', shortcut: 'Ctrl+6', action: () => setIsVoidSalesOpen(true), tint: 'text-rose-600', cashierOnly: true },
+    { icon: Undo, label: 'Return Sales', shortcut: 'Ctrl+7', action: () => setIsReturnSalesOpen(true), tint: 'text-amber-600', cashierOnly: true },
     { icon: Search, label: 'Price Inquiry', shortcut: 'Ctrl+P', action: () => setIsPriceInquiryOpen(true), tint: 'text-fuchsia-600', cashierOnly: false },
   ];
 
-  const footerActions = isFrontliner
+  const actions: RailAction[] = isFrontliner
     ? allActions.filter(a => !a.cashierOnly)
-    : allActions;
+    : [...allActions];
 
-  return (
-    <div className={`grid gap-2 shrink-0 ${isFrontliner ? 'grid-cols-2' : 'grid-cols-8'}`}>
-      {footerActions.map(({ icon: Icon, label, shortcut, action, tint }) => (
-        <button
-          key={label}
-          onClick={action}
-          className="tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring group flex h-16 flex-col items-center justify-center gap-1 rounded-xl border border-border/60 bg-background px-1 text-xs font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/50 hover:shadow-md"
-        >
-          <Icon className={`h-5 w-5 transition-transform group-hover:scale-110 ${tint}`} />
-          <span className="leading-tight text-center text-[11px] text-foreground">{label}</span>
-          {shortcut && <kbd className="rounded bg-muted px-1 py-px text-[8px] font-mono font-semibold leading-none text-muted-foreground">{shortcut}</kbd>}
-        </button>
-      ))}
-    </div>
-  );
+  // Cashier: queue button — only visible in pharmacy mode
+  if (!isFrontliner && posMode === 'pharmacy' && setIsQueuePanelOpen) {
+    actions.push({
+      icon: Inbox,
+      label: 'Queue',
+      shortcut: 'Ctrl+Q',
+      action: () => setIsQueuePanelOpen(true),
+      tint: 'text-violet-600',
+      badge: queuedOrdersCount,
+      badgeTint: 'bg-violet-600',
+      highlight: true,
+    });
+  }
+
+  return <PosActionRail actions={actions} side="right" />;
 }
