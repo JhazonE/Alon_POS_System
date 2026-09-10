@@ -4,7 +4,7 @@
       <stop stop-color="#0E7C86"/>
       <stop offset="1" stop-color="#2FB8A6"/>
     </linearGradient>
-    <linearGradient id="wm-arm" x1="312" y1="352" x2="356" y2="160" gradientUnits="userSpaceOnUse">
+    <linearGradient id="wm-crest" x1="116" y1="256" x2="256" y2="180" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FBBF24"/>
       <stop offset="1" stop-color="#F2A93B"/>
     </linearGradient>
@@ -13,9 +13,11 @@
   <!-- Icon -->
   <g transform="translate(8,8) scale(0.28125)">
     <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#wm-bg)"/>
-    <path d="M156 172 L256 352 L356 172" stroke="#FFFFFF" stroke-width="52"
+    <path d="M104 256 C 155 140, 205 140, 256 256 C 307 372, 357 372, 408 256"
+          stroke="#FFFFFF" stroke-width="70"
           stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <path d="M256 352 L356 172" stroke="url(#wm-arm)" stroke-width="52"
+    <path d="M104 256 C 155 140, 205 140, 256 256"
+          stroke="url(#wm-crest)" stroke-width="70"
           stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   </g>
 

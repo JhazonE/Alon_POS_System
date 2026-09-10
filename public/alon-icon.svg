@@ -4,7 +4,7 @@
       <stop stop-color="#0E7C86"/>
       <stop offset="1" stop-color="#2FB8A6"/>
     </linearGradient>
-    <linearGradient id="alon-arm" x1="312" y1="352" x2="356" y2="160" gradientUnits="userSpaceOnUse">
+    <linearGradient id="alon-crest" x1="116" y1="256" x2="256" y2="180" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FBBF24"/>
       <stop offset="1" stop-color="#F2A93B"/>
     </linearGradient>
@@ -18,10 +18,13 @@
   <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#alon-bg)"/>
   <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#alon-gloss)"/>
 
-  <!-- V monogram (base, gives a clean rounded vertex) -->
-  <path d="M156 172 L256 352 L356 172" stroke="#FFFFFF" stroke-width="52"
+  <!-- "Alon" is Filipino for wave. One bold swell — a single thick stroke so the
+       mark still resolves at 16px, where stacked wave lines would merge. -->
+  <path d="M104 256 C 155 140, 205 140, 256 256 C 307 372, 357 372, 408 256"
+        stroke="#FFFFFF" stroke-width="70"
         stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <!-- Rising right stroke recolored as a growth accent -->
-  <path d="M256 352 L356 172" stroke="url(#alon-arm)" stroke-width="52"
+  <!-- The leading crest picks up the amber accent, the way the old mark lit one arm. -->
+  <path d="M104 256 C 155 140, 205 140, 256 256"
+        stroke="url(#alon-crest)" stroke-width="70"
         stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>
