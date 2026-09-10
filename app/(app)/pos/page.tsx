@@ -165,7 +165,6 @@ function POSContent() {
             onLoginSuccess={pos.handlePosLoginSuccess}
             terminalName={pos.currentTerminalName}
             businessName={pos.businessSettings?.businessName}
-            logoPath={pos.businessSettings?.logoPath}
             currentTime={pos.currentTime}
           />
         </div>

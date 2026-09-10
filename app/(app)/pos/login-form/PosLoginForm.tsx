@@ -9,7 +9,7 @@ import { useLoginForm } from './use-login-form';
 import type { PosLoginFormProps } from './login-form-types';
 
 export function PosLoginForm({
-  onLoginSuccess, terminalName, businessName, logoPath, currentTime,
+  onLoginSuccess, terminalName, businessName, currentTime,
 }: PosLoginFormProps) {
   const {
     form, error, showPassword, setShowPassword,
@@ -35,18 +35,14 @@ export function PosLoginForm({
 
         <div className="px-8 pt-7">
           <div className="flex items-center gap-3.5">
+            {/* The login screen is the product's front door, so it carries the
+                product brand, not the store's. Which store this terminal
+                belongs to is shown in the footer alongside the terminal. */}
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-primary/15">
-              {logoPath ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoPath} alt={businessName || 'Business logo'} className="h-full w-full object-contain p-1.5" />
-              ) : (
-                <Image src="/alon-icon.svg" alt="Alon POS System" width={48} height={48} className="h-full w-full object-contain p-1.5" priority />
-              )}
+              <Image src="/alon-icon.svg" alt="Alon POS System" width={48} height={48} className="h-full w-full object-contain p-1.5" priority />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold uppercase tracking-wide text-foreground">
-                {businessName || 'Alon POS System'}
-              </h1>
+              <h1 className="truncate text-lg font-bold uppercase tracking-wide text-foreground">Alon POS System</h1>
               <p className="mt-0.5 text-xs font-medium text-muted-foreground">Point of Sale Terminal</p>
             </div>
           </div>
@@ -125,19 +121,28 @@ export function PosLoginForm({
         </div>
 
         {/* Terminal identity strip — says which register you are signing into */}
-        <div className="flex items-center justify-between gap-3 border-t bg-muted/40 px-8 py-3">
-          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-            <Monitor className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate font-medium">{terminalName || 'Terminal not assigned'}</span>
-            {currentTime && <span className="shrink-0 font-mono text-[11px] opacity-70">{currentTime}</span>}
+        <div className="border-t bg-muted/40 px-8 py-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <Monitor className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate font-medium">
+                {[businessName, terminalName].filter(Boolean).join(' · ') || 'Terminal not assigned'}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="font-medium">Secure</span>
+              {process.env.NEXT_PUBLIC_APP_VERSION && (
+                <span className="font-mono text-[11px] opacity-70">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+              )}
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            <span className="font-medium">Secure</span>
-            {process.env.NEXT_PUBLIC_APP_VERSION && (
-              <span className="font-mono text-[11px] opacity-70">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
-            )}
-          </div>
+          {/* The clock is a full long-form date ("Thursday, September 10, 2026
+              at 11:16:04 PM") — around 260px. It cannot share a row with the
+              Secure badge inside a max-w-md card, so it gets its own line. */}
+          {currentTime && (
+            <p className="mt-1.5 truncate font-mono text-[11px] opacity-70">{currentTime}</p>
+          )}
         </div>
       </div>
 
