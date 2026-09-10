@@ -41,7 +41,7 @@ const main = async () => {
   const svg = await readFile(svgPath);
 
   // App-loaded PNGs
-  await writeFile(path.join(root, 'public', 'alon_logo.png'), await pngFromSvg(svg, 512));
+  await writeFile(path.join(root, 'public', 'alon-mark.png'), await pngFromSvg(svg, 512));
   await writeFile(path.join(root, 'app', 'icon.png'), await pngFromSvg(svg, 512));
 
   // ICO sizes
@@ -50,10 +50,10 @@ const main = async () => {
     sizes.map(async (size) => ({ size, data: await pngFromSvg(svg, size) }))
   );
 
-  await writeFile(path.join(root, 'public', 'alon_logo.ico'), buildIco(pngs));
+  await writeFile(path.join(root, 'public', 'alon-mark.ico'), buildIco(pngs));
   await writeFile(path.join(root, 'public', 'favicon.ico'), buildIco(pngs.filter((p) => p.size <= 64)));
 
-  console.log('Generated: public/alon_logo.png, app/icon.png, public/alon_logo.ico, public/favicon.ico');
+  console.log('Generated: public/alon-mark.png, app/icon.png, public/alon-mark.ico, public/favicon.ico');
 };
 
 main().catch((err) => {

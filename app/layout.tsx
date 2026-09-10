@@ -7,9 +7,9 @@ export const metadata = {
   description: 'Point of Sales + Inventory Management',
   icons: {
     icon: [
-      { url: '/alon_logo.png' }
+      { url: '/alon-mark.png' }
     ],
-    apple: '/alon_logo.png',
+    apple: '/alon-mark.png',
   },
 };
 
