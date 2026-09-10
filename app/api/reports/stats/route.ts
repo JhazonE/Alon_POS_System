@@ -58,9 +58,15 @@ export async function GET(request: NextRequest) {
         // - Low Stock Items (Current)
         // - Total Items (Current)
 
+        // `setDate(1)` keeps the current time of day, so `toISOString()` here
+        // rolled the date back a day whenever local time was behind UTC --
+        // in UTC+8 that is every load before 08:00, which returned the last
+        // day of the PREVIOUS month as the month start and pulled that day's
+        // sales into every month-to-date figure. `toLocalYmd` reads the local
+        // calendar fields, matching the DATE column it is compared against.
         const currentMonthStart = new Date();
         currentMonthStart.setDate(1);
-        const currentMonthStartStr = currentMonthStart.toISOString().split('T')[0];
+        const currentMonthStartStr = toLocalYmd(currentMonthStart);
 
         // Fetch settings for fiscal year
         const settingsResult = await query("SELECT fiscal_year_start_month FROM pos_settings LIMIT 1") as any[];
