@@ -146,9 +146,10 @@ export function AppSidebar({
       <div className="sticky top-0 z-10 flex h-20 shrink-0 items-center border-b border-[#174145] px-6">
         <div className="flex items-center gap-3">
           <Logo variant="icon" size={36} />
-          <div className="flex flex-col">
-            <h1 className="text-xl font-extrabold font-headline tracking-tight text-[#DCF2F0]">ALON POS SYSTEM</h1>
-            <span className="text-[10px] uppercase font-bold text-[#4FC3C9] tracking-[0.2em] mt-0.5 opacity-90">Enterprise</span>
+          <div className="flex min-w-0 flex-col">
+            <h1 className="font-headline text-xl font-extrabold leading-none tracking-tight text-[#DCF2F0]">ALON</h1>
+            <span className="mt-1 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-[#A8D5D3]">POS System</span>
+            <span className="mt-1 text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-[#4FC3C9] opacity-90">Enterprise</span>
           </div>
         </div>
       </div>
