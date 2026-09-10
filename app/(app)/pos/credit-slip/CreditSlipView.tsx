@@ -22,7 +22,7 @@ export const CreditSlipView = forwardRef<HTMLDivElement, CreditSlipViewProps>(({
 
       <div className="mb-2 border-b border-dashed border-black pb-2">
         <div className="font-bold text-center border-y border-black py-1 mb-1 uppercase">
-          Merchandise Credit Slip
+          Return Sales Slip
         </div>
         <div className="font-bold text-xs">MC NO.: {creditSlipId}</div>
         <div className="mt-1">Ref SO#: {originalSoNumber}</div>

@@ -90,10 +90,10 @@ export class CreditSlipGenerator {
         enc.newline();
 
         // ─── SLIP HEADER ───────────────────────────────────────────
-        enc.raw([0x1b, 0x61, 0x31]).line('MERCHANDISE CREDIT SLIP').raw([0x1b, 0x61, 0x30]);
+        enc.raw([0x1b, 0x61, 0x31]).line('RETURN SALES SLIP').raw([0x1b, 0x61, 0x30]);
         // SI NO. must match the original receipt's SI number, not the internal credit-slip ID.
         enc.line(`SI NO.: ${formatSINumber(originalSiNumber || originalSoNumber)}`);
-        // Labelled "MC NO." to match the Merchandise Credit report column, so
+        // Labelled "MC NO." to match the Return Sales report column, so
         // staff can match a paper slip to the report row by the same name.
         enc.line(`MC NO.: ${creditSlipId}`);
         enc.line(`Cust: ${customerName}`);
@@ -156,7 +156,7 @@ export class CreditSlipGenerator {
 
         // ─── FOOTER ────────────────────────────────────────────
         enc.align('center');
-        enc.line('Merchandise Credit');
+        enc.line('Return Sales');
         enc.line('Transaction Record');
         enc.line('Printed: ' + format(new Date(), 'MM/dd/yy h:mm a'));
         enc.line('Pos System by Bhagoh');

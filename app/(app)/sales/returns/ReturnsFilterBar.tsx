@@ -27,7 +27,7 @@ export function ReturnsFilterBar({ fromDate, setFromDate, toDate, setToDate, isL
           <div>
             <CardTitle className="flex items-center gap-2">
               <Undo className="h-5 w-5 text-green-600" />
-              Merchandise Credit Report
+              Return Sales Report
             </CardTitle>
             <CardDescription>View and analyze all returned sales transactions</CardDescription>
           </div>

@@ -27,7 +27,7 @@ export function VoidsFilterBar({ fromDate, setFromDate, toDate, setToDate, isLoa
           <div>
             <CardTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-destructive" />
-              Post Void Report
+              Void Sales Report
             </CardTitle>
             <CardDescription>View and analyze all voided sales transactions</CardDescription>
           </div>

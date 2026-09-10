@@ -53,7 +53,7 @@ const creditTxt = renderCreditSlipText(
   { creditSiNumber: 5, originalSiNumber: 2, dateTime: sale.dateTime, items: sale.items, total: 100 },
   settings,
 );
-assert.ok(creditTxt.includes('MERCHANDISE CREDIT'), 'credit slip title');
+assert.ok(creditTxt.includes('RETURN SALES SLIP'), 'credit slip title');
 assert.ok(creditTxt.includes('SI NO.: 000005'), 'credit slip shows its SI');
 assert.ok(creditTxt.includes('000002'), 'credit slip shows original SI');
 

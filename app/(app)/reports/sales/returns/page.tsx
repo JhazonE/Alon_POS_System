@@ -163,9 +163,9 @@ export default function ReturnedSalesPage() {
   }, []);
 
   const exportToPDF = () => {
-    const fileName = `Merchandise_Credit_Report_${format(fromDate || new Date(), 'yyyyMMdd')}_${format(toDate || new Date(), 'yyyyMMdd')}.pdf`;
+    const fileName = `Return_Sales_Report_${format(fromDate || new Date(), 'yyyyMMdd')}_${format(toDate || new Date(), 'yyyyMMdd')}.pdf`;
     const ok = exportReportPdf<ReturnRecord>({
-      title: 'Merchandise Credit Report',
+      title: 'Return Sales Report',
       dateRange: `From: ${fromDate ? format(fromDate, 'yyyy-MM-dd') : 'N/A'} To: ${toDate ? format(toDate, 'yyyy-MM-dd') : 'N/A'}`,
       summary: [
         { label: 'Revenue', value: formatCurrency(totals.revenue) },
@@ -206,9 +206,9 @@ export default function ReturnedSalesPage() {
     const profitSum = filteredRecords.reduce((s, r) => s + Number(r.profit), 0);
     const vatableSum = filteredRecords.reduce((s, r) => s + Number(r.vatableSales), 0);
     const vatSum = filteredRecords.reduce((s, r) => s + Number(r.vatAmount), 0);
-    const fileName = `Merchandise_Credit_Report_${format(fromDate || new Date(), 'yyyyMMdd')}_${format(toDate || new Date(), 'yyyyMMdd')}.xls`;
+    const fileName = `Return_Sales_Report_${format(fromDate || new Date(), 'yyyyMMdd')}_${format(toDate || new Date(), 'yyyyMMdd')}.xls`;
     const ok = exportReportExcel<ReturnRecord>({
-      title: 'Merchandise Credit Report',
+      title: 'Return Sales Report',
       subtitle: `From: ${fromDate ? format(fromDate, 'yyyy-MM-dd') : 'N/A'} To: ${toDate ? format(toDate, 'yyyy-MM-dd') : 'N/A'}`,
       columns: [
         { header: 'MC No.', cell: (r) => r.mcNo || '—' },
@@ -249,7 +249,7 @@ export default function ReturnedSalesPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Undo className="h-5 w-5 text-green-600" />
-                Merchandise Credit Report
+                Return Sales Report
               </CardTitle>
               <CardDescription>
                 View and analyze all returned sales transactions

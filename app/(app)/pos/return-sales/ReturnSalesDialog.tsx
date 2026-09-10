@@ -119,7 +119,7 @@ export function ReturnSalesDialog({
                     <Undo className="h-5 w-5" />
                   </div>
                   <div>
-                    <SheetTitle>Merchandise Credit</SheetTitle>
+                    <SheetTitle>Return Sales</SheetTitle>
                     <SheetDescription>Search by SO number or pick a recent transaction</SheetDescription>
                   </div>
                 </div>

@@ -35,8 +35,8 @@ export function AppBreadcrumbs() {
           
           // Custom label mappings
           const labelMap: Record<string, string> = {
-            'returns': 'Merchandise Credits',
-            'voids': 'Post Void',
+            'returns': 'Return Sales',
+            'voids': 'Void Sales',
             'by-product': isPurchases ? 'Purchases by Product' : 'Sales by Product',
             'by-supplier': 'Purchases by Supplier',
             'profit-margin': 'Profit Margin',

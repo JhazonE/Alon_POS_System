@@ -215,7 +215,7 @@ export function SelectItemsView({ sale, onReturnItems, onBack }: SelectItemsView
 
       <div className="mt-3 flex items-center justify-between rounded-xl border bg-gradient-to-br from-amber-500/10 to-transparent px-4 py-3 shrink-0">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Merchandise Credit</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Return Sales</p>
           <p className="text-xs text-muted-foreground">{totalReturnQty} {totalReturnQty === 1 ? 'item' : 'items'} to return</p>
         </div>
         <p className="font-mono text-2xl font-black tabular-nums text-amber-600">{peso(creditTotal)}</p>

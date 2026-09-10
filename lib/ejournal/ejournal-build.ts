@@ -24,9 +24,9 @@ export function buildFiles(data: EJournalData): Record<string, string> {
       'voided transactions'
     ),
     'merchandise-credits': section(
-      'MERCHANDISE CREDITS',
+      'RETURN SALES',
       data.merchandiseCredits.map((c) => renderCreditSlipText(c, settings)),
-      'merchandise credits'
+      'return sales'
     ),
     'x-readings': section(
       'X-READINGS',

@@ -27,7 +27,7 @@ export function ReturnSuccessView({
 
         <div className="mt-6 w-full max-w-xs rounded-2xl border bg-gradient-to-br from-amber-500/10 to-transparent p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Merchandise Credit Issued
+            Return Sales Issued
           </p>
           <p className="mt-1 font-mono text-4xl font-black tabular-nums text-amber-600">
             {peso(returnedTotal)}

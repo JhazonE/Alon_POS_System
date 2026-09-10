@@ -19,6 +19,6 @@ const data: EJournalData = {
 const files = buildFiles(data);
 assert.ok(files['sales-invoices'].includes('SI NO.: 000001'), 'sales file has the SI');
 assert.ok(files['voided'].includes('No voided'), 'empty voided file has explicit note');
-assert.ok(files['merchandise-credits'].includes('No merchandise credits'), 'empty credits note');
+assert.ok(files['merchandise-credits'].includes('No return sales'), 'empty credits note');
 assert.ok(files['x-readings'].includes('No X-readings'), 'empty x note');
 assert.ok(files['z-reading'].includes('No Z-reading'), 'empty z note');

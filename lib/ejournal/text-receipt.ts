@@ -102,7 +102,7 @@ export function renderCreditSlipText(credit: EJCredit, settings: EJSettings): st
   const out: string[] = [];
   out.push(...renderReceiptHeader(settings, credit.dateTime));
   out.push('');
-  out.push(center('MERCHANDISE CREDIT SLIP', cols));
+  out.push(center('RETURN SALES SLIP', cols));
   out.push(`SI NO.: ${formatSINumber(credit.creditSiNumber)}`);
   out.push(`Orig SI: ${formatSINumber(credit.originalSiNumber)}`);
   out.push(`Cust: ${credit.customerName || 'Walk-in'}`);

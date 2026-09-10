@@ -85,7 +85,7 @@ export function useReturnsData() {
 
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('Merchandise Credit Report', pageWidth / 2, yPos, { align: 'center' });
+      doc.text('Return Sales Report', pageWidth / 2, yPos, { align: 'center' });
       yPos += 8;
 
       doc.setFontSize(10);

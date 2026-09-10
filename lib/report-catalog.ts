@@ -217,7 +217,7 @@ export const reportSections: ReportSection[] = [
   },
   {
     title: 'POS Reports',
-    blurb: 'Terminal-level transaction records, merchandise credits, voids, and shift readings.',
+    blurb: 'Terminal-level transaction records, return sales, void sales, and shift readings.',
     cards: [
       {
         href: '/sales',
@@ -242,14 +242,14 @@ export const reportSections: ReportSection[] = [
       },
       {
         href: '/sales/returns',
-        title: 'Merchandise Credits',
+        title: 'Return Sales',
         description: 'Returned items with the original SI, who processed the return, and the refund amount.',
         icon: Undo,
         iconClassName: 'text-orange-600',
       },
       {
         href: '/sales/voids',
-        title: 'Post Void',
+        title: 'Void Sales',
         description: 'Transactions voided after the sale closed, with the authorizing user.',
         icon: Ban,
         iconClassName: 'text-red-600',
