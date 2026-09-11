@@ -128,8 +128,8 @@ export default function LoginPage() {
                 <Logo size={120} />
              </div>
              <div className="space-y-1 text-center">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center justify-center gap-2">
-                  Welcome back
+                <h1 className="text-3xl font-bold uppercase tracking-tight text-foreground flex items-center justify-center gap-2">
+                  Alon POS System
                   {error && (
                     <Badge variant="destructive" className="ml-2 px-2 py-0.5 animate-in zoom-in-95 duration-300">
                       <XCircle className="w-3 h-3 mr-1" />
