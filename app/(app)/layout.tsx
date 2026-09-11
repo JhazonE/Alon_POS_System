@@ -11,7 +11,9 @@ import { queryClient } from './layout-nav-config';
 import { useAppLayout } from './use-app-layout';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
-import { useLicenseHeartbeat } from './use-license-heartbeat';
+// Licensing is disabled — see components/license-gate.tsx. Re-add this call
+// to resume background revocation checks.
+// import { useLicenseHeartbeat } from './use-license-heartbeat';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const {
@@ -26,8 +28,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   } = useAppLayout();
 
   const router = useRouter();
-
-  useLicenseHeartbeat();
 
   // Seed the sidebar's initial open state from the persisted cookie so a
   // collapsed sidebar stays collapsed across reloads. Read once on mount.

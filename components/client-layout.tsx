@@ -9,7 +9,9 @@ const Toaster = dynamic(
 );
 
 import { ThemeProvider } from '@/components/theme-provider';
-import { LicenseGate } from '@/components/license-gate';
+// Licensing is disabled — see components/license-gate.tsx. Re-wrap children in
+// <LicenseGate> to restore the activation wall.
+// import { LicenseGate } from '@/components/license-gate';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,7 +21,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       enableSystem
       disableTransitionOnChange
     >
-      <LicenseGate>{children}</LicenseGate>
+      {children}
       <Toaster />
     </ThemeProvider>
   );
