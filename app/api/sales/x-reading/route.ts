@@ -86,25 +86,40 @@ export async function GET(request: NextRequest) {
       LEFT JOIN users u ON s.user_id = u.uid
       LEFT JOIN pos_terminals pt_term ON s.terminal_id = pt_term.id
       LEFT JOIN (
-          SELECT 
+          SELECT
               pt.shift_id,
-              SUM(CASE WHEN pt.transaction_type = 'sale' THEN pt.subtotal ELSE 0 END) as gross_sales,
-              SUM(CASE WHEN pt.transaction_type = 'sale' THEN pt.total_amount ELSE 0 END) as net_sales,
-              SUM(pt.tax_amount) as vat_amount,
-              SUM(pt.discount_amount) as discounts,
+              -- Voiding a sale (app/api/pos/void-transaction/route.ts) only ever sets
+              -- sales_transactions.status = 'Voided' — it never touches
+              -- pos_transactions.transaction_type, which stays 'sale'. Checking
+              -- transaction_type = 'void' here always evaluated to zero rows, which
+              -- both hid the void amount AND left the voided sale's pesos counted in
+              -- gross/net sales below. Gate every 'sale' aggregate on st.status so a
+              -- voided sale is excluded here and counted in void_amount instead —
+              -- mirrors the pattern already used by app/api/sales/z-reading/route.ts.
+              SUM(CASE WHEN pt.transaction_type = 'sale' AND st.status <> 'Voided' THEN pt.subtotal ELSE 0 END) as gross_sales,
+              SUM(CASE WHEN pt.transaction_type = 'sale' AND st.status <> 'Voided' THEN pt.total_amount ELSE 0 END) as net_sales,
+              SUM(CASE WHEN pt.transaction_type = 'sale' AND st.status <> 'Voided' THEN pt.tax_amount ELSE 0 END) as vat_amount,
+              SUM(CASE WHEN pt.transaction_type = 'sale' AND st.status <> 'Voided' THEN pt.discount_amount ELSE 0 END) as discounts,
               SUM(CASE WHEN pt.transaction_type = 'return' THEN pt.total_amount ELSE 0 END) as returns_amount,
-              COUNT(CASE WHEN pt.transaction_type = 'sale' THEN 1 END) as transaction_count,
+              COUNT(CASE WHEN pt.transaction_type = 'sale' AND st.status <> 'Voided' THEN 1 END) as transaction_count,
               -- Placeholder — pt.payment_method collapses split-tender sales to the
               -- literal string 'MULTIPLE', which would hide the real cash portion
               -- from the drawer reconciliation. The real per-shift cash figure is
               -- recomputed below from the same payment_details breakdown used for
               -- paymentMethods, so both stay consistent with one source of truth.
-              SUM(CASE WHEN pt.transaction_type = 'sale' AND pt.payment_method = 'CASH' THEN pt.total_amount ELSE 0 END) as cash_sales,
+              SUM(CASE WHEN pt.transaction_type = 'sale' AND st.status <> 'Voided' AND pt.payment_method = 'CASH' THEN pt.total_amount ELSE 0 END) as cash_sales,
+              -- SI range intentionally stays unconditional (not gated on st.status):
+              -- a voided sale still consumed a real BIR SI number, so excluding it
+              -- here could clip the beginning/end of the range and misreport gaps.
               MIN(CASE WHEN pt.transaction_type = 'sale' THEN st.si_number END) as min_sale_id,
               MAX(CASE WHEN pt.transaction_type = 'sale' THEN st.si_number END) as max_sale_id,
               MIN(CASE WHEN pt.transaction_type = 'sale' AND pt.bir_or_number IS NOT NULL THEN pt.bir_or_number END) as min_sale_or_id,
               MAX(CASE WHEN pt.transaction_type = 'sale' AND pt.bir_or_number IS NOT NULL THEN pt.bir_or_number END) as max_sale_or_id,
-              SUM(CASE WHEN pt.transaction_type = 'void' THEN pt.total_amount ELSE 0 END) as void_amount,
+              SUM(CASE WHEN pt.transaction_type = 'sale' AND st.status = 'Voided' THEN pt.total_amount ELSE 0 END) as void_amount,
+              -- refund_amount is unrelated dead code with the same shape (no code path
+              -- ever writes transaction_type = 'refund' either) — left as-is; refunds
+              -- to date are recorded as transaction_type = 'return' (returns_amount
+              -- above), not a distinct 'refund' type.
               SUM(CASE WHEN pt.transaction_type = 'refund' THEN pt.total_amount ELSE 0 END) as refund_amount
           FROM pos_transactions pt
           LEFT JOIN sales_transactions st ON pt.sale_id = st.id

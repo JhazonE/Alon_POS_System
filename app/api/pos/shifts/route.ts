@@ -30,19 +30,32 @@ export async function GET(request: NextRequest) {
       // pos_transactions.payment_method only for sales with no payment_details
       // rows at all, so no sale is silently dropped. Mirrors the same fix in
       // app/api/sales/x-reading/route.ts.
+      //
+      // st.status <> 'Voided' excludes voided sales from the cash figure at the
+      // source: voiding (app/api/pos/void-transaction/route.ts) never touches
+      // pos_transactions, so a voided sale's original payment_details rows (and
+      // its 'sale' transaction_type) are still sitting here. Without this join
+      // the expected cash-in-drawer below stayed inflated by every voided cash
+      // sale, which is exactly the gap the (also-fixed) refundsResult query
+      // below was trying — and failing — to close via transaction_type = 'void',
+      // a value that is never written anywhere in this codebase.
       const paymentBreakdown = await query(
         `SELECT name, SUM(amount) as amount FROM (
             SELECT pd.payment_method as name, SUM(pd.amount_tendered - pd.change_given) as amount
             FROM pos_transactions pt
             JOIN payment_details pd ON pd.transaction_id = pt.id
+            LEFT JOIN sales_transactions st ON pt.sale_id = st.id
             WHERE pt.shift_id = ? AND pt.transaction_type = 'sale' AND pt.is_training = 0
+            AND st.status <> 'Voided'
             GROUP BY pd.payment_method
 
             UNION ALL
 
             SELECT pt.payment_method as name, SUM(pt.total_amount) as amount
             FROM pos_transactions pt
+            LEFT JOIN sales_transactions st ON pt.sale_id = st.id
             WHERE pt.shift_id = ? AND pt.transaction_type = 'sale' AND pt.is_training = 0
+            AND st.status <> 'Voided'
             AND NOT EXISTS (SELECT 1 FROM payment_details pd WHERE pd.transaction_id = pt.id)
             GROUP BY pt.payment_method
          ) combined
@@ -53,6 +66,15 @@ export async function GET(request: NextRequest) {
       // Refunds/voids/returns aren't split-tender (see checkout route — they
       // reverse a whole sale, not a portion of one) so they stay on the
       // collapsed column; only cash reduces the physical drawer.
+      //
+      // 'void' is kept here for forward-compatibility only — it has never
+      // matched a real row (voids don't insert a pos_transactions row at all;
+      // see paymentBreakdown above, which now excludes them at the source) and
+      // 'return' rows are recorded with payment_method = 'Return', not 'CASH'
+      // (see app/api/sales/returns/route.ts), so this query is currently a
+      // no-op. Left as documented dead code rather than silently deleted, since
+      // making merchandise-credit cash refunds actually reduce the drawer is a
+      // separate, unreported behavior change.
       const refundsResult = await query(
         `SELECT SUM(total_amount) as total_refunds
          FROM pos_transactions
