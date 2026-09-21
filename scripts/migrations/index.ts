@@ -113,6 +113,7 @@ import './112_add_z_reading_confirmation_setting';
 import './113_add_z_reading_lockout_toggle';
 import './115_create_product_selling_units';
 import './116_create_product_selling_unit_prices';
+import './117_add_selling_unit_to_sale_items';
 
 // Import runner functions
 import { migrateUp, migrateDown } from './runner';
