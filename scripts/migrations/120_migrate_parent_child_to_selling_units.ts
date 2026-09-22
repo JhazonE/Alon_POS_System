@@ -1,5 +1,5 @@
 import { registerMigration, Migration } from './runner';
-import { withTransaction } from '../../lib/mysql';
+import { query, withTransaction } from '../../lib/mysql';
 import { toSafeNumber } from '../../lib/utils';
 import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput } from '../../lib/selling-units-migration';
 
@@ -46,24 +46,45 @@ function sanitizeRow(row: Record<string, any>): Record<string, any> {
   return out;
 }
 
+// Tables that reference products.id and were given their own nullable
+// selling_unit_id column (migrations 121-127) so the re-pointing done here is
+// precisely reversible in down(). inventory_batches / sale_items /
+// purchase_order_items are handled separately below because they also carry
+// unit-name/qty_base snapshot columns.
+const SIMPLE_REPOINT_TABLES = [
+  'stock_movements',
+  'sales_invoice_items',
+  'pos_transaction_items',
+  'stock_adjustments',
+  'bad_order_items',
+  'sales_order_items',
+  'stock_count_items',
+] as const;
+
 const migration: Migration = {
   name: '120_migrate_parent_child_to_selling_units',
   timestamp: '2026-09-21_11-30-00',
 
   async up(): Promise<void> {
-    await withTransaction(async (connection) => {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS migration_120_backup (
-          id VARCHAR(50) NOT NULL,
-          product_json JSON NOT NULL,
-          conversion_factors_json JSON NOT NULL,
-          root_product_id VARCHAR(50) NOT NULL,
-          selling_unit_id VARCHAR(50) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (id)
-        )
-      `);
+    // DDL must run OUTSIDE withTransaction. Non-temporary CREATE TABLE is on
+    // MySQL 8's implicit-commit list, so issuing it as the first statement
+    // inside the transaction silently committed it and left every later
+    // statement auto-committing individually — a mid-migration failure's
+    // rollback() would then have undone nothing. Keep the transaction body
+    // pure DML.
+    await query(`
+      CREATE TABLE IF NOT EXISTS migration_120_backup (
+        id VARCHAR(50) NOT NULL,
+        product_json JSON NOT NULL,
+        conversion_factors_json JSON NOT NULL,
+        root_product_id VARCHAR(50) NOT NULL,
+        selling_unit_id VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+      )
+    `);
 
+    await withTransaction(async (connection) => {
       const [productRows]: any = await connection.query(`
         SELECT id, parent_id AS parentId, unit_of_measure AS unitOfMeasure,
                barcode, cost, price, conversion_factor AS conversionFactor
@@ -96,6 +117,46 @@ const migration: Migration = {
 
       const plan = computeSellingUnitsPlan(products, conversionFactors, generateId);
 
+      // --- Preflight guard: refuse to merge a child that carries its own stock ---
+      //
+      // A child being folded into its root may have its own independently
+      // tracked products.stock and its own inventory_batches, denominated in
+      // the child's unit at the child's own cost. This migration does not yet
+      // know how to fold that into the root's single stock/FIFO ledger: not
+      // re-pointing those batches silently loses the inventory, and re-pointing
+      // them without converting quantity/cost silently corrupts the root's FIFO
+      // ledger. Reconciling child stock is a known, deliberately deferred
+      // follow-up (review findings I1/I2) that needs its own design pass.
+      //
+      // Until then, fail loudly BEFORE any write rather than corrupt data. This
+      // runs before the INSERT/UPDATE/DELETE loops below, so the throw aborts
+      // the transaction with nothing written.
+      const blocked: string[] = [];
+      for (const deletedId of plan.deletedProductIds) {
+        const [[stockRow]]: any = await connection.query(
+          'SELECT stock FROM products WHERE id = ?',
+          [deletedId]
+        );
+        const childStock = stockRow?.stock == null ? 0 : toSafeNumber(stockRow.stock);
+        const [[batchRow]]: any = await connection.query(
+          'SELECT COUNT(*) AS cnt FROM inventory_batches WHERE product_id = ? AND quantity_remaining <> 0',
+          [deletedId]
+        );
+        const batchCount = Number(batchRow?.cnt ?? 0);
+        if (childStock !== 0 || batchCount > 0) {
+          blocked.push(`${deletedId} (stock=${childStock}, batches with remaining qty=${batchCount})`);
+        }
+      }
+      if (blocked.length > 0) {
+        throw new Error(
+          `Migration 120 aborted: ${blocked.length} child product(s) to be merged into their root still carry ` +
+          `independently tracked stock, which this migration does not yet know how to reconcile into the root's ` +
+          `single stock/FIFO ledger (known deferred follow-up — see review findings I1/I2 and the selling-product-units ` +
+          `design spec). Nothing was written. Affected products:\n  ${blocked.join('\n  ')}\n` +
+          `Zero out or manually reconcile these children's stock and inventory_batches before re-running.`
+        );
+      }
+
       for (const unit of plan.sellingUnits) {
         await connection.query(
           `INSERT INTO product_selling_units
@@ -127,6 +188,48 @@ const migration: Migration = {
                selling_unit_qty_base = (SELECT qty_base FROM product_selling_units WHERE id = ?)
            WHERE product_id = ?`,
           [r.toRootProductId, r.sellingUnitId, r.sellingUnitId, r.sellingUnitId, r.fromProductId]
+        );
+
+        // Every other table with a products.id FK must be re-pointed too.
+        // Eight of them are ON DELETE CASCADE, so leaving them alone would
+        // silently destroy their rows when the child products row is deleted
+        // below — including the BIR-significant sales_invoice_items and
+        // pos_transaction_items. stock_count_items has no ON DELETE clause at
+        // all (MySQL default RESTRICT), so it would have blocked the DELETE
+        // outright and aborted the migration.
+        for (const table of SIMPLE_REPOINT_TABLES) {
+          await connection.query(
+            `UPDATE ${table} SET product_id = ?, selling_unit_id = ? WHERE product_id = ?`,
+            [r.toRootProductId, r.sellingUnitId, r.fromProductId]
+          );
+        }
+
+        // product_shelves has PRIMARY KEY (product_id, shelf_id): a blind
+        // UPDATE collides whenever the root is already shelved at the same
+        // shelf as the child. Merge instead — the root's existing row wins.
+        // Shelf placement is non-financial location data, so losing the exact
+        // child-vs-root split here is acceptable (see down()).
+        await connection.query(
+          `INSERT IGNORE INTO product_shelves (product_id, shelf_id, quantity)
+             SELECT ?, shelf_id, quantity FROM product_shelves WHERE product_id = ?`,
+          [r.toRootProductId, r.fromProductId]
+        );
+        await connection.query('DELETE FROM product_shelves WHERE product_id = ?', [r.fromProductId]);
+
+        // supplier_product_mapping has UNIQUE (product_id, supplier_id): same
+        // problem, different shape. Drop the child's rows for suppliers the
+        // root already maps to, then move the rest across.
+        await connection.query(
+          `DELETE FROM supplier_product_mapping
+            WHERE product_id = ?
+              AND supplier_id IN (SELECT supplier_id FROM (
+                    SELECT supplier_id FROM supplier_product_mapping WHERE product_id = ?
+                  ) AS root_suppliers)`,
+          [r.fromProductId, r.toRootProductId]
+        );
+        await connection.query(
+          'UPDATE supplier_product_mapping SET product_id = ? WHERE product_id = ?',
+          [r.toRootProductId, r.fromProductId]
         );
       }
 
@@ -204,6 +307,18 @@ const migration: Migration = {
               'UPDATE purchase_order_items SET product_id = ?, selling_unit_id = NULL, selling_unit_name = NULL, selling_unit_qty_base = NULL WHERE product_id = ? AND selling_unit_id = ?',
               [id, row.root_product_id, row.selling_unit_id]
             );
+            for (const table of SIMPLE_REPOINT_TABLES) {
+              await connection.query(
+                `UPDATE ${table} SET product_id = ?, selling_unit_id = NULL WHERE product_id = ? AND selling_unit_id = ?`,
+                [id, row.root_product_id, row.selling_unit_id]
+              );
+            }
+            // product_shelves and supplier_product_mapping are intentionally
+            // NOT reversed: up() merged them into the root (deduping against
+            // its PK / UNIQUE constraint) rather than tagging them, so which
+            // rows came from the child is no longer recoverable. Both hold
+            // non-financial association data — a restored product can simply
+            // be re-shelved and re-linked to its suppliers by hand.
 
             pending.delete(id);
             progress = true;
@@ -217,9 +332,11 @@ const migration: Migration = {
 
       // up() created a selling unit for every surviving product too — remove all of them.
       await connection.query('DELETE FROM product_selling_units');
-      await connection.query('DROP TABLE IF EXISTS migration_120_backup');
-      console.log('✅ Rolled back selling-units data migration');
     });
+
+    // DDL outside the transaction, for the same implicit-commit reason as up().
+    await query('DROP TABLE IF EXISTS migration_120_backup');
+    console.log('✅ Rolled back selling-units data migration');
   }
 };
 
