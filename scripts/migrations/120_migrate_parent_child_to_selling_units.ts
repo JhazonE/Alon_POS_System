@@ -46,6 +46,21 @@ function sanitizeRow(row: Record<string, any>): Record<string, any> {
   return out;
 }
 
+// product_price_levels is created by the standalone root-level
+// run_price_level_migration.js script, not by a numbered migration in this
+// directory — it may not exist on a fresh `npm run migrate` database. Guard
+// every touch of it with this check so this migration stays a no-op for that
+// table when it's absent, same posture as the rest of this file toward
+// optional legacy tables.
+async function tableExists(connection: { query: Function }, table: string): Promise<boolean> {
+  const [rows]: any = await connection.query(`
+    SELECT COUNT(*) as cnt
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+  `, [table]);
+  return rows[0]?.cnt > 0;
+}
+
 // Tables that reference products.id and were given their own nullable
 // selling_unit_id column (migrations 121-127) so the re-pointing done here is
 // precisely reversible in down(). inventory_batches / sale_items /
@@ -166,6 +181,11 @@ const migration: Migration = {
         );
       }
 
+      // product_price_levels is created by a standalone script (not a
+      // numbered migration), so it may not exist on a fresh DB. Check once,
+      // outside the loop, since the schema doesn't change mid-transaction.
+      const hasProductPriceLevels = await tableExists(connection, 'product_price_levels');
+
       for (const r of plan.reassignments) {
         await connection.query(
           `UPDATE inventory_batches SET product_id = ?, selling_unit_id = ? WHERE product_id = ?`,
@@ -231,6 +251,23 @@ const migration: Migration = {
           'UPDATE supplier_product_mapping SET product_id = ? WHERE product_id = ?',
           [r.toRootProductId, r.fromProductId]
         );
+
+        // product_price_levels has PRIMARY KEY (product_id, price_level_id):
+        // same collision risk as product_shelves above, whenever the root and
+        // the child each carry their own price-level override for the same
+        // price_level_id (this happens on real data — e.g. both a root and
+        // its child have their own "retail-level" row). Merge instead — the
+        // root's existing row wins. Only touch this table if it exists: it's
+        // created by the standalone run_price_level_migration.js script, not
+        // a numbered migration here.
+        if (hasProductPriceLevels) {
+          await connection.query(
+            `INSERT IGNORE INTO product_price_levels (product_id, price_level_id, price, min_quantity)
+               SELECT ?, price_level_id, price, min_quantity FROM product_price_levels WHERE product_id = ?`,
+            [r.toRootProductId, r.fromProductId]
+          );
+          await connection.query('DELETE FROM product_price_levels WHERE product_id = ?', [r.fromProductId]);
+        }
       }
 
       // Deepest-first order from the plan means a node's own children (if
@@ -319,6 +356,14 @@ const migration: Migration = {
             // rows came from the child is no longer recoverable. Both hold
             // non-financial association data — a restored product can simply
             // be re-shelved and re-linked to its suppliers by hand.
+            //
+            // product_price_levels has the same limitation and for the same
+            // reason: up() merges it into the root via the same composite-PK
+            // INSERT-IGNORE-then-DELETE shape (root's existing row wins on a
+            // price_level_id collision), so it isn't tagged and can't be
+            // precisely un-merged here either. Acceptable because these rows
+            // are price overrides, not audit/financial transaction history —
+            // they can be manually re-entered if a rollback is ever needed.
 
             pending.delete(id);
             progress = true;
