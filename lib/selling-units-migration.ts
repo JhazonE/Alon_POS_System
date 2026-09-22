@@ -66,9 +66,43 @@ export function computeSellingUnitsPlan(
       usedBarcodes.add(trimmed);
       return trimmed;
     }
-    const fallback = `SU-${fallbackSourceId}`;
+    // product_selling_units has UNIQUE(barcode), so the synthetic fallback has
+    // to be genuinely free too — a real product's barcode could literally be
+    // the string "SU-<some id>". Keep suffixing until nothing claims it.
+    let fallback = `SU-${fallbackSourceId}`;
+    let suffix = 1;
+    while (usedBarcodes.has(fallback)) {
+      suffix += 1;
+      fallback = `SU-${fallbackSourceId}-${suffix}`;
+    }
     usedBarcodes.add(fallback);
     return fallback;
+  }
+
+  // product_selling_units has UNIQUE(product_id, unit_name), so unit names only
+  // have to be unique *within one root product*, not globally. Real families do
+  // have two children sharing a unit_of_measure (e.g. two "Piece" children under
+  // one parent); without this the first INSERT for such a family throws
+  // ER_DUP_ENTRY and aborts the whole migration.
+  const usedUnitNames = new Map<string, Set<string>>();
+  function resolveUnitName(rootProductId: string, candidate: string): string {
+    let taken = usedUnitNames.get(rootProductId);
+    if (!taken) {
+      taken = new Set<string>();
+      usedUnitNames.set(rootProductId, taken);
+    }
+    if (!taken.has(candidate)) {
+      taken.add(candidate);
+      return candidate;
+    }
+    let suffix = 1;
+    let name = candidate;
+    while (taken.has(name)) {
+      suffix += 1;
+      name = `${candidate} (${suffix})`;
+    }
+    taken.add(name);
+    return name;
   }
 
   const sellingUnits: PlannedSellingUnit[] = [];
@@ -84,7 +118,7 @@ export function computeSellingUnitsPlan(
       id: generateId(),
       rootProductId: root.id,
       sourceProductId: root.id,
-      unitName: root.unitOfMeasure || 'Unit',
+      unitName: resolveUnitName(root.id, root.unitOfMeasure || 'Unit'),
       qtyBase: 1,
       barcode: resolveBarcode(root.barcode, root.id),
       cost: root.cost,
@@ -97,7 +131,17 @@ export function computeSellingUnitsPlan(
       const children = childrenOf.get(node.id) || [];
       for (const child of children) {
         const cfFactor = cfMap.get(`${node.id}::${child.unitOfMeasure || ''}`);
+        if (cfFactor == null && child.conversionFactor == null) {
+          console.warn(
+            `⚠️  selling-units migration: no conversion factor found for child product ${child.id} ` +
+            `(unit "${child.unitOfMeasure ?? ''}" under parent ${node.id}) — defaulting to 1. ` +
+            `Verify this product's qty_base after migrating.`
+          );
+        }
         const immediateFactor = cfFactor ?? child.conversionFactor ?? 1;
+        // A conversion_factors row means "1 parent unit = factor child units"
+        // (see lib/family-sync.ts findUltimateRoot). childCumulative is
+        // therefore how many of THIS child's unit make up one root/base unit.
         const childCumulative = cumulativeFactor * (immediateFactor || 1);
 
         const sellingUnitId = generateId();
@@ -105,8 +149,12 @@ export function computeSellingUnitsPlan(
           id: sellingUnitId,
           rootProductId: root.id,
           sourceProductId: child.id,
-          unitName: child.unitOfMeasure || 'Unit',
-          qtyBase: childCumulative,
+          unitName: resolveUnitName(root.id, child.unitOfMeasure || 'Unit'),
+          // qty_base = how many BASE units one of this unit equals. The root
+          // stays the base (qty_base = 1) and is the bigger unit, so a
+          // descendant is worth 1/composed-factor of a base unit — e.g. with
+          // 1 Box = 12 Piece, one Piece is 1/12 of a Box.
+          qtyBase: 1 / childCumulative,
           barcode: resolveBarcode(child.barcode, child.id),
           cost: child.cost,
           price: child.price,
@@ -125,6 +173,20 @@ export function computeSellingUnitsPlan(
     };
 
     walk(root, 1);
+  }
+
+  // Every input product must end up represented by exactly one selling unit.
+  // A parent_id cycle (or a parent_id pointing at a missing row) would leave a
+  // product unreachable from any root and silently orphan it — fail loudly
+  // instead of migrating a partial picture.
+  const covered = new Set(sellingUnits.map(u => u.sourceProductId));
+  const orphaned = products.filter(p => !covered.has(p.id)).map(p => p.id);
+  if (orphaned.length > 0) {
+    throw new Error(
+      `selling-units migration planner: ${orphaned.length} product(s) were not reachable from any root ` +
+      `and would be silently dropped: ${orphaned.join(', ')}. ` +
+      `This usually means a parent_id cycle or a parent_id pointing at a non-existent product.`
+    );
   }
 
   return { sellingUnits, deletedProductIds, reassignments };

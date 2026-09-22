@@ -38,7 +38,7 @@ CREATE TABLE product_selling_units (
   id VARCHAR(50) PRIMARY KEY,
   product_id VARCHAR(50) NOT NULL,        -- FK -> products(id) ON DELETE CASCADE
   unit_name VARCHAR(100) NOT NULL,
-  qty_base DECIMAL(10,4) NOT NULL,        -- how many base-stock units this equals
+  qty_base DECIMAL(14,6) NOT NULL,        -- how many base-stock units this equals (fractional for units smaller than the base)
   barcode VARCHAR(100) NOT NULL,
   cost DECIMAL(10,2),                     -- reference/display only, see Decisions
   price DECIMAL(10,2) NOT NULL,           -- default price (paired with the default price_level)
@@ -124,7 +124,7 @@ Re-architected to not depend on `parent_id`/`conversion_factors`:
 Run once, in a migration script, per existing parent (a product with `conversion_factors` rows and/or children pointing at it via `parent_id`):
 
 1. Create the parent's base selling unit from its own current `barcode`/`cost`/`price`/`unit_of_measure` (`qty_base = 1`, `is_base = true`).
-2. For each direct child: create an additional selling unit on the **parent**, with `qty_base` = the child's `conversion_factor` (or the matching `conversion_factors.factor` row on the parent for that child's unit — the research found these can disagree; the `conversion_factors` table value wins, since `lib/family-sync.ts` treats it as authoritative today), `barcode`/`cost`/`price` carried over from the child's own row.
+2. For each direct child: create an additional selling unit on the **parent**, with `barcode`/`cost`/`price` carried over from the child's own row, and `qty_base` = **`1 / (composed conversion factor from the root down to that child)`**. A `conversion_factors` row means "1 *parent* unit = `factor` *child* units" (see `lib/family-sync.ts`'s `findUltimateRoot`: `1 Sugar25kg = 50 Sugar500g`), i.e. the factor counts the *smaller* unit — so the child's `qty_base`, which must express how many *base* units one child unit equals, is the **inverse** of that factor, not the factor itself. Concretely: the root/parent stays the base unit at `qty_base = 1`, and if 1 Box = 12 Piece then the Piece unit gets `qty_base = 1/12`. The factor source is the matching `conversion_factors.factor` row on the parent for that child's unit, falling back to the child's own `conversion_factor` scalar (the research found these can disagree; the `conversion_factors` table value wins, since `lib/family-sync.ts` treats it as authoritative today). For deeper levels the factors compose multiplicatively before being inverted — a grandchild under `1 root = 12 mid` and `1 mid = 5 grandchild` gets `qty_base = 1/60`.
 3. Re-point the child's `inventory_batches` rows to the parent's `product_id`, tagging them with the new `selling_unit_id`.
 4. Re-point `sales_items`/`purchase_order_items` rows referencing the child's `product_id` to the parent's `product_id` + the new `selling_unit_id` (with the unit-name/qty_base snapshot columns backfilled).
 5. Delete the child's `products` row.

@@ -11,7 +11,7 @@ const migration: Migration = {
         id VARCHAR(50) NOT NULL,
         product_id VARCHAR(50) NOT NULL,
         unit_name VARCHAR(100) NOT NULL,
-        qty_base DECIMAL(10,4) NOT NULL,
+        qty_base DECIMAL(14,6) NOT NULL,
         barcode VARCHAR(100) NOT NULL,
         cost DECIMAL(10,2) DEFAULT NULL,
         price DECIMAL(10,2) NOT NULL,
