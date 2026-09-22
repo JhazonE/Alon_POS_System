@@ -116,6 +116,18 @@ import './116_create_product_selling_unit_prices';
 import './117_add_selling_unit_to_sale_items';
 import './118_add_selling_unit_to_purchase_order_items';
 import './119_add_selling_unit_to_inventory_batches';
+// migrateUp() runs migrations in this import order, NOT sorted by timestamp or
+// filename (only migrateDown() uses timestamp). 121-127 add the selling_unit_id
+// columns that 120's data migration writes to, so they must be registered
+// BEFORE 120 despite the higher numeric prefix. Their timestamps still sort
+// before 120's, which keeps migrateDown() rolling 120 back first.
+import './121_add_selling_unit_to_stock_movements';
+import './122_add_selling_unit_to_sales_invoice_items';
+import './123_add_selling_unit_to_pos_transaction_items';
+import './124_add_selling_unit_to_stock_adjustments';
+import './125_add_selling_unit_to_bad_order_items';
+import './126_add_selling_unit_to_sales_order_items';
+import './127_add_selling_unit_to_stock_count_items';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions
