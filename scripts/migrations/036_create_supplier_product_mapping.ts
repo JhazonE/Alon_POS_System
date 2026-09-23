@@ -3,7 +3,7 @@ import { query } from '../../lib/mysql';
 
 const migration: Migration = {
   name: '036_create_supplier_product_mapping',
-  timestamp: new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-'),
+  timestamp: '2026-01-16_10-00-00',
 
   async up(): Promise<void> {
     const createTable = `
