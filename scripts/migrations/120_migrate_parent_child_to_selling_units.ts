@@ -95,6 +95,7 @@ const migration: Migration = {
         root_product_id VARCHAR(50) NOT NULL,
         selling_unit_id VARCHAR(50) NOT NULL,
         qty_base_used VARCHAR(50) NOT NULL,
+        batches_json JSON NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
       )
@@ -136,23 +137,26 @@ const migration: Migration = {
       // --- Preflight guard: refuse to merge a child with an unsafe qty_base ---
       //
       // qty_base is used as a divisor when converting a child's inventory_batches
-      // unit_cost into root-equivalent terms (see convertChildUnitCostToBase). A
-      // qty_base <= 0 only happens on pre-existing bad conversion-factor data
-      // (e.g. a missing or inverted conversion_factors row) — fail loudly rather
-      // than divide by zero or silently flip a cost's sign. This runs before the
+      // unit_cost into root-equivalent terms (see the inline `unit_cost / ?`
+      // conversion below). A qty_base that isn't a positive finite number only
+      // happens on pre-existing bad conversion-factor data (e.g. a missing,
+      // zero, or inverted conversion_factors row — a factor of 0 makes qty_base
+      // `1 / 0 = Infinity`, and `Infinity <= 0` is false, so a plain `<= 0` check
+      // alone would miss it) — fail loudly rather than divide by zero, produce
+      // NaN/Infinity, or silently flip a cost's sign. This runs before the
       // INSERT/UPDATE/DELETE loops below, so the throw aborts the transaction
       // with nothing written.
       const unsafeQtyBase: string[] = [];
       for (const unit of plan.sellingUnits) {
-        if (!unit.isBase && unit.qtyBase <= 0) {
+        if (!unit.isBase && (!Number.isFinite(unit.qtyBase) || unit.qtyBase <= 0)) {
           unsafeQtyBase.push(`${unit.sourceProductId} (qty_base=${unit.qtyBase})`);
         }
       }
       if (unsafeQtyBase.length > 0) {
         throw new Error(
-          `Migration 120 aborted: ${unsafeQtyBase.length} child product(s) have a qty_base <= 0, which cannot be ` +
-          `safely used to convert stock/batch cost into root-equivalent terms (likely a bad or missing ` +
-          `conversion_factors row). Nothing was written. Affected products:\n  ${unsafeQtyBase.join('\n  ')}\n` +
+          `Migration 120 aborted: ${unsafeQtyBase.length} child product(s) have a qty_base that is not a positive ` +
+          `finite number, which cannot be safely used to convert stock/batch cost into root-equivalent terms ` +
+          `(likely a bad or missing conversion_factors row). Nothing was written. Affected products:\n  ${unsafeQtyBase.join('\n  ')}\n` +
           `Fix the underlying conversion_factors data before re-running.`
         );
       }
@@ -174,6 +178,16 @@ const migration: Migration = {
       // outside the loop, since the schema doesn't change mid-transaction.
       const hasProductPriceLevels = await tableExists(connection, 'product_price_levels');
 
+      // Captured per-child below, right before its inventory_batches rows are
+      // converted, so down() can restore the exact pre-migration values
+      // verbatim instead of trying to reverse the arithmetic (see the backup
+      // INSERT and down() further below for why: quantity_in/quantity_remaining/
+      // unit_cost are DECIMAL(14,4), so up()'s conversion has already rounded
+      // them by the time they're stored — arithmetic reversal of an
+      // already-rounded number can't recover the original exactly whenever the
+      // quantity isn't a clean multiple of the conversion factor).
+      const originalBatchesByChildId = new Map<string, any[]>();
+
       for (const r of plan.reassignments) {
         const qtyBase = sellingUnitById.get(r.sellingUnitId)!.qtyBase;
 
@@ -192,11 +206,32 @@ const migration: Migration = {
           [convertChildQuantityToBase(childStock, qtyBase), r.toRootProductId]
         );
 
+        // Capture the child's inventory_batches rows EXACTLY as they are right
+        // now, before the conversion below touches them — this is what down()
+        // will write back verbatim, so it doesn't matter that the forward
+        // conversion is about to round them.
+        const [childBatchRows]: any = await connection.query(
+          'SELECT * FROM inventory_batches WHERE product_id = ?',
+          [r.fromProductId]
+        );
+        originalBatchesByChildId.set(r.fromProductId, childBatchRows);
+
         // Convert and re-point the child's inventory_batches in one statement.
         // quantity_in/quantity_remaining scale up by qtyBase; unit_cost scales
         // down by the same factor so total peso value (qty * unit_cost) is
         // preserved. The same batch id + received_date are kept, so FIFO order
         // against the root's own pre-existing batches is unaffected.
+        //
+        // Accepted, bounded tradeoff: quantity_in/quantity_remaining/unit_cost
+        // are DECIMAL(14,4), so whenever a quantity isn't an exact multiple of
+        // the conversion factor (e.g. 1 piece of a 12-pack, qtyBase = 1/12),
+        // this rounds to 4 decimal places and total peso value (qty * unit_cost)
+        // is preserved only up to that rounding (sub-centavo for ordinary item
+        // costs) — same class of tradeoff as qty_base's own DECIMAL(14,6)
+        // precision limit (see product_selling_units above), not fixed here
+        // since it would require widening inventory_batches' own schema, a
+        // foundational table (FIFO deduction, receipts, reports) that's out of
+        // this task's scope.
         await connection.query(
           `UPDATE inventory_batches
            SET product_id = ?, selling_unit_id = ?,
@@ -296,11 +331,12 @@ const migration: Migration = {
         );
         const r = plan.reassignments.find(x => x.fromProductId === deletedId)!;
         const qtyBaseUsed = sellingUnitById.get(r.sellingUnitId)!.qtyBase;
+        const originalBatches = originalBatchesByChildId.get(deletedId) ?? [];
 
         await connection.query(
-          `INSERT INTO migration_120_backup (id, product_json, conversion_factors_json, root_product_id, selling_unit_id, qty_base_used)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [deletedId, JSON.stringify(productRow), JSON.stringify(cfForThisProduct), r.toRootProductId, r.sellingUnitId, String(qtyBaseUsed)]
+          `INSERT INTO migration_120_backup (id, product_json, conversion_factors_json, root_product_id, selling_unit_id, qty_base_used, batches_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [deletedId, JSON.stringify(productRow), JSON.stringify(cfForThisProduct), r.toRootProductId, r.sellingUnitId, String(qtyBaseUsed), JSON.stringify(originalBatches)]
         );
 
         await connection.query('DELETE FROM products WHERE id = ?', [deletedId]);
@@ -356,22 +392,33 @@ const migration: Migration = {
             // (rounded) number than the one that produced these values, corrupting
             // the round trip. String(jsNumber) round-trips back to the exact same
             // double via Number(), sidestepping any DECIMAL column precision limit.
-            const qtyBase = row.qty_base_used ? Number(row.qty_base_used) : 1;
+            // qty_base_used is NOT NULL and every row this migration ever writes
+            // sets it, so a missing value here means the backup row is corrupted
+            // or foreign to this migration — fail loudly rather than silently
+            // apply a wrong (fallback) factor to the products.stock reversal below.
+            if (!row.qty_base_used) {
+              throw new Error(`migration_120_backup row ${id} is missing qty_base_used`);
+            }
+            const qtyBase = Number(row.qty_base_used);
 
-            // Reverse the batch conversion done in up(): divide quantities back
-            // down, multiply unit_cost back up, and un-repoint to the restored
-            // child. Scoped to (root_product_id, selling_unit_id) so only the
-            // batches that came from THIS child are touched, not the root's own
-            // or another merged sibling's.
-            await connection.query(
-              `UPDATE inventory_batches
-               SET product_id = ?, selling_unit_id = NULL,
-                   quantity_in = quantity_in / ?,
-                   quantity_remaining = quantity_remaining / ?,
-                   unit_cost = unit_cost * ?
-               WHERE product_id = ? AND selling_unit_id = ?`,
-              [id, qtyBase, qtyBase, qtyBase, row.root_product_id, row.selling_unit_id]
-            );
+            // Restore the child's inventory_batches rows verbatim from the exact
+            // pre-migration snapshot captured in up(), rather than reversing the
+            // forward conversion arithmetically. quantity_in/quantity_remaining/
+            // unit_cost are DECIMAL(14,4), so up()'s conversion already rounded
+            // them on the way in whenever the quantity wasn't an exact multiple
+            // of the conversion factor — arithmetic reversal of an
+            // already-rounded stored value can't recover the original exactly in
+            // that case. Restoring the captured original bytes is exact by
+            // construction regardless of what rounding happened forward. Only
+            // the four columns up() ever touches are restored; nothing else in
+            // this file modifies inventory_batches, so no other column needs it.
+            const originalBatches = parseJsonColumn(row.batches_json);
+            for (const b of originalBatches) {
+              await connection.query(
+                'UPDATE inventory_batches SET product_id = ?, selling_unit_id = NULL, quantity_in = ?, quantity_remaining = ?, unit_cost = ? WHERE id = ?',
+                [id, b.quantity_in, b.quantity_remaining, b.unit_cost, b.id]
+              );
+            }
 
             // Reverse the stock merge: subtract the same converted amount that
             // up() added, using the child's original stock value already
