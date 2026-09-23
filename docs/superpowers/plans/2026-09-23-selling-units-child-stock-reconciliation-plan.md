@@ -419,20 +419,22 @@ mysql -h 127.0.0.1 -u root -p123700 alon_pos_real_scratch < "backups/backup-stoc
 
 Expected: import completes with no errors (this file is a full `mysqldump`-style dump — it creates its own tables, so `schema.sql` is not applied separately here).
 
-- [ ] **Step 2: Capture pre-migration totals per family**
+- [ ] **Step 2: Capture pre-migration totals**
+
+Two numbers matter here, and only two — not a per-family hand-reconciliation, which would require scaling each child's stock by its own `qty_base` before summing (different children under one root can have different factors), and that `qty_base` doesn't exist until the migration computes it. Capture instead:
+
+1. The **global** batch value across the whole database — this must come out exactly unchanged after `up()`, because the migration only ever converts-and-repoints existing `inventory_batches` rows, never creates or destroys value.
+2. Each root-with-children's **own** pre-migration stock (not the children's — that's reconciled post-hoc in Step 4 using data the migration itself records).
 
 ```bash
 mysql -h 127.0.0.1 -u root -p123700 alon_pos_real_scratch -e "
-SELECT p.id AS root_id, p.stock AS root_stock_before,
-  (SELECT COALESCE(SUM(stock),0) FROM products c WHERE c.parent_id = p.id) AS children_stock_before,
-  (SELECT COALESCE(SUM(ib.quantity_remaining * ib.unit_cost),0) FROM inventory_batches ib WHERE ib.product_id = p.id) AS root_batch_value_before,
-  (SELECT COALESCE(SUM(ib2.quantity_remaining * ib2.unit_cost),0) FROM inventory_batches ib2 JOIN products c2 ON ib2.product_id = c2.id WHERE c2.parent_id = p.id) AS children_batch_value_before
-FROM products p WHERE p.parent_id IS NULL AND EXISTS (SELECT 1 FROM products c3 WHERE c3.parent_id = p.id);
-" > /tmp/family-totals-before.txt
-cat /tmp/family-totals-before.txt
+SELECT SUM(quantity_remaining * unit_cost) AS global_batch_value_before FROM inventory_batches;
+SELECT id, stock AS stock_before FROM products WHERE id IN (SELECT DISTINCT parent_id FROM products WHERE parent_id IS NOT NULL);
+" > /tmp/before.txt
+cat /tmp/before.txt
 ```
 
-Note the printed values — Step 4 recomputes the same totals after migrating and compares by hand (or with a short `tsx` script if there are many families) for each root: `root_stock_after` should equal `root_stock_before + children_stock_before` (each scaled by its own `qty_base`, which nets out to a plain sum only because `qty_base` was applied identically on both the stock and batch side — the important invariant is `root_batch_value_after == root_batch_value_before + children_batch_value_before`, not a raw stock sum, since `qty_base` scaling changes the *stock number* but never the *peso value*).
+Keep this file — Step 4 reads it back.
 
 - [ ] **Step 3: Run the migration and confirm the preflight no longer blocks**
 
@@ -442,19 +444,33 @@ npx tsx scripts/migrations/index.ts up
 
 Expected: no `Migration 120 aborted` error. Console shows the usual `✅ Migrated N selling unit(s) across M product(s); removed K legacy child product row(s)` line, with `K` close to 18 (the real dump's known child-product count).
 
-- [ ] **Step 4: Verify batch value is preserved per family and FIFO order is intact**
+- [ ] **Step 4: Verify global value conservation, per-root stock, and FIFO order**
 
 ```bash
 mysql -h 127.0.0.1 -u root -p123700 alon_pos_real_scratch -e "
-SELECT product_id, SUM(quantity_remaining * unit_cost) AS total_value_after
-FROM inventory_batches
-GROUP BY product_id
-ORDER BY product_id;
-" > /tmp/family-totals-after.txt
-cat /tmp/family-totals-after.txt
+SELECT SUM(quantity_remaining * unit_cost) AS global_batch_value_after FROM inventory_batches;
+"
 ```
 
-Expected: for every former root product, `total_value_after` equals that root's pre-migration batch value plus the sum of its former children's pre-migration batch value (from Step 2's `root_batch_value_before + children_batch_value_before`), within rounding tolerance (a few centavos across many fractional batches is acceptable — this is the same DECIMAL(14,6)/DECIMAL(14,4) rounding tradeoff already accepted for `qty_base` in the prior review).
+Expected: matches Step 2's `global_batch_value_before`, within rounding tolerance (a few centavos across many fractional batches is acceptable — the same DECIMAL(14,6)/DECIMAL(14,4) rounding tradeoff already accepted for `qty_base` in the prior review). This single number is the strongest correctness signal: it proves the migration moved and converted value without creating or destroying any of it, across every family at once.
+
+Per-root stock reconciliation uses `migration_120_backup` (each deleted child's original `product_json`, still present — `up()` doesn't drop this table) joined to `product_selling_units` (for the `qty_base` the migration actually used), so no manual per-child scaling is needed:
+
+```bash
+mysql -h 127.0.0.1 -u root -p123700 alon_pos_real_scratch -e "
+SELECT
+  b.root_product_id,
+  p.stock AS root_stock_after,
+  SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(b.product_json, '$.stock')) AS DECIMAL(15,4)) * su.qty_base) AS expected_children_contribution
+FROM migration_120_backup b
+JOIN product_selling_units su ON su.id = b.selling_unit_id
+JOIN products p ON p.id = b.root_product_id
+GROUP BY b.root_product_id, p.stock;
+" > /tmp/after-stock.txt
+cat /tmp/after-stock.txt
+```
+
+For each `root_product_id`, look up its `stock_before` from `/tmp/before.txt` (Step 2) and confirm `root_stock_after` equals `stock_before + expected_children_contribution`, within rounding tolerance.
 
 ```bash
 mysql -h 127.0.0.1 -u root -p123700 alon_pos_real_scratch -e "
@@ -474,11 +490,11 @@ Expected: for any merged root with multiple batches, rows are listed in ascendin
 npx tsx scripts/migrations/index.ts down
 mysql -h 127.0.0.1 -u root -p123700 alon_pos_real_scratch -e "
 SELECT COUNT(*) AS product_count FROM products;
-SELECT SUM(quantity_remaining * unit_cost) AS total_batch_value FROM inventory_batches;
+SELECT SUM(quantity_remaining * unit_cost) AS global_batch_value_restored FROM inventory_batches;
 "
 ```
 
-Expected: `product_count` matches the original dump's product count (children restored), and `total_batch_value` matches the sum of Step 2's `root_batch_value_before + children_batch_value_before` across all families (global total preserved through a full up/down round trip).
+Expected: `product_count` matches the original dump's product count (children restored), and `global_batch_value_restored` matches Step 2's `global_batch_value_before` exactly (a full up/down round trip must be lossless).
 
 ```bash
 npx tsx scripts/migrations/index.ts up
@@ -491,12 +507,12 @@ Expected: migration 120 re-applies cleanly, leaving the scratch DB fully migrate
 ```bash
 mysql -h 127.0.0.1 -u root -p123700 -e "DROP DATABASE IF EXISTS alon_pos_real_scratch;"
 unset DB_NAME
-rm -f /tmp/family-totals-before.txt /tmp/family-totals-after.txt
+rm -f /tmp/before.txt /tmp/after-stock.txt
 ```
 
 - [ ] **Step 7: Record results**
 
-No commit — this task produces no code changes. Record in the task report: the exact per-family value-preservation numbers from Steps 2 and 4 (or a note that they matched within tolerance), the FIFO-order confirmation from Step 4, and the round-trip totals from Step 5.
+No commit — this task produces no code changes. Record in the task report: the global batch value before/after/restored (Steps 2, 4, 5), the per-root stock reconciliation table from Step 4 (each root's `stock_before + expected_children_contribution` vs `root_stock_after`), the FIFO-order confirmation from Step 4, and the round-trip product count from Step 5.
 
 ---
 
