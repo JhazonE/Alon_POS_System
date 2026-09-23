@@ -1,7 +1,7 @@
 import { registerMigration, Migration } from './runner';
 import { query, withTransaction } from '../../lib/mysql';
 import { toSafeNumber } from '../../lib/utils';
-import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput, convertChildQuantityToBase, convertChildUnitCostToBase } from '../../lib/selling-units-migration';
+import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput, convertChildQuantityToBase } from '../../lib/selling-units-migration';
 
 // MySQL JSON columns are auto-parsed by mysql2 (this pool never sets
 // jsonStrings — see lib/mysql.ts), so values read back from
@@ -94,6 +94,7 @@ const migration: Migration = {
         conversion_factors_json JSON NOT NULL,
         root_product_id VARCHAR(50) NOT NULL,
         selling_unit_id VARCHAR(50) NOT NULL,
+        qty_base_used VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
       )
@@ -294,11 +295,12 @@ const migration: Migration = {
           [deletedId]
         );
         const r = plan.reassignments.find(x => x.fromProductId === deletedId)!;
+        const qtyBaseUsed = sellingUnitById.get(r.sellingUnitId)!.qtyBase;
 
         await connection.query(
-          `INSERT INTO migration_120_backup (id, product_json, conversion_factors_json, root_product_id, selling_unit_id)
-           VALUES (?, ?, ?, ?, ?)`,
-          [deletedId, JSON.stringify(productRow), JSON.stringify(cfForThisProduct), r.toRootProductId, r.sellingUnitId]
+          `INSERT INTO migration_120_backup (id, product_json, conversion_factors_json, root_product_id, selling_unit_id, qty_base_used)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [deletedId, JSON.stringify(productRow), JSON.stringify(cfForThisProduct), r.toRootProductId, r.sellingUnitId, String(qtyBaseUsed)]
         );
 
         await connection.query('DELETE FROM products WHERE id = ?', [deletedId]);
@@ -346,11 +348,15 @@ const migration: Migration = {
               );
             }
 
-            const [[suRow]]: any = await connection.query(
-              'SELECT qty_base FROM product_selling_units WHERE id = ?',
-              [row.selling_unit_id]
-            );
-            const qtyBase = suRow ? toSafeNumber(suRow.qty_base) : 1;
+            // Use the exact-precision qty_base up() actually used (captured as a
+            // string in this backup row), not product_selling_units.qty_base —
+            // that column is DECIMAL(14,6), which rounds a non-terminating qty_base
+            // (e.g. 1/12) before up() ever converted these batches, so re-deriving
+            // the factor from it would reverse the conversion with a different
+            // (rounded) number than the one that produced these values, corrupting
+            // the round trip. String(jsNumber) round-trips back to the exact same
+            // double via Number(), sidestepping any DECIMAL column precision limit.
+            const qtyBase = row.qty_base_used ? Number(row.qty_base_used) : 1;
 
             // Reverse the batch conversion done in up(): divide quantities back
             // down, multiply unit_cost back up, and un-repoint to the restored
