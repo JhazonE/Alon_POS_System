@@ -191,3 +191,25 @@ export function computeSellingUnitsPlan(
 
   return { sellingUnits, deletedProductIds, reassignments };
 }
+
+/**
+ * Converts a quantity denominated in a child selling unit into root-equivalent
+ * base units, using the same qty_base factor computeSellingUnitsPlan already
+ * assigns that unit (how many base units one of this unit equals).
+ */
+export function convertChildQuantityToBase(quantity: number, qtyBase: number): number {
+  return quantity * qtyBase;
+}
+
+/**
+ * Converts a per-unit cost denominated in a child selling unit into a
+ * root-equivalent (base-unit) per-unit cost. Inverts qty_base (rather than
+ * multiplying, like the quantity conversion above) so that total peso value
+ * is preserved: (quantity * qtyBase) * (unitCost / qtyBase) === quantity * unitCost.
+ */
+export function convertChildUnitCostToBase(unitCost: number, qtyBase: number): number {
+  if (qtyBase <= 0) {
+    throw new Error(`Cannot convert unit cost with qty_base <= 0 (got ${qtyBase})`);
+  }
+  return unitCost / qtyBase;
+}

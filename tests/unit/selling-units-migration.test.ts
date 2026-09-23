@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput } from '../../lib/selling-units-migration';
+import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput, convertChildQuantityToBase, convertChildUnitCostToBase } from '../../lib/selling-units-migration';
 
 function makeIdGen(prefix: string) {
   let n = 0;
@@ -130,6 +130,42 @@ function assertClose(actual: number, expected: number, message: string) {
     /not reachable from any root/,
     'a parent_id cycle throws instead of orphaning products'
   );
+}
+
+// --- convertChildQuantityToBase: scales a child-unit quantity into base units ---
+{
+  assertClose(convertChildQuantityToBase(12, 1 / 12), 1, '12 child-units at qty_base=1/12 is 1 base unit');
+  assertClose(convertChildQuantityToBase(5, 1 / 144), 5 / 144, 'a very small fraction scales correctly');
+  assertClose(convertChildQuantityToBase(-8, 1 / 12), -8 / 12, 'negative quantities are merged mechanically, not blocked');
+  assert.equal(convertChildQuantityToBase(0, 1 / 12), 0, 'zero quantity converts to zero');
+}
+
+// --- convertChildUnitCostToBase: inverts the scale so total peso value is preserved ---
+{
+  assertClose(convertChildUnitCostToBase(10, 1 / 12), 120, 'unit_cost divides by qty_base (10 / (1/12) = 120)');
+  assertClose(convertChildUnitCostToBase(1, 1 / 144), 144, 'a very small fraction still inverts correctly');
+  assert.throws(
+    () => convertChildUnitCostToBase(10, 0),
+    /qty_base <= 0/,
+    'qty_base = 0 throws instead of dividing by zero'
+  );
+  assert.throws(
+    () => convertChildUnitCostToBase(10, -1),
+    /qty_base <= 0/,
+    'a negative qty_base throws — never a safe conversion factor'
+  );
+}
+
+// --- round-trip: converting a quantity/cost to base and back recovers the original ---
+{
+  const qty = 7;
+  const unitCost = 25.5;
+  const qtyBase = 1 / 12;
+  const baseQty = convertChildQuantityToBase(qty, qtyBase);
+  const baseCost = convertChildUnitCostToBase(unitCost, qtyBase);
+  assertClose(baseQty * baseCost, qty * unitCost, 'total peso value is preserved by the conversion');
+  assertClose(baseQty / qtyBase, qty, 'dividing back by qty_base recovers the original quantity (down() reversal)');
+  assertClose(baseCost * qtyBase, unitCost, 'multiplying back by qty_base recovers the original unit_cost (down() reversal)');
 }
 
 console.log('selling-units-migration: all assertions passed');
