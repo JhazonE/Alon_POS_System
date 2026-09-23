@@ -161,6 +161,29 @@ const migration: Migration = {
         );
       }
 
+      // Non-aborting warning: a qty_base > 1 for a non-base unit is outside the
+      // planner's own model — the root is always defined as the bigger/base unit
+      // (qty_base = 1), so every descendant should be a FRACTION of one base unit.
+      // This only happens on bad/inverted conversion_factors data (a common,
+      // pre-existing data-quality issue this migration does not attempt to fix —
+      // see the design spec's out-of-scope note). Warn loudly rather than abort:
+      // aborting here would reintroduce the exact all-or-nothing blocking this
+      // plan was built to remove (in real data, MOST families can have at least
+      // one suspect factor). The operator should verify the flagged families'
+      // conversion_factors before trusting the migrated result — global batch
+      // value conservation alone cannot catch this class of error, since
+      // multiplying quantity and dividing cost by the SAME factor preserves total
+      // value even when the factor itself is wrong.
+      const suspectQtyBase = plan.sellingUnits.filter(u => !u.isBase && u.qtyBase > 1);
+      if (suspectQtyBase.length > 0) {
+        console.warn(
+          `⚠️  Migration 120: ${suspectQtyBase.length} selling unit(s) have qty_base > 1, which is outside the expected ` +
+          `model (the root should always be the bigger unit) — this usually means a bad or inverted conversion_factors ` +
+          `row. Migrating anyway, but VERIFY these before trusting the result:\n` +
+          suspectQtyBase.map(u => `  ${u.sourceProductId} (unit "${u.unitName}", qty_base=${u.qtyBase})`).join('\n')
+        );
+      }
+
       // Looked up per-reassignment below to convert that child's stock/batches.
       const sellingUnitById = new Map(plan.sellingUnits.map(u => [u.id, u]));
 
@@ -231,7 +254,10 @@ const migration: Migration = {
         // precision limit (see product_selling_units above), not fixed here
         // since it would require widening inventory_batches' own schema, a
         // foundational table (FIFO deduction, receipts, reports) that's out of
-        // this task's scope.
+        // this task's scope. Bound: roughly `5e-5 × base_unit_cost` per affected
+        // batch row (half the DECIMAL(14,4) rounding unit, 0.00005, times the
+        // converted unit cost) — e.g. a few thousandths of a peso on a ₱15 item,
+        // a few centavos on a ₱1000+ item.
         await connection.query(
           `UPDATE inventory_batches
            SET product_id = ?, selling_unit_id = ?,
@@ -396,10 +422,10 @@ const migration: Migration = {
             // sets it, so a missing value here means the backup row is corrupted
             // or foreign to this migration — fail loudly rather than silently
             // apply a wrong (fallback) factor to the products.stock reversal below.
-            if (!row.qty_base_used) {
-              throw new Error(`migration_120_backup row ${id} is missing qty_base_used`);
+            const qtyBase = row.qty_base_used ? Number(row.qty_base_used) : NaN;
+            if (!Number.isFinite(qtyBase) || qtyBase <= 0) {
+              throw new Error(`migration_120_backup row ${id} has an invalid qty_base_used: ${row.qty_base_used}`);
             }
-            const qtyBase = Number(row.qty_base_used);
 
             // Restore the child's inventory_batches rows verbatim from the exact
             // pre-migration snapshot captured in up(), rather than reversing the
@@ -410,10 +436,45 @@ const migration: Migration = {
             // already-rounded stored value can't recover the original exactly in
             // that case. Restoring the captured original bytes is exact by
             // construction regardless of what rounding happened forward. Only
-            // the four columns up() ever touches are restored; nothing else in
-            // this file modifies inventory_batches, so no other column needs it.
+            // the five columns up() ever touches (product_id, selling_unit_id,
+            // quantity_in, quantity_remaining, unit_cost) are restored; nothing
+            // else in this file modifies inventory_batches, so no other column
+            // needs it.
+            //
+            // IMPORTANT: this restore is ABSOLUTE, not a delta — it writes back
+            // the pre-migration snapshot regardless of what happened to the batch
+            // since up() ran. This is only correct if no inventory activity (a
+            // sale, an adjustment, etc.) touched a merged batch between up() and
+            // down(). If it did, that activity's effect on THIS batch's
+            // quantity_remaining is silently discarded/resurrected here — unlike
+            // the products.stock reversal a few lines below, which IS delta-based
+            // (`stock = stock - ?`) and so correctly reflects interim activity.
+            // This asymmetry is inherent to choosing byte-exact restoration over
+            // arithmetic reversal (see the fix history in this file's git log) and
+            // is a known, accepted limitation of rolling back after live use — not
+            // unique to this migration, but real. The warning below gives an
+            // operator a chance to notice before it happens silently. If a batch
+            // row was deleted entirely after up(), the UPDATE below simply matches
+            // zero rows and no-ops for that one batch.
             const originalBatches = parseJsonColumn(row.batches_json);
             for (const b of originalBatches) {
+              const [[currentBatch]]: any = await connection.query(
+                'SELECT quantity_remaining FROM inventory_batches WHERE id = ?',
+                [b.id]
+              );
+              if (currentBatch) {
+                const expectedCurrent = toSafeNumber(b.quantity_remaining) * qtyBase;
+                const actualCurrent = toSafeNumber(currentBatch.quantity_remaining);
+                if (Math.abs(actualCurrent - expectedCurrent) > 0.01) {
+                  console.warn(
+                    `⚠️  Migration 120 rollback: batch ${b.id} (restoring to product ${id}) shows signs of activity since up() ` +
+                    `ran — its current quantity_remaining (${actualCurrent}) doesn't match what up()'s conversion would have ` +
+                    `produced from the original value (expected ~${expectedCurrent.toFixed(4)}). Restoring the ORIGINAL ` +
+                    `pre-migration value (${b.quantity_remaining}) verbatim, discarding whatever happened since up(). Verify ` +
+                    `this is intended.`
+                  );
+                }
+              }
               await connection.query(
                 'UPDATE inventory_batches SET product_id = ?, selling_unit_id = NULL, quantity_in = ?, quantity_remaining = ?, unit_cost = ? WHERE id = ?',
                 [id, b.quantity_in, b.quantity_remaining, b.unit_cost, b.id]

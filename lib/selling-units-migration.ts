@@ -131,14 +131,19 @@ export function computeSellingUnitsPlan(
       const children = childrenOf.get(node.id) || [];
       for (const child of children) {
         const cfFactor = cfMap.get(`${node.id}::${child.unitOfMeasure || ''}`);
-        if (cfFactor == null && child.conversionFactor == null) {
+        const immediateFactor = cfFactor ?? child.conversionFactor ?? 1;
+        // A factor of exactly 0 is NOT null — it would silently sail past a
+        // null-only check here and then get coerced to 1 by the `|| 1` below,
+        // which is exactly the kind of bad-data case this warning exists to
+        // catch. Warn on either: no factor was found at all (null in both
+        // sources), OR one WAS found but it's unusable (falsy, i.e. 0).
+        if ((cfFactor == null && child.conversionFactor == null) || !immediateFactor) {
           console.warn(
-            `⚠️  selling-units migration: no conversion factor found for child product ${child.id} ` +
+            `⚠️  selling-units migration: no usable conversion factor found for child product ${child.id} ` +
             `(unit "${child.unitOfMeasure ?? ''}" under parent ${node.id}) — defaulting to 1. ` +
             `Verify this product's qty_base after migrating.`
           );
         }
-        const immediateFactor = cfFactor ?? child.conversionFactor ?? 1;
         // A conversion_factors row means "1 parent unit = factor child units"
         // (see lib/family-sync.ts findUltimateRoot). childCumulative is
         // therefore how many of THIS child's unit make up one root/base unit.

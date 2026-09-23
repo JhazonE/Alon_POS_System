@@ -31,7 +31,7 @@ No runtime application code changes. `lib/family-sync.ts`, checkout, and the Add
 | How to merge `products.stock` | **Additive, independent of the batch merge.** `products.stock` and `inventory_batches` are two separately-maintained signals elsewhere in this codebase (confirmed in `lib/stock-movements.ts` — e.g. `sale` movements don't route through the same batch-sync branch as `adjustment`/`transfer`/`return`), so this migration treats them the same way: `root.stock += childStock × qty_base`, computed independently of the batch conversion, not derived from it. |
 | Negative child stock (3 real products in the backup dump) | **Merge mechanically regardless of sign.** This migration's job is to preserve whatever numbers exist, not to fix unrelated pre-existing data-quality bugs (same posture already taken toward the real SUGAR-family `conversion_factors` bug documented in the prior review — flagged, not fixed, here). |
 | Preflight guard | **Narrowed, not removed.** Still aborts (before any write) if a child's `qty_base` is `<= 0` — dividing a cost by zero or a negative factor is not a safe mechanical conversion, and this only happens on the same class of pre-existing bad conversion-factor data already flagged as out of scope. No longer aborts merely because a child has nonzero stock or batches — that is now the expected, handled case. |
-| Rollback | **Fully reversible**, using the same data `down()` already backs up. The batch and stock conversions are inverted using the child's `qty_base` (looked up from `product_selling_units` before it is deleted at the end of `down()`) and the child's original `stock` value (already stored in `migration_120_backup.product_json`). |
+| Rollback | **Fully reversible**, using the same data `down()` already backs up. **As shipped** (corrected during implementation, after two review rounds found the originally-planned approach had two independent precision-loss sources): `down()` restores each child's `inventory_batches` rows **verbatim** from a JSON snapshot (`migration_120_backup.batches_json`) captured before conversion, rather than reversing the forward math — `inventory_batches`' own `DECIMAL(14,4)` columns round on the way in during `up()`, so arithmetic reversal of an already-rounded value can't recover the exact original. The `stock` reversal (a single scalar per child, not multiple rows) IS still done via reversal math, using the exact double captured as a string in `migration_120_backup.qty_base_used` — not `product_selling_units.qty_base`, which is a second, independent `DECIMAL(14,6)`-rounded source and would reverse with a different number than the one `up()` actually used. |
 
 ## Conversion math
 
@@ -53,8 +53,10 @@ WHERE product_id = ?
 ```
 (`?` = `qtyBase`, bound for both quantity columns and once more, inverted, for `unit_cost`.) This preserves each batch's `id` and `received_date` (FIFO order is unaffected) and preserves total peso value: `qty × unitCost` before conversion equals `(qty × qtyBase) × (unitCost / qtyBase)` after.
 
-**Rollback**, per restored child (run before `product_selling_units` rows are deleted, so `qty_base` is still resolvable by `selling_unit_id`):
+**Rollback — as shipped (corrected during implementation, not the query below):** the batch reversal is NOT the arithmetic query originally sketched here. `inventory_batches`' `DECIMAL(14,4)` columns round on the way in during `up()`, so dividing/multiplying back out (as the query below would do) cannot recover the exact pre-migration values whenever a quantity wasn't an exact multiple of the conversion factor — this was caught in review after initial implementation. What actually ships instead: `down()` restores each child's original `inventory_batches` rows **verbatim** from a JSON snapshot (`migration_120_backup.batches_json`) captured immediately before `up()`'s conversion touches them, keyed by batch `id`. The arithmetic form below is kept here only as a record of the originally-planned (and superseded) approach:
 ```sql
+-- SUPERSEDED — not what down() does. Batches are restored verbatim from
+-- migration_120_backup.batches_json instead (see prose above).
 UPDATE inventory_batches
 SET product_id = ?, selling_unit_id = NULL,
     quantity_in = quantity_in / ?,
@@ -62,6 +64,7 @@ SET product_id = ?, selling_unit_id = NULL,
     unit_cost = unit_cost * ?
 WHERE product_id = ? AND selling_unit_id = ?
 ```
+The `stock` reversal is a single scalar per child (not multiple rows), and IS still done via reversal math exactly as below, using the exact double captured as a string in `migration_120_backup.qty_base_used` (not `product_selling_units.qty_base`, a second, independently-rounded `DECIMAL(14,6)` source):
 ```
 root.stock -= backedUpChildStock × qtyBase
 ```
@@ -81,7 +84,7 @@ export function convertChildUnitCostToBase(unitCost: number, qtyBase: number): n
 }
 ```
 
-The migration script calls these for clarity/testability at the call sites that build the SQL parameters, even though the actual scaling happens in the `UPDATE` statement itself (both must agree — the unit tests are the guarantee they do).
+**As shipped, this is asymmetric — intentionally, not an oversight.** Only `convertChildQuantityToBase` is actually imported and called in the migration, for the single-value `products.stock` merge (one call per merged child). `convertChildUnitCostToBase` remains exported and unit-tested — it documents and verifies the cost-conversion formula in isolation — but is **not** invoked from `up()`/`down()`: the `inventory_batches` cost conversion is done as inline SQL (`unit_cost / ?`) inside the same bulk `UPDATE` that also scales `quantity_in`/`quantity_remaining`, because batches are N rows per child (bulk SQL is the efficient shape there) while stock is exactly 1 value per child (a single JS-level call is simplest there). This split was a deliberate call made during Task 2 of implementation, not a drift from the plan below.
 
 ## Testing
 
