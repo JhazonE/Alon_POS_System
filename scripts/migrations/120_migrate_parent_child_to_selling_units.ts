@@ -1,7 +1,7 @@
 import { registerMigration, Migration } from './runner';
 import { query, withTransaction } from '../../lib/mysql';
 import { toSafeNumber } from '../../lib/utils';
-import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput } from '../../lib/selling-units-migration';
+import { computeSellingUnitsPlan, MigrationProductInput, MigrationConversionFactorInput, convertChildQuantityToBase, convertChildUnitCostToBase } from '../../lib/selling-units-migration';
 
 // MySQL JSON columns are auto-parsed by mysql2 (this pool never sets
 // jsonStrings — see lib/mysql.ts), so values read back from
@@ -132,45 +132,32 @@ const migration: Migration = {
 
       const plan = computeSellingUnitsPlan(products, conversionFactors, generateId);
 
-      // --- Preflight guard: refuse to merge a child that carries its own stock ---
+      // --- Preflight guard: refuse to merge a child with an unsafe qty_base ---
       //
-      // A child being folded into its root may have its own independently
-      // tracked products.stock and its own inventory_batches, denominated in
-      // the child's unit at the child's own cost. This migration does not yet
-      // know how to fold that into the root's single stock/FIFO ledger: not
-      // re-pointing those batches silently loses the inventory, and re-pointing
-      // them without converting quantity/cost silently corrupts the root's FIFO
-      // ledger. Reconciling child stock is a known, deliberately deferred
-      // follow-up (review findings I1/I2) that needs its own design pass.
-      //
-      // Until then, fail loudly BEFORE any write rather than corrupt data. This
-      // runs before the INSERT/UPDATE/DELETE loops below, so the throw aborts
-      // the transaction with nothing written.
-      const blocked: string[] = [];
-      for (const deletedId of plan.deletedProductIds) {
-        const [[stockRow]]: any = await connection.query(
-          'SELECT stock FROM products WHERE id = ?',
-          [deletedId]
-        );
-        const childStock = stockRow?.stock == null ? 0 : toSafeNumber(stockRow.stock);
-        const [[batchRow]]: any = await connection.query(
-          'SELECT COUNT(*) AS cnt FROM inventory_batches WHERE product_id = ? AND quantity_remaining <> 0',
-          [deletedId]
-        );
-        const batchCount = Number(batchRow?.cnt ?? 0);
-        if (childStock !== 0 || batchCount > 0) {
-          blocked.push(`${deletedId} (stock=${childStock}, batches with remaining qty=${batchCount})`);
+      // qty_base is used as a divisor when converting a child's inventory_batches
+      // unit_cost into root-equivalent terms (see convertChildUnitCostToBase). A
+      // qty_base <= 0 only happens on pre-existing bad conversion-factor data
+      // (e.g. a missing or inverted conversion_factors row) — fail loudly rather
+      // than divide by zero or silently flip a cost's sign. This runs before the
+      // INSERT/UPDATE/DELETE loops below, so the throw aborts the transaction
+      // with nothing written.
+      const unsafeQtyBase: string[] = [];
+      for (const unit of plan.sellingUnits) {
+        if (!unit.isBase && unit.qtyBase <= 0) {
+          unsafeQtyBase.push(`${unit.sourceProductId} (qty_base=${unit.qtyBase})`);
         }
       }
-      if (blocked.length > 0) {
+      if (unsafeQtyBase.length > 0) {
         throw new Error(
-          `Migration 120 aborted: ${blocked.length} child product(s) to be merged into their root still carry ` +
-          `independently tracked stock, which this migration does not yet know how to reconcile into the root's ` +
-          `single stock/FIFO ledger (known deferred follow-up — see review findings I1/I2 and the selling-product-units ` +
-          `design spec). Nothing was written. Affected products:\n  ${blocked.join('\n  ')}\n` +
-          `Zero out or manually reconcile these children's stock and inventory_batches before re-running.`
+          `Migration 120 aborted: ${unsafeQtyBase.length} child product(s) have a qty_base <= 0, which cannot be ` +
+          `safely used to convert stock/batch cost into root-equivalent terms (likely a bad or missing ` +
+          `conversion_factors row). Nothing was written. Affected products:\n  ${unsafeQtyBase.join('\n  ')}\n` +
+          `Fix the underlying conversion_factors data before re-running.`
         );
       }
+
+      // Looked up per-reassignment below to convert that child's stock/batches.
+      const sellingUnitById = new Map(plan.sellingUnits.map(u => [u.id, u]));
 
       for (const unit of plan.sellingUnits) {
         await connection.query(
@@ -187,9 +174,36 @@ const migration: Migration = {
       const hasProductPriceLevels = await tableExists(connection, 'product_price_levels');
 
       for (const r of plan.reassignments) {
+        const qtyBase = sellingUnitById.get(r.sellingUnitId)!.qtyBase;
+
+        // Merge the child's own stock counter into the root's, converted to
+        // base units. products.stock and inventory_batches are independently
+        // maintained elsewhere in this codebase (lib/stock-movements.ts), so
+        // this addition is separate from the batch conversion below, not
+        // derived from it.
+        const [[childProductRow]]: any = await connection.query(
+          'SELECT stock FROM products WHERE id = ?',
+          [r.fromProductId]
+        );
+        const childStock = childProductRow?.stock == null ? 0 : toSafeNumber(childProductRow.stock);
         await connection.query(
-          `UPDATE inventory_batches SET product_id = ?, selling_unit_id = ? WHERE product_id = ?`,
-          [r.toRootProductId, r.sellingUnitId, r.fromProductId]
+          'UPDATE products SET stock = stock + ? WHERE id = ?',
+          [convertChildQuantityToBase(childStock, qtyBase), r.toRootProductId]
+        );
+
+        // Convert and re-point the child's inventory_batches in one statement.
+        // quantity_in/quantity_remaining scale up by qtyBase; unit_cost scales
+        // down by the same factor so total peso value (qty * unit_cost) is
+        // preserved. The same batch id + received_date are kept, so FIFO order
+        // against the root's own pre-existing batches is unaffected.
+        await connection.query(
+          `UPDATE inventory_batches
+           SET product_id = ?, selling_unit_id = ?,
+               quantity_in = quantity_in * ?,
+               quantity_remaining = quantity_remaining * ?,
+               unit_cost = unit_cost / ?
+           WHERE product_id = ?`,
+          [r.toRootProductId, r.sellingUnitId, qtyBase, qtyBase, qtyBase, r.fromProductId]
         );
         await connection.query(
           `UPDATE sale_items
@@ -332,9 +346,34 @@ const migration: Migration = {
               );
             }
 
+            const [[suRow]]: any = await connection.query(
+              'SELECT qty_base FROM product_selling_units WHERE id = ?',
+              [row.selling_unit_id]
+            );
+            const qtyBase = suRow ? toSafeNumber(suRow.qty_base) : 1;
+
+            // Reverse the batch conversion done in up(): divide quantities back
+            // down, multiply unit_cost back up, and un-repoint to the restored
+            // child. Scoped to (root_product_id, selling_unit_id) so only the
+            // batches that came from THIS child are touched, not the root's own
+            // or another merged sibling's.
             await connection.query(
-              'UPDATE inventory_batches SET product_id = ?, selling_unit_id = NULL WHERE product_id = ? AND selling_unit_id = ?',
-              [id, row.root_product_id, row.selling_unit_id]
+              `UPDATE inventory_batches
+               SET product_id = ?, selling_unit_id = NULL,
+                   quantity_in = quantity_in / ?,
+                   quantity_remaining = quantity_remaining / ?,
+                   unit_cost = unit_cost * ?
+               WHERE product_id = ? AND selling_unit_id = ?`,
+              [id, qtyBase, qtyBase, qtyBase, row.root_product_id, row.selling_unit_id]
+            );
+
+            // Reverse the stock merge: subtract the same converted amount that
+            // up() added, using the child's original stock value already
+            // captured in this backup row.
+            const backedUpChildStock = productData.stock == null ? 0 : toSafeNumber(productData.stock);
+            await connection.query(
+              'UPDATE products SET stock = stock - ? WHERE id = ?',
+              [convertChildQuantityToBase(backedUpChildStock, qtyBase), row.root_product_id]
             );
             await connection.query(
               'UPDATE sale_items SET product_id = ?, selling_unit_id = NULL, selling_unit_name = NULL, selling_unit_qty_base = NULL WHERE product_id = ? AND selling_unit_id = ?',
