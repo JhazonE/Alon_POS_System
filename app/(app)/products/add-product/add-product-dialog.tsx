@@ -18,6 +18,7 @@ import { AddProductFormProvider } from './add-product-form-context';
 import { BasicInfoTab } from './tabs/basic-info-tab';
 import { InventoryTab } from './tabs/inventory-tab';
 import { SellingUnitsTab } from './tabs/selling-units-tab';
+import { SuppliersTab } from './tabs/suppliers-tab';
 import { LoyaltyTab } from './tabs/loyalty-tab';
 
 export function AddProductDialog(props: UseAddProductFormProps) {
@@ -111,6 +112,14 @@ export function AddProductDialog(props: UseAddProductFormProps) {
                           {tabErrors.sellingUnits && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
                         </TabsTrigger>
                       )}
+                      {itemType === 'standard' && (
+                        <TabsTrigger
+                          value="suppliers"
+                          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
+                        >
+                          Suppliers
+                        </TabsTrigger>
+                      )}
                       <TabsTrigger
                         value="loyalty"
                         className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
@@ -127,6 +136,11 @@ export function AddProductDialog(props: UseAddProductFormProps) {
                     {itemType === 'standard' && (
                       <TabsContent value="selling-units" className="space-y-4 p-6">
                         <SellingUnitsTab />
+                      </TabsContent>
+                    )}
+                    {itemType === 'standard' && (
+                      <TabsContent value="suppliers" className="space-y-4 p-6">
+                        <SuppliersTab />
                       </TabsContent>
                     )}
                     <TabsContent value="loyalty" className="space-y-4 p-6">
