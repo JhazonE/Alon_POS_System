@@ -2212,8 +2212,22 @@ export async function deleteSupplierMapping(id: string) {
 
 export async function getSupplierMappings(productId: string) {
   try {
+    // Column aliases match the camelCase `SupplierProductMapping` shape the
+    // UI renders (product-suppliers.tsx) — `spm.*` alone would return raw
+    // snake_case columns and every field but supplierName would render blank.
     const sql = `
-      SELECT spm.*, s.name as supplierName 
+      SELECT
+        spm.id,
+        spm.product_id as productId,
+        spm.supplier_id as supplierId,
+        s.name as supplierName,
+        spm.supplier_sku as supplierSku,
+        spm.supplier_lead_time as supplierLeadTime,
+        spm.supplier_specific_rop as supplierSpecificRop,
+        spm.supplier_cost as supplierCost,
+        spm.is_primary as isPrimary,
+        spm.created_at as createdAt,
+        spm.updated_at as updatedAt
       FROM supplier_product_mapping spm
       JOIN suppliers s ON spm.supplier_id = s.id
       WHERE spm.product_id = ?
