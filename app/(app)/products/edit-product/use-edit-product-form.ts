@@ -228,8 +228,11 @@ export function useEditProductForm({
   };
 
   const selectedSupplierId = form.watch('supplier');
-  const costValue = form.watch('cost');
-  const watchedCost = form.watch('cost');
+  // Cost now lives on the base selling-unit row (index 0 — toFormSellingUnits
+  // always sorts the base unit first, and addSellingUnit only appends;
+  // nothing in this form reorders rows), not the top-level `cost` field,
+  // which no input writes to for a standard product anymore.
+  const watchedBaseCost = form.watch('sellingUnits.0.cost' as any) as number | undefined;
   const watchedPrice = form.watch('price');
   const watchedCategoryName = form.watch('category');
   const watchedSubcategoryName = form.watch('subcategory');
@@ -321,17 +324,22 @@ export function useEditProductForm({
 
     if (source) {
       setMarkupSource(`Calculated from ${source} Markup (${markup}%)`);
-      if (watchedCost && watchedCost > 0) {
+      if (watchedBaseCost && watchedBaseCost > 0) {
           // Calculate base price and default level price
           const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
-          const suggestedMainPrice = calculateSuggestedPrice(watchedCost, markup, 0, defaultLevel);
+          const suggestedMainPrice = calculateSuggestedPrice(watchedBaseCost, markup, 0, defaultLevel);
 
-          form.setValue('price', parseFloat(suggestedMainPrice.toFixed(2)));
+          if (defaultLevel) {
+            form.setValue(
+              `sellingUnits.0.prices.${defaultLevel.id}.price` as any,
+              parseFloat(suggestedMainPrice.toFixed(2)),
+            );
+          }
       }
     } else {
       setMarkupSource(null);
     }
-  }, [watchedCost, watchedCategoryName, watchedSubcategoryName, watchedBrandName, selectedSupplierId, categories, subcategories, brands, suppliers, form, priceLevels, systemSettings, isInitialized]);
+  }, [watchedBaseCost, watchedCategoryName, watchedSubcategoryName, watchedBrandName, selectedSupplierId, categories, subcategories, brands, suppliers, form, priceLevels, systemSettings, isInitialized]);
 
   // Auto-update main price when a price level is selected
   useEffect(() => {
