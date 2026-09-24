@@ -83,6 +83,64 @@ export function sellingUnitsSuperRefine(
 }
 
 /**
+ * One supplier-mapping row. Field names match what `addProduct` in actions.ts
+ * reads positionally off `formData.supplierMappings[]` — do not rename these
+ * to match the DB column names or the `SupplierProductMapping` read-side type
+ * in lib/types.ts, both of which use different names.
+ */
+export const supplierMappingSchema = z.object({
+  supplierId: z.string().min(1, 'Supplier is required'),
+  supplierSku: z.string().optional(),
+  leadTime: z.coerce.number().int().nonnegative().default(0),
+  rop: z.coerce.number().int().nonnegative().default(0),
+  cost: z.coerce.number().min(0).optional(),
+  isPrimary: z.boolean().default(false),
+});
+
+export type SupplierMappingValues = z.infer<typeof supplierMappingSchema>;
+
+/**
+ * Structural rules the per-row schema cannot express: at most one primary
+ * row, and no supplier mapped twice (the table's UNIQUE KEY (product_id,
+ * supplier_id) would otherwise surface as a raw DB error on save).
+ */
+export function supplierMappingsSuperRefine(
+  mappings: SupplierMappingValues[] | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  if (!mappings || mappings.length === 0) return;
+
+  const primaryIndexes = mappings
+    .map((m, i) => (m.isPrimary ? i : -1))
+    .filter((i) => i >= 0);
+
+  if (primaryIndexes.length > 1) {
+    for (const i of primaryIndexes.slice(1)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supplierMappings', i, 'isPrimary'],
+        message: 'Only one supplier can be marked primary.',
+      });
+    }
+  }
+
+  const seen = new Map<string, number>();
+  mappings.forEach((m, i) => {
+    const key = m.supplierId;
+    if (!key) return;
+    if (seen.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supplierMappings', i, 'supplierId'],
+        message: 'This supplier is already mapped to this product.',
+      });
+    } else {
+      seen.set(key, i);
+    }
+  });
+}
+
+/**
  * Fields shared by every product type.
  *
  * Note the field is `itemType`. The old `productType` parent/child family
@@ -124,6 +182,7 @@ const standardProductSchema = baseProductSchema.extend({
   sellingUnits: z.array(sellingUnitSchema)
     .min(1, 'At least one selling unit (the base unit) is required'),
   isPerishable: z.boolean().optional(),
+  supplierMappings: z.array(supplierMappingSchema).optional(),
 });
 
 /**
@@ -155,6 +214,7 @@ const serviceProductSchema = baseProductSchema.extend({
   shelfLocationIds: z.undefined(),
   sellingUnits: z.undefined(),
   isPerishable: z.undefined(),
+  supplierMappings: z.undefined(),
 });
 
 export const productSchema = z
@@ -162,6 +222,7 @@ export const productSchema = z
   .superRefine((values, ctx) => {
     if (values.itemType !== 'standard') return;
     sellingUnitsSuperRefine(values.sellingUnits, ctx);
+    supplierMappingsSuperRefine(values.supplierMappings, ctx);
   });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
