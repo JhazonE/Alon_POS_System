@@ -45,11 +45,17 @@ test.describe('Edit product', () => {
 });
 
 test.describe('Product Suppliers tab', () => {
-  test('admin makadugang ug supplier mapping sa product', async ({ page, request }) => {
+  test('admin makadugang ug supplier mapping sa product', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
 
-    await openRowMenu(page, EDITABLE_PRODUCT.sku, EDITABLE_PRODUCT.name);
+    // I-search pinaagi sa SKU ra — ang laing test niini nga file ("Edit product")
+    // usab og-usab sa ngalan sa EDITABLE_PRODUCT, mao nga dili ni mo-depend sa
+    // current name aron dili ma-break kung ma-ayo ra na nga laing test.
+    await page.getByPlaceholder('Search products...').fill(EDITABLE_PRODUCT.sku);
+    const row = page.getByRole('row', { name: new RegExp(EDITABLE_PRODUCT.sku) });
+    await expect(row).toBeVisible();
+    await row.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('menuitem', { name: 'Edit Product' }).click();
 
     const dialog = page.getByRole('dialog');
@@ -67,17 +73,38 @@ test.describe('Product Suppliers tab', () => {
     await page.getByRole('option', { name: TEST_SUPPLIER.name }).click();
     await mappingDialog.getByLabel('Lead Time (Days)').fill('5');
     await mappingDialog.getByLabel('Reorder Point').fill('20');
+    await mappingDialog.getByLabel('Cost (₱)').fill('123.45');
     await mappingDialog.getByRole('button', { name: 'Save' }).click();
 
     await expect(mappingDialog).toBeHidden();
-    await expect(dialog.getByText(TEST_SUPPLIER.name)).toBeVisible();
-    await expect(dialog.getByText('5 days')).toBeVisible();
 
-    // I-verify nga na-persist sa DB pinaagi sa server action's underlying table.
-    const res = await request.get(`/api/products?search=${EDITABLE_PRODUCT.sku}&limit=50`);
+    const mappingRow = dialog.getByRole('row', { name: new RegExp(TEST_SUPPLIER.name) });
+    await expect(mappingRow).toBeVisible();
+    await expect(mappingRow.getByText('5 days')).toBeVisible();
+    await expect(mappingRow.getByText('20')).toBeVisible();
+    await expect(mappingRow.getByText('₱123.45')).toBeVisible();
+    // Not yet primary — no "0" leaking from a non-boolean isPrimary value,
+    // and no Primary badge.
+    await expect(mappingRow.getByText('0', { exact: true })).not.toBeVisible();
+    await expect(mappingRow.getByText('Primary', { exact: true })).not.toBeVisible();
+
+    // Star the mapping primary — this propagates its ROP (20) onto the
+    // product's own reorder_point via setPrimarySupplier.
+    await mappingRow.getByRole('button').first().click();
+    const confirmPrimary = page.getByRole('alertdialog');
+    await expect(confirmPrimary.getByText('Change Primary Supplier?')).toBeVisible();
+    await confirmPrimary.getByRole('button', { name: 'Confirm Change' }).click();
+    await expect(confirmPrimary).toBeHidden();
+    await expect(mappingRow.getByText('Primary', { exact: true })).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+    // I-verify nga na-propagate ang ROP (20) sa product mismo, dili NULL.
+    const res = await page.request.get(`/api/products?search=${EDITABLE_PRODUCT.sku}&limit=50`);
     const body = await res.json();
     const match = (body.data ?? []).find((p: any) => p.sku === EDITABLE_PRODUCT.sku);
     expect(match, 'product kinahanglan naa gihapon').toBeTruthy();
+    expect(Number(match.reorderPoint ?? match.reorder_point)).toBe(20);
   });
 });
 

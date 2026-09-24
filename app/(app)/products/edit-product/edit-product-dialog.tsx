@@ -144,7 +144,15 @@ export function EditProductDialog({
                       )}
                       {product?.type !== 'service' && (
                         <TabsContent value="suppliers" className="space-y-4 p-6">
-                          <ProductSuppliers productId={product.id} onUpdate={onProductUpdated} />
+                          {/* No onUpdate here: ProductSuppliers already refreshes its own
+                              table via loadData() after every mutation. Wiring onUpdate to
+                              onProductUpdated would refetch the parent product list while
+                              this dialog is still open — use-edit-product-form.ts's
+                              form.reset effect depends on `product`, so a changed row
+                              reference mid-session would wipe any unsaved edits on every
+                              other tab. The parent list still refreshes normally when
+                              Save Changes closes this dialog. */}
+                          <ProductSuppliers productId={product.id} />
                         </TabsContent>
                       )}
                       <TabsContent value="loyalty" className="space-y-4 p-6">

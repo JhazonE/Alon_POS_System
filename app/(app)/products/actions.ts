@@ -2224,7 +2224,7 @@ export async function getSupplierMappings(productId: string) {
         spm.supplier_sku as supplierSku,
         spm.supplier_lead_time as supplierLeadTime,
         spm.supplier_specific_rop as supplierSpecificRop,
-        spm.supplier_cost as supplierCost,
+        CAST(spm.supplier_cost AS DOUBLE) as supplierCost,
         spm.is_primary as isPrimary,
         spm.created_at as createdAt,
         spm.updated_at as updatedAt
@@ -2232,7 +2232,12 @@ export async function getSupplierMappings(productId: string) {
       JOIN suppliers s ON spm.supplier_id = s.id
       WHERE spm.product_id = ?
     `;
-    return await query(sql, [productId]);
+    const rows: any[] = await query(sql, [productId]);
+    // MySQL has no native boolean — is_primary comes back as 0/1 through
+    // mysql2 even with a `= 1` boolean expression in SQL. Coerce here so
+    // `mapping.isPrimary && <Badge/>` in product-suppliers.tsx renders
+    // nothing for a falsy row instead of the literal text "0".
+    return rows.map((row) => ({ ...row, isPrimary: !!row.isPrimary }));
   } catch (error) {
     console.error('Error fetching supplier mappings:', error);
     return [];
@@ -2248,9 +2253,14 @@ export async function setPrimarySupplier(productId: string, mappingId: string) {
       // 2. Set new primary mapping
       await connection.query('UPDATE supplier_product_mapping SET is_primary = 1 WHERE id = ?', [mappingId]);
       
-      // 3. Get the ROP from the new primary mapping
-      const [mapping]: any = await connection.query('SELECT supplier_specific_rop FROM supplier_product_mapping WHERE id = ?', [mappingId]);
-      
+      // 3. Get the ROP from the new primary mapping.
+      // connection.query() is the raw PoolConnection API — unlike the query()
+      // helper in lib/mysql.ts, it does NOT unwrap to rows and returns
+      // [rows, fields]. Destructuring straight to `[mapping]` binds `mapping`
+      // to the rows array itself (always truthy), so `mapping.supplier_specific_rop`
+      // was always undefined and this silently wrote NULL to reorder_point.
+      const [[mapping]]: any = await connection.query('SELECT supplier_specific_rop FROM supplier_product_mapping WHERE id = ?', [mappingId]);
+
       if (mapping) {
         // 4. Update the product's main reorder point
         await connection.query('UPDATE products SET reorder_point = ? WHERE id = ?', [mapping.supplier_specific_rop, productId]);
