@@ -4,14 +4,12 @@ import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnitOfMeasure } from '@/lib/types';
-import type { Supplier } from '@/lib/types';
 
 import { useAddProductFormContext } from '../add-product-form-context';
 import { InlineEditableSelect } from '../../components/inline-editable-select';
 import { InlineEditableMultiSelect } from '../../components/inline-editable-multi-select';
 import {
   addDepartment, updateDepartment,
-  addSupplier, updateSupplier, getSuppliers,
   addWarehouse, updateWarehouse, getWarehouses,
   addShelfLocation, updateShelfLocation, getShelfLocations,
   addUnitOfMeasure, updateUnitOfMeasure,
@@ -23,13 +21,11 @@ export function InventoryTab() {
     itemType,
     departments, isLoadingDepartments,
     taxRates,
-    suppliers, isLoadingSuppliers,
     warehouses, isLoadingWarehouses,
     shelfLocations,
     unitsOfMeasure, isLoadingUnits,
     selects, setSelects,
     refreshDepartments,
-    refreshSuppliers,
     refreshWarehouses,
     refreshShelfLocations,
     refreshUnits,
@@ -228,50 +224,6 @@ export function InventoryTab() {
           )}
         />
 
-        {itemType === 'standard' && (
-          <FormField
-            control={form.control}
-            name="supplier"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Supplier (Optional)</FormLabel>
-                <InlineEditableSelect
-                  items={suppliers}
-                  isLoading={isLoadingSuppliers}
-                  value={field.value}
-                  onChange={field.onChange}
-                  open={selects.suppliers}
-                  onOpenChange={(o) => setSelects((p) => ({ ...p, suppliers: o }))}
-                  placeholder="Select a supplier"
-                  addLabel="Add Supplier"
-                  emptyLabel="No suppliers found"
-                  getId={(s: Supplier) => s.id}
-                  getValue={(s: Supplier) => s.id}
-                  getOptionLabel={(s: Supplier) => s.name}
-                  getName={(s: Supplier) => s.name}
-                  onAdd={async (name) => {
-                    const r = await addSupplier({ name });
-                    if (r.success) {
-                      await refreshSuppliers();
-                      const fresh = await getSuppliers();
-                      const created = fresh.find((s) => s.name === name);
-                      return created?.id;
-                    }
-                    return undefined;
-                  }}
-                  onRename={async (id, name) => {
-                    const existing = suppliers.find((s: Supplier) => s.id === id);
-                    if (!existing) return undefined;
-                    const r = await updateSupplier(id, { ...existing, name });
-                    if (r.success) { await refreshSuppliers(); return id; }
-                    return undefined;
-                  }}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
       </div>
 
       {/* Unit of measure now lives on the base selling-unit row — one source of
