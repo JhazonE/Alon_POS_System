@@ -24,7 +24,7 @@ import {
   getShelfLocations,
   getDepartments,
 } from '../actions';
-import { productSchema, type ProductFormValues, type SellingUnitValues } from './product-schema';
+import { productSchema, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
 
 function getCurrentUid(): string {
   if (typeof window === 'undefined') return 'system';
@@ -147,6 +147,7 @@ export function useAddProductForm({
       sellingUnits: [
         { unitName: '', qtyBase: 1, barcode: '', cost: undefined, isBase: true, prices: {} },
       ],
+      supplierMappings: [],
       earnsPoints: true,
       isPerishable: false,
     },
@@ -156,6 +157,31 @@ export function useAddProductForm({
     control: form.control as any,
     name: 'sellingUnits',
   });
+
+  const { fields: supplierMappingFields, append: appendSupplierMapping, remove: removeSupplierMappingRow } = useFieldArray({
+    control: form.control as any,
+    name: 'supplierMappings',
+  });
+
+  const addSupplierMapping = () =>
+    appendSupplierMapping({
+      supplierId: '',
+      supplierSku: '',
+      leadTime: 0,
+      rop: 0,
+      cost: undefined,
+      isPrimary: false,
+    } as any);
+
+  const removeSupplierMapping = (index: number) => removeSupplierMappingRow(index);
+
+  /** Marks one row primary and clears the flag on every other row. */
+  const setPrimarySupplierRow = (index: number) => {
+    const rows = (form.getValues('supplierMappings' as any) as SupplierMappingValues[] | undefined) ?? [];
+    rows.forEach((_, i) => {
+      form.setValue(`supplierMappings.${i}.isPrimary` as any, i === index, { shouldDirty: true });
+    });
+  };
 
   const watchedSellingUnits = form.watch('sellingUnits' as any) as SellingUnitValues[] | undefined;
   const baseUnitIndex = Math.max(0, (watchedSellingUnits ?? []).findIndex((u) => u?.isBase));
@@ -243,6 +269,7 @@ export function useAddProductForm({
       form.setValue('shelfLocationIds', undefined);
       form.setValue('sellingUnits' as any, undefined);
       form.setValue('isPerishable', undefined);
+      form.setValue('supplierMappings' as any, undefined);
     } else {
       // Switching back from Service: the array above was cleared, so restore a
       // blank base row or the Selling Units tab renders with nothing in it.
@@ -266,7 +293,9 @@ export function useAddProductForm({
   const watchedCategoryName = form.watch('category');
   const watchedSubcategoryName = form.watch('subcategory');
   const watchedBrandName = form.watch('brand');
-  const watchedSupplierId = form.watch('supplier');
+  const watchedSupplierMappings = form.watch('supplierMappings' as any) as SupplierMappingValues[] | undefined;
+  const primarySupplierId = (watchedSupplierMappings ?? []).find((m) => m?.isPrimary)?.supplierId
+    ?? (watchedSupplierMappings ?? [])[0]?.supplierId;
   const [markupSource, setMarkupSource] = useState<string | null>(null);
 
   useEffect(() => {
@@ -280,7 +309,7 @@ export function useAddProductForm({
             category: watchedCategoryName,
             subcategory: watchedSubcategoryName,
             brand: watchedBrandName,
-            supplierId: watchedSupplierId
+            supplierId: primarySupplierId
         },
         systemSettings,
         categories,
@@ -307,7 +336,7 @@ export function useAddProductForm({
       setMarkupSource(null);
     }
 
-  }, [watchedBaseCost, watchedCategoryName, watchedSubcategoryName, watchedBrandName, watchedSupplierId, categories, subcategories, brands, suppliers, form, priceLevels, systemSettings]);
+  }, [watchedBaseCost, watchedCategoryName, watchedSubcategoryName, watchedBrandName, primarySupplierId, categories, subcategories, brands, suppliers, form, priceLevels, systemSettings]);
 
   // Auto-update main price when a price level is selected
   useEffect(() => {
@@ -434,10 +463,14 @@ export function useAddProductForm({
         }
       }
 
+      const primaryMapping = (values as any).supplierMappings?.find((m: SupplierMappingValues) => m.isPrimary)
+        ?? (values as any).supplierMappings?.[0];
+
       const result = await addProduct(
         {
           ...values,
           itemType,
+          supplier: primaryMapping?.supplierId,
           price: mirroredPrice,
           cost: baseUnit?.cost ?? values.cost,
           barcode: baseUnit?.barcode ?? values.barcode,
@@ -535,6 +568,7 @@ export function useAddProductForm({
     // field arrays
     sellingUnitFields, appendSellingUnit, addSellingUnit, removeSellingUnit,
     baseUnitIndex, baseUnitName,
+    supplierMappingFields, addSupplierMapping, removeSupplierMapping, setPrimarySupplierRow,
 
     // derived values
     tabErrors,
