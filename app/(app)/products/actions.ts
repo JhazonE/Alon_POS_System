@@ -241,6 +241,43 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
       });
     });
 
+    // Selling units + their per-price-level prices, mapped by product id. Same
+    // fetch-all-then-group shape as cfMap/plMap above (this action is already a
+    // handful of unbounded reads; a third does not change its cost profile).
+    const sellingUnitRows = await query(
+      `SELECT id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order
+       FROM product_selling_units
+       ORDER BY product_id, sort_order, unit_name`,
+    );
+    const sellingUnitPriceRows = await query(
+      `SELECT selling_unit_id, price_level_id, price, min_quantity FROM product_selling_unit_prices`,
+    );
+
+    const suPriceMap = new Map<string, Record<string, { price: number; minQuantity?: number }>>();
+    sellingUnitPriceRows.forEach((r: any) => {
+      if (!suPriceMap.has(r.selling_unit_id)) suPriceMap.set(r.selling_unit_id, {});
+      suPriceMap.get(r.selling_unit_id)![r.price_level_id] = {
+        price: parseFloat(r.price),
+        minQuantity: r.min_quantity == null ? undefined : parseFloat(r.min_quantity),
+      };
+    });
+
+    const suMap = new Map<string, any[]>();
+    sellingUnitRows.forEach((r: any) => {
+      if (!suMap.has(r.product_id)) suMap.set(r.product_id, []);
+      suMap.get(r.product_id)!.push({
+        id: r.id,
+        unitName: r.unit_name,
+        qtyBase: parseFloat(r.qty_base),
+        barcode: r.barcode,
+        cost: r.cost == null ? undefined : parseFloat(r.cost),
+        price: parseFloat(r.price),
+        isBase: r.is_base === 1,
+        sortOrder: r.sort_order,
+        prices: suPriceMap.get(r.id) || {},
+      });
+    });
+
     const defaultPriceLevelSql = `SELECT id FROM price_levels WHERE is_default = 1 LIMIT 1`;
     const defaultPriceLevelResult = await query(defaultPriceLevelSql);
     const defaultLevelId = defaultPriceLevelResult.length > 0 ? defaultPriceLevelResult[0].id : 'retail-level';
@@ -278,6 +315,7 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
         parentId: product.parent_id,
         conversionFactor: product.conversion_factor,
         conversionFactors: cfMap.get(product.id) || [],
+        sellingUnits: suMap.get(product.id) || [],
         incomeAccount: product.income_account,
         expenseAccount: product.expense_account,
         supplier: product.primary_supplier_id || product.supplier_id,

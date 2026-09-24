@@ -1,7 +1,5 @@
 'use client';
 
-import { Wand2 } from 'lucide-react';
-
 import { Badge } from '@/components/ui/badge';
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -21,7 +19,6 @@ export function BasicInfoTab() {
     subcategories,
     setSelects,
     selects,
-    generateBarcode,
     refreshBrands,
     refreshCategories,
     refreshSubcategories,
@@ -96,43 +93,12 @@ export function BasicInfoTab() {
           control={form.control}
           name="sku"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="sm:col-span-2">
               <FormLabel>SKU</FormLabel>
               <FormControl>
                 <Input {...field} value={field.value ?? ''} readOnly className="bg-muted" />
               </FormControl>
               <FormDescription>SKU cannot be changed after creation.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="barcode"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Barcode (EAN-8)</FormLabel>
-              <div className="relative">
-                <FormControl>
-                  <Input
-                    placeholder="e.g., 123456789012"
-                    {...field}
-                    value={field.value ?? ''}
-                    className="pr-10"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') e.preventDefault();
-                    }}
-                  />
-                </FormControl>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
-                  onClick={generateBarcode}
-                >
-                  <Wand2 className="h-4 w-4" />
-                  <span className="sr-only">Generate Barcode</span>
-                </button>
-              </div>
               <FormMessage />
             </FormItem>
           )}

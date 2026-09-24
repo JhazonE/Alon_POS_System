@@ -280,10 +280,9 @@ export function InventoryTab() {
         )}
       </div>
 
-      {/* Warehouse and Shelf are stock-only, leaving Unit of Measure alone here
-          for a service. Two columns keeps it the same width as the fields
-          above rather than shrinking it to a third. Mirrors the Add form. */}
-      <div className={`grid grid-cols-1 gap-4 ${isServiceProduct ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+      {/* Unit of measure now lives on the base selling-unit row — one source of
+          truth, same treatment as barcode and cost. Mirrors the Add form. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {!isServiceProduct && (
         <FormField
           control={form.control}
@@ -367,50 +366,11 @@ export function InventoryTab() {
           )}
         />
         )}
-
-        <FormField
-          control={form.control}
-          name="unitOfMeasure"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Unit of Measure</FormLabel>
-              <InlineEditableSelect
-                items={units}
-                isLoading={false}
-                value={field.value}
-                onChange={field.onChange}
-                open={selects.units}
-                onOpenChange={(o) => setSelects((p) => ({ ...p, units: o }))}
-                placeholder="Select a unit"
-                addLabel="Add Unit"
-                emptyLabel="No units found"
-                getId={(u: UnitOfMeasure) => u.id}
-                getValue={(u: UnitOfMeasure) => u.name}
-                getOptionLabel={(u: UnitOfMeasure) => `${u.name} (${u.abbreviation})`}
-                getName={(u: UnitOfMeasure) => u.name}
-                onAdd={async (name) => {
-                  const r = await addUnitOfMeasure(name, name);
-                  if (r.success) { await refreshUnits(); return name; }
-                  return undefined;
-                }}
-                onRename={async (id, name) => {
-                  const existing = units.find((u: UnitOfMeasure) => u.id === id);
-                  const r = await updateUnitOfMeasure(id, name, existing?.abbreviation ?? name);
-                  if (r.success) { await refreshUnits(); return name; }
-                  return undefined;
-                }}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
       </div>
 
-      {/* Stock and Reorder Point are standard-only, leaving Cost alone here for
-          a service — kept at two columns so it lines up with every field
-          above it. Mirrors the Add form. */}
-      <div className={`grid grid-cols-1 gap-4 ${isServiceProduct ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-        {!isServiceProduct && (
+      {/* Cost now lives on the base selling unit row in the Selling Units tab —
+          one source of truth. Mirrors the Add form. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>Initial Stock</Label>
           <div>
@@ -418,8 +378,6 @@ export function InventoryTab() {
           </div>
           <p className="text-sm text-muted-foreground">Stock is updated via transactions.</p>
         </div>
-        )}
-        {!isServiceProduct && (
         <FormField
           control={form.control}
           name="reorderPoint"
@@ -428,22 +386,6 @@ export function InventoryTab() {
               <FormLabel>Reorder Point</FormLabel>
               <FormControl>
                 <Input type="number" placeholder="0" value={field.value != null ? formatQuantity(field.value) : ''} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        )}
-        <FormField
-          control={form.control}
-          name="cost"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between h-6">
-                <FormLabel>{isServiceProduct ? 'Cost (required)' : 'Cost (₱)'}</FormLabel>
-              </div>
-              <FormControl>
-                <Input type="number" step="0.01" placeholder="e.g., 50.00" value={field.value || ''} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
               </FormControl>
               <FormMessage />
             </FormItem>

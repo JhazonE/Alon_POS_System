@@ -5,7 +5,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { calculateMarkupPercentage, calculateSuggestedPrice } from '@/lib/purchase-utils';
-import { seedDefaultPriceLevel } from '@/lib/price-level-seed';
 import { applyPriceLevelAdjustment } from '@/lib/price-level-calc';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
@@ -24,7 +23,7 @@ import {
   getShelfLocations,
   getDepartments,
 } from '../actions';
-import { productSchema, type ProductFormValues } from './product-schema';
+import { productSchema, type ProductFormValues, type SellingUnitValues } from './product-schema';
 
 /**
  * Calculate the price for a price level override.
@@ -46,6 +45,49 @@ export function calculatePriceLevelPrice(
   if (basePrice === undefined || basePrice === null) return 0;
 
   return applyPriceLevelAdjustment(level.adjustmentType, level.percentageAdjustment, basePrice);
+}
+
+/**
+ * Maps a product's stored selling units onto the form shape.
+ *
+ * A service never gets units (its tab is hidden and updateProduct leaves the
+ * selling-unit tables alone when the field is absent). A standard product that
+ * somehow has no rows yet — one created before this feature, or one loaded by a
+ * caller that does not hydrate them (e.g. the inventory detail page's
+ * `<EditProductDialog product={product} />` at
+ * app/(app)/inventory/[productId]/page.tsx:110) — gets a synthesized base row
+ * from its scalar columns, so the tab is never blank and saving cannot
+ * silently wipe it.
+ */
+export function toFormSellingUnits(product: Product): any[] | undefined {
+  if (product?.type === 'service') return undefined;
+
+  const stored = product?.sellingUnits ?? [];
+  if (stored.length > 0) {
+    return stored
+      .slice()
+      .sort((a, b) => (a.isBase === b.isBase ? (a.sortOrder ?? 0) - (b.sortOrder ?? 0) : a.isBase ? -1 : 1))
+      .map((u) => ({
+        id: u.id,
+        unitName: u.unitName,
+        qtyBase: Number(u.qtyBase),
+        barcode: u.barcode ?? '',
+        cost: u.cost ?? undefined,
+        isBase: !!u.isBase,
+        prices: u.prices ?? {},
+      }));
+  }
+
+  return [
+    {
+      unitName: product?.unitOfMeasure ?? '',
+      qtyBase: 1,
+      barcode: product?.barcode ?? '',
+      cost: product?.cost ?? undefined,
+      isBase: true,
+      prices: {},
+    },
+  ];
 }
 
 export interface UseEditProductFormProps {
@@ -145,9 +187,7 @@ export function useEditProductForm({
       subcategory: product.subcategory ?? '', // Handle null
       supplier: product.supplier ?? '', // Handle null
       unitOfMeasure: product.unitOfMeasure ?? '', // Handle null
-      conversionFactor: product.conversionFactor ?? 1, // Handle null/0 by defaulting to 1
-      conversionFactors: product.conversionFactors || [],
-      priceLevels: product.priceLevels || [],
+      sellingUnits: toFormSellingUnits(product),
       vatStatus: product.vatStatus || 'YES (Subject to 12% VAT)',
       availability: product.availability || 'Available',
       earnsPoints: product.earnsPoints ?? true,
@@ -156,30 +196,50 @@ export function useEditProductForm({
     },
   });
 
-  const { fields: conversionFactorFields, append: appendConversionFactor, remove: removeConversionFactor } = useFieldArray({
-    control: form.control,
-    name: 'conversionFactors',
+  const { fields: sellingUnitFields, append: appendSellingUnit, remove: removeSellingUnit } = useFieldArray({
+    control: form.control as any,
+    name: 'sellingUnits',
   });
 
-  const { fields: priceLevelFields, append: appendPriceLevel, remove: removePriceLevel } = useFieldArray({
-    control: form.control,
-    name: "priceLevels",
-  });
+  const watchedSellingUnits = form.watch('sellingUnits' as any) as SellingUnitValues[] | undefined;
+  const baseUnitIndex = Math.max(0, (watchedSellingUnits ?? []).findIndex((u) => u?.isBase));
+  const baseUnitName = (watchedSellingUnits ?? [])[baseUnitIndex]?.unitName || '';
+
+  /** Appends a blank non-base row. qtyBase is deliberately left empty. */
+  const addSellingUnit = () =>
+    appendSellingUnit({
+      unitName: '',
+      qtyBase: undefined as unknown as number,
+      barcode: '',
+      cost: undefined,
+      isBase: false,
+      prices: {},
+    } as any);
+
+  /** EAN-8: 7 random digits + 1 check digit. */
+  const generateUnitBarcode = (index: number) => {
+    const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10));
+    const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+    const check = (10 - (sum % 10)) % 10;
+    form.setValue(`sellingUnits.${index}.barcode` as any, [...digits, check].join(''), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
 
   const selectedSupplierId = form.watch('supplier');
-  const selectedUnitOfMeasure = form.watch('unitOfMeasure');
   const costValue = form.watch('cost');
   const watchedCost = form.watch('cost');
   const watchedPrice = form.watch('price');
   const watchedCategoryName = form.watch('category');
   const watchedSubcategoryName = form.watch('subcategory');
   const watchedBrandName = form.watch('brand');
-  const formErrors = form.formState.errors;
+  const formErrors = form.formState.errors as any;
   const tabErrors = {
     basic: !!(formErrors.name || formErrors.brand || formErrors.sku || formErrors.description || formErrors.category),
+    // unitOfMeasure can still error here — a Service edits it on this tab.
     inventory: !!(formErrors.unitOfMeasure),
-    priceLevels: !!(formErrors.priceLevels),
-    conversion: !!(formErrors.conversionFactors),
+    sellingUnits: !!formErrors.sellingUnits,
   };
 
   // State for selected price level (for automatic price calculation)
@@ -202,9 +262,7 @@ export function useEditProductForm({
           subcategory: product.subcategory ?? '', // Handle null
           supplier: product.supplier ?? '', // Handle null
           unitOfMeasure: product.unitOfMeasure ?? '', // Handle null
-          conversionFactor: product.conversionFactor ?? 1, // Handle null/0 by defaulting to 1
-          conversionFactors: product.conversionFactors || [],
-          priceLevels: seedDefaultPriceLevel(product.priceLevels || [], priceLevels, product.price),
+          sellingUnits: toFormSellingUnits(product),
           vatStatus: product.vatStatus || 'YES (Subject to 12% VAT)',
           availability: product.availability || 'Available',
           earnsPoints: product.earnsPoints ?? true,
@@ -212,7 +270,6 @@ export function useEditProductForm({
           description: product.description ?? '',
           department: product.department ?? '',
       };
-      console.log('Resetting form with:', sanitizedProduct);
       form.reset(sanitizedProduct);
     }
     // priceLevels (level definitions) is deliberately NOT a dependency here —
@@ -339,56 +396,57 @@ export function useEditProductForm({
 
           form.setValue('price', parseFloat(finalPrice.toFixed(2)));
 
-          // ALSO update all price level fields automatically
-          if (priceLevelFields.length > 0) {
-            priceLevelFields.forEach((field, index) => {
-              const levelDef = priceLevels.find((l: any) => l.id === field.levelId);
-              if (levelDef) {
-                // Calculate price for each level
-                let levelPrice;
-                const levelMarkup = levelDef.percentageAdjustment ?? 0;
+          // ALSO fill every price-level column on the BASE selling unit row.
+          // Non-base rows keep whatever the user typed.
+          const units = (form.getValues('sellingUnits' as any) as SellingUnitValues[] | undefined) ?? [];
+          const idx = Math.max(0, units.findIndex((u) => u?.isBase));
+          priceLevels.forEach((levelDef: any) => {
+            let levelPrice: number;
+            const levelMarkup = levelDef.percentageAdjustment ?? 0;
 
-                if (levelDef.calculationBase === 'cost') {
-                    levelPrice = parseFloat((cost * (1 + levelMarkup / 100)).toFixed(2));
-                } else {
-                    // Retail Base
-                    if (levelMarkup === 0 && levelDef.name?.toLowerCase() === 'retail') {
-                        levelPrice = parseFloat(basePrice.toFixed(2));
-                    } else {
-                        levelPrice = parseFloat((basePrice * (1 + levelMarkup / 100)).toFixed(2));
-                    }
-                }
-                form.setValue(`priceLevels.${index}.price`, levelPrice);
+            if (levelDef.calculationBase === 'cost') {
+              levelPrice = parseFloat((cost * (1 + levelMarkup / 100)).toFixed(2));
+            } else {
+              // Retail Base
+              if (levelMarkup === 0 && levelDef.name?.toLowerCase() === 'retail') {
+                levelPrice = parseFloat(basePrice.toFixed(2));
+              } else {
+                levelPrice = parseFloat((basePrice * (1 + levelMarkup / 100)).toFixed(2));
               }
-            });
-          }
+            }
+            form.setValue(`sellingUnits.${idx}.prices.${levelDef.id}.price` as any, levelPrice);
+          });
         }
       }
     }
-  }, [selectedPriceLevelId, priceLevels, priceLevelFields, form, categories, subcategories, brands, systemSettings]);
-
-  const generateBarcode = () => {
-    // EAN-8: 7 random digits + 1 check digit
-    const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10));
-    const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
-    const check = (10 - (sum % 10)) % 10;
-    form.setValue('barcode', [...digits, check].join(''));
-  };
+  }, [selectedPriceLevelId, priceLevels, form, categories, subcategories, brands, systemSettings]);
 
   const saveChanges = async (values: ProductFormValues) => {
-    console.log('EditProductDialog saveChanges called with values:', values);
-    // Filter out conversion factors with empty units to avoid schema validation errors
-    values.conversionFactors = values.conversionFactors?.filter(cf => cf.unit.trim() !== '') || [];
     try {
       setIsSubmitting(true);
 
-      const result = await updateProduct(product.id, values);
+      // The base selling unit is the single source of truth for the product's
+      // scalar price/cost/barcode/unit_of_measure columns. Mirror them here;
+      // updateProduct re-derives the same values server-side as the
+      // authoritative pass. A service submits no sellingUnits, so its own
+      // Inventory-tab values pass through untouched.
+      const units = (values as any).sellingUnits as SellingUnitValues[] | undefined;
+      const baseUnit = units?.find((u) => u.isBase) ?? units?.[0];
+      const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
 
-      console.log('updateProduct result:', result);
+      let mirroredPrice = values.price;
+      if (baseUnit && defaultLevel) {
+        const entered = Number(baseUnit.prices?.[defaultLevel.id]?.price ?? NaN);
+        if (Number.isFinite(entered) && entered > 0) mirroredPrice = entered;
+      }
 
-      // MOCK API CAILL
-      // console.log('API Disabled: Mock Save Success');
-      // const result = { success: true, message: 'Mock saved successfully' };
+      const result = await updateProduct(product.id, {
+        ...values,
+        price: mirroredPrice,
+        cost: baseUnit ? baseUnit.cost : values.cost,
+        barcode: baseUnit ? baseUnit.barcode : values.barcode,
+        unitOfMeasure: baseUnit?.unitName || values.unitOfMeasure,
+      } as any);
 
       if (result.success) {
         await logActivity({
@@ -459,18 +517,17 @@ export function useEditProductForm({
     selects, setSelects,
 
     // field arrays
-    conversionFactorFields, appendConversionFactor, removeConversionFactor,
-    priceLevelFields, appendPriceLevel, removePriceLevel,
+    sellingUnitFields, appendSellingUnit, addSellingUnit, removeSellingUnit,
+    baseUnitIndex, baseUnitName,
 
     // watched / derived values
     selectedSupplierId,
-    selectedUnitOfMeasure,
     tabErrors,
     selectedPriceLevelId, setSelectedPriceLevelId,
     markupSource,
 
     // handlers
-    generateBarcode,
+    generateUnitBarcode,
     saveChanges,
     refreshBrands,
     refreshDepartments,

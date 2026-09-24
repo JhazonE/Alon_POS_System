@@ -43,18 +43,32 @@ export interface Product {
   shelfLocationNames?: string | null;
   shelfQuantities?: Record<string, number>;
 
-  // Parent/Child relationship
+  // Parent/Child relationship — legacy; superseded by sellingUnits. Still read
+  // by the products-list tree UI and lib/family-sync.ts until their own plans.
   parentId?: string | null;
   conversionFactor?: number;
 
-  // Conversion factors for different units
+  // Conversion factors for different units — legacy, see above.
   conversionFactors?: { unit: string; factor: number }[];
+
+  // Selling units (product_selling_units + product_selling_unit_prices)
+  sellingUnits?: {
+    id: string;
+    unitName: string;
+    qtyBase: number;
+    barcode: string;
+    cost?: number;
+    price: number;
+    isBase: boolean;
+    sortOrder: number;
+    prices: Record<string, { price: number; minQuantity?: number }>;
+  }[];
 
   // Timestamps
   createdAt?: string;
   updatedAt?: string;
 
-  // Price Levels
+  // Price Levels — legacy product_price_levels rows.
   priceLevels?: { levelId: string; price: number; minQuantity?: number }[];
 
   // Supplier Mapping
