@@ -21,7 +21,6 @@ export function BasicInfoTab() {
     refreshCategories,
     refreshSubcategories,
     generateSku,
-    generateBarcode,
   } = useAddProductFormContext();
 
   return (
@@ -77,12 +76,12 @@ export function BasicInfoTab() {
         )}
       />
 
-      {/* Row 2: SKU and Barcode */}
+      {/* Row 2: SKU (barcode now lives on the base selling unit) */}
       <FormField
         control={form.control}
         name="sku"
         render={({ field }) => (
-          <FormItem>
+          <FormItem className="col-span-2 sm:col-span-1">
             <FormLabel>SKU</FormLabel>
             <div className="relative">
               <FormControl>
@@ -101,30 +100,6 @@ export function BasicInfoTab() {
           </FormItem>
         )}
       />
-      <FormField
-        control={form.control}
-        name="barcode"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Barcode (EAN-8)</FormLabel>
-            <div className="relative">
-              <FormControl>
-                <Input placeholder="e.g., 123456789012" {...field} className="pr-10" />
-              </FormControl>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
-                onClick={generateBarcode}
-              >
-                <Wand2 className="h-4 w-4" />
-                <span className="sr-only">Generate Barcode</span>
-              </button>
-            </div>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
       {/* Row 3: Description and Additional Description */}
       <FormField
         control={form.control}

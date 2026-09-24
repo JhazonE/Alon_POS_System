@@ -24,7 +24,7 @@ import {
   getShelfLocations,
   getDepartments,
 } from '../actions';
-import { productSchema, type ProductFormValues } from './product-schema';
+import { productSchema, type ProductFormValues, type SellingUnitValues } from './product-schema';
 
 function getCurrentUid(): string {
   if (typeof window === 'undefined') return 'system';
@@ -73,11 +73,9 @@ export function useAddProductForm({
 }: UseAddProductFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [productType, setProductType] = useState<'parent' | 'child'>('parent');
-  // Standard vs Service. Distinct from `productType` above, which is the
-  // parent/child family selector.
+  // Standard vs Service. The old parent/child `productType` selector is gone —
+  // a product's units now live in its `sellingUnits` array, not in sibling rows.
   const [itemType, setItemType] = useState<ProductType>('standard');
-  const [autoCreateChild, setAutoCreateChild] = useState(true);
   const { toast } = useToast();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -146,32 +144,52 @@ export function useAddProductForm({
       cost: 0,
       sku: '',
       barcode: '',
-      conversionFactor: 1,
-      conversionFactors: [],
-      priceLevels: [],
+      sellingUnits: [
+        { unitName: '', qtyBase: 1, barcode: '', cost: undefined, isBase: true, prices: {} },
+      ],
       earnsPoints: true,
       isPerishable: false,
     },
   });
 
-  const { fields: conversionFactorFields, append: appendConversionFactor, remove: removeConversionFactor } = useFieldArray({
-    control: form.control,
-    name: "conversionFactors",
+  const { fields: sellingUnitFields, append: appendSellingUnit, remove: removeSellingUnit } = useFieldArray({
+    control: form.control as any,
+    name: 'sellingUnits',
   });
 
-  const { fields: priceLevelFields, append: appendPriceLevel, remove: removePriceLevel } = useFieldArray({
-    control: form.control,
-    name: "priceLevels",
-  });
+  const watchedSellingUnits = form.watch('sellingUnits' as any) as SellingUnitValues[] | undefined;
+  const baseUnitIndex = Math.max(0, (watchedSellingUnits ?? []).findIndex((u) => u?.isBase));
+  const baseUnitName = (watchedSellingUnits ?? [])[baseUnitIndex]?.unitName || '';
 
-  const selectedUnitOfMeasure = form.watch('unitOfMeasure');
+  /** Appends a blank non-base row. qtyBase is deliberately left empty. */
+  const addSellingUnit = () =>
+    appendSellingUnit({
+      unitName: '',
+      qtyBase: undefined as unknown as number,
+      barcode: '',
+      cost: undefined,
+      isBase: false,
+      prices: {},
+    } as any);
+
+  /** EAN-8: 7 random digits + 1 check digit. */
+  const generateUnitBarcode = (index: number) => {
+    const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10));
+    const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+    const check = (10 - (sum % 10)) % 10;
+    form.setValue(`sellingUnits.${index}.barcode` as any, [...digits, check].join(''), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
   const watchedPrice = form.watch('price');
-  const formErrors = form.formState.errors;
+  const formErrors = form.formState.errors as any;
   const tabErrors = {
     basic: !!(formErrors.name || formErrors.brand || formErrors.sku || formErrors.description || formErrors.category),
+    // unitOfMeasure can still error here — a Service edits it on this tab.
     inventory: !!(formErrors.unitOfMeasure || formErrors.stock),
-    priceLevels: !!(formErrors.priceLevels),
-    conversion: !!(formErrors.conversionFactors),
+    sellingUnits: !!formErrors.sellingUnits,
   };
 
   // State for selected price level (for automatic price calculation)
@@ -190,21 +208,8 @@ export function useAddProductForm({
       setDepartments(externalProductOptions.departments || []);
       setPriceLevels(externalProductOptions.priceLevels || []);
       setTaxRates(externalProductOptions.taxRates || []);
-
-      // Initialize default price level if form is empty
-      const systemPriceLevels = externalProductOptions.priceLevels || [];
-      const currentPriceLevels = form.getValues('priceLevels') || [];
-
-      if (currentPriceLevels.length === 0 && systemPriceLevels.length > 0) {
-          // Find default level or take first
-          const defaultLevel = systemPriceLevels.find((l:any) => l.isDefault) || systemPriceLevels[0];
-          if (defaultLevel) {
-              appendPriceLevel({ levelId: defaultLevel.id, price: 0 });
-          }
-      }
-
     }
-  }, [externalProductOptions, form, appendPriceLevel]); // Added appendPriceLevel dep
+  }, [externalProductOptions]);
 
   useEffect(() => {
     if (isOpen) {
@@ -215,26 +220,8 @@ export function useAddProductForm({
         const defaultTax = taxRates.find(t => t.isDefault) || taxRates[0];
         form.setValue('vatStatus', defaultTax.name);
       }
-
-      setProductType('parent');
-      setAutoCreateChild(true);
     }
   }, [isOpen, form]);
-
-  useEffect(() => {
-    if (productType === 'parent') {
-      form.setValue('conversionFactor', 1);
-      form.setValue('parentId', undefined);
-    }
-  }, [productType, form]);
-
-  useEffect(() => {
-    if (productType === 'child') {
-      // For child products, conversion factor should be manually entered by user
-      // The previous auto-setting based on unit of measure is no longer valid
-      // since conversion factors are now managed separately
-    }
-  }, [productType]);
 
   // Switching to Service clears every stock-side field. Without this, values
   // typed while Standard was selected stay in form state and fail the service
@@ -254,10 +241,20 @@ export function useAddProductForm({
       form.setValue('supplier', undefined);
       form.setValue('warehouse', undefined);
       form.setValue('shelfLocationIds', undefined);
-      form.setValue('parentId', undefined);
-      form.setValue('conversionFactor', undefined);
-      form.setValue('conversionFactors', undefined);
+      form.setValue('sellingUnits' as any, undefined);
       form.setValue('isPerishable', undefined);
+    } else {
+      // Switching back from Service: the array above was cleared, so restore a
+      // blank base row or the Selling Units tab renders with nothing in it.
+      const current = form.getValues('sellingUnits' as any) as SellingUnitValues[] | undefined;
+      if (!current || current.length === 0) {
+        form.setValue('sellingUnits' as any, [
+          { unitName: '', qtyBase: 1, barcode: '', cost: undefined, isBase: true, prices: {} },
+        ]);
+      }
+      // A Service run may have written unitOfMeasure via its own select; a
+      // standard product takes it from the base row on submit, so clear it.
+      form.setValue('unitOfMeasure', '');
     }
   }, [itemType, form]);
 
@@ -366,33 +363,32 @@ export function useAddProductForm({
 
           form.setValue('price', parseFloat(finalPrice.toFixed(2)));
 
-          // ALSO update all price level fields automatically
-          if (priceLevelFields.length > 0) {
-            priceLevelFields.forEach((field, index) => {
-              const levelDef = priceLevels.find((l: any) => l.id === field.levelId);
-              if (levelDef) {
-                // Calculate price for each level
-                let levelPrice;
-                const levelMarkup = levelDef.percentageAdjustment ?? 0;
+          // ALSO fill every price-level column on the BASE selling unit row.
+          // Non-base rows are left alone — their price is a per-unit decision,
+          // not a derived multiple, and overwriting a typed value would be the
+          // same silent-default failure mode the qtyBase rule guards against.
+          const units = (form.getValues('sellingUnits' as any) as SellingUnitValues[] | undefined) ?? [];
+          const idx = Math.max(0, units.findIndex((u) => u?.isBase));
+          priceLevels.forEach((levelDef: any) => {
+            let levelPrice: number;
+            const levelMarkup = levelDef.percentageAdjustment ?? 0;
 
-                if (levelDef.calculationBase === 'cost') {
-                    levelPrice = parseFloat((cost * (1 + levelMarkup / 100)).toFixed(2));
-                } else {
-                    // Retail Base
-                    if (levelMarkup === 0 && levelDef.name?.toLowerCase() === 'retail') {
-                        levelPrice = parseFloat(basePrice.toFixed(2));
-                    } else {
-                        levelPrice = parseFloat((basePrice * (1 + levelMarkup / 100)).toFixed(2));
-                    }
-                }
-                form.setValue(`priceLevels.${index}.price`, levelPrice);
+            if (levelDef.calculationBase === 'cost') {
+              levelPrice = parseFloat((cost * (1 + levelMarkup / 100)).toFixed(2));
+            } else {
+              // Retail Base
+              if (levelMarkup === 0 && levelDef.name?.toLowerCase() === 'retail') {
+                levelPrice = parseFloat(basePrice.toFixed(2));
+              } else {
+                levelPrice = parseFloat((basePrice * (1 + levelMarkup / 100)).toFixed(2));
               }
-            });
-          }
+            }
+            form.setValue(`sellingUnits.${idx}.prices.${levelDef.id}.price` as any, levelPrice);
+          });
         }
       }
     }
-  }, [selectedPriceLevelId, priceLevels, priceLevelFields, form, categories, subcategories, brands, systemSettings]);
+  }, [selectedPriceLevelId, priceLevels, form, categories, subcategories, brands, systemSettings]);
 
   async function onSubmit(values: ProductFormValues) {
     setIsSubmitting(true);
@@ -400,67 +396,44 @@ export function useAddProductForm({
     try {
       const uid = getCurrentUid();
 
-      // The default price level is auto-appended (on productOptions load, well
-      // before the user has entered a cost) with a hardcoded price: 0 as a
-      // placeholder — there is no meaningful value to compute at that point.
-      // Now that price-level rows are no longer continuously auto-recalculated
-      // (see the removed "Apply to all price levels" effects), that
-      // placeholder would otherwise reach the DB untouched, and getProducts'
-      // effectivePrice prefers a default-level product_price_levels row over
-      // the raw products.price column — so every new product would display
-      // ₱0.00 in the Products table despite a correct products.price. Fix up
-      // only rows still sitting at that untouched 0 placeholder; a row the
-      // user edited to any nonzero value is left alone. (A deliberate,
-      // genuine ₱0 price level is indistinguishable from "untouched" with
-      // the current data model and would also get corrected here — an
-      // accepted, narrow edge case, not the scenario this fix targets.)
-      values.priceLevels = (values.priceLevels || []).map((pl) => {
-        if (pl.price !== 0) return pl;
-        const level = priceLevels.find((l: any) => l.id === pl.levelId);
-        if (!level) return pl;
-        const basePrice = (level.calculationBase || 'retail') === 'cost' ? (values.cost || 0) : values.price;
-        return { ...pl, price: applyPriceLevelAdjustment(level.adjustmentType, level.percentageAdjustment, basePrice) };
-      });
+      // The base selling unit is the single source of truth for the product's
+      // scalar price/cost/barcode/unit_of_measure columns. Mirror them here so
+      // the ~100+ call sites that read products.* directly keep working;
+      // addProduct re-derives the same values server-side as the
+      // authoritative pass.
+      const units = (values as any).sellingUnits as SellingUnitValues[] | undefined;
+      const baseUnit = units?.find((u) => u.isBase) ?? units?.[0];
+      const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
 
-      // Build the auto-child intent (if applicable) so a single approval covers parent + child.
-      let childProduct: any = undefined;
-      const willAutoChild =
-        itemType === 'standard' &&
-        productType === 'parent' &&
-        autoCreateChild &&
-        values.conversionFactors &&
-        values.conversionFactors.length > 0;
-
-      if (willAutoChild) {
-        const firstConversion = values.conversionFactors![0];
-        const childPrice = values.price / firstConversion.factor;
-        const childCost = values.cost ? values.cost / firstConversion.factor : undefined;
-        childProduct = {
-          name: `${values.name} (${firstConversion.unit})`,
-          brand: values.brand,
-          sku: `${values.sku}-${firstConversion.unit.toLowerCase().replace(/\s+/g, '')}`,
-          barcode: values.barcode ? `${values.barcode}-${firstConversion.unit.toLowerCase()}` : undefined,
-          description: `${values.description} - ${firstConversion.unit}`,
-          additionalDescription: values.additionalDescription,
-          category: values.category,
-          subcategory: values.subcategory,
-          supplier: values.supplier,
-          unitOfMeasure: firstConversion.unit,
-          stock: 0,
-          reorderPoint: 0,
-          price: childPrice,
-          cost: childCost,
-          conversionFactor: firstConversion.factor,
-          image: `https://picsum.photos/seed/${values.sku}-${firstConversion.unit}/400/300`,
-        };
+      let mirroredPrice = values.price;
+      if (baseUnit && defaultLevel) {
+        const entered = Number(baseUnit.prices?.[defaultLevel.id]?.price ?? NaN);
+        if (Number.isFinite(entered) && entered > 0) {
+          mirroredPrice = entered;
+        } else {
+          // No explicit default-level price typed — fall back to the level's
+          // own adjustment applied to the row's cost/price basis, the same
+          // rule the old Price Levels tab used when a level was picked.
+          const basis = (defaultLevel.calculationBase || 'retail') === 'cost'
+            ? Number(baseUnit.cost ?? values.cost ?? 0)
+            : Number(values.price ?? 0);
+          mirroredPrice = applyPriceLevelAdjustment(
+            defaultLevel.adjustmentType,
+            defaultLevel.percentageAdjustment,
+            basis,
+          );
+        }
       }
 
       const result = await addProduct(
         {
           ...values,
           itemType,
+          price: mirroredPrice,
+          cost: baseUnit?.cost ?? values.cost,
+          barcode: baseUnit?.barcode ?? values.barcode,
+          unitOfMeasure: baseUnit?.unitName || values.unitOfMeasure,
           image: `https://picsum.photos/seed/${values.sku}/400/300`,
-          ...(childProduct ? { __childProduct: childProduct } : {}),
         } as any,
         uid,
       );
@@ -474,17 +447,6 @@ export function useAddProductForm({
         onProductAdded?.();
         setIsOpen(false);
       } else if (result.success) {
-        // Immediate insert path — create child directly if approval is off.
-        if (willAutoChild && result.productId) {
-          const childResult = await addProduct(
-            { ...childProduct, parentId: result.productId } as any,
-            uid,
-          );
-          if (!childResult.success) {
-            console.warn('Failed to auto-create child product:', childResult.message);
-          }
-        }
-
         // Fire and forget - don't block form submission on activity logging
         logActivity({
           action: 'CREATE',
@@ -496,7 +458,7 @@ export function useAddProductForm({
         });
         toast({
           title: 'Product Added',
-          description: `${values.name} has been successfully added.${willAutoChild ? ' Child unit auto-created.' : ''}`,
+          description: `${values.name} has been successfully added.`,
         });
         form.reset();
         onProductAdded?.();
@@ -528,14 +490,6 @@ export function useAddProductForm({
     form.setValue('sku', `${brandPart}-${namePart}-${randomPart}`);
   };
 
-  const generateBarcode = () => {
-    // EAN-8: 7 random digits + 1 check digit
-    const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10));
-    const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
-    const check = (10 - (sum % 10)) % 10;
-    form.setValue('barcode', [...digits, check].join(''));
-  };
-
   // Refresh callbacks wired to the "Manage …" dialogs.
   const refreshBrands = () => getBrands().then(setBrands);
   const refreshDepartments = () => getDepartments().then(setDepartments);
@@ -550,9 +504,7 @@ export function useAddProductForm({
     // dialog + submit state
     isOpen, setIsOpen,
     isSubmitting,
-    productType, setProductType,
     itemType, setItemType,
-    autoCreateChild, setAutoCreateChild,
     form,
 
     // option data + loading flags
@@ -572,11 +524,10 @@ export function useAddProductForm({
     selects, setSelects,
 
     // field arrays
-    conversionFactorFields, appendConversionFactor, removeConversionFactor,
-    priceLevelFields, appendPriceLevel, removePriceLevel,
+    sellingUnitFields, appendSellingUnit, addSellingUnit, removeSellingUnit,
+    baseUnitIndex, baseUnitName,
 
     // derived values
-    selectedUnitOfMeasure,
     tabErrors,
     selectedPriceLevelId, setSelectedPriceLevelId,
     markupSource,
@@ -584,7 +535,7 @@ export function useAddProductForm({
     // handlers
     onSubmit,
     generateSku,
-    generateBarcode,
+    generateUnitBarcode,
     refreshBrands,
     refreshDepartments,
     refreshCategories,

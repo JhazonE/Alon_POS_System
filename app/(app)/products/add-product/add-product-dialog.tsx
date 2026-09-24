@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, Loader2, Wand2 } from 'lucide-react';
+import { PlusCircle, Wand2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -17,9 +17,9 @@ import { useAddProductForm, type UseAddProductFormProps } from './use-add-produc
 import { AddProductFormProvider } from './add-product-form-context';
 import { BasicInfoTab } from './tabs/basic-info-tab';
 import { InventoryTab } from './tabs/inventory-tab';
-import { ConversionTab } from './tabs/conversion-tab';
-import { PriceLevelsTab } from './tabs/price-levels-tab';
+import { SellingUnitsTab } from './tabs/selling-units-tab';
 import { LoyaltyTab } from './tabs/loyalty-tab';
+import { Spinner } from '@/components/ui/spinner';
 
 export function AddProductDialog(props: UseAddProductFormProps) {
   const controller = useAddProductForm(props);
@@ -103,20 +103,13 @@ export function AddProductDialog(props: UseAddProductFormProps) {
                         Inventory
                         {tabErrors.inventory && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
                       </TabsTrigger>
-                      <TabsTrigger
-                        value="price-levels"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
-                      >
-                        Price Levels
-                        {tabErrors.priceLevels && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
-                      </TabsTrigger>
                       {itemType === 'standard' && (
                         <TabsTrigger
-                          value="conversion"
+                          value="selling-units"
                           className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
                         >
-                          Conversion
-                          {tabErrors.conversion && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
+                          Selling Units
+                          {tabErrors.sellingUnits && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
                         </TabsTrigger>
                       )}
                       <TabsTrigger
@@ -133,13 +126,10 @@ export function AddProductDialog(props: UseAddProductFormProps) {
                       <InventoryTab />
                     </TabsContent>
                     {itemType === 'standard' && (
-                      <TabsContent value="conversion" className="space-y-4 p-6">
-                        <ConversionTab />
+                      <TabsContent value="selling-units" className="space-y-4 p-6">
+                        <SellingUnitsTab />
                       </TabsContent>
                     )}
-                    <TabsContent value="price-levels" className="space-y-4 p-6">
-                      <PriceLevelsTab />
-                    </TabsContent>
                     <TabsContent value="loyalty" className="space-y-4 p-6">
                       <LoyaltyTab />
                     </TabsContent>
@@ -162,7 +152,7 @@ export function AddProductDialog(props: UseAddProductFormProps) {
           <button type="submit" form="add-product-form" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 h-4 w-4" />
                 Adding Product...
               </>
             ) : (

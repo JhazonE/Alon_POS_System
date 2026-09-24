@@ -20,7 +20,6 @@ import {
 export function InventoryTab() {
   const {
     form,
-    productType,
     itemType,
     departments, isLoadingDepartments,
     taxRates,
@@ -275,10 +274,9 @@ export function InventoryTab() {
         )}
       </div>
 
-      {/* Warehouse and Shelf are stock-only, leaving Unit of Measure alone here
-          for a service. Two columns keeps it the same width as the fields
-          above rather than shrinking it to a third. */}
-      <div className={`grid grid-cols-1 gap-4 ${itemType === 'standard' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+      {/* Unit of measure now lives on the base selling-unit row — one source of
+          truth, same treatment as barcode and cost. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {itemType === 'standard' && (
           <FormField
             control={form.control}
@@ -362,106 +360,32 @@ export function InventoryTab() {
             )}
           />
         )}
-
-        <FormField
-          control={form.control}
-          name="unitOfMeasure"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{productType === 'parent' ? 'Base Unit of Measure' : 'Unit of Measure'}</FormLabel>
-              <InlineEditableSelect
-                items={unitsOfMeasure}
-                isLoading={isLoadingUnits}
-                value={field.value}
-                onChange={field.onChange}
-                open={selects.units}
-                onOpenChange={(o) => setSelects((p) => ({ ...p, units: o }))}
-                placeholder="Select a unit"
-                addLabel="Add Unit"
-                emptyLabel="No units found"
-                getId={(u: UnitOfMeasure) => u.id}
-                getValue={(u: UnitOfMeasure) => u.name}
-                getOptionLabel={(u: UnitOfMeasure) => `${u.name} (${u.abbreviation})`}
-                getName={(u: UnitOfMeasure) => u.name}
-                onAdd={async (name) => {
-                  const r = await addUnitOfMeasure(name, name);
-                  if (r.success) { await refreshUnits(); return name; }
-                  return undefined;
-                }}
-                onRename={async (id, name) => {
-                  const existing = unitsOfMeasure.find((u: UnitOfMeasure) => u.id === id);
-                  const r = await updateUnitOfMeasure(id, name, existing?.abbreviation ?? name);
-                  if (r.success) { await refreshUnits(); return name; }
-                  return undefined;
-                }}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
       </div>
 
-      {itemType === 'standard' && productType === 'child' && (
+      {/* Cost now lives on the base selling unit row in the Selling Units tab —
+          one source of truth. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
           control={form.control}
-          name="conversionFactor"
+          name="stock"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Conversion Factor</FormLabel>
+              <FormLabel>Initial Stock</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="e.g., 12" value={field.value} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                <Input type="number" placeholder="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
               </FormControl>
-              <FormDescription>How many base units are in this child unit?</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-      )}
-
-      {/* Stock and Reorder Point are standard-only, leaving Cost alone here for
-          a service — kept at two columns so it lines up with every field
-          above it. */}
-      <div className={`grid grid-cols-1 gap-4 ${itemType === 'standard' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-        {itemType === 'standard' && (
-          <FormField
-            control={form.control}
-            name="stock"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Initial Stock</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-        {itemType === 'standard' && (
-          <FormField
-            control={form.control}
-            name="reorderPoint"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Reorder Point</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
         <FormField
           control={form.control}
-          name="cost"
+          name="reorderPoint"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center justify-between h-6">
-                <FormLabel>{itemType === 'service' ? 'Cost (required)' : 'Cost (₱)'}</FormLabel>
-              </div>
+              <FormLabel>Reorder Point</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" placeholder="e.g., 50.00" value={field.value || ''} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                <Input type="number" placeholder="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
               </FormControl>
               <FormMessage />
             </FormItem>
