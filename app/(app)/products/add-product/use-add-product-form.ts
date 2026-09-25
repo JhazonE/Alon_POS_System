@@ -163,17 +163,37 @@ export function useAddProductForm({
     name: 'supplierMappings',
   });
 
-  const addSupplierMapping = () =>
+  /**
+   * The first row ever added defaults to primary — nothing else prompts the
+   * user to pick one, and an un-primaried mapping list leaves
+   * products.reorder_point at 0 while supplier_id still gets set from the
+   * client's own primary-or-first-row fallback (actions.ts reads only
+   * `.find(m => m.isPrimary)` for reorder_point), silently disagreeing with
+   * what the mapping table itself stores.
+   */
+  const addSupplierMapping = () => {
+    const existing = (form.getValues('supplierMappings' as any) as SupplierMappingValues[] | undefined) ?? [];
     appendSupplierMapping({
       supplierId: '',
       supplierSku: '',
       leadTime: 0,
       rop: 0,
       cost: undefined,
-      isPrimary: false,
+      isPrimary: existing.length === 0,
     } as any);
+  };
 
-  const removeSupplierMapping = (index: number) => removeSupplierMappingRow(index);
+  /** Removing the primary row promotes whichever row is now first. */
+  const removeSupplierMapping = (index: number) => {
+    const rows = (form.getValues('supplierMappings' as any) as SupplierMappingValues[] | undefined) ?? [];
+    const removedWasPrimary = rows[index]?.isPrimary;
+    removeSupplierMappingRow(index);
+    // After removal every later row shifts down one index, so "whichever
+    // row is now first" is always index 0 of the remaining rows.
+    if (removedWasPrimary && rows.length > 1) {
+      form.setValue('supplierMappings.0.isPrimary' as any, true, { shouldDirty: true });
+    }
+  };
 
   /** Marks one row primary and clears the flag on every other row. */
   const setPrimarySupplierRow = (index: number) => {
@@ -216,6 +236,7 @@ export function useAddProductForm({
     // unitOfMeasure can still error here — a Service edits it on this tab.
     inventory: !!(formErrors.unitOfMeasure || formErrors.stock),
     sellingUnits: !!formErrors.sellingUnits,
+    suppliers: !!formErrors.supplierMappings,
   };
 
   // State for selected price level (for automatic price calculation)

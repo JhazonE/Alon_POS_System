@@ -118,6 +118,7 @@ export function AddProductDialog(props: UseAddProductFormProps) {
                           className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
                         >
                           Suppliers
+                          {tabErrors.suppliers && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
                         </TabsTrigger>
                       )}
                       <TabsTrigger

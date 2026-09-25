@@ -617,15 +617,14 @@ export async function addProduct(
       }
 
       if (formData.supplierMappings && formData.supplierMappings.length > 0) {
-        for (let i = 0; i < formData.supplierMappings.length; i++) {
-          const mapping = formData.supplierMappings[i];
+        for (const mapping of formData.supplierMappings) {
           // supplier_product_mapping.id is VARCHAR(50) — a productId-prefixed id
           // (productId is itself `${sku}-${Date.now()}`) overflows it for any
-          // non-trivial SKU. Match the short, collision-safe format
-          // addSupplierMapping already uses elsewhere, with a loop index so two
-          // mappings inserted in the same submit (same Date.now() millisecond)
-          // don't collide.
-          const mappingId = `spm_${Date.now()}_${i}`;
+          // non-trivial SKU. A short prefix + uuid (already imported in this
+          // file) is both well under the limit and collision-safe across
+          // concurrent requests, unlike a Date.now()-based id — this project
+          // runs one server per terminal against a shared DB.
+          const mappingId = `spm_${uuidv4()}`;
           await connection.query('INSERT INTO supplier_product_mapping (id, product_id, supplier_id, supplier_sku, supplier_lead_time, supplier_specific_rop, supplier_cost, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [mappingId, productId, mapping.supplierId, mapping.supplierSku || null, mapping.leadTime, mapping.rop, mapping.cost || null, mapping.isPrimary ? 1 : 0]);
         }
       }
@@ -779,11 +778,11 @@ export async function updateProduct(id: string, formData: ProductFormData) {
 
       if (formData.supplierMappings) {
         await connection.query('DELETE FROM supplier_product_mapping WHERE product_id = ?', [id]);
-        for (let i = 0; i < formData.supplierMappings.length; i++) {
-          const mapping = formData.supplierMappings[i];
-          // See the matching comment in addProduct — id is VARCHAR(50) and a
-          // productId-prefixed id overflows it.
-          const mappingId = `spm_${Date.now()}_${i}`;
+        for (const mapping of formData.supplierMappings) {
+          // See the matching comment in addProduct — id is VARCHAR(50), and a
+          // uuid-based id is both well under the limit and collision-safe
+          // across concurrent requests.
+          const mappingId = `spm_${uuidv4()}`;
           await connection.query('INSERT INTO supplier_product_mapping (id, product_id, supplier_id, supplier_sku, supplier_lead_time, supplier_specific_rop, supplier_cost, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [mappingId, id, mapping.supplierId, mapping.supplierSku || null, mapping.leadTime, mapping.rop, mapping.cost || null, mapping.isPrimary ? 1 : 0]);
         }
       }
