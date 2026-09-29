@@ -615,6 +615,49 @@ function validPrice(entry: { price?: unknown } | null | undefined): number | und
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * Dual-write bridge: mirrors the BASE selling unit's per-level prices into the
+ * legacy `product_price_levels` table, which POS checkout
+ * (lib/pricing.ts calculateEffectivePrice, a Math.min over products.price and
+ * these rows) and the products list (getProducts' effectivePrice) still read.
+ * Without it a price entered in the Selling Units tab never reaches the POS,
+ * and a stale lower row keeps winning the Math.min.
+ *
+ * Upserts on the table's real PRIMARY KEY (product_id, price_level_id), the
+ * same way PO receiving and bulk price update do — a check filtered on
+ * min_quantity can miss an existing tiered row and then collide on INSERT.
+ * On conflict only `price` changes, so an existing row's min_quantity (which
+ * the tab cannot display or edit) is preserved; new rows get 0.
+ *
+ * `removedLevelIds` are deleted: levels the caller established the user
+ * explicitly removed (see updateProduct). Nothing else is ever deleted here —
+ * a row for a level the tab never showed (e.g. a Wholesale override that
+ * predates selling units) is left alone.
+ */
+async function writeBaseUnitPriceLevels(
+  connection: any,
+  productId: string,
+  baseUnit: NonNullable<ProductFormData['sellingUnits']>[number],
+  removedLevelIds: string[] = [],
+) {
+  for (const [levelId, entry] of Object.entries(baseUnit.prices || {})) {
+    const price = validPrice(entry);
+    if (price === undefined) continue;
+    await connection.query(
+      `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
+       VALUES (?, ?, ?, 0)
+       ON DUPLICATE KEY UPDATE price = VALUES(price)`,
+      [productId, levelId, price],
+    );
+  }
+  for (const levelId of removedLevelIds) {
+    await connection.query(
+      'DELETE FROM product_price_levels WHERE product_id = ? AND price_level_id = ?',
+      [productId, levelId],
+    );
+  }
+}
+
 /** The default price level's id, or the first one, or null if none exist. */
 async function resolveDefaultPriceLevelId(connection: any): Promise<string | null> {
   const [rows]: any = await connection.query(
@@ -779,6 +822,8 @@ export async function addProduct(
 
         // Sync the scalar columns from the base row — one source of truth.
         if (baseUnit) {
+          await writeBaseUnitPriceLevels(connection, productId, baseUnit);
+
           const basePrice = resolvedBasePrice ?? Number(productData.price ?? 0);
           await connection.query(
             'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
@@ -945,11 +990,34 @@ export async function updateProduct(id: string, formData: ProductFormData) {
 
         if (formData.sellingUnits.length > 0) {
           const defaultLevelId = await resolveDefaultPriceLevelId(connection);
+
+          // Which levels the base unit showed a price for BEFORE this save —
+          // read now, since writeSellingUnits rewrites these rows. A level in
+          // this list that the submission no longer carries is one the user
+          // removed in the tab, so its product_price_levels row goes too. A
+          // level never stored here was never visible in the tab, so its
+          // product_price_levels row (if any) is not this form's to delete.
+          const submittedBase = formData.sellingUnits.find((u) => u.isBase) ?? formData.sellingUnits[0];
+          let removedLevelIds: string[] = [];
+          if (submittedBase?.id) {
+            const [prevLevelRows]: any = await connection.query(
+              `SELECT psup.price_level_id
+                 FROM product_selling_unit_prices psup
+                 JOIN product_selling_units psu ON psu.id = psup.selling_unit_id
+                WHERE psu.id = ? AND psu.product_id = ? AND psu.is_base = 1`,
+              [submittedBase.id, id],
+            );
+            removedLevelIds = (prevLevelRows as any[])
+              .map((r) => r.price_level_id as string)
+              .filter((levelId) => validPrice(submittedBase.prices?.[levelId]) === undefined);
+          }
+
           const { baseUnit, basePrice: resolvedBasePrice } =
             await writeSellingUnits(connection, id, formData.sellingUnits, defaultLevelId);
 
           // Sync the scalar columns from the base row — one source of truth.
           if (baseUnit) {
+            await writeBaseUnitPriceLevels(connection, id, baseUnit, removedLevelIds);
             const basePrice = resolvedBasePrice ?? Number(productData.price ?? 0);
             await connection.query(
               'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
