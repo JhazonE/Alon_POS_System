@@ -82,7 +82,7 @@ export function toFormSellingUnits(product: Product): any[] | undefined {
     {
       unitName: product?.unitOfMeasure ?? '',
       qtyBase: 1,
-      barcode: product?.barcode ?? '',
+      barcode: (product?.barcode ?? '').trim() || `SU-${product.id}`,
       cost: product?.cost ?? undefined,
       isBase: true,
       prices: {},
