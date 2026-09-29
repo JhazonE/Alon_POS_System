@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, FileSpreadsheet, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PhilippinePeso, Users, TrendingUp, Package } from 'lucide-react';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   Select,
   SelectContent,
@@ -273,49 +274,37 @@ export default function PurchasesBySupplierPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-            <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{formatCurrency(totals.totalSpent)}</div>
-            <p className="text-xs text-muted-foreground">Across all suppliers</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Spent"
+          icon={PhilippinePeso}
+          value={formatCurrency(totals.totalSpent)}
+          valueClassName="text-indigo-600"
+          sub="Across all suppliers"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totals.totalSuppliers}</div>
-            <p className="text-xs text-muted-foreground">Engaged suppliers</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Suppliers"
+          icon={Users}
+          value={totals.totalSuppliers}
+          valueClassName="text-green-600"
+          sub="Engaged suppliers"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg per Supplier</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{formatCurrency(totals.avgSpentPerSupplier)}</div>
-            <p className="text-xs text-muted-foreground">Average wallet share</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Avg per Supplier"
+          icon={TrendingUp}
+          value={formatCurrency(totals.avgSpentPerSupplier)}
+          valueClassName="text-purple-600"
+          sub="Average wallet share"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total POs</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totals.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Total purchase orders</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total POs"
+          icon={Package}
+          value={totals.totalOrders}
+          valueClassName="text-blue-600"
+          sub="Total purchase orders"
+        />
       </div>
 
       {/* Data Section */}

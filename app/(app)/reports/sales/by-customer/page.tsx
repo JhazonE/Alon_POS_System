@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, FileSpreadsheet, Users, TrendingUp, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   Select,
   SelectContent,
@@ -309,51 +310,36 @@ export default function SalesByCustomerPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{totals.customers}</div>
-            <p className="text-xs text-muted-foreground">Unique customers</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Customers"
+          icon={Users}
+          value={totals.customers}
+          valueClassName="text-indigo-600"
+          sub="Unique customers"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <div className="h-4 w-4 flex items-center justify-center text-muted-foreground font-semibold text-base">₱</div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(totals.totalSales)}</div>
-            <p className="text-xs text-muted-foreground">All customer sales</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Sales"
+          value={formatCurrency(totals.totalSales)}
+          valueClassName="text-blue-600"
+          sub="All customer sales"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Credit Sales</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(totals.creditSales)}</div>
-            <p className="text-xs text-muted-foreground">Non-cash transactions</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Credit Sales"
+          icon={TrendingUp}
+          value={formatCurrency(totals.creditSales)}
+          valueClassName="text-orange-600"
+          sub="Non-cash transactions"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={cn("text-2xl font-bold", totals.outstanding > 0 ? "text-red-600" : "text-green-600")}>
-              {formatCurrency(totals.outstanding)}
-            </div>
-            <p className="text-xs text-muted-foreground">Unpaid balance</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Outstanding"
+          icon={TrendingUp}
+          value={formatCurrency(totals.outstanding)}
+          valueClassName={totals.outstanding > 0 ? 'text-red-600' : 'text-green-600'}
+          sub="Unpaid balance"
+        />
       </div>
 
       {/* Data Section */}
