@@ -14,7 +14,7 @@
  */
 export const HEADER_ICON_BUTTON =
   'flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] '
-  + 'bg-[rgba(45,165,176,0.10)] text-[#0E7C86] transition-colors '
-  + 'hover:bg-[rgba(45,165,176,0.20)] '
-  + 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E7C86]/40 '
-  + 'dark:bg-[rgba(45,165,176,0.13)] dark:text-[#4FC3C9] dark:hover:bg-[rgba(45,165,176,0.24)]';
+  + 'bg-[rgba(42,158,205,0.10)] text-[#104885] transition-colors '
+  + 'hover:bg-[rgba(42,158,205,0.20)] '
+  + 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#104885]/40 '
+  + 'dark:bg-[rgba(42,158,205,0.13)] dark:text-[#4db4e0] dark:hover:bg-[rgba(42,158,205,0.24)]';

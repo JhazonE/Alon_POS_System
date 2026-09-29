@@ -16,7 +16,7 @@ VersionInfoVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\{#AppName}
 DisableProgramGroupPage=yes
-SetupIconFile=public\alon_logo.ico
+SetupIconFile=public\alon-logo.ico
 OutputBaseFilename=AlonPOSSystemSetup_{#AppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -105,9 +105,9 @@ Source: "public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs
 
 
 [Icons]
-Name: "{autoprograms}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon_logo.ico"
-Name: "{autodesktop}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon_logo.ico"
-Name: "{userstartup}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon_logo.ico"
+Name: "{autoprograms}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon-logo.ico"
+Name: "{autodesktop}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon-logo.ico"
+Name: "{userstartup}\Alon POS System"; Filename: "{app}\{#AppExeName}"; Parameters: "--route=/pos --role=""POS Terminal"""; IconFilename: "{app}\public\alon-logo.ico"
 ; Launch the server at boot through wscript + the hidden VBS wrapper so no
 ; console window appears (start_server.bat directly would flash a cmd window
 ; even with runminimized). wscript is the default, no-console host for .vbs.

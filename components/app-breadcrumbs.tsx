@@ -18,11 +18,11 @@ export function AppBreadcrumbs() {
 
   // 12.5px is the nav-row text size from components/sidebar/nav-card.tsx --
   // the trail reads as the horizontal continuation of the row you clicked.
-  const linkClass = 'text-[#3F6E71] transition-colors hover:text-[#0B2A2D] dark:text-[rgba(192,232,230,0.6)] dark:hover:text-[#DCF2F0]';
+  const linkClass = 'text-[#4a6690] transition-colors hover:text-[#0a2145] dark:text-[rgba(196,218,245,0.6)] dark:hover:text-[#dce9f8]';
 
   return (
     <Breadcrumb>
-      <BreadcrumbList className="gap-1.5 text-[12.5px] sm:gap-1.5 [&>li>svg]:text-[#9FC5C4] dark:[&>li>svg]:text-[rgba(192,232,230,0.35)]">
+      <BreadcrumbList className="gap-1.5 text-[12.5px] sm:gap-1.5 [&>li>svg]:text-[#9db4d6] dark:[&>li>svg]:text-[rgba(196,218,245,0.35)]">
         <BreadcrumbItem>
           <BreadcrumbLink href="/" className={linkClass}>Home</BreadcrumbLink>
         </BreadcrumbItem>
@@ -52,7 +52,7 @@ export function AppBreadcrumbs() {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage className="font-semibold text-[#0B2A2D] dark:text-[#DCF2F0]">
+                  <BreadcrumbPage className="font-semibold text-[#0a2145] dark:text-[#dce9f8]">
                     {label}
                   </BreadcrumbPage>
                 ) : (

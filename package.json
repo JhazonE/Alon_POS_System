@@ -134,7 +134,7 @@
     ],
     "win": {
       "target": "dir",
-      "icon": "public/alon-mark.ico"
+      "icon": "public/alon-logo.ico"
     }
   }
 }

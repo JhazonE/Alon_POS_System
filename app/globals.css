@@ -4,34 +4,34 @@
 
 @layer base {
   :root {
-    /* Wave Palette (Alon-branded) - Light Mode */
-    --background: 180 37% 97%;      /* Very light teal-white */
-    --foreground: 185 61% 11%;      /* Deep teal-slate for text */
+    /* Alon palette (navy / royal / sky, from the logo) - Light Mode */
+    --background: 213 45% 97%;      /* Very light blue-white */
+    --foreground: 218 75% 15%;      /* Deep navy for text */
 
     --card: 0 0% 100%;
-    --card-foreground: 185 61% 11%;
+    --card-foreground: 218 75% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 185 61% 11%;
+    --popover-foreground: 218 75% 15%;
 
-    --primary: 185 81% 29%;         /* Deep teal */
+    --primary: 213 79% 29%;         /* Royal blue #104885 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 180 33% 92%;
-    --secondary-foreground: 185 61% 11%;
+    --secondary: 214 40% 93%;
+    --secondary-foreground: 218 75% 15%;
 
-    --muted: 180 33% 92%;
-    --muted-foreground: 182 25% 33%;
+    --muted: 214 40% 93%;
+    --muted-foreground: 215 25% 38%;
 
-    --accent: 180 33% 92%;
-    --accent-foreground: 185 61% 11%;
+    --accent: 214 40% 93%;
+    --accent-foreground: 218 75% 15%;
 
     --destructive: 9 73% 41%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 180 33% 92%;
-    --input: 180 33% 92%;
-    --ring: 185 81% 29%;
+    --border: 214 40% 90%;
+    --input: 214 40% 90%;
+    --ring: 213 79% 29%;
 
     --radius: 0.75rem;
 
@@ -41,23 +41,23 @@
     --warning-bg: 43 95% 92%;
 
     --brand-amber: 36 88% 59%;
-    --brand-amber-foreground: 185 61% 11%;
+    --brand-amber-foreground: 218 75% 15%;
 
-    --chart-1: 185 81% 29%;
-    --chart-2: 36 88% 59%;
+    --chart-1: 213 79% 29%;
+    --chart-2: 199 66% 48%;
     --chart-3: 153 78% 27%;
     --chart-4: 217 60% 55%;
     --chart-5: 9 73% 55%;
 
-    /* Sidebar - Deep Teal-Slate */
-    --sidebar-background: 185 61% 11%;
-    --sidebar-foreground: 177 46% 83%;
-    --sidebar-primary: 185 81% 29%;
+    /* Sidebar - Deep Navy */
+    --sidebar-background: 218 75% 15%;
+    --sidebar-foreground: 214 55% 90%;
+    --sidebar-primary: 203 72% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 185 50% 16%;
-    --sidebar-accent-foreground: 177 46% 83%;
-    --sidebar-border: 185 50% 18%;
-    --sidebar-ring: 185 81% 29%;
+    --sidebar-accent: 217 67% 23%;
+    --sidebar-accent-foreground: 214 55% 90%;
+    --sidebar-border: 217 62% 27%;
+    --sidebar-ring: 203 72% 42%;
   }
 
   .dark {
@@ -71,8 +71,8 @@
     --popover: 222 47% 14%;          /* Popovers/dropdowns slightly lighter */
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 199 74% 60%;
+    --primary-foreground: 218 75% 10%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -88,7 +88,7 @@
 
     --border: 217 33% 22%;           /* More visible borders */
     --input: 217 33% 22%;            /* More visible input borders */
-    --ring: 224.3 76.3% 48%;
+    --ring: 199 74% 60%;
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -98,12 +98,12 @@
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 203 72% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 199 74% 60%;
   }
 }
 
@@ -112,7 +112,7 @@
 
   The `.dark` block above is a blue-slate ramp, but the sidebar
   (`components/sidebar/nav-card.tsx`) and header (`app/(app)/AppHeader.tsx`)
-  hardcode teal, so a card built on `bg-card` turns blue beside a teal panel.
+  hardcode navy, so a card built on `bg-card` turns a different blue beside a navy panel.
   Those two files solved it with inline hex; that does not scale to a card
   system with six surface roles, so the same hex values live here as tokens.
 
@@ -126,37 +126,37 @@
 */
 @layer base {
   :root {
-    --matte-ground:  241 247 246;  /* #F1F7F6 */
+    --matte-ground:  240 245 251;  /* #F0F5FB */
     --matte-surface: 255 255 255;  /* #FFFFFF */
-    --matte-line:    220 235 233;  /* #DCEBE9 */
-    --matte-inset:   244 251 250;  /* #F4FBFA — matches AppHeader's chip */
-    --matte-label:    91 123 121;  /* #5B7B79 */
-    --matte-value:    11  42  45;  /* #0B2A2D */
-    --matte-accent:   14 124 134;  /* #0E7C86 — sidebar active row */
+    --matte-line:    218 230 244;  /* #DAE6F4 */
+    --matte-inset:   243 248 253;  /* #F3F8FD — matches AppHeader's chip */
+    --matte-label:    86 112 154;  /* #56709A */
+    --matte-value:    10  33  69;  /* #0A2145 */
+    --matte-accent:   16  72 133;  /* #104885 — sidebar active row */
     --matte-up:       27 122  85;  /* #1B7A55 */
     --matte-down:    180  71  47;  /* #B4472F */
     --matte-warn:    166 116  30;  /* #A6741E */
 
-    --matte-chart-1:  14 124 134;  /* #0E7C86 */
+    --matte-chart-1:  16  72 133;  /* #104885 */
     --matte-chart-2: 217 146  43;  /* #D9922B */
     --matte-chart-3:  27 122  85;  /* #1B7A55 */
-    --matte-chart-4:  74 127 181;  /* #4A7FB5 */
+    --matte-chart-4:  42 158 205;  /* #2A9ECD */
     --matte-chart-5: 180  71  47;  /* #B4472F */
   }
 
   .dark {
-    --matte-ground:   11  42  45;  /* #0B2A2D */
-    --matte-surface:  15  51  54;  /* #0F3336 — sidebar nav card */
-    --matte-line:     23  64  63;  /* #17403F — sidebar nav card border */
-    --matte-inset:     8  35  38;  /* #082326 */
-    --matte-label:   140 178 176;  /* #8CB2B0 */
-    --matte-value:   220 242 240;  /* #DCF2F0 */
-    --matte-accent:   79 195 201;  /* #4FC3C9 */
+    --matte-ground:   10  33  69;  /* #0A2145 */
+    --matte-surface:  15  44  88;  /* #0F2C58 — sidebar nav card */
+    --matte-line:     26  59 110;  /* #1A3B6E — sidebar nav card border */
+    --matte-inset:     7  26  56;  /* #071A38 */
+    --matte-label:   157 180 214;  /* #9DB4D6 */
+    --matte-value:   220 233 248;  /* #DCE9F8 */
+    --matte-accent:   77 180 224;  /* #4DB4E0 */
     --matte-up:       74 179 134;  /* #4AB386 */
     --matte-down:    214 122  98;  /* #D67A62 */
     --matte-warn:    242 169  58;  /* #F2A93A */
 
-    --matte-chart-1:  79 195 201;
+    --matte-chart-1:  77 180 224;
     --matte-chart-2: 242 169  58;
     --matte-chart-3:  74 179 134;
     --matte-chart-4: 127 168 219;  /* #7FA8DB */
@@ -188,21 +188,21 @@
     transition: background-color 5000s ease-in-out 0s;
   }
 
-  /* POS login sits on a solid deep-teal ground in both themes, but the dark
-     theme's --primary is blue — a button and focus ring in that blue clash
-     badly against the teal. Re-point the brand tokens to teal for anything
+  /* POS login sits on a solid deep-navy ground in both themes, but the dark
+     theme's --primary is a different blue — a button and focus ring in that blue can clash
+     against the navy. Re-point the brand tokens to the logo blue for anything
      inside the login ground so the card stays on-brand in dark mode too. */
   .pos-login-brand {
-    --primary: 185 81% 29%;          /* #0E7C86 */
+    --primary: 213 79% 29%;          /* #104885 */
     --primary-foreground: 0 0% 100%;
-    --ring: 185 81% 29%;
+    --ring: 213 79% 29%;
   }
   .dark .pos-login-brand {
-    --primary: 184 51% 64%;          /* #4FC3C9 — lifts off the dark teal ground */
-    --primary-foreground: 187 60% 8%;
-    --ring: 184 51% 64%;
-    --card: 185 57% 14%;             /* #0F3336 — the dark matte surface; the
-                                        default navy card reads cold on teal */
+    --primary: 199 74% 60%;          /* #4DB4E0 — lifts off the dark navy ground */
+    --primary-foreground: 218 75% 8%;
+    --ring: 199 74% 60%;
+    --card: 217 71% 20%;             /* #0F2C58 — the dark matte surface; the
+                                        default slate card reads cold on navy */
   }
 }
 
@@ -305,15 +305,15 @@
 
   /*
    * Scrollbar for the hand-built sidebar panel. The panel paints its own dark
-   * teal palette rather than the --sidebar-* tokens above, so the thumb is
-   * tinted from the same accent (#4FC3C9) instead of inheriting the theme's.
+   * navy palette rather than the --sidebar-* tokens above, so the thumb is
+   * tinted from the same accent (#4DB4E0) instead of inheriting the theme's.
    * The track stays transparent so the panel's own background shows through
    * to the rounded edge. Chromium (the Electron target) reads the -webkit-*
    * rules; the standard properties cover Firefox and Chromium 121+.
    */
   [data-sidebar="scroll"] {
     scrollbar-width: thin;
-    scrollbar-color: rgba(79, 195, 201, 0.28) transparent;
+    scrollbar-color: rgba(77, 180, 224, 0.28) transparent;
   }
 
   [data-sidebar="scroll"]::-webkit-scrollbar {
@@ -325,12 +325,12 @@
   }
 
   [data-sidebar="scroll"]::-webkit-scrollbar-thumb {
-    background-color: rgba(79, 195, 201, 0.28);
+    background-color: rgba(77, 180, 224, 0.28);
     border-radius: 9999px;
   }
 
   [data-sidebar="scroll"]::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(79, 195, 201, 0.5);
+    background-color: rgba(77, 180, 224, 0.5);
   }
 }
 

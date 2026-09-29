@@ -158,7 +158,7 @@ function createWindow() {
     },
     title: `Alon POS System - ${roleName}`,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'public', 'alon-mark.png'),
+    icon: path.join(__dirname, 'public', 'alon-logo.png'),
     fullscreen: !isAdmin,
     frame: isAdmin,
     resizable: true,
@@ -172,7 +172,7 @@ function createWindow() {
     win.on('close', () => saveWindowState(win, stateKey));
   }
 
-  win.setIcon(path.join(__dirname, 'public', 'alon-mark.png'));
+  win.setIcon(path.join(__dirname, 'public', 'alon-logo.png'));
 
   const startUrl = `${SERVER_ORIGIN}${startRoute}`;
   win.loadURL(startUrl);
@@ -266,7 +266,7 @@ ipcMain.handle('window:open-customer-display', () => {
     height,
     frame: false,
     fullscreen: true,
-    icon: path.join(__dirname, 'public', 'alon-mark.png'),
+    icon: path.join(__dirname, 'public', 'alon-logo.png'),
     title: 'Customer Display',
     skipTaskbar: false,
     webPreferences: {
@@ -278,7 +278,7 @@ ipcMain.handle('window:open-customer-display', () => {
     show: false,
   });
 
-  customerDisplayWindow.setIcon(path.join(__dirname, 'public', 'alon-mark.png'));
+  customerDisplayWindow.setIcon(path.join(__dirname, 'public', 'alon-logo.png'));
   customerDisplayWindow.loadURL(`${SERVER_ORIGIN}/pos/customer-display`);
   customerDisplayWindow.once('ready-to-show', () => customerDisplayWindow.show());
   customerDisplayWindow.on('closed', () => { customerDisplayWindow = null; });

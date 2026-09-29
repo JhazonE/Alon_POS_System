@@ -109,7 +109,7 @@ export function NotificationsBell({ user }: { user: AppUser | null }) {
         <button className={`relative ${HEADER_ICON_BUTTON} active:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:shrink-0`}>
           <Bell className="h-[17px] w-[17px]" />
           {notifications.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-600 border-2 border-white dark:border-[#0F3336] animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-600 border-2 border-white dark:border-[#0f2c58] animate-pulse" />
           )}
           <span className="sr-only">Notifications</span>
         </button>

@@ -1,4 +1,4 @@
-// Generates Alon POS System raster/ICO assets from public/alon-icon.svg
+// Generates Alon POS System raster/ICO assets from public/alon-icon.png
 // Usage: node scripts/generate-logo.mjs
 import sharp from 'sharp';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -6,10 +6,13 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const svgPath = path.join(root, 'public', 'alon-icon.svg');
+const srcPath = path.join(root, 'public', 'alon-icon.png');
 
-const pngFromSvg = async (svg, size) =>
-  sharp(svg, { density: 384 }).resize(size, size, { fit: 'contain' }).png().toBuffer();
+const pngFromSrc = async (src, size) =>
+  sharp(src)
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 }, kernel: 'lanczos3' })
+    .png()
+    .toBuffer();
 
 // Build an .ico that embeds PNG-encoded images (supported on Windows Vista+)
 const buildIco = (pngs) => {
@@ -38,22 +41,22 @@ const buildIco = (pngs) => {
 };
 
 const main = async () => {
-  const svg = await readFile(svgPath);
+  const src = await readFile(srcPath);
 
   // App-loaded PNGs
-  await writeFile(path.join(root, 'public', 'alon-mark.png'), await pngFromSvg(svg, 512));
-  await writeFile(path.join(root, 'app', 'icon.png'), await pngFromSvg(svg, 512));
+  await writeFile(path.join(root, 'public', 'alon-logo.png'), await pngFromSrc(src, 512));
+  await writeFile(path.join(root, 'app', 'icon.png'), await pngFromSrc(src, 512));
 
   // ICO sizes
   const sizes = [16, 32, 48, 64, 128, 256];
   const pngs = await Promise.all(
-    sizes.map(async (size) => ({ size, data: await pngFromSvg(svg, size) }))
+    sizes.map(async (size) => ({ size, data: await pngFromSrc(src, size) }))
   );
 
-  await writeFile(path.join(root, 'public', 'alon-mark.ico'), buildIco(pngs));
+  await writeFile(path.join(root, 'public', 'alon-logo.ico'), buildIco(pngs));
   await writeFile(path.join(root, 'public', 'favicon.ico'), buildIco(pngs.filter((p) => p.size <= 64)));
 
-  console.log('Generated: public/alon-mark.png, app/icon.png, public/alon-mark.ico, public/favicon.ico');
+  console.log('Generated: public/alon-logo.png, app/icon.png, public/alon-logo.ico, public/favicon.ico');
 };
 
 main().catch((err) => {

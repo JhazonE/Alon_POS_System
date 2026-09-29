@@ -23,7 +23,7 @@ export function SidebarPanel({ children }: { children: React.ReactNode }) {
       ].join(' ')}
     >
       <div className="sticky top-0 flex h-svh w-[300px] p-[10px]">
-        <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#174145] bg-[#0B2A2D]">
+        <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#1a3b6e] bg-[#0a2145]">
           {children}
         </div>
       </div>
