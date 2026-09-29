@@ -6,6 +6,7 @@ import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMeasure, ShelfLocation, Account, TaxRate } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
+import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
 
 
 export type ProductFormData = {
@@ -1097,6 +1098,11 @@ export async function updateProductPrice(id: string, newPrice: number) {
       }
       
       await connection.query('UPDATE products SET price = ? WHERE id = ?', [newPrice, id]);
+      // Keep the base selling unit (what the Edit form hydrates from) in step.
+      await syncBaseSellingUnit(connection, id, {
+        price: newPrice,
+        levelPrices: { [defaultLevelId]: newPrice },
+      });
     });
 
     return { success: true };

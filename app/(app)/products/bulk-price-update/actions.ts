@@ -5,6 +5,7 @@ import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { applyAdjustment, isValidPriceValue, type AdjustmentType } from '@/lib/price-update-math';
 import { addProduct } from '@/app/(app)/products/actions';
 import { generateSku } from '@/lib/sku';
+import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
 
 export interface PriceUpdateItem {
   productId: string;
@@ -117,8 +118,15 @@ async function applyPriceUpdateBatch(items: PriceUpdateItem[]): Promise<PriceUpd
             [newValue, item.productId, defaultLevelId],
           );
         }
+        // The Edit Product form hydrates from the base selling unit; keep it
+        // in step or the next Edit save reverts this update.
+        await syncBaseSellingUnit(connection, item.productId, {
+          price: newValue,
+          levelPrices: defaultLevelId ? { [defaultLevelId]: newValue } : undefined,
+        });
       } else if (item.field === 'cost') {
         await connection.query('UPDATE products SET cost = ? WHERE id = ?', [newValue, item.productId]);
+        await syncBaseSellingUnit(connection, item.productId, { cost: newValue });
       } else if (item.field === 'priceLevel' && item.priceLevelId) {
         // product_price_levels' primary key is (product_id, price_level_id) —
         // min_quantity is NOT part of it. A SELECT-then-branch existence check
@@ -133,6 +141,15 @@ async function applyPriceUpdateBatch(items: PriceUpdateItem[]): Promise<PriceUpd
            ON DUPLICATE KEY UPDATE price = VALUES(price)`,
           [item.productId, item.priceLevelId, newValue],
         );
+        // Update the base unit's existing price row for this level (if the
+        // tab shows one) so the next Edit save doesn't write the old value
+        // back into product_price_levels. For the default level also update
+        // the base unit's price, which is what the tab shows for that level
+        // when no per-level row exists.
+        await syncBaseSellingUnit(connection, item.productId, {
+          price: item.priceLevelId === defaultLevelId ? newValue : undefined,
+          levelPrices: { [item.priceLevelId]: newValue },
+        });
       }
       applied++;
     }

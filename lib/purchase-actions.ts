@@ -3,6 +3,7 @@ import { generateBatchId } from './batch-utils';
 import { calculatePurchaseCosts } from './purchase-utils';
 import { toSafeNumber } from './utils';
 import { findUltimateRoot, addFamilyStock } from './family-sync';
+import { syncBaseSellingUnit } from './selling-unit-sync';
 
 function parseDueDays(paymentTerms: string | undefined | null): number {
   if (!paymentTerms) return 0;
@@ -242,6 +243,15 @@ export async function processPurchaseOrderReceipt(orderId: string, receiptData: 
           ON DUPLICATE KEY UPDATE price = VALUES(price)
         `, [receivedItem.productId, defaultLevelId, finalPrice]);
       }
+
+      // Mirror the same cost/price onto the product's base selling unit, which
+      // the Edit Product form hydrates from — otherwise the next unrelated
+      // Edit save writes the stale base-unit values back over this receipt.
+      await syncBaseSellingUnit(connection, receivedItem.productId, {
+        price: finalPrice,
+        cost: finalCost,
+        levelPrices: defaultLevelId && finalPrice > 0 ? { [defaultLevelId]: finalPrice } : undefined,
+      });
     }
 
     // 5. Update PO status and received total
