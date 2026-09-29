@@ -34,30 +34,53 @@ export function SellingUnitsTab() {
    * Fills every price-level column of one row from that row's own cost and the
    * base row's retail price. A non-base row scales by its qtyBase: one Box of
    * 12 is priced off 12 Pieces of retail.
+   *
+   * Idempotent — clicking it again gives the same values. The retail basis is
+   * never an output of the same click:
+   * - retail-based default level (the normal case): the base row's default
+   *   price IS the retail basis (the old Price Levels tab's main price), so on
+   *   the base row it is left as entered, and a non-base row's default price is
+   *   exactly retail × qty. Re-applying the default level's own adjustment to
+   *   its own price is what compounded on every click.
+   * - cost-based default level: computed from the base row's cost, like any
+   *   cost-based level.
+   * A level whose basis is empty/0 is left untouched rather than zeroed.
    */
   const autoPriceRow = (index: number) => {
     const units: any[] = form.getValues('sellingUnits' as any) || [];
     const row = units[index];
     if (!row) return;
 
-    const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
-    const baseRetail = defaultLevel
-      ? Number(units[baseUnitIndex]?.prices?.[defaultLevel.id]?.price ?? 0)
-      : 0;
+    const baseRow = units[baseUnitIndex];
     const qty = row.isBase ? 1 : Number(row.qtyBase) || 0;
     if (!qty) return;
 
-    const rowRetail = row.isBase ? baseRetail : baseRetail * qty;
-    const rowCost = Number(row.cost ?? units[baseUnitIndex]?.cost ?? 0) * (row.isBase ? 1 : qty);
+    const baseCost = Number(baseRow?.cost ?? 0) || 0;
+    // A row's own Cost is already per that unit (one Box), so it is not scaled
+    // again; only the base cost fallback is multiplied up to this unit.
+    const ownCost = row.cost === undefined || row.cost === null || row.cost === '' ? NaN : Number(row.cost);
+    const rowCost = row.isBase ? baseCost : Number.isFinite(ownCost) ? ownCost : baseCost * qty;
+
+    const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
+    const defaultIsRetailBased = !!defaultLevel && (defaultLevel.calculationBase || 'retail') === 'retail';
+    const baseRetail = !defaultLevel
+      ? 0
+      : defaultIsRetailBased
+        ? Number(baseRow?.prices?.[defaultLevel.id]?.price ?? 0) || 0
+        : calculatePriceLevelPrice(defaultLevel.id, 'cost', priceLevels, 0, baseCost);
+    const rowRetail = baseRetail * qty;
 
     priceLevels.forEach((level: any) => {
-      const value = calculatePriceLevelPrice(
-        level.id,
-        level.calculationBase || 'retail',
-        priceLevels,
-        rowRetail,
-        rowCost,
-      );
+      const calculationBase = level.calculationBase || 'retail';
+      let value: number;
+      if (defaultIsRetailBased && level.id === defaultLevel.id) {
+        if (row.isBase) return; // the input itself — leave as entered
+        value = rowRetail;
+      } else {
+        value = calculatePriceLevelPrice(level.id, calculationBase, priceLevels, rowRetail, rowCost);
+      }
+      const basis = calculationBase === 'cost' ? rowCost : rowRetail;
+      if (!(basis > 0) || !Number.isFinite(value)) return;
       form.setValue(
         `sellingUnits.${index}.prices.${level.id}.price` as any,
         parseFloat(value.toFixed(2)),

@@ -230,6 +230,42 @@ test.describe('Selling Units — edit', () => {
     expect(product.unit_of_measure).toBe(P.units[0].unitName);
   });
 
+  // Wala mag-save — ang fixture state kay gamiton pa sa sunod nga test.
+  test('ang auto-price wand dili mo-compound kung i-click balik-balik', async ({ page }) => {
+    const P = SELLING_UNITS_PRODUCT;
+    // Seeded levels: Retail = retail-based +100% (default), Wholesale = retail-based +90%.
+    const baseRetail = P.units[0].retail;
+    const baseWholesale = +(baseRetail * 1.9).toFixed(2);
+    const caseRetail = baseRetail * P.units[1].qtyBase;
+    const caseWholesale = +(caseRetail * 1.9).toFixed(2);
+
+    await seedSession(page, DEFAULT_ADMIN);
+    await page.goto('/products');
+    await openRowMenu(page, P.sku, P.name);
+    await page.getByRole('menuitem', { name: 'Edit Product' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('tab', { name: 'Selling Units' }).click();
+    await expect(unitRows(dialog)).toHaveCount(2);
+    const base = unitRows(dialog).nth(0);
+    const caseRow = unitRows(dialog).nth(1);
+
+    for (let click = 0; click < 3; click++) {
+      await base.getByRole('button', { name: 'Auto-fill prices for this unit' }).click();
+      // The base row's default (Retail) price is the retail basis: left as entered.
+      await expect(base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`)).toHaveValue(String(baseRetail));
+      await expect(base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`)).toHaveValue(String(baseWholesale));
+    }
+    for (let click = 0; click < 2; click++) {
+      await caseRow.getByRole('button', { name: 'Auto-fill prices for this unit' }).click();
+      await expect(caseRow.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`)).toHaveValue(String(caseRetail));
+      await expect(caseRow.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`)).toHaveValue(String(caseWholesale));
+    }
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  });
+
   test('pag-remove sa usa ka non-base selling unit mo-papas sa iyang row', async ({ page }) => {
     const P = SELLING_UNITS_PRODUCT;
 

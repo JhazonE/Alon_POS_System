@@ -15,11 +15,14 @@ export type { SellingUnitValues };
  * service (whose tab is hidden). `updateProduct` only rewrites the selling-unit
  * tables when the field is present, so a service edit never touches them.
  *
- * `unitOfMeasure` keeps its `.min(1)` here (unlike the Add form, which relaxes
- * it): an Edit form's values are seeded from an existing product, so the field
- * is always already populated, and a service still edits it directly on the
- * Inventory tab. For a standard product the base row's Unit Name overwrites it
- * on submit.
+ * `unitOfMeasure` is NOT required at the field level (same as the Add form):
+ * for a standard product the base row's Unit Name is mirrored onto it in
+ * saveChanges, which runs only AFTER this schema validates — so a legacy
+ * product whose stored unit_of_measure is empty must not fail here first. The
+ * base row's own `unitName` (required by sellingUnitSchema) is what enforces a
+ * unit for a standard product. A service has no selling units and edits this
+ * field directly on the Inventory tab, so the superRefine below still
+ * requires it there.
  */
 export const productSchema = z
   .object({
@@ -37,7 +40,7 @@ export const productSchema = z
     warehouse: z.string().optional(),
     shelfLocationIds: z.array(z.string()).optional(),
     isSerialized: z.boolean().default(false),
-    unitOfMeasure: z.string().min(1, 'Unit of measure is required'),
+    unitOfMeasure: z.string().default(''),
     reorderPoint: z.coerce.number().int().nonnegative().optional().default(0),
     // Mirrored from the base selling unit's default-level price on submit for a
     // standard product; a service keeps its own markup-derived price.
@@ -54,6 +57,15 @@ export const productSchema = z
   })
   .superRefine((values, ctx) => {
     sellingUnitsSuperRefine(values.sellingUnits, ctx);
+    // No selling units = a service (the hook omits them only for a service):
+    // its Inventory-tab unit is the only source, so it is still required.
+    if (values.sellingUnits === undefined && !values.unitOfMeasure?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['unitOfMeasure'],
+        message: 'Unit of measure is required',
+      });
+    }
   });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
