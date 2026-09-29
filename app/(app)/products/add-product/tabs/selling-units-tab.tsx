@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Wand2, X } from 'lucide-react';
+import { ChevronDown, PlusCircle, Wand2, X } from 'lucide-react';
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UnitOfMeasure } from '@/lib/types';
 
 import { useAddProductFormContext } from '../add-product-form-context';
@@ -21,6 +22,7 @@ export function SellingUnitsTab() {
     sellingUnitFields, addSellingUnit, removeSellingUnit,
     baseUnitIndex, baseUnitName,
     generateUnitBarcode,
+    supplierCostOptions,
   } = useAddProductFormContext();
 
   // Which row's Unit Name select is open — local, per-row state (the shared
@@ -238,17 +240,55 @@ export function SellingUnitsTab() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs">Cost (₱)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={field.value ?? ''}
-                            onChange={(e) =>
-                              field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={field.value ?? ''}
+                              // The base row's picker sits over the right edge, so drop
+                              // the native spinner that would otherwise be underneath it.
+                              className={isBaseRow ? 'pr-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none' : undefined}
+                              onChange={(e) =>
+                                field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
+                              }
+                            />
+                          </FormControl>
+                          {isBaseRow && (
+                            // Always rendered (disabled when nothing to pick) so it is
+                            // clear the picker exists. Picks fill Cost, which stays editable.
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  disabled={supplierCostOptions.length === 0}
+                                  title={
+                                    supplierCostOptions.length === 0
+                                      ? 'No supplier cost yet — add one in the Suppliers tab'
+                                      : 'Pick from supplier cost'
+                                  }
+                                  className="inline-flex items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 disabled:pointer-events-none p-0 absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                  <span className="sr-only">Pick from supplier cost</span>
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel className="text-xs">Supplier cost</DropdownMenuLabel>
+                                {supplierCostOptions.map((o) => (
+                                  <DropdownMenuItem
+                                    key={o.key}
+                                    className="text-xs"
+                                    onSelect={() => field.onChange(o.cost)}
+                                  >
+                                    {o.name} — ₱{o.cost.toFixed(2)}{o.isPrimary ? ' ★' : ''}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

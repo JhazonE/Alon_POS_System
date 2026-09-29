@@ -317,6 +317,16 @@ export function useAddProductForm({
   const watchedSupplierMappings = form.watch('supplierMappings' as any) as SupplierMappingValues[] | undefined;
   const primarySupplierId = (watchedSupplierMappings ?? []).find((m) => m?.isPrimary)?.supplierId
     ?? (watchedSupplierMappings ?? [])[0]?.supplierId;
+  // Costs the user can pick from for a selling unit's Cost: one entry per
+  // mapped supplier that has a cost > 0 (mapping rows without a chosen
+  // supplier or cost are skipped).
+  const supplierCostOptions = (watchedSupplierMappings ?? []).flatMap((m, i) => {
+    const cost = Number(m?.cost);
+    if (!m?.supplierId || !Number.isFinite(cost) || cost <= 0) return [];
+    const name = suppliers.find((s: Supplier) => s.id === m.supplierId)?.name ?? 'Supplier';
+    return [{ key: `${i}`, name, cost, isPrimary: !!m.isPrimary }];
+  });
+
   const [markupSource, setMarkupSource] = useState<string | null>(null);
 
   useEffect(() => {
@@ -595,6 +605,7 @@ export function useAddProductForm({
     tabErrors,
     selectedPriceLevelId, setSelectedPriceLevelId,
     markupSource,
+    supplierCostOptions,
 
     // handlers
     onSubmit,
