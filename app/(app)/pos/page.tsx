@@ -160,7 +160,7 @@ function POSContent() {
       {/* Solid brand ground — deep teal in light, near-black teal in dark. No blur:
           the terminal behind is not something a signed-out cashier should read. */}
       {!pos.isPosLoggedIn && (
-        <div className="pos-login-brand absolute inset-0 z-50 flex items-center justify-center bg-[#0D7C87] animate-fade-in dark:bg-[#0B2A2D]">
+        <div className="pos-login-brand absolute inset-0 z-50 flex items-center justify-center bg-[#0D7C87] animate-fade-in dark:bg-[#0a2145]">
           <PosLoginForm
             onLoginSuccess={pos.handlePosLoginSuccess}
             terminalName={pos.currentTerminalName}

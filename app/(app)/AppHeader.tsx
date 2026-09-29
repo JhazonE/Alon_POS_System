@@ -33,7 +33,7 @@ export function AppHeader({
 }) {
   return (
     <header className="non-printable window-drag shrink-0 px-[10px] pt-[10px]">
-      <div className="window-no-drag flex h-14 items-center gap-3 rounded-2xl border border-[#D9EDEB] bg-white px-3 shadow-sm dark:border-[#17403F] dark:bg-[#0F3336]">
+      <div className="window-no-drag flex h-14 items-center gap-3 rounded-2xl border border-[#d6e4f5] bg-white px-3 shadow-sm dark:border-[#1a3b6e] dark:bg-[#0f2c58]">
         <AnimatedSidebarTrigger />
         <AppBreadcrumbs />
 
@@ -41,15 +41,15 @@ export function AppHeader({
 
         {businessName && (
           <>
-            <div className="hidden items-center gap-2.5 rounded-xl border border-[#D9EDEB] bg-[#F4FBFA] py-1.5 pl-1.5 pr-3 sm:flex dark:border-[#17403F] dark:bg-[#0B2A2D]">
-              <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-[rgba(45,165,176,0.13)] text-[#0E7C86] dark:text-[#4FC3C9]">
+            <div className="hidden items-center gap-2.5 rounded-xl border border-[#d6e4f5] bg-[#f3f8fd] py-1.5 pl-1.5 pr-3 sm:flex dark:border-[#1a3b6e] dark:bg-[#0a2145]">
+              <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-[rgba(42,158,205,0.13)] text-[#104885] dark:text-[#4db4e0]">
                 <Store className="h-[13px] w-[13px]" />
               </span>
-              <span className="text-[12.5px] font-semibold text-[#0B2A2D] dark:text-[#DCF2F0]">
+              <span className="text-[12.5px] font-semibold text-[#0a2145] dark:text-[#dce9f8]">
                 {businessName}
               </span>
             </div>
-            <div className="hidden h-6 w-px bg-[#D9EDEB] sm:block dark:bg-[#17403F]" />
+            <div className="hidden h-6 w-px bg-[#d6e4f5] sm:block dark:bg-[#1a3b6e]" />
           </>
         )}
 

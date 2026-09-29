@@ -39,7 +39,7 @@ export function PosLoginForm({
                 product brand, not the store's. Which store this terminal
                 belongs to is shown in the footer alongside the terminal. */}
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-primary/15">
-              <Image src="/alon-icon.svg" alt="Alon POS System" width={48} height={48} className="h-full w-full object-contain p-1.5" priority />
+              <Image src="/alon-logo.png" alt="Alon POS System" width={48} height={48} className="h-full w-full object-contain p-1.5" priority />
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-lg font-bold uppercase tracking-wide text-foreground">Alon POS System</h1>

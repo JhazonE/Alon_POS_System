@@ -24,7 +24,7 @@ export function Logo({ className, enableLink = true, variant = 'default', size, 
       className
     )}>
       <Image
-        src="/alon-mark.png"
+        src="/alon-logo.png"
         alt="ALON POS SYSTEM"
         width={currentSize} 
         height={isIcon ? currentSize : 80} 

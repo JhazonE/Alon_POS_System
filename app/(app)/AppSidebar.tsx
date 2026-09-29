@@ -143,13 +143,13 @@ export function AppSidebar({
 
   return (
     <SidebarPanel>
-      <div className="sticky top-0 z-10 flex h-20 shrink-0 items-center border-b border-[#174145] px-6">
+      <div className="sticky top-0 z-10 flex h-20 shrink-0 items-center border-b border-[#1a3b6e] px-6">
         <div className="flex items-center gap-3">
           <Logo variant="icon" size={36} />
           <div className="flex min-w-0 flex-col">
-            <h1 className="font-headline text-xl font-extrabold leading-none tracking-tight text-[#DCF2F0]">ALON</h1>
+            <h1 className="font-headline text-xl font-extrabold leading-none tracking-tight text-[#dce9f8]">ALON</h1>
             <span className="mt-1 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-[#A8D5D3]">POS System</span>
-            <span className="mt-1 text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-[#4FC3C9] opacity-90">Enterprise</span>
+            <span className="mt-1 text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-[#4db4e0] opacity-90">Enterprise</span>
           </div>
         </div>
       </div>
@@ -161,13 +161,13 @@ export function AppSidebar({
             aria-label="Search navigation"
             title="Search (Ctrl+K)"
             onClick={() => { setOpen(true); setTimeout(() => searchRef.current?.focus(), 0); }}
-            className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-[rgba(192,232,230,0.66)] transition-colors hover:bg-[#143A3D]"
+            className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-[rgba(196,218,245,0.66)] transition-colors hover:bg-[#143463]"
           >
             <Search className="size-4" />
           </button>
         ) : (
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(192,232,230,0.5)]" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[rgba(196,218,245,0.5)]" />
             <Input
               ref={searchRef}
               value={query}
@@ -179,7 +179,7 @@ export function AppSidebar({
                 }
               }}
               placeholder="Search... (Ctrl+K)"
-              className="h-9 pl-9 text-sm bg-[#0F3336] border-[#17403F] text-[#DCF2F0] placeholder:text-[rgba(192,232,230,0.45)] focus-visible:ring-1"
+              className="h-9 pl-9 text-sm bg-[#0f2c58] border-[#1a3b6e] text-[#dce9f8] placeholder:text-[rgba(196,218,245,0.45)] focus-visible:ring-1"
             />
           </div>
         )}
@@ -189,7 +189,7 @@ export function AppSidebar({
         {isSearching ? (
           <NavCard label={`RESULTS (${matches.length})`}>
             {matches.length === 0 && (
-              <div className="px-2 py-1.5 text-[12px] text-[rgba(192,232,230,0.5)]">No pages found.</div>
+              <div className="px-2 py-1.5 text-[12px] text-[rgba(196,218,245,0.5)]">No pages found.</div>
             )}
             {matches.map(m => (
               <Link
@@ -200,17 +200,17 @@ export function AppSidebar({
                 data-active={pathname === m.href}
                 className={`flex h-8 items-center rounded-lg px-2 text-[12.5px] transition-colors ${
                   pathname === m.href
-                    ? 'bg-[#0E7C86] font-semibold text-white'
-                    : 'text-[rgba(192,232,230,0.66)] hover:bg-[#143A3D]'
+                    ? 'bg-[#1e7db8] font-semibold text-white'
+                    : 'text-[rgba(196,218,245,0.66)] hover:bg-[#143463]'
                 }`}
               >
                 <span className="truncate">
                   {matchSegments(m.label, query).map((seg, i) =>
                     seg.match
-                      ? <mark key={i} className="rounded-sm bg-[#0E7C86]/40 px-0.5 text-inherit">{seg.text}</mark>
+                      ? <mark key={i} className="rounded-sm bg-[#1e7db8]/40 px-0.5 text-inherit">{seg.text}</mark>
                       : <span key={i}>{seg.text}</span>,
                   )}
-                  {m.section && <span className="ml-1 text-[11px] text-[rgba(192,232,230,0.45)]">· {m.section}</span>}
+                  {m.section && <span className="ml-1 text-[11px] text-[rgba(196,218,245,0.45)]">· {m.section}</span>}
                 </span>
               </Link>
             ))}
@@ -342,18 +342,18 @@ export function AppSidebar({
         )}
       </div>
 
-      <div className="mt-auto shrink-0 border-t border-[#174145] p-2">
+      <div className="mt-auto shrink-0 border-t border-[#1a3b6e] p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-2 text-left text-sm text-[#DCF2F0] outline-none transition-colors hover:bg-[#143A3D] focus-visible:ring-2">
-              <Avatar className="size-9 ring-2 ring-[#174145] shadow-sm">
-                <AvatarFallback className="bg-[rgba(45,165,176,0.13)] text-[#4FC3C9] font-semibold border border-[#17403F]">
+            <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-2 text-left text-sm text-[#dce9f8] outline-none transition-colors hover:bg-[#143463] focus-visible:ring-2">
+              <Avatar className="size-9 ring-2 ring-[#1a3b6e] shadow-sm">
+                <AvatarFallback className="bg-[rgba(42,158,205,0.13)] text-[#4db4e0] font-semibold border border-[#1a3b6e]">
                   {getInitials(user.email)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col truncate">
                 <span className="text-sm font-semibold">{user.email || 'Anonymous'}</span>
-                <span className="text-[11px] text-[rgba(192,232,230,0.5)]">View Profile</span>
+                <span className="text-[11px] text-[rgba(196,218,245,0.5)]">View Profile</span>
               </div>
             </button>
           </DropdownMenuTrigger>
