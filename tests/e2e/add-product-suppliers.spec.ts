@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_SUPPLIER } from './fixtures/test-data';
+import {
+  TEST_BRAND,
+  TEST_CATEGORY,
+  TEST_UNIT,
+  TEST_PRICE_LEVEL,
+  TEST_PRICE_LEVEL_WHOLESALE,
+  TEST_SUPPLIER,
+} from './fixtures/test-data';
 
 /**
  * Add Product > Suppliers tab (DB-backed) — i-drive ang Add Product dialog's
@@ -60,12 +67,17 @@ test.describe('Add product with a supplier mapping', () => {
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
     await dialog.getByLabel('Initial Stock').fill(String(NEW_PRODUCT.stock));
 
-    // --- Selling Units (base row owns unit-of-measure, barcode, cost, price;
-    // Unit Name is a free-text input here, not a picker) ---
+    // --- Selling Units (base row owns unit name, barcode, cost ug price;
+    // Unit Name is a Select — InlineEditableSelect over units_of_measure —
+    // not free text) ---
     await dialog.getByRole('tab', { name: 'Selling Units' }).click();
-    await dialog.getByLabel('Unit Name').fill(TEST_UNIT.name);
-    await dialog.getByLabel('Barcode').fill(`SUP-${NEW_PRODUCT.sku}`);
-    await dialog.getByLabel(/^cost/i).fill('80');
+    const base = dialog.locator('div.bg-card.border.rounded-md.shadow-sm').nth(0);
+    await selectOption(page, dialog, 'Unit Name', `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
+    await base.getByLabel('Barcode').fill(`SUP-${NEW_PRODUCT.sku}`);
+    await base.getByLabel('Cost (₱)').fill('80');
+    // Every active price level's column is required.
+    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill('100');
+    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill('100');
 
     // --- Suppliers (new tab, local state — nothing persists until final submit) ---
     await dialog.getByRole('tab', { name: 'Suppliers' }).click();

@@ -70,8 +70,30 @@ export const TEST_PAYMENT_METHOD = {
 export const TEST_BRAND = { id: 'brand-test', name: 'Test Brand' };
 export const TEST_CATEGORY = { id: 'cat-test', name: 'Test Category' };
 export const TEST_UNIT = { id: 'uom-piece', name: 'Piece', abbreviation: 'pcs' };
+/**
+ * Extra units of measure for the Selling Units tab's non-base rows. The Unit
+ * Name field there is a Select (InlineEditableSelect over units_of_measure),
+ * not free text, and it renders with no `orphanLabel` fallback — so any unit
+ * name a selling-unit row uses (typed via the UI, or pre-seeded straight into
+ * product_selling_units for the edit-test fixture) must exist here first, or
+ * it simply won't be selectable/won't render in the trigger.
+ */
+export const TEST_UNIT_BOX = { id: 'uom-box', name: 'Box', abbreviation: 'bx' };
+export const TEST_UNIT_CASE = { id: 'uom-case', name: 'Case', abbreviation: 'cs' };
 /** Default retail price level — ang form mo-sync sa main price gikan sa default level. */
 export const TEST_PRICE_LEVEL = { id: 'retail-level', name: 'Retail', isDefault: true };
+
+/**
+ * Second (non-default) price level. The Selling Units tab renders ONE COLUMN
+ * PER ACTIVE PRICE LEVEL, so a second level is what makes the multi-column
+ * behaviour testable at all. percentage_adjustment 90 = a 10% discount off
+ * retail's 100 — a value distinguishable from retail's in an assertion.
+ */
+export const TEST_PRICE_LEVEL_WHOLESALE = {
+  id: 'wholesale-level',
+  name: 'Wholesale',
+  isDefault: false,
+};
 
 /** Bag-ong product nga himuon sa Add Product UI test. */
 export const NEW_PRODUCT = {
@@ -80,6 +102,10 @@ export const NEW_PRODUCT = {
   description: 'A widget created by the e2e Add Product test.',
   price: 99.5,
   stock: 42,
+  unitName: 'Piece',
+  barcode: '5000000000014',
+  cost: 80,
+  retail: 100,
 };
 
 /**
@@ -391,4 +417,84 @@ export const SO_SERVICE = {
   price: 500,
   cost: 200,
   stock: 0,
+};
+
+/** Bag-ong product nga himuon sa Selling Units add test (2 units). */
+export const SELLING_UNITS_NEW_PRODUCT = {
+  name: 'QA Selling Units Widget',
+  sku: 'QA-SU-NEW-001',
+  description: 'Product created by the e2e Selling Units add test.',
+  baseUnitName: 'Piece',
+  baseBarcode: '5100000000011',
+  baseCost: 8,
+  baseRetail: 12,
+  baseWholesale: 11,
+  boxUnitName: 'Box',
+  boxQtyBase: 12,
+  boxBarcode: '5100000000028',
+  boxCost: 96,
+  boxRetail: 140,
+  boxWholesale: 130,
+  stock: 24,
+};
+
+/**
+ * A product that already carries selling units, standing in for one that came
+ * out of the Plan 1 data migration. Its rows are seeded directly into
+ * product_selling_units / product_selling_unit_prices, NOT through the UI, so
+ * the edit test genuinely exercises loading stored rows into the tab.
+ */
+export const SELLING_UNITS_PRODUCT: FullProduct & {
+  barcode: string;
+  cost: number;
+  units: {
+    id: string;
+    unitName: string;
+    qtyBase: number;
+    barcode: string;
+    cost: number;
+    price: number;
+    isBase: boolean;
+    sortOrder: number;
+    retail: number;
+    wholesale: number;
+  }[];
+} = {
+  id: 'test-selling-units-1',
+  name: 'Selling Units Sardines',
+  sku: 'SU-EDIT-001',
+  description: 'Product nga naa nay selling units para sa edit test.',
+  price: 25,
+  stock: 60,
+  brand: TEST_BRAND.name,
+  category: TEST_CATEGORY.name,
+  unitOfMeasure: TEST_UNIT.name,
+  barcode: '5200000000014',
+  cost: 18,
+  units: [
+    {
+      id: 'psu-su-edit-base',
+      unitName: 'Piece',
+      qtyBase: 1,
+      barcode: '5200000000014',
+      cost: 18,
+      price: 25,
+      isBase: true,
+      sortOrder: 0,
+      retail: 25,
+      wholesale: 23,
+    },
+    {
+      id: 'psu-su-edit-case',
+      unitName: 'Case',
+      qtyBase: 24,
+      barcode: '5200000000021',
+      cost: 420,
+      price: 580,
+      isBase: false,
+      sortOrder: 1,
+      retail: 580,
+      wholesale: 540,
+    },
+  ],
 };

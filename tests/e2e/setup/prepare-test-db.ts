@@ -27,7 +27,11 @@ import {
   TEST_BRAND,
   TEST_CATEGORY,
   TEST_UNIT,
+  TEST_UNIT_BOX,
+  TEST_UNIT_CASE,
   TEST_PRICE_LEVEL,
+  TEST_PRICE_LEVEL_WHOLESALE,
+  SELLING_UNITS_PRODUCT,
   EDITABLE_PRODUCT,
   DELETABLE_PRODUCT,
   INVENTORY_PRODUCT,
@@ -149,6 +153,19 @@ async function seedFixtures(): Promise<void> {
     ['pos_settings_1', BUSINESS_NAME, '₱', 'PHP'],
   );
 
+  // --- price levels (kinahanglan una sa products: ang
+  // product_selling_unit_prices naay FK padulong sa price_levels) ---
+  await conn.query(
+    `INSERT INTO price_levels (id, name, calculation_base, is_default, percentage_adjustment)
+     VALUES (?, ?, 'retail', 1, 100.00)`,
+    [TEST_PRICE_LEVEL.id, TEST_PRICE_LEVEL.name],
+  );
+  await conn.query(
+    `INSERT INTO price_levels (id, name, calculation_base, is_default, percentage_adjustment)
+     VALUES (?, ?, 'retail', 0, 90.00)`,
+    [TEST_PRICE_LEVEL_WHOLESALE.id, TEST_PRICE_LEVEL_WHOLESALE.name],
+  );
+
   // --- products ---
   for (const p of TEST_PRODUCTS) {
     await conn.query(
@@ -163,6 +180,31 @@ async function seedFixtures(): Promise<void> {
       `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
       [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure],
+    );
+  }
+
+  // --- product nga naa nay selling units (stand-in para sa Plan 1 migrated data) ---
+  await conn.query(
+    `INSERT INTO products (id, name, price, cost, stock, sku, barcode, description, brand, category, unit_of_measure, availability)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
+    [
+      SELLING_UNITS_PRODUCT.id, SELLING_UNITS_PRODUCT.name, SELLING_UNITS_PRODUCT.price,
+      SELLING_UNITS_PRODUCT.cost, SELLING_UNITS_PRODUCT.stock, SELLING_UNITS_PRODUCT.sku,
+      SELLING_UNITS_PRODUCT.barcode, SELLING_UNITS_PRODUCT.description,
+      SELLING_UNITS_PRODUCT.brand, SELLING_UNITS_PRODUCT.category, SELLING_UNITS_PRODUCT.unitOfMeasure,
+    ],
+  );
+  for (const u of SELLING_UNITS_PRODUCT.units) {
+    await conn.query(
+      `INSERT INTO product_selling_units
+         (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [u.id, SELLING_UNITS_PRODUCT.id, u.unitName, u.qtyBase, u.barcode, u.cost, u.price, u.isBase ? 1 : 0, u.sortOrder],
+    );
+    await conn.query(
+      `INSERT INTO product_selling_unit_prices (selling_unit_id, price_level_id, price, min_quantity)
+       VALUES (?, ?, ?, 0), (?, ?, ?, 0)`,
+      [u.id, TEST_PRICE_LEVEL.id, u.retail, u.id, TEST_PRICE_LEVEL_WHOLESALE.id, u.wholesale],
     );
   }
 
@@ -359,17 +401,20 @@ async function seedFixtures(): Promise<void> {
     TEST_UNIT.name,
     TEST_UNIT.abbreviation,
   ]);
-  await conn.query(
-    `INSERT INTO price_levels (id, name, calculation_base, is_default, percentage_adjustment)
-     VALUES (?, ?, 'retail', 1, 100.00)`,
-    [TEST_PRICE_LEVEL.id, TEST_PRICE_LEVEL.name],
-  );
-
+  // Box/Case — extra units the Selling Units tab's non-base rows need selectable
+  // in its Unit Name picker (see the fixture's comment for why).
+  for (const u of [TEST_UNIT_BOX, TEST_UNIT_CASE]) {
+    await conn.query('INSERT INTO units_of_measure (id, name, abbreviation) VALUES (?, ?, ?)', [
+      u.id,
+      u.name,
+      u.abbreviation,
+    ]);
+  }
   await conn.end();
   console.log(
-    `✅ Seeded: ${Object.keys(TEST_USERS).length} users, ${TEST_PRODUCTS.length + 3} products, ` +
+    `✅ Seeded: ${Object.keys(TEST_USERS).length} users, ${TEST_PRODUCTS.length + 4} products, ` +
       `1 terminal, 1 payment method, 1 supplier, 1 warehouse, ` +
-      `1 brand/category/unit/price-level, pos_settings, transaction_references`,
+      `1 brand/category/unit, 2 price levels, pos_settings, transaction_references`,
   );
 }
 

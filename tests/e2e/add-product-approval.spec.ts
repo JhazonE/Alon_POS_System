@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { resetPosState, testQuery } from './helpers/db';
-import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT } from './fixtures/test-data';
+import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE } from './fixtures/test-data';
 
 /**
  * Add Product Approval (DB-backed) — verifies the require_product_confirmation
@@ -48,9 +48,19 @@ async function fillAndSubmitProduct(
 
   // --- Inventory ---
   await dialog.getByRole('tab', { name: 'Inventory' }).click();
-  await selectOption(page, dialog, /unit of measure/i, `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
   await dialog.getByLabel('Initial Stock').fill(String(opts.stock));
-  await dialog.getByLabel(/^cost/i).fill(opts.cost);
+
+  // --- Selling Units (base row owns unit name, barcode, cost ug price) ---
+  await dialog.getByRole('tab', { name: 'Selling Units' }).click();
+  const base = dialog.locator('div.bg-card.border.rounded-md.shadow-sm').nth(0);
+  // Unit Name kay Select (InlineEditableSelect), dili free-text input.
+  await selectOption(page, dialog, 'Unit Name', `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
+  // Unique kada tawag — product_selling_units.barcode kay globally UNIQUE.
+  await base.getByLabel('Barcode').fill(String(Date.now()).slice(-8));
+  await base.getByLabel('Cost (₱)').fill(opts.cost);
+  await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(Number(opts.cost) * 1.25));
+  // Every active price level's column is required.
+  await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(Number(opts.cost) * 1.25));
 
   // --- Submit ---
   await dialog.getByRole('button', { name: 'Add Product' }).click();

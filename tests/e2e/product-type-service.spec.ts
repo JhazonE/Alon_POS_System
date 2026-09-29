@@ -64,7 +64,7 @@ test.describe('Service product type', () => {
     await resetPosState();
   });
 
-  test('creating a service hides all stock fields and the Conversion tab', async ({ page }) => {
+  test('creating a service hides all stock fields and the Selling Units tab', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
     await page.getByRole('button', { name: 'Add Product' }).first().click();
@@ -74,8 +74,9 @@ test.describe('Service product type', () => {
 
     await dialog.getByRole('button', { name: 'Service', exact: true }).click();
 
-    // 5 tabs → 4: Conversion disappears from both the tablist and its panel.
-    await expect(dialog.getByRole('tab', { name: 'Conversion' })).toBeHidden();
+    // 4 tabs → 3: Selling Units disappears from both the tablist and its panel —
+    // a service has no sellable units, so its unit and cost stay on Inventory.
+    await expect(dialog.getByRole('tab', { name: 'Selling Units' })).toBeHidden();
 
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
     await expect(dialog.getByLabel('Initial Stock')).toBeHidden();

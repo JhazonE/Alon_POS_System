@@ -1,11 +1,19 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, NEW_PRODUCT } from './fixtures/test-data';
+import {
+  TEST_BRAND,
+  TEST_CATEGORY,
+  TEST_UNIT,
+  TEST_PRICE_LEVEL,
+  TEST_PRICE_LEVEL_WHOLESALE,
+  NEW_PRODUCT,
+} from './fixtures/test-data';
 
 /**
  * Add Product (DB-backed) — i-drive ang tinuod nga Add Product dialog batok sa
- * alon_pos_test. Nagsalig sa seeded brand/category/unit + category markup (ang form
- * walay standalone price input; ang price mo-auto-calculate gikan sa cost × markup).
+ * alon_pos_test. Nagsalig sa seeded brand/category/price-level. Ang presyo, cost,
+ * barcode ug unit name gikan sa base selling-unit row sa Selling Units tab —
+ * wala nay standalone nga price/cost/barcode/unit input sa ubang tabs.
  */
 
 /** I-pili ang usa ka Radix Select option pinaagi sa label sa sulod sa dialog. */
@@ -40,10 +48,19 @@ test.describe('Add product', () => {
 
     // --- Inventory ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await selectOption(page, dialog, /unit of measure/i, `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
     await dialog.getByLabel('Initial Stock').fill(String(NEW_PRODUCT.stock));
-    // Cost → mo-trigger sa auto-markup price calculation (price > 0 kinahanglan para sa submit).
-    await dialog.getByLabel(/^cost/i).fill('80');
+
+    // --- Selling Units (base row owns unit name, barcode, cost ug price) ---
+    await dialog.getByRole('tab', { name: 'Selling Units' }).click();
+    const base = dialog.locator('div.bg-card.border.rounded-md.shadow-sm').nth(0);
+    // Unit Name kay Select (InlineEditableSelect), dili free-text input.
+    await selectOption(page, dialog, 'Unit Name', `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
+    await base.getByLabel('Barcode').fill(NEW_PRODUCT.barcode);
+    await base.getByLabel('Cost (₱)').fill(String(NEW_PRODUCT.cost));
+    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(NEW_PRODUCT.retail));
+    // Every active price level's column is required — a second (Wholesale)
+    // level now exists, so it needs a value too or submit fails validation.
+    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(NEW_PRODUCT.retail));
 
     // --- Submit ---
     await dialog.getByRole('button', { name: 'Add Product' }).click();
@@ -59,6 +76,6 @@ test.describe('Add product', () => {
     expect(match, 'bag-ong product makita sa /api/products').toBeTruthy();
     expect(match.name).toBe(NEW_PRODUCT.name);
     expect(Number(match.stock)).toBe(NEW_PRODUCT.stock);
-    expect(Number(match.price)).toBeGreaterThan(0);
+    expect(Number(match.price)).toBe(NEW_PRODUCT.retail);
   });
 });
