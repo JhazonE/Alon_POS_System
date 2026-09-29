@@ -24,25 +24,26 @@ export function WaveStatCard({
   return (
     <div
       data-report="stat"
-      className="relative overflow-hidden rounded-2xl border border-border bg-card p-4"
+      className="relative rounded-2xl border border-border bg-card p-4"
     >
-      <svg
-        aria-hidden
-        viewBox="0 0 200 100"
-        preserveAspectRatio="none"
-        className="pointer-events-none absolute -bottom-1.5 -right-2.5 h-[60px] w-[110px]"
-      >
-        <path
-          d="M0,60 C40,90 80,20 120,50 C150,72 180,40 200,55 L200,100 L0,100 Z"
-          fill="rgb(var(--matte-accent))"
-          opacity="0.14"
-        />
-        <path
-          d="M20,75 C60,100 100,40 140,65 C165,80 190,55 200,68 L200,100 L0,100 Z"
-          fill="rgb(var(--matte-accent))"
-          opacity="0.22"
-        />
-      </svg>
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+        <svg
+          viewBox="0 0 200 100"
+          preserveAspectRatio="none"
+          className="absolute -bottom-1.5 -right-2.5 h-[60px] w-[110px]"
+        >
+          <path
+            d="M0,60 C40,90 80,20 120,50 C150,72 180,40 200,55 L200,100 L0,100 Z"
+            fill="rgb(var(--matte-accent))"
+            opacity="0.14"
+          />
+          <path
+            d="M20,75 C60,100 100,40 140,65 C165,80 190,55 200,68 L200,100 L0,100 Z"
+            fill="rgb(var(--matte-accent))"
+            opacity="0.22"
+          />
+        </svg>
+      </div>
 
       <div className="relative">
         <div className="flex items-start justify-between gap-2">
@@ -51,7 +52,7 @@ export function WaveStatCard({
           </span>
           {Icon ? <Icon className="h-4 w-4 text-[rgb(var(--matte-accent))]" /> : null}
         </div>
-        <div className={cn('mt-1.5 text-2xl font-extrabold leading-none text-foreground', valueClassName)}>
+        <div className={cn('mt-1.5 text-2xl font-extrabold leading-tight break-words text-foreground', valueClassName)}>
           {value}
         </div>
         {sub ? (
