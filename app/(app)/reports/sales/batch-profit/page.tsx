@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, FileSpreadsheet, Layers, TrendingUp, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PhilippinePeso } from 'lucide-react';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   Select,
   SelectContent,
@@ -297,49 +298,36 @@ export default function BatchProfitPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between pb-1 space-y-0 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-            Total Revenue
-            <PhilippinePeso className="h-3 w-3" />
-          </CardHeader>
-          <CardContent className="py-2 px-4">
-            <div className="text-xl font-bold text-blue-700">{formatCurrency(totals.revenue)}</div>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Revenue"
+          icon={PhilippinePeso}
+          value={formatCurrency(totals.revenue)}
+          valueClassName="text-xl text-blue-700"
+        />
 
-        <Card>
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between pb-1 space-y-0 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-            Total Batch Cost
-            <PhilippinePeso className="h-3 w-3" />
-          </CardHeader>
-          <CardContent className="py-2 px-4">
-            <div className="text-xl font-bold text-muted-foreground">{formatCurrency(totals.cost)}</div>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Batch Cost"
+          icon={PhilippinePeso}
+          value={formatCurrency(totals.cost)}
+          valueClassName="text-xl text-muted-foreground"
+        />
 
-        <Card>
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between pb-1 space-y-0 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-            Gross Profit
-            <TrendingUp className="h-3 w-3 text-green-500" />
-          </CardHeader>
-          <CardContent className="py-2 px-4">
-            <div className={cn("text-xl font-bold", totals.profit >= 0 ? "text-green-600" : "text-red-600")}>
-              {formatCurrency(totals.profit)}
-            </div>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Gross Profit"
+          icon={TrendingUp}
+          value={formatCurrency(totals.profit)}
+          valueClassName={cn('text-xl', totals.profit >= 0 ? 'text-green-600' : 'text-red-600')}
+        />
 
-        <Card>
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between pb-1 space-y-0 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-            Avg Batch Margin
-            <TrendingUp className="h-3 w-3 text-amber-500" />
-          </CardHeader>
-          <CardContent className="py-2 px-4">
-            <div className={cn("text-xl font-bold", totals.marginPct >= 20 ? "text-green-600" : totals.marginPct >= 10 ? "text-amber-600" : "text-red-600")}>
-              {totals.marginPct}%
-            </div>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Avg Batch Margin"
+          icon={TrendingUp}
+          value={`${totals.marginPct}%`}
+          valueClassName={cn(
+            'text-xl',
+            totals.marginPct >= 20 ? 'text-green-600' : totals.marginPct >= 10 ? 'text-amber-600' : 'text-red-600',
+          )}
+        />
       </div>
 
       <Card>

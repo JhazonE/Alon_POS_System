@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, FileSpreadsheet, CreditCard, UserPlus, RefreshCw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -191,22 +192,40 @@ export default function MembershipReportPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Activations</CardTitle><UserPlus className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-emerald-600">{summary.totalActivations}</div><p className="text-xs text-muted-foreground">New cards</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Renewals</CardTitle><RefreshCw className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-blue-600">{summary.totalRenewals}</div><p className="text-xs text-muted-foreground">Extended cards</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Collected</CardTitle><div className="h-4 w-4 flex items-center justify-center text-muted-foreground font-semibold text-base">₱</div></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-amber-600">{formatCurrency(summary.totalCollected)}</div><p className="text-xs text-muted-foreground">All membership fees</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Cash / Card</CardTitle><CreditCard className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-lg font-bold">{formatCurrency(summary.cashTotal)} <span className="text-muted-foreground">/</span> {formatCurrency(summary.cardTotal)}</div><p className="text-xs text-muted-foreground">Cash vs card</p></CardContent>
-        </Card>
+        <WaveStatCard
+          label="Activations"
+          icon={UserPlus}
+          value={summary.totalActivations}
+          valueClassName="text-emerald-600"
+          sub="New cards"
+        />
+
+        <WaveStatCard
+          label="Renewals"
+          icon={RefreshCw}
+          value={summary.totalRenewals}
+          valueClassName="text-blue-600"
+          sub="Extended cards"
+        />
+
+        <WaveStatCard
+          label="Total Collected"
+          value={formatCurrency(summary.totalCollected)}
+          valueClassName="text-amber-600"
+          sub="All membership fees"
+        />
+
+        <WaveStatCard
+          label="Cash / Card"
+          icon={CreditCard}
+          value={
+            <>
+              {formatCurrency(summary.cashTotal)} <span className="text-muted-foreground">/</span> {formatCurrency(summary.cardTotal)}
+            </>
+          }
+          valueClassName="text-lg"
+          sub="Cash vs card"
+        />
       </div>
 
       <Card>

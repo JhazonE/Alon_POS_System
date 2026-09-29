@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -283,26 +283,17 @@ export default function CostVsRetailReportPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Cost Value</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(summary.totalCostValue)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Retail Value</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(summary.totalRetailValue)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Potential Profit</CardTitle></CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${summary.totalProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              {formatCurrency(summary.totalProfit)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Overall Margin</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{summary.marginPct.toFixed(1)}%</div></CardContent>
-        </Card>
+        <WaveStatCard label="Total Cost Value" value={formatCurrency(summary.totalCostValue)} />
+
+        <WaveStatCard label="Total Retail Value" value={formatCurrency(summary.totalRetailValue)} />
+
+        <WaveStatCard
+          label="Potential Profit"
+          value={formatCurrency(summary.totalProfit)}
+          valueClassName={summary.totalProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}
+        />
+
+        <WaveStatCard label="Overall Margin" value={`${summary.marginPct.toFixed(1)}%`} />
       </div>
 
       <div className="bg-background p-4 rounded-md border">
