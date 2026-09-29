@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, FileSpreadsheet, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PhilippinePeso, Package2, TrendingUp, BarChart } from 'lucide-react';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   Select,
   SelectContent,
@@ -280,49 +281,37 @@ export default function PurchasesByProductPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Spend</CardTitle>
-            <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(totals.totalCost)}</div>
-            <p className="text-xs text-muted-foreground">Total procurement value</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Spend"
+          icon={PhilippinePeso}
+          value={formatCurrency(totals.totalCost)}
+          valueClassName="text-blue-600"
+          sub="Total procurement value"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Units Purchased</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totals.totalQuantity.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total items bought</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Units Purchased"
+          icon={BarChart}
+          value={totals.totalQuantity.toLocaleString()}
+          valueClassName="text-green-600"
+          sub="Total items bought"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unique Products</CardTitle>
-            <Package2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{totals.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Different items purchased</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Unique Products"
+          icon={Package2}
+          value={totals.totalProducts}
+          valueClassName="text-purple-600"
+          sub="Different items purchased"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Unit Cost</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(totals.avgUnitCost)}</div>
-            <p className="text-xs text-muted-foreground">Weighted average cost</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Avg Unit Cost"
+          icon={TrendingUp}
+          value={formatCurrency(totals.avgUnitCost)}
+          valueClassName="text-orange-600"
+          sub="Weighted average cost"
+        />
       </div>
 
       {/* Data Section */}

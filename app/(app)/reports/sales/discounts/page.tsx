@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, FileSpreadsheet, ShieldCheck, Search, Users, BadgeCheck } from 'lucide-react';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   Select,
   SelectContent,
@@ -280,49 +281,36 @@ export default function DiscountReportPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-            <BadgeCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totals.count.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Discounted line items</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Records"
+          icon={BadgeCheck}
+          value={totals.count.toLocaleString()}
+          valueClassName="text-blue-600"
+          sub="Discounted line items"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Discount</CardTitle>
-            <div className="h-4 w-4 flex items-center justify-center text-muted-foreground font-semibold text-base">₱</div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totals.discount)}</div>
-            <p className="text-xs text-muted-foreground">Amount discounted</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Total Discount"
+          value={formatCurrency(totals.discount)}
+          valueClassName="text-green-600"
+          sub="Amount discounted"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Senior Citizen</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{totals.senior}</div>
-            <p className="text-xs text-muted-foreground">Senior discount records</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Senior Citizen"
+          icon={Users}
+          value={totals.senior}
+          valueClassName="text-orange-600"
+          sub="Senior discount records"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">PWD</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{totals.pwd}</div>
-            <p className="text-xs text-muted-foreground">PWD discount records</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="PWD"
+          icon={Users}
+          value={totals.pwd}
+          valueClassName="text-purple-600"
+          sub="PWD discount records"
+        />
       </div>
 
       {/* Data Section */}
