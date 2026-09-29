@@ -503,16 +503,37 @@ async function writeSellingUnits(
     );
   }
 
+  let basePrice: number | undefined;
+
   for (let i = 0; i < units.length; i++) {
     const u = units[i];
     const unitId = u.id || `psu_${uuidv4()}`;
 
-    const defaultLevelPrice =
-      defaultPriceLevelId && u.prices?.[defaultPriceLevelId]
-        ? Number(u.prices[defaultPriceLevelId].price)
-        : undefined;
-    const firstAnyPrice = Object.values(u.prices || {})[0]?.price;
-    const unitPrice = Number(defaultLevelPrice ?? firstAnyPrice ?? 0);
+    // product_selling_units.price is the unit's default-level price. Resolve
+    // it from, in order: the submitted default-level entry; for a kept unit,
+    // the price already stored on the row; any other submitted level; 0.
+    //
+    // The stored-price step matters: units written by the parent/child data
+    // migration (120) have a real `price` but no product_selling_unit_prices
+    // rows, and a form session that never renders the Selling Units tab
+    // (Radix unmounts inactive tabs) submits an empty `prices` map for them.
+    // Without this step such a save silently zeroed the unit's price.
+    const defaultLevelPrice = defaultPriceLevelId ? validPrice(u.prices?.[defaultPriceLevelId]) : undefined;
+    let storedPrice: number | undefined;
+    if (u.id && defaultLevelPrice === undefined) {
+      const [storedRows]: any = await connection.query(
+        'SELECT price FROM product_selling_units WHERE id = ? AND product_id = ?',
+        [u.id, productId],
+      );
+      const stored = Number(storedRows?.[0]?.price);
+      if (Number.isFinite(stored) && stored > 0) storedPrice = stored;
+    }
+    const firstAnyPrice = Object.values(u.prices || {})
+      .map(validPrice)
+      .find((p) => p !== undefined);
+    const resolvedPrice = defaultLevelPrice ?? storedPrice ?? firstAnyPrice;
+    const unitPrice = resolvedPrice ?? 0;
+    if (u === baseUnit) basePrice = resolvedPrice;
 
     if (u.id) {
       // Existing row — UPDATE in place. MySQL applies ON DELETE SET NULL
@@ -562,7 +583,8 @@ async function writeSellingUnits(
     // PK (selling_unit_id, price_level_id), no surrogate id, no dependents.
     await connection.query('DELETE FROM product_selling_unit_prices WHERE selling_unit_id = ?', [unitId]);
     for (const [levelId, entry] of Object.entries(u.prices || {})) {
-      if (entry == null || entry.price == null || Number.isNaN(Number(entry.price))) continue;
+      const price = validPrice(entry);
+      if (price === undefined) continue;
       await connection.query(
         `INSERT INTO product_selling_unit_prices
            (selling_unit_id, price_level_id, price, min_quantity)
@@ -570,14 +592,27 @@ async function writeSellingUnits(
         [
           unitId,
           levelId,
-          Number(entry.price),
+          price,
           entry.minQuantity == null ? null : Number(entry.minQuantity),
         ],
       );
     }
   }
 
-  return baseUnit;
+  // basePrice is undefined when nothing resolved it (no valid submitted price
+  // and no stored price) — callers then fall back to the form's own price.
+  return { baseUnit, basePrice };
+}
+
+/**
+ * A submitted price entry's price as a finite number, or undefined when the
+ * entry is absent or its field was left blank (the tab's inputs write
+ * `undefined` for an empty field).
+ */
+function validPrice(entry: { price?: unknown } | null | undefined): number | undefined {
+  if (entry == null || entry.price == null || entry.price === '') return undefined;
+  const n = Number(entry.price);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 /** The default price level's id, or the first one, or null if none exist. */
@@ -739,14 +774,12 @@ export async function addProduct(
 
       if (formData.sellingUnits && formData.sellingUnits.length > 0) {
         const defaultLevelId = await resolveDefaultPriceLevelId(connection);
-        const baseUnit = await writeSellingUnits(connection, productId, formData.sellingUnits, defaultLevelId);
+        const { baseUnit, basePrice: resolvedBasePrice } =
+          await writeSellingUnits(connection, productId, formData.sellingUnits, defaultLevelId);
 
         // Sync the scalar columns from the base row — one source of truth.
         if (baseUnit) {
-          const basePrice =
-            defaultLevelId && baseUnit.prices?.[defaultLevelId]
-              ? Number(baseUnit.prices[defaultLevelId].price)
-              : Number(Object.values(baseUnit.prices || {})[0]?.price ?? productData.price ?? 0);
+          const basePrice = resolvedBasePrice ?? Number(productData.price ?? 0);
           await connection.query(
             'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
             [
@@ -912,14 +945,12 @@ export async function updateProduct(id: string, formData: ProductFormData) {
 
         if (formData.sellingUnits.length > 0) {
           const defaultLevelId = await resolveDefaultPriceLevelId(connection);
-          const baseUnit = await writeSellingUnits(connection, id, formData.sellingUnits, defaultLevelId);
+          const { baseUnit, basePrice: resolvedBasePrice } =
+            await writeSellingUnits(connection, id, formData.sellingUnits, defaultLevelId);
 
           // Sync the scalar columns from the base row — one source of truth.
           if (baseUnit) {
-            const basePrice =
-              defaultLevelId && baseUnit.prices?.[defaultLevelId]
-                ? Number(baseUnit.prices[defaultLevelId].price)
-                : Number(Object.values(baseUnit.prices || {})[0]?.price ?? productData.price ?? 0);
+            const basePrice = resolvedBasePrice ?? Number(productData.price ?? 0);
             await connection.query(
               'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
               [

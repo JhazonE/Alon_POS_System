@@ -56,10 +56,21 @@ export function calculatePriceLevelPrice(
  * caller that does not hydrate them (e.g. the inventory detail page's
  * `<EditProductDialog product={product} />` at
  * app/(app)/inventory/[productId]/page.tsx:110) — gets a synthesized base row
- * from its scalar columns, so the tab is never blank and saving cannot
- * silently wipe it.
+ * from its scalar columns, so the tab is never blank. (Saving such a
+ * synthesized row is only allowed when the product really has no stored units
+ * — updateProduct refuses an id-less submission for a product that has some.)
+ *
+ * `defaultPriceLevelId` fills the default level's price for any unit with no
+ * entry for that level, from the unit's own stored `price` column (the
+ * synthesized row uses the product's price). Units written by the parent/child
+ * data migration (120) have a real `price` but no per-level price rows; without
+ * this their Retail column rendered blank. Pass null/undefined when price
+ * levels are not loaded yet — the hook fills the gap once they arrive.
  */
-export function toFormSellingUnits(product: Product): any[] | undefined {
+export function toFormSellingUnits(
+  product: Product,
+  defaultPriceLevelId?: string | null,
+): any[] | undefined {
   if (product?.type === 'service') return undefined;
 
   const stored = product?.sellingUnits ?? [];
@@ -74,7 +85,7 @@ export function toFormSellingUnits(product: Product): any[] | undefined {
         barcode: u.barcode ?? '',
         cost: u.cost ?? undefined,
         isBase: !!u.isBase,
-        prices: u.prices ?? {},
+        prices: withDefaultLevelPrice(u.prices ?? {}, defaultPriceLevelId, u.price),
       }));
   }
 
@@ -85,9 +96,32 @@ export function toFormSellingUnits(product: Product): any[] | undefined {
       barcode: (product?.barcode ?? '').trim() || `SU-${product.id}`,
       cost: product?.cost ?? undefined,
       isBase: true,
-      prices: {},
+      prices: withDefaultLevelPrice({}, defaultPriceLevelId, product?.price),
     },
   ];
+}
+
+/**
+ * Returns `prices` with the default level's entry filled from `fallbackPrice`
+ * when that entry is missing and the fallback is a positive number. Never
+ * overwrites an existing entry.
+ */
+export function withDefaultLevelPrice(
+  prices: Record<string, { price: number; minQuantity?: number }>,
+  defaultPriceLevelId: string | null | undefined,
+  fallbackPrice: number | string | null | undefined,
+): Record<string, { price: number; minQuantity?: number }> {
+  if (!defaultPriceLevelId) return prices;
+  const existing = prices[defaultPriceLevelId]?.price as unknown;
+  if (existing != null && existing !== '' && Number.isFinite(Number(existing))) return prices;
+  const fallback = Number(fallbackPrice);
+  if (fallbackPrice == null || !Number.isFinite(fallback) || fallback <= 0) return prices;
+  return { ...prices, [defaultPriceLevelId]: { price: fallback } };
+}
+
+/** The same default-level choice saveChanges and the tab's wand make. */
+function defaultLevelIdOf(priceLevels: any[]): string | undefined {
+  return (priceLevels.find((l: any) => l.isDefault) || priceLevels[0])?.id;
 }
 
 export interface UseEditProductFormProps {
@@ -121,7 +155,10 @@ export function useEditProductForm({
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [shelfLocations, setShelfLocations] = useState<any[]>([]);
   const [isLoadingShelfLocations, setIsLoadingShelfLocations] = useState(false);
-  const [priceLevels, setPriceLevels] = useState<any[]>([]);
+  // Seeded from the parent's pre-loaded options on the first render (not only
+  // in the effect below) so the form's initial selling-unit hydration already
+  // knows the default price level.
+  const [priceLevels, setPriceLevels] = useState<any[]>(() => externalProductOptions?.priceLevels || []);
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [isLoadingPriceLevels, setIsLoadingPriceLevels] = useState(false);
   const [departments, setDepartments] = useState<any[]>([]);
@@ -187,7 +224,7 @@ export function useEditProductForm({
       subcategory: product.subcategory ?? '', // Handle null
       supplier: product.supplier ?? '', // Handle null
       unitOfMeasure: product.unitOfMeasure ?? '', // Handle null
-      sellingUnits: toFormSellingUnits(product),
+      sellingUnits: toFormSellingUnits(product, defaultLevelIdOf(priceLevels)),
       vatStatus: product.vatStatus || 'YES (Subject to 12% VAT)',
       availability: product.availability || 'Available',
       earnsPoints: product.earnsPoints ?? true,
@@ -265,7 +302,7 @@ export function useEditProductForm({
           subcategory: product.subcategory ?? '', // Handle null
           supplier: product.supplier ?? '', // Handle null
           unitOfMeasure: product.unitOfMeasure ?? '', // Handle null
-          sellingUnits: toFormSellingUnits(product),
+          sellingUnits: toFormSellingUnits(product, defaultLevelIdOf(priceLevels)),
           vatStatus: product.vatStatus || 'YES (Subject to 12% VAT)',
           availability: product.availability || 'Available',
           earnsPoints: product.earnsPoints ?? true,
@@ -285,6 +322,30 @@ export function useEditProductForm({
     // seed on the rare cold-load race.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, isOpen, form]);
+
+  // Price levels that arrive after the reset above (cold-load race) would
+  // leave a migrated unit's default-level price blank. Fill ONLY those still
+  // missing entries from the unit's stored price — no reset, so nothing the
+  // user already typed is touched. Saving is safe regardless (updateProduct
+  // keeps the stored price when the default level is absent), this is about
+  // not showing a blank Retail column for a unit that has a price.
+  useEffect(() => {
+    if (!isOpen || product?.type === 'service') return;
+    const defaultLevelId = defaultLevelIdOf(priceLevels);
+    if (!defaultLevelId) return;
+    const current = (form.getValues('sellingUnits' as any) as any[] | undefined) ?? [];
+    const storedById = new Map((product?.sellingUnits ?? []).map((u) => [u.id, u]));
+    current.forEach((unit, index) => {
+      if (!unit?.id) return;
+      const stored = storedById.get(unit.id);
+      if (!stored) return;
+      const prices = unit.prices ?? {};
+      const filled = withDefaultLevelPrice(prices, defaultLevelId, stored.price);
+      if (filled !== prices) {
+        form.setValue(`sellingUnits.${index}.prices.${defaultLevelId}` as any, filled[defaultLevelId]);
+      }
+    });
+  }, [priceLevels, isOpen, product, form]);
 
   const [markupSource, setMarkupSource] = useState<string | null>(null);
 
