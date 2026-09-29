@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, FileDown, Landmark, FileText, FileSpreadsheet } from 'lucide-react';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -585,42 +586,33 @@ export default function BirSalesSummaryPage() {
 
       {/* Summary cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gross Sales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{peso(summaryTotals.grossSales)}</div>
-            <p className="text-xs text-muted-foreground">Total for the period</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Deductions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{peso(summaryTotals.totalDeductions)}</div>
-            <p className="text-xs text-muted-foreground">Discounts, returns & voids</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">VAT Payable</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{peso(summaryTotals.vatPayable)}</div>
-            <p className="text-xs text-muted-foreground">Net of VAT adjustments</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Sales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{peso(summaryTotals.netSales)}</div>
-            <p className="text-xs text-muted-foreground">Total income</p>
-          </CardContent>
-        </Card>
+        <WaveStatCard
+          label="Gross Sales"
+          value={peso(summaryTotals.grossSales)}
+          valueClassName="text-blue-600"
+          sub="Total for the period"
+        />
+
+        <WaveStatCard
+          label="Total Deductions"
+          value={peso(summaryTotals.totalDeductions)}
+          valueClassName="text-orange-600"
+          sub="Discounts, returns & voids"
+        />
+
+        <WaveStatCard
+          label="VAT Payable"
+          value={peso(summaryTotals.vatPayable)}
+          valueClassName="text-purple-600"
+          sub="Net of VAT adjustments"
+        />
+
+        <WaveStatCard
+          label="Net Sales"
+          value={peso(summaryTotals.netSales)}
+          valueClassName="text-green-600"
+          sub="Total income"
+        />
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import { 
   Table, 
   TableBody, 
@@ -311,30 +311,11 @@ export default function InventoryReportPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.totalItems}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatStockQuantity(summary.totalStock)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value (Avg Cost)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalValue)}</div>
-          </CardContent>
-        </Card>
+        <WaveStatCard label="Total Items" value={summary.totalItems} />
+
+        <WaveStatCard label="Total Quantity" value={formatStockQuantity(summary.totalStock)} />
+
+        <WaveStatCard label="Total Value (Avg Cost)" value={formatCurrency(summary.totalValue)} />
       </div>
 
       {/* Report table */}
