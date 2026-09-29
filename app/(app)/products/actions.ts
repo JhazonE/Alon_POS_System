@@ -460,8 +460,25 @@ export async function getLowStockAlerts() {
 /**
  * Writes one product's selling units and their per-price-level prices.
  *
- * Callers are responsible for having already deleted any prior rows (the update
- * path does a delete-then-reinsert; the insert path has nothing to delete).
+ * Upsert, not delete-then-reinsert: a unit whose `id` is already present in
+ * `product_selling_units` is UPDATEd in place; a unit with no `id` (or an id
+ * not present yet) is INSERTed. This is required, not stylistic — MySQL/
+ * InnoDB does not defer foreign-key checks to transaction commit the way
+ * Postgres can, so `DELETE FROM product_selling_units` immediately fires the
+ * `ON DELETE SET NULL` FKs from sale_items / inventory_batches /
+ * sales_invoice_items / pos_transaction_items / etc., and a later re-INSERT
+ * of a row with the same id does NOT undo that: those historical references
+ * stay NULL forever. Callers that want to remove units the user dropped must
+ * delete only those specific rows themselves (by id) before calling this.
+ *
+ * Before the per-unit writes, kept rows (those with an `id`) are first
+ * renamed to a unique `__tmp_<id>` placeholder for `unit_name`/`barcode`.
+ * This avoids transiently tripping `unique_selling_unit_barcode` or
+ * `unique_product_unit_name` when the submission swaps names/barcodes
+ * between two kept units (e.g. renaming unit A to what used to be unit B's
+ * name) — row-by-row UPDATEs in submission order could otherwise collide
+ * mid-way through.
+ *
  * Returns the base row so the caller can sync products.price/cost/barcode/
  * unit_of_measure from it — that sync is what keeps the ~100+ call sites that
  * read products.* directly working unmodified.
@@ -474,11 +491,20 @@ async function writeSellingUnits(
 ) {
   const baseUnit = units.find((u) => u.isBase) ?? units[0];
 
+  // Two-phase rename: blank out kept rows' unit_name/barcode to a unique
+  // placeholder before writing real values below, so two kept units can
+  // swap names/barcodes with each other without tripping the unique
+  // constraints mid-update.
+  for (const u of units) {
+    if (!u.id) continue;
+    await connection.query(
+      'UPDATE product_selling_units SET unit_name = ?, barcode = ? WHERE id = ? AND product_id = ?',
+      [`__tmp_${u.id}`, `__tmp_${u.id}`, u.id, productId],
+    );
+  }
+
   for (let i = 0; i < units.length; i++) {
     const u = units[i];
-    // Existing rows keep their id so sale_items / inventory_batches /
-    // purchase_order_items FKs (nullable, ON DELETE SET NULL) survive an edit
-    // that does not remove that particular unit.
     const unitId = u.id || `psu_${uuidv4()}`;
 
     const defaultLevelPrice =
@@ -488,23 +514,53 @@ async function writeSellingUnits(
     const firstAnyPrice = Object.values(u.prices || {})[0]?.price;
     const unitPrice = Number(defaultLevelPrice ?? firstAnyPrice ?? 0);
 
-    await connection.query(
-      `INSERT INTO product_selling_units
-         (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        unitId,
-        productId,
-        u.unitName,
-        Number(u.qtyBase),
-        u.barcode,
-        u.cost == null ? null : Number(u.cost),
-        unitPrice,
-        u.isBase ? 1 : 0,
-        i,
-      ],
-    );
+    if (u.id) {
+      // Existing row — UPDATE in place. MySQL applies ON DELETE SET NULL
+      // immediately when a referenced row is deleted, even inside a
+      // transaction (InnoDB has no deferred constraint checking), so
+      // sale_items / inventory_batches / sales_invoice_items / etc. FK
+      // references to this row must never go through a delete+reinsert.
+      await connection.query(
+        `UPDATE product_selling_units
+           SET unit_name = ?, qty_base = ?, barcode = ?, cost = ?, price = ?, is_base = ?, sort_order = ?
+         WHERE id = ? AND product_id = ?`,
+        [
+          u.unitName,
+          Number(u.qtyBase),
+          u.barcode,
+          u.cost == null ? null : Number(u.cost),
+          unitPrice,
+          u.isBase ? 1 : 0,
+          i,
+          u.id,
+          productId,
+        ],
+      );
+    } else {
+      // New row — nothing to preserve.
+      await connection.query(
+        `INSERT INTO product_selling_units
+           (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          unitId,
+          productId,
+          u.unitName,
+          Number(u.qtyBase),
+          u.barcode,
+          u.cost == null ? null : Number(u.cost),
+          unitPrice,
+          u.isBase ? 1 : 0,
+          i,
+        ],
+      );
+    }
 
+    // Prices are always rewritten wholesale per unit (delete then reinsert).
+    // This is safe even for a kept unit: nothing else references
+    // product_selling_unit_prices rows individually — it has a composite
+    // PK (selling_unit_id, price_level_id), no surrogate id, no dependents.
+    await connection.query('DELETE FROM product_selling_unit_prices WHERE selling_unit_id = ?', [unitId]);
     for (const [levelId, entry] of Object.entries(u.prices || {})) {
       if (entry == null || entry.price == null || Number.isNaN(Number(entry.price))) continue;
       await connection.query(
@@ -830,18 +886,29 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         }
       }
 
-      // Delete-then-reinsert, the same pattern this function already used for
-      // conversion_factors / product_price_levels. The DELETE cascades to
-      // product_selling_unit_prices via fk_psup_selling_unit ON DELETE CASCADE,
-      // so that table needs no separate delete. Rows the user kept come back
-      // with their original id (carried on formData), so sale_items /
-      // inventory_batches / purchase_order_items keep pointing at them; a row
-      // the user removed stays deleted and those FKs go NULL (ON DELETE SET NULL).
+      // Diff-aware: delete only the units the user removed (those whose id is
+      // no longer in the submitted set), then upsert the rest via
+      // writeSellingUnits. We deliberately do NOT delete-then-reinsert kept
+      // units: MySQL/InnoDB fires ON DELETE SET NULL immediately (no deferred
+      // constraint checking like Postgres), so a blanket DELETE would
+      // permanently null out sale_items / inventory_batches /
+      // sales_invoice_items / pos_transaction_items / etc. FK references to
+      // every selling unit on every edit, even ones the user didn't touch.
+      // Only a unit that's genuinely gone from the submission should lose
+      // those references.
       //
       // `undefined` means "leave the selling-unit tables alone" — a service
       // edit, or any caller that does not manage units.
       if (formData.sellingUnits !== undefined) {
-        await connection.query('DELETE FROM product_selling_units WHERE product_id = ?', [id]);
+        const keptIds = formData.sellingUnits.filter((u) => u.id).map((u) => u.id!);
+        if (keptIds.length > 0) {
+          await connection.query(
+            `DELETE FROM product_selling_units WHERE product_id = ? AND id NOT IN (${keptIds.map(() => '?').join(',')})`,
+            [id, ...keptIds],
+          );
+        } else {
+          await connection.query('DELETE FROM product_selling_units WHERE product_id = ?', [id]);
+        }
 
         if (formData.sellingUnits.length > 0) {
           const defaultLevelId = await resolveDefaultPriceLevelId(connection);
