@@ -19,9 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn, formatQuantity } from '@/lib/utils';
 
 import { EditProductDialog } from '../edit-product/edit-product-dialog';
-import { QuickAddChildDialog } from '../quick-add-child/quick-add-child-dialog';
 import { BreakPackDialog } from '../break-pack/break-pack-dialog';
-import { ReassignParentDialog } from '../reassign-parent/reassign-parent-dialog';
 import { DetailItem } from './detail-item';
 import { SectionHeader } from './section-header';
 
@@ -29,7 +27,6 @@ export function ViewProductDialog({
     product,
     onProductUpdated,
     products,
-    onChildAdded,
     productOptions,
     onOptionsRefresh,
     trigger,
@@ -39,7 +36,6 @@ export function ViewProductDialog({
     product: Product;
     onProductUpdated?: () => void;
     products?: Product[];
-    onChildAdded?: () => void;
     productOptions?: any;
     onOptionsRefresh?: () => void;
     trigger?: React.ReactNode;
@@ -281,26 +277,6 @@ export function ViewProductDialog({
                      <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">ID: {product.id}</p>
                      <div className="flex items-center gap-3">
                         <button onClick={() => setIsOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] hover:bg-muted">Close</button>
-                        {!product.parentId && (product.conversionFactors?.length ?? 0) > 0 && products && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <QuickAddChildDialog
-                                  parentProduct={product}
-                                  baseStock={undefined}
-                                  onChildAdded={() => {
-                                    onChildAdded?.();
-                                    onProductUpdated?.();
-                                  }}
-                                  products={products}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Add child unit</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
                         {!product.parentId && (
                           <TooltipProvider>
                             <Tooltip>
@@ -314,22 +290,6 @@ export function ViewProductDialog({
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Break this pack into smaller units</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {products && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <ReassignParentDialog
-                                  product={product}
-                                  products={products}
-                                  onProductUpdated={onProductUpdated}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Move this product under a different parent</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

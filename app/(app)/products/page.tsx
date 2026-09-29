@@ -20,7 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddProductDialog } from './add-product/add-product-dialog';
-import { QuickAddChildDialog } from './quick-add-child/quick-add-child-dialog';
 import { ManageBrandsDialog } from './brands/ManageBrandsDialog';
 import { ManageCategoriesDialog } from './categories/ManageCategoriesDialog';
 import { ManageDepartmentsDialog } from './departments/ManageDepartmentsDialog';
@@ -32,7 +31,7 @@ import { ManageUnitOfMeasureDialog } from './units-of-measure/ManageUnitOfMeasur
 import { ManageWarehousesDialog } from '../sales/manage-warehouses/ManageWarehousesDialog';
 import { BulkPriceUpdateDrawer } from './bulk-price-update/BulkPriceUpdateDrawer';
 
-import { Search, ChevronDown, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, Copy, AlertTriangle, Printer } from 'lucide-react';
+import { Search, ChevronDown, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
 import { PrintBarcodeDialog } from './print-barcode/print-barcode-dialog';
 import { useState, useMemo, Fragment, useEffect, useCallback, Suspense } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -50,7 +49,6 @@ import { AddPurchaseOrderDialog } from '../purchases/add-purchase-order/add-purc
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { addChildProduct } from './actions';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 
 function ProductRow({ product, onProductDeleted, onProductUpdated, products, productOptions, onOptionsRefresh, depth = 0, lowStockThreshold }: {
@@ -68,7 +66,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [restockDialogOpen, setRestockDialogOpen] = useState(false);
-  const [addChildDialogOpen, setAddChildDialogOpen] = useState(false);
   const [printBarcodeOpen, setPrintBarcodeOpen] = useState(false);
 
   const { toast } = useToast();
@@ -206,14 +203,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
                   </DropdownMenuItem>
               )}
 
-              {/* Add child product option - available on any product with its own conversion factors */}
-              {product.conversionFactors && product.conversionFactors.length > 0 ? (
-                  <DropdownMenuItem onClick={() => setAddChildDialogOpen(true)}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    <span>Add Child Unit</span>
-                  </DropdownMenuItem>
-              ) : null}
-              
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600 focus:text-red-600"
@@ -238,7 +227,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
                 product={product}
                 onProductUpdated={onProductUpdated}
                 products={products}
-                onChildAdded={onProductDeleted}
                 productOptions={productOptions}
                 onOptionsRefresh={onOptionsRefresh}
             />
@@ -258,17 +246,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
                   if (onProductUpdated) onProductUpdated();
                 }}
             />
-            {/* Always use the current product itself as the parent - supports multi-level nesting */}
-            {product.conversionFactors && product.conversionFactors.length > 0 ? (
-                <QuickAddChildDialog
-                    open={addChildDialogOpen}
-                    onOpenChange={setAddChildDialogOpen}
-                    parentProduct={product}
-                    baseStock={product.stock}
-                    onChildAdded={onProductDeleted || (() => { })}
-                    products={products}
-                />
-            ) : null}
           </div>
         </TableCell>
       </TableRow>
