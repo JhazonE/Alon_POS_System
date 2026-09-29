@@ -459,11 +459,21 @@ export async function getLowStockAlerts() {
 }
 
 /**
+ * A selling-unit save that must be refused with a specific message rather
+ * than the generic one: it rolls back the transaction like any other throw,
+ * and updateProduct returns `message` to the user.
+ */
+class SellingUnitConflictError extends Error {}
+
+/**
  * Writes one product's selling units and their per-price-level prices.
  *
- * Upsert, not delete-then-reinsert: a unit whose `id` is already present in
- * `product_selling_units` is UPDATEd in place; a unit with no `id` (or an id
- * not present yet) is INSERTed. This is required, not stylistic — MySQL/
+ * Upsert, not delete-then-reinsert: a unit that carries an `id` is UPDATEd in
+ * place (scoped to this product), and that UPDATE must match a row — an id
+ * that is stale (removed by a concurrent edit) or belongs to another product
+ * throws SellingUnitConflictError, rolling back the caller's transaction,
+ * rather than silently dropping the unit. A unit with no `id` is INSERTed
+ * under a freshly minted id. This is required, not stylistic — MySQL/
  * InnoDB does not defer foreign-key checks to transaction commit the way
  * Postgres can, so `DELETE FROM product_selling_units` immediately fires the
  * `ON DELETE SET NULL` FKs from sale_items / inventory_batches /
@@ -542,7 +552,7 @@ async function writeSellingUnits(
       // transaction (InnoDB has no deferred constraint checking), so
       // sale_items / inventory_batches / sales_invoice_items / etc. FK
       // references to this row must never go through a delete+reinsert.
-      await connection.query(
+      const [updateResult]: any = await connection.query(
         `UPDATE product_selling_units
            SET unit_name = ?, qty_base = ?, barcode = ?, cost = ?, price = ?, is_base = ?, sort_order = ?
          WHERE id = ? AND product_id = ?`,
@@ -558,6 +568,16 @@ async function writeSellingUnits(
           productId,
         ],
       );
+      // No match means the id is stale or not this product's. Fail loudly
+      // (rolls back the whole save) instead of silently dropping the unit.
+      // mysql2 reports matched rows here (CLIENT_FOUND_ROWS is on by
+      // default), and the placeholder rename above guarantees a real change
+      // anyway, so 0 can only mean "no such row for this product".
+      if (!updateResult || updateResult.affectedRows === 0) {
+        throw new SellingUnitConflictError(
+          'One of this product\'s selling units was changed or removed by someone else. Reload the product and try again.',
+        );
+      }
     } else {
       // New row — nothing to preserve.
       await connection.query(
@@ -582,7 +602,14 @@ async function writeSellingUnits(
     // This is safe even for a kept unit: nothing else references
     // product_selling_unit_prices rows individually — it has a composite
     // PK (selling_unit_id, price_level_id), no surrogate id, no dependents.
-    await connection.query('DELETE FROM product_selling_unit_prices WHERE selling_unit_id = ?', [unitId]);
+    // Scoped through product_selling_units to this product as defense in
+    // depth, so a wrong unitId can never touch another product's prices.
+    await connection.query(
+      `DELETE psup FROM product_selling_unit_prices psup
+         JOIN product_selling_units psu ON psu.id = psup.selling_unit_id
+        WHERE psup.selling_unit_id = ? AND psu.product_id = ?`,
+      [unitId, productId],
+    );
     for (const [levelId, entry] of Object.entries(u.prices || {})) {
       const price = validPrice(entry);
       if (price === undefined) continue;
@@ -856,6 +883,9 @@ export async function addProduct(
     return { success: true, message: `${formData.name} has been added to the inventory.`, productId };
   } catch (error: any) {
     console.error('Error saving product:', error);
+    if (error instanceof SellingUnitConflictError) {
+      return { success: false, message: error.message };
+    }
     if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_selling_unit_barcode')) {
       return { success: false, message: "That barcode is already used by another product's selling unit." };
     }
@@ -986,7 +1016,21 @@ export async function updateProduct(id: string, formData: ProductFormData) {
             [id, ...keptIds],
           );
         } else {
-          await connection.query('DELETE FROM product_selling_units WHERE product_id = ?', [id]);
+          // No submitted unit carries an id. For a product that already has
+          // stored units this can only be a caller that never hydrated them
+          // (e.g. toFormSellingUnits' synthesized fallback row) — a blanket
+          // DELETE here would permanently null every sale_items /
+          // inventory_batches / etc. reference to them. Refuse the save.
+          // A product with no stored units yet (a real first save) is fine.
+          const [countRows]: any = await connection.query(
+            'SELECT COUNT(*) AS cnt FROM product_selling_units WHERE product_id = ?',
+            [id],
+          );
+          if (Number(countRows?.[0]?.cnt ?? 0) > 0) {
+            throw new SellingUnitConflictError(
+              'This product\'s selling units could not be loaded, so saving now would replace them. Reload the product and try again.',
+            );
+          }
         }
 
         if (formData.sellingUnits.length > 0) {
@@ -1049,6 +1093,9 @@ export async function updateProduct(id: string, formData: ProductFormData) {
     return { success: true, message: `${formData.name} has been updated.` };
   } catch (error: any) {
     console.error('Error updating product:', error);
+    if (error instanceof SellingUnitConflictError) {
+      return { success: false, message: error.message };
+    }
     if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_selling_unit_barcode')) {
       return { success: false, message: "That barcode is already used by another product's selling unit." };
     }
