@@ -6,7 +6,6 @@ import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMeasure, ShelfLocation, Account, TaxRate } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
-import { getIllegalReassignTargets, type TreeProduct } from '@/lib/product-tree';
 
 
 export type ProductFormData = {
@@ -31,10 +30,25 @@ export type ProductFormData = {
   cost?: number;
   incomeAccount?: string;
   expenseAccount?: string;
-  parentId?: string;
-  conversionFactor?: number;
-  conversionFactors?: { unit: string; factor: number }[];
-  priceLevels?: { levelId: string; price: number; minQuantity?: number }[];
+  /**
+   * Every way this product is sold. Exactly one row carries isBase: true, and
+   * that row's qtyBase is 1 (the forms enforce this; the DB's UNIQUE keys on
+   * barcode and (product_id, unit_name) are the backstop).
+   *
+   * Absent (not empty) means "do not touch the selling-unit tables" — the
+   * bulk-price-update / Excel import path at
+   * app/(app)/products/bulk-price-update/actions.ts:324 calls addProduct
+   * without them, and a service edit submits none.
+   */
+  sellingUnits?: {
+    id?: string;
+    unitName: string;
+    qtyBase: number;
+    barcode: string;
+    cost?: number;
+    isBase: boolean;
+    prices?: Record<string, { price: number; minQuantity?: number }>;
+  }[];
   supplierMappings?: {
     supplierId: string;
     leadTime: number;
@@ -48,7 +62,6 @@ export type ProductFormData = {
   earnsPoints?: boolean;
   isPerishable?: boolean;
   itemType?: 'standard' | 'service';
-  __childProduct?: ProductFormData;
 };
 
 export type ProductFilters = {
@@ -444,6 +457,81 @@ export async function getLowStockAlerts() {
   }
 }
 
+/**
+ * Writes one product's selling units and their per-price-level prices.
+ *
+ * Callers are responsible for having already deleted any prior rows (the update
+ * path does a delete-then-reinsert; the insert path has nothing to delete).
+ * Returns the base row so the caller can sync products.price/cost/barcode/
+ * unit_of_measure from it — that sync is what keeps the ~100+ call sites that
+ * read products.* directly working unmodified.
+ */
+async function writeSellingUnits(
+  connection: any,
+  productId: string,
+  units: NonNullable<ProductFormData['sellingUnits']>,
+  defaultPriceLevelId: string | null,
+) {
+  const baseUnit = units.find((u) => u.isBase) ?? units[0];
+
+  for (let i = 0; i < units.length; i++) {
+    const u = units[i];
+    // Existing rows keep their id so sale_items / inventory_batches /
+    // purchase_order_items FKs (nullable, ON DELETE SET NULL) survive an edit
+    // that does not remove that particular unit.
+    const unitId = u.id || `psu_${uuidv4()}`;
+
+    const defaultLevelPrice =
+      defaultPriceLevelId && u.prices?.[defaultPriceLevelId]
+        ? Number(u.prices[defaultPriceLevelId].price)
+        : undefined;
+    const firstAnyPrice = Object.values(u.prices || {})[0]?.price;
+    const unitPrice = Number(defaultLevelPrice ?? firstAnyPrice ?? 0);
+
+    await connection.query(
+      `INSERT INTO product_selling_units
+         (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        unitId,
+        productId,
+        u.unitName,
+        Number(u.qtyBase),
+        u.barcode,
+        u.cost == null ? null : Number(u.cost),
+        unitPrice,
+        u.isBase ? 1 : 0,
+        i,
+      ],
+    );
+
+    for (const [levelId, entry] of Object.entries(u.prices || {})) {
+      if (entry == null || entry.price == null || Number.isNaN(Number(entry.price))) continue;
+      await connection.query(
+        `INSERT INTO product_selling_unit_prices
+           (selling_unit_id, price_level_id, price, min_quantity)
+         VALUES (?, ?, ?, ?)`,
+        [
+          unitId,
+          levelId,
+          Number(entry.price),
+          entry.minQuantity == null ? null : Number(entry.minQuantity),
+        ],
+      );
+    }
+  }
+
+  return baseUnit;
+}
+
+/** The default price level's id, or the first one, or null if none exist. */
+async function resolveDefaultPriceLevelId(connection: any): Promise<string | null> {
+  const [rows]: any = await connection.query(
+    'SELECT id FROM price_levels ORDER BY is_default DESC, name ASC LIMIT 1',
+  );
+  return rows?.[0]?.id ?? null;
+}
+
 export async function addProduct(
   formData: ProductFormData,
   userId: string = 'system',
@@ -480,14 +568,6 @@ export async function addProduct(
           };
         }
         // pendingApproval === false (all steps auto-skipped) → fall through to immediate insert.
-      }
-    }
-
-    if (formData.conversionFactors && formData.conversionFactors.length > 0) {
-      const units = formData.conversionFactors.map(cf => cf.unit.toLowerCase());
-      const uniqueUnits = new Set(units);
-      if (units.length !== uniqueUnits.size) {
-        return { success: false, message: 'Duplicate conversion factor units detected. Each unit must be unique.' };
       }
     }
 
@@ -536,8 +616,6 @@ export async function addProduct(
         image_url: formData.image || null,
         image_hint: formData.name.toLowerCase().replace(/\s+/g, '-'),
         unit_of_measure: formData.unitOfMeasure,
-        parent_id: formData.parentId || null,
-        conversion_factor: formData.conversionFactor || 1,
         expense_account: formData.expenseAccount || null,
         income_account: formData.incomeAccount || null,
         vat_status: formData.vatStatus || 'YES (Subject to 12% VAT)',
@@ -552,9 +630,9 @@ export async function addProduct(
           id, name, description, additional_description, category, brand, department,
           subcategory, supplier_id, warehouse_id, stock, reorder_point, avg_daily_sales, price, cost,
           sku, barcode, image_url, image_hint,
-          unit_of_measure, parent_id, conversion_factor, income_account, expense_account,
+          unit_of_measure, income_account, expense_account,
           vat_status, availability, earns_points, shelf_location_id, is_perishable, type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const legacyShelfId = formData.shelfLocationIds && formData.shelfLocationIds.length > 0 ? formData.shelfLocationIds[0] : null;
@@ -565,7 +643,7 @@ export async function addProduct(
         productData.supplier_id, productData.warehouse_id, productData.stock, productData.reorder_point,
         productData.avg_daily_sales, productData.price, productData.cost, productData.sku,
         productData.barcode, productData.image_url, productData.image_hint, productData.unit_of_measure,
-        productData.parent_id, productData.conversion_factor, productData.income_account,
+        productData.income_account,
         productData.expense_account, productData.vat_status, productData.availability, productData.earns_points,
         legacyShelfId, productData.is_perishable, productData.type
       ];
@@ -603,16 +681,26 @@ export async function addProduct(
         }
       }
 
-      if (formData.conversionFactors && formData.conversionFactors.length > 0) {
-        for (const cf of formData.conversionFactors) {
-          const cfId = `${productId}-cf-${cf.unit}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          await connection.query('INSERT INTO conversion_factors (id, product_id, unit, factor) VALUES (?, ?, ?, ?)', [cfId, productId, cf.unit, cf.factor]);
-        }
-      }
+      if (formData.sellingUnits && formData.sellingUnits.length > 0) {
+        const defaultLevelId = await resolveDefaultPriceLevelId(connection);
+        const baseUnit = await writeSellingUnits(connection, productId, formData.sellingUnits, defaultLevelId);
 
-      if (formData.priceLevels && formData.priceLevels.length > 0) {
-        for (const pl of formData.priceLevels) {
-          await connection.query('INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, ?)', [productId, pl.levelId, pl.price, pl.minQuantity || 0]);
+        // Sync the scalar columns from the base row — one source of truth.
+        if (baseUnit) {
+          const basePrice =
+            defaultLevelId && baseUnit.prices?.[defaultLevelId]
+              ? Number(baseUnit.prices[defaultLevelId].price)
+              : Number(Object.values(baseUnit.prices || {})[0]?.price ?? productData.price ?? 0);
+          await connection.query(
+            'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
+            [
+              basePrice,
+              baseUnit.cost == null ? productData.cost : Number(baseUnit.cost),
+              baseUnit.barcode,
+              baseUnit.unitName,
+              productId,
+            ],
+          );
         }
       }
 
@@ -630,25 +718,14 @@ export async function addProduct(
       }
     });
 
-    // On finalization of an approved queue item, create the auto-child too (single approval covers both).
-    let childWarning = '';
-    if (isInternalFinalization && formData.__childProduct) {
-      const childResult = await addProduct(
-        { ...formData.__childProduct, parentId: productId },
-        userId,
-        true,
-      );
-      if (!childResult.success) {
-        console.warn('Failed to auto-create child product on finalization:', childResult.message);
-        childWarning = ` (WARNING: child unit was not created: ${childResult.message})`;
-      }
-    }
-
-    return { success: true, message: `${formData.name} has been added to the inventory.${childWarning}`, productId };
+    return { success: true, message: `${formData.name} has been added to the inventory.`, productId };
   } catch (error: any) {
     console.error('Error saving product:', error);
-    if (error.code === 'ER_DUP_ENTRY' && error.message.includes('unique_product_unit')) {
-      return { success: false, message: 'A conversion factor with this unit already exists for this product.' };
+    if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_selling_unit_barcode')) {
+      return { success: false, message: "That barcode is already used by another product's selling unit." };
+    }
+    if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_product_unit_name')) {
+      return { success: false, message: 'Two selling units of this product have the same unit name.' };
     }
     return { success: false, message: 'There was an error saving the product.' };
   }
@@ -656,14 +733,6 @@ export async function addProduct(
 
 export async function updateProduct(id: string, formData: ProductFormData) {
   try {
-    if (formData.conversionFactors && formData.conversionFactors.length > 0) {
-      const units = formData.conversionFactors.map(cf => cf.unit.toLowerCase());
-      const uniqueUnits = new Set(units);
-      if (units.length !== uniqueUnits.size) {
-        return { success: false, message: 'Duplicate conversion factor units detected. Each unit must be unique.' };
-      }
-    }
-
     await withTransaction(async (connection) => {
       // Fetch existing product to preserve fields not in the form
       const [existingRows]: any = await connection.query('SELECT * FROM products WHERE id = ?', [id]);
@@ -761,18 +830,40 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         }
       }
 
-      await connection.query('DELETE FROM conversion_factors WHERE product_id = ?', [id]);
-      if (formData.conversionFactors && formData.conversionFactors.length > 0) {
-        for (const cf of formData.conversionFactors) {
-          const cfId = `${id}-cf-${cf.unit}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          await connection.query('INSERT INTO conversion_factors (id, product_id, unit, factor) VALUES (?, ?, ?, ?)', [cfId, id, cf.unit, cf.factor]);
-        }
-      }
+      // Delete-then-reinsert, the same pattern this function already used for
+      // conversion_factors / product_price_levels. The DELETE cascades to
+      // product_selling_unit_prices via fk_psup_selling_unit ON DELETE CASCADE,
+      // so that table needs no separate delete. Rows the user kept come back
+      // with their original id (carried on formData), so sale_items /
+      // inventory_batches / purchase_order_items keep pointing at them; a row
+      // the user removed stays deleted and those FKs go NULL (ON DELETE SET NULL).
+      //
+      // `undefined` means "leave the selling-unit tables alone" — a service
+      // edit, or any caller that does not manage units.
+      if (formData.sellingUnits !== undefined) {
+        await connection.query('DELETE FROM product_selling_units WHERE product_id = ?', [id]);
 
-      await connection.query('DELETE FROM product_price_levels WHERE product_id = ?', [id]);
-      if (formData.priceLevels && formData.priceLevels.length > 0) {
-        for (const pl of formData.priceLevels) {
-          await connection.query('INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, ?)', [id, pl.levelId, pl.price, pl.minQuantity || 0]);
+        if (formData.sellingUnits.length > 0) {
+          const defaultLevelId = await resolveDefaultPriceLevelId(connection);
+          const baseUnit = await writeSellingUnits(connection, id, formData.sellingUnits, defaultLevelId);
+
+          // Sync the scalar columns from the base row — one source of truth.
+          if (baseUnit) {
+            const basePrice =
+              defaultLevelId && baseUnit.prices?.[defaultLevelId]
+                ? Number(baseUnit.prices[defaultLevelId].price)
+                : Number(Object.values(baseUnit.prices || {})[0]?.price ?? productData.price ?? 0);
+            await connection.query(
+              'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
+              [
+                basePrice,
+                baseUnit.cost == null ? productData.cost : Number(baseUnit.cost),
+                baseUnit.barcode,
+                baseUnit.unitName,
+                id,
+              ],
+            );
+          }
         }
       }
 
@@ -791,104 +882,13 @@ export async function updateProduct(id: string, formData: ProductFormData) {
     return { success: true, message: `${formData.name} has been updated.` };
   } catch (error: any) {
     console.error('Error updating product:', error);
-    if (error.code === 'ER_DUP_ENTRY' && error.message.includes('unique_product_unit')) {
-      return { success: false, message: 'A conversion factor with this unit already exists for this product.' };
+    if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_selling_unit_barcode')) {
+      return { success: false, message: "That barcode is already used by another product's selling unit." };
+    }
+    if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_product_unit_name')) {
+      return { success: false, message: 'Two selling units of this product have the same unit name.' };
     }
     return { success: false, message: 'There was an error updating the product.' };
-  }
-}
-
-export async function reassignParent(
-  childId: string,
-  newParentId: string | null,
-  conversionFactor: number,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    // Validate factor up front when attaching to a parent.
-    if (newParentId !== null) {
-      if (childId === newParentId) {
-        return { success: false, message: 'A product cannot be its own parent.' };
-      }
-      if (!Number.isFinite(conversionFactor) || conversionFactor <= 0) {
-        return { success: false, message: 'Conversion factor must be a number greater than 0.' };
-      }
-    }
-
-    return await withTransaction(async (connection) => {
-      // Load the child.
-      const [childRows]: any = await connection.query(
-        'SELECT id, name, unit_of_measure, parent_id, stock, cost, price FROM products WHERE id = ?',
-        [childId],
-      );
-      const child = childRows?.[0];
-      if (!child) {
-        return { success: false, message: 'Product not found.' };
-      }
-
-      // Prevent reassignment if product has existing inventory.
-      if (newParentId !== null && child.stock > 0) {
-        return {
-          success: false,
-          message: `Cannot assign "${child.name}" to a parent while it has ${child.stock} units in stock. Please adjust or clear the inventory first, then reassign.`,
-        };
-      }
-
-      if (newParentId !== null) {
-        // Cycle guard: the new parent must not be the child or one of its descendants.
-        // Build the full id/parent map from the DB and reuse the pure helper.
-        const [allRows]: any = await connection.query(
-          'SELECT id, parent_id FROM products',
-        );
-        const treeProducts: TreeProduct[] = (allRows as any[]).map((r) => ({
-          id: r.id,
-          parentId: r.parent_id,
-        }));
-        const illegal = getIllegalReassignTargets(childId, treeProducts);
-        if (illegal.has(newParentId)) {
-          return { success: false, message: 'Cannot reassign: that would create a parent loop.' };
-        }
-
-        // Confirm the target parent exists.
-        const [parentRows]: any = await connection.query(
-          'SELECT id, name FROM products WHERE id = ?',
-          [newParentId],
-        );
-        const newParent = parentRows?.[0];
-        if (!newParent) {
-          return { success: false, message: 'Target parent product not found.' };
-        }
-
-        // Update parentage.
-        await connection.query(
-          'UPDATE products SET parent_id = ? WHERE id = ?',
-          [newParentId, childId],
-        );
-
-        // Upsert the conversion factor on the NEW parent, keyed by the child's unit.
-        // unique_product_unit (product_id, unit) makes this idempotent.
-        const cfId = `${newParentId}-cf-${child.unit_of_measure}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        await connection.query(
-          `INSERT INTO conversion_factors (id, product_id, unit, factor)
-           VALUES (?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE factor = VALUES(factor)`,
-          [cfId, newParentId, child.unit_of_measure, conversionFactor],
-        );
-
-        console.log(`[reassignParent] ${childId} moved under ${newParentId} (factor ${conversionFactor}, unit ${child.unit_of_measure})`);
-        return { success: true, message: `${child.name} moved under ${newParent.name}.` };
-      }
-
-      // Detach: clear parent_id, leave conversion_factors untouched.
-      await connection.query(
-        'UPDATE products SET parent_id = NULL WHERE id = ?',
-        [childId],
-      );
-      console.log(`[reassignParent] ${childId} detached to top-level`);
-      return { success: true, message: `${child.name} is now a top-level product.` };
-    });
-  } catch (error: any) {
-    console.error('Error in reassignParent:', error);
-    return { success: false, message: 'There was an error reassigning the product.' };
   }
 }
 
@@ -2041,38 +2041,6 @@ export async function deleteShelfLocation(id: string) {
   } catch (error) {
     console.error('Error deleting shelf location:', error);
     return { success: false, message: 'Error deleting shelf location.' };
-  }
-}
-
-export async function addChildProduct(parentId: string, data: any) {
-  try {
-    const id = `product_${Date.now()}`;
-    await withTransaction(async (connection) => {
-      const productSql = `
-        INSERT INTO products (
-          id, name, brand, sku, barcode, description, category, subcategory, 
-          unit_of_measure, stock, reorder_point, price, cost, parent_id,
-          conversion_factor, warehouse_id, department, supplier_id, vat_status, income_account, expense_account
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      await connection.query(productSql, [
-        id, data.name, data.brand, data.sku, data.barcode || null, 
-        data.description, data.category, data.subcategory || null,
-        data.unitOfMeasure, data.stock || 0, data.reorderPoint || 0, 
-        data.price, data.cost, parentId,
-        data.conversionFactor || 1,
-        data.warehouseId || null,
-        data.department || null,
-        data.supplierId || null,
-        data.vatStatus || 'YES (Subject to 12% VAT)',
-        data.incomeAccount || null,
-        data.expenseAccount || null
-      ]);
-    });
-    return { success: true, message: 'Child product added successfully.' };
-  } catch (error) {
-    console.error('Error adding child product:', error);
-    return { success: false, message: 'Error adding child product.' };
   }
 }
 
