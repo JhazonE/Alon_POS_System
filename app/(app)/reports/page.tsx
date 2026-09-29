@@ -1,15 +1,9 @@
 
 'use client';
 
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { WaveLinkCard } from '@/components/reports/WaveLinkCard';
 import { reportSections } from '@/lib/report-catalog';
+import { cn } from '@/lib/utils';
 
 export default function ReportsPage() {
   return (
@@ -23,22 +17,15 @@ export default function ReportsPage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {section.cards.map(card => (
-              <Link key={card.href} href={card.href}>
-                <Card
-                  className={cn(
-                    'hover:bg-muted/50 transition-colors cursor-pointer h-full',
-                    card.cardClassName,
-                  )}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <card.icon className={cn('h-5 w-5', card.iconClassName)} />
-                      {card.title}
-                    </CardTitle>
-                    <CardDescription>{card.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
+              <WaveLinkCard
+                key={card.href}
+                href={card.href}
+                title={card.title}
+                description={card.description}
+                icon={card.icon}
+                iconClassName={card.iconClassName}
+                className={card.cardClassName}
+              />
             ))}
           </div>
         </div>
