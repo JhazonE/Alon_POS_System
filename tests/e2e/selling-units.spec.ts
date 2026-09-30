@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { selectCategory } from './helpers/product-form';
 import { testQuery } from './helpers/db';
 import {
   TEST_BRAND,
@@ -67,10 +68,9 @@ test.describe('Selling Units — add', () => {
 
     // --- Basic Info ---
     await dialog.getByLabel('Product Name').fill(P.name);
-    await dialog.getByLabel('SKU').fill(P.sku);
     await dialog.getByLabel('Description', { exact: true }).fill(P.description);
     await selectOption(page, dialog, 'Brand', TEST_BRAND.name);
-    await selectOption(page, dialog, 'Category', TEST_CATEGORY.name);
+    await selectCategory(page, dialog, TEST_CATEGORY.name);
 
     // --- Inventory (initial stock ra — ang unit of measure naa na sa base row) ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
@@ -109,9 +109,9 @@ test.describe('Selling Units — add', () => {
         `SELECT psu.unit_name, psu.qty_base, psu.barcode, psu.cost, psu.is_base
          FROM product_selling_units psu
          JOIN products p ON p.id = psu.product_id
-         WHERE p.sku = ?
+         WHERE p.name = ?
          ORDER BY psu.sort_order`,
-        [P.sku],
+        [P.name],
       );
       expect(units).toHaveLength(2);
       expect(units[0].unit_name).toBe(P.baseUnitName);
@@ -129,9 +129,9 @@ test.describe('Selling Units — add', () => {
        FROM product_selling_unit_prices psup
        JOIN product_selling_units psu ON psu.id = psup.selling_unit_id
        JOIN products p ON p.id = psu.product_id
-       WHERE p.sku = ?
+       WHERE p.name = ?
        ORDER BY psu.sort_order, psup.price_level_id`,
-      [P.sku],
+      [P.name],
     );
     const priceOf = (unitName: string, levelId: string) =>
       Number(prices.find((r: any) => r.unit_name === unitName && r.price_level_id === levelId)?.price);
@@ -142,8 +142,8 @@ test.describe('Selling Units — add', () => {
 
     // The base row mirrors onto the product's scalar columns.
     const [product] = await testQuery(
-      'SELECT price, cost, barcode, unit_of_measure FROM products WHERE sku = ?',
-      [P.sku],
+      'SELECT price, cost, barcode, unit_of_measure FROM products WHERE name = ?',
+      [P.name],
     );
     expect(Number(product.price)).toBe(P.baseRetail);
     expect(Number(product.cost)).toBe(P.baseCost);

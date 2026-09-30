@@ -98,7 +98,6 @@ export const TEST_PRICE_LEVEL_WHOLESALE = {
 /** Bag-ong product nga himuon sa Add Product UI test. */
 export const NEW_PRODUCT = {
   name: 'QA Test Widget',
-  sku: 'QA-WIDGET-001',
   description: 'A widget created by the e2e Add Product test.',
   price: 99.5,
   stock: 42,
@@ -422,7 +421,6 @@ export const SO_SERVICE = {
 /** Bag-ong product nga himuon sa Selling Units add test (2 units). */
 export const SELLING_UNITS_NEW_PRODUCT = {
   name: 'QA Selling Units Widget',
-  sku: 'QA-SU-NEW-001',
   description: 'Product created by the e2e Selling Units add test.',
   baseUnitName: 'Piece',
   baseBarcode: '5100000000011',

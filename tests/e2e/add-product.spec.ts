@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { selectCategory } from './helpers/product-form';
 import {
   TEST_BRAND,
   TEST_CATEGORY,
@@ -41,10 +42,9 @@ test.describe('Add product', () => {
 
     // --- Basic Info ---
     await dialog.getByLabel('Product Name').fill(NEW_PRODUCT.name);
-    await dialog.getByLabel('SKU').fill(NEW_PRODUCT.sku);
     await dialog.getByLabel('Description', { exact: true }).fill(NEW_PRODUCT.description);
     await selectOption(page, dialog, 'Brand', TEST_BRAND.name);
-    await selectOption(page, dialog, 'Category', TEST_CATEGORY.name);
+    await selectCategory(page, dialog, TEST_CATEGORY.name);
 
     // --- Inventory ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
@@ -68,13 +68,13 @@ test.describe('Add product', () => {
     // Mo-close ang dialog human sa malampuson nga pag-save.
     await expect(dialog).toBeHidden();
 
-    // I-verify nga na-persist sa DB.
-    const res = await request.get(`/api/products?search=${NEW_PRODUCT.sku}&limit=50`);
+    // I-verify nga na-persist sa DB — walay SKU ang bag-ong product.
+    const res = await request.get(`/api/products?search=${encodeURIComponent(NEW_PRODUCT.name)}&limit=50`);
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    const match = (body.data ?? []).find((p: any) => p.sku === NEW_PRODUCT.sku);
+    const match = (body.data ?? []).find((p: any) => p.name === NEW_PRODUCT.name);
     expect(match, 'bag-ong product makita sa /api/products').toBeTruthy();
-    expect(match.name).toBe(NEW_PRODUCT.name);
+    expect(match.sku ?? null).toBeNull();
     expect(Number(match.stock)).toBe(NEW_PRODUCT.stock);
     expect(Number(match.price)).toBe(NEW_PRODUCT.retail);
   });
