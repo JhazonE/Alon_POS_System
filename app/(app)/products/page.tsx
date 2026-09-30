@@ -50,6 +50,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
+import { SellingUnitsPanel, StockDot } from './components/selling-units-panel';
+
+// Expand, Name, SKU, Barcode, Unit, Stock, Cost, Retail Price, Warehouse, Shelf, Actions
+const PRODUCT_TABLE_COLUMN_COUNT = 11;
 
 function ProductRow({ product, onProductDeleted, onProductUpdated, products, productOptions, onOptionsRefresh, depth = 0, lowStockThreshold }: {
   product: ProductWithChildren;
@@ -86,23 +90,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
         ? 'low-stock'
         : 'in-stock';
 
-  const badgeVariant =
-    stockStatus === 'service'
-      ? 'outline'
-      : stockStatus === 'out-of-stock'
-      ? 'destructive'
-      : stockStatus === 'low-stock'
-        ? 'destructive'
-        : 'default';
-  const badgeText =
-    stockStatus === 'service'
-      ? 'Available'
-      : stockStatus === 'out-of-stock'
-      ? 'Out of Stock'
-      : stockStatus === 'low-stock'
-        ? 'Low Stock'
-        : 'In Stock';
-
   const handleDeleteConfirm = async () => {
     const result = await deleteProduct(product.id);
     if (result.success) {
@@ -122,13 +109,14 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
   };
 
   const hasChildren = product.children && product.children.length > 0;
+  const hasSellingUnits = !!product.sellingUnits && product.sellingUnits.length > 0;
   const indentStyle = { paddingLeft: `${depth * 24}px` };
 
   return (
     <>
       <TableRow className={cn(depth > 0 && "bg-muted/20")}>
         <TableCell className="hidden sm:table-cell" style={indentStyle}>
-          {hasChildren ? (
+          {hasChildren || hasSellingUnits ? (
             <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 group" onClick={() => setIsOpen(!isOpen)}>
               <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
             </button>
@@ -150,14 +138,14 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
         </TableCell>
         <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
         <TableCell className="hidden lg:table-cell">{product.barcode}</TableCell>
-        <TableCell>
-          <Badge variant={badgeVariant}>{badgeText}</Badge>
-        </TableCell>
         <TableCell className="hidden sm:table-cell text-center text-muted-foreground">
           {product.unitOfMeasure}
         </TableCell>
         <TableCell className="text-center font-bold">
-          {formatStockQuantity(product.stock)}
+          <span className="inline-flex items-center justify-center gap-2">
+            {stockStatus !== 'service' && <StockDot status={stockStatus} />}
+            {formatStockQuantity(product.stock)}
+          </span>
         </TableCell>
         <TableCell className="hidden md:table-cell text-right">
           {product.cost && typeof product.cost === 'number' ? `₱${product.cost.toFixed(2)}` : '—'}
@@ -250,6 +238,20 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
         </TableCell>
       </TableRow>
 
+      {isOpen && hasSellingUnits && (
+        <TableRow className="bg-muted/30 hover:bg-muted/30" data-testid="selling-units-panel">
+          <TableCell colSpan={PRODUCT_TABLE_COLUMN_COUNT} className="py-2 pr-4 pl-4 sm:pl-14">
+            <div style={indentStyle}>
+              <SellingUnitsPanel
+                product={product}
+                priceLevels={productOptions?.priceLevels ?? []}
+                effectiveReorderPoint={effectiveReorderPoint}
+              />
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+
       {isOpen && hasChildren && product.children!.map(child => (
         <ProductRow
           key={child.id}
@@ -289,7 +291,6 @@ function ProductSkeleton() {
       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
       <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
       <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
-      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
       <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
       <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
       <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
@@ -847,7 +848,6 @@ function ProductsContent() {
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">SKU</TableHead>
                 <TableHead className="hidden lg:table-cell">Barcode</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="hidden sm:table-cell text-center">Unit</TableHead>
                 <TableHead className="text-center">Stock</TableHead>
                 <TableHead className="hidden md:table-cell text-right">Cost</TableHead>
@@ -879,7 +879,7 @@ function ProductsContent() {
               )}
               {!isLoadingProducts && filteredProducts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center">
+                  <TableCell colSpan={PRODUCT_TABLE_COLUMN_COUNT} className="h-24 text-center">
                     No products found.
                   </TableCell>
                 </TableRow>
