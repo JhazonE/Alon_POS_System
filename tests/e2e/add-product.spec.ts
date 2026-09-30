@@ -78,4 +78,43 @@ test.describe('Add product', () => {
     expect(Number(match.stock)).toBe(NEW_PRODUCT.stock);
     expect(Number(match.price)).toBe(NEW_PRODUCT.retail);
   });
+
+  test('category picker: inline add category/subcategory ug "None" (walay submit)', async ({ page }) => {
+    await seedSession(page, DEFAULT_ADMIN);
+    await page.goto('/products');
+
+    await page.getByRole('button', { name: 'Add Product' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Add New Product')).toBeVisible();
+
+    const trigger = dialog.getByLabel('Category / Subcategory', { exact: true });
+    await trigger.click();
+    const popover = page.locator('[data-radix-popper-content-wrapper]');
+
+    // Inline add category — awtomatikong napili human ma-save.
+    const catName = `QA Inline Cat ${Date.now()}`;
+    await popover.getByRole('button', { name: 'Add Category', exact: true }).click();
+    await popover.getByPlaceholder('New name...').fill(catName);
+    await popover.getByPlaceholder('New name...').press('Enter');
+    await expect(trigger).toContainText(catName);
+
+    // Inline add subcategory.
+    const subName = `QA Inline Sub ${Date.now()}`;
+    await popover.getByRole('button', { name: 'Add Subcategory', exact: true }).click();
+    await popover.getByPlaceholder('New name...').fill(subName);
+    await popover.getByPlaceholder('New name...').press('Enter');
+    await expect(trigger).toContainText(`${catName} › ${subName}`);
+
+    // "None" mo-clear sa subcategory apan mo-tipig ang category.
+    await popover.getByRole('button', { name: 'None', exact: true }).click();
+    await expect(trigger).toContainText(catName);
+    await expect(trigger).not.toContainText('›');
+
+    await popover.getByRole('button', { name: 'Done' }).click();
+    await expect(popover).toBeHidden();
+
+    // I-close ang dialog nga walay pag-save.
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+  });
 });

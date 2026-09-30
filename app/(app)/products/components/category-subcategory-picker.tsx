@@ -242,7 +242,7 @@ export function CategorySubcategoryPicker({
 }: CategorySubcategoryPickerProps) {
   const [open, setOpen] = useState(false);
 
-  const label = category ? (subcategory ? `${category} › ${subcategory}` : category) : '';
+  const label = [category, subcategory].filter(Boolean).join(' › ');
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

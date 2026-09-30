@@ -255,8 +255,7 @@ export async function previewPriceListUpload(
       }
       // A blank sku is common for a genuinely new product the uploader
       // doesn't have a code for yet — auto-generate one instead of skipping,
-      // using the same generator (brand/name prefix + random suffix) the
-      // Add Product dialog's own "Generate SKU" button uses.
+      // using generateSku (brand/name prefix + random suffix).
       const newSku = sku || generateSku(row.brand, row.name);
       if (seenSkus.has(newSku)) {
         skipped.push({ row, reason: `Duplicate SKU "${newSku}" (earlier row in this file superseded)` });

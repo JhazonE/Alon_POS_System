@@ -30,6 +30,8 @@ test.describe('Edit product', () => {
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Edit Product')).toBeVisible();
+    // Ang legacy read-only SKU line makita ug mao ang stored value.
+    await expect(dialog.getByLabel('SKU', { exact: true })).toHaveValue(EDITABLE_PRODUCT.sku);
 
     // I-usab ang Product Name dayon i-save.
     await dialog.getByLabel('Product Name').fill(newName);
