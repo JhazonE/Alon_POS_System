@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { selectCategory } from './helpers/product-form';
 import {
   TEST_BRAND,
   TEST_CATEGORY,
@@ -16,19 +17,21 @@ import {
  */
 
 /**
- * SKU is timestamped fresh per call — addProduct does not enforce SKU
- * uniqueness, so a fixed (or module-load-time-fixed) SKU would silently
- * create a duplicate row on a repeated run within the same process (a CI
- * retry, or `--repeat-each`; global-setup only seeds once per invocation),
- * which then breaks this test's own row lookup via a Playwright strict-mode
- * "multiple elements" error rather than a useful assertion failure. A
- * module-level constant is evaluated once at file load, not once per test —
- * this must be a function called from inside the test body instead.
+ * The product name is timestamped fresh per call — products have no SKU, and
+ * addProduct does not enforce name uniqueness, so a fixed (or
+ * module-load-time-fixed) name would silently create a duplicate row on a
+ * repeated run within the same process (a CI retry, or `--repeat-each`;
+ * global-setup only seeds once per invocation), which then breaks this test's
+ * own row lookup via a Playwright strict-mode "multiple elements" error rather
+ * than a useful assertion failure. A module-level constant is evaluated once
+ * at file load, not once per test — this must be a function called from inside
+ * the test body instead.
  */
 function makeNewProduct() {
+  const uniq = Date.now();
   return {
-    name: 'QA Widget With Supplier',
-    sku: `QA-WIDGET-SUP-${Date.now()}`,
+    name: `QA Widget With Supplier ${uniq}`,
+    uniq,
     description: 'A widget created by the e2e Add Product Suppliers test.',
     stock: 10,
   };
@@ -58,10 +61,9 @@ test.describe('Add product with a supplier mapping', () => {
 
     // --- Basic Info ---
     await dialog.getByLabel('Product Name').fill(NEW_PRODUCT.name);
-    await dialog.getByLabel('SKU').fill(NEW_PRODUCT.sku);
     await dialog.getByLabel('Description', { exact: true }).fill(NEW_PRODUCT.description);
     await selectOption(page, dialog, 'Brand', TEST_BRAND.name);
-    await selectOption(page, dialog, 'Category', TEST_CATEGORY.name);
+    await selectCategory(page, dialog, TEST_CATEGORY.name);
 
     // --- Inventory ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
@@ -73,7 +75,7 @@ test.describe('Add product with a supplier mapping', () => {
     await dialog.getByRole('tab', { name: 'Selling Units' }).click();
     const base = dialog.locator('div.bg-card.border.rounded-md.shadow-sm').nth(0);
     await selectOption(page, dialog, 'Unit Name', `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
-    await base.getByLabel('Barcode').fill(`SUP-${NEW_PRODUCT.sku}`);
+    await base.getByLabel('Barcode').fill(`SUP-${NEW_PRODUCT.uniq}`);
     await base.getByLabel('Cost (₱)').fill('80');
     // Every active price level's column is required.
     await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill('100');
@@ -104,18 +106,18 @@ test.describe('Add product with a supplier mapping', () => {
     // supplier field ang /api/products response mismo (MySqlProductRepository
     // wala ni-select niini), mao nga ang Edit Product Suppliers tab check sa
     // ubos mao ang verification para sa supplier assignment.
-    const res = await request.get(`/api/products?search=${NEW_PRODUCT.sku}&limit=50`);
+    const res = await request.get(`/api/products?search=${encodeURIComponent(NEW_PRODUCT.name)}&limit=50`);
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    const match = (body.data ?? []).find((p: any) => p.sku === NEW_PRODUCT.sku);
+    const match = (body.data ?? []).find((p: any) => p.name === NEW_PRODUCT.name);
     expect(match, 'bag-ong product makita sa /api/products').toBeTruthy();
     expect(Number(match.reorderPoint ?? match.reorder_point)).toBe(15);
 
     // I-verify nga na-persist ang supplier mapping pinaagi sa pag-abli sa Edit
     // Product's Suppliers tab (walay REST endpoint para sa supplier_product_mapping,
     // mao nga ang UI mismo ang verification layer, sama sa Edit Product's own test).
-    await page.getByPlaceholder('Search products...').fill(NEW_PRODUCT.sku);
-    const row = page.getByRole('row', { name: new RegExp(NEW_PRODUCT.sku) });
+    await page.getByPlaceholder('Search products...').fill(NEW_PRODUCT.name);
+    const row = page.getByRole('row', { name: new RegExp(NEW_PRODUCT.name) });
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: 'Open menu' }).click();
     // Wait for the Radix dropdown menu itself (not just its item) to finish

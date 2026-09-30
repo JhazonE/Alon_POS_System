@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { selectCategory } from './helpers/product-form';
 import { resetPosState, testQuery } from './helpers/db';
 import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE } from './fixtures/test-data';
 
@@ -32,7 +33,7 @@ async function selectOption(
 
 async function fillAndSubmitProduct(
   page: import('@playwright/test').Page,
-  opts: { name: string; sku: string; description: string; stock: number; cost: string },
+  opts: { name: string; description: string; stock: number; cost: string },
 ) {
   await page.goto('/products');
   await page.getByRole('button', { name: 'Add Product' }).first().click();
@@ -41,10 +42,9 @@ async function fillAndSubmitProduct(
 
   // --- Basic Info ---
   await dialog.getByLabel('Product Name').fill(opts.name);
-  await dialog.getByLabel('SKU').fill(opts.sku);
   await dialog.getByLabel('Description', { exact: true }).fill(opts.description);
   await selectOption(page, dialog, 'Brand', TEST_BRAND.name);
-  await selectOption(page, dialog, 'Category', TEST_CATEGORY.name);
+  await selectCategory(page, dialog, TEST_CATEGORY.name);
 
   // --- Inventory ---
   await dialog.getByRole('tab', { name: 'Inventory' }).click();
@@ -76,7 +76,7 @@ test.describe('Add Product Approval', () => {
   test.beforeEach(async () => {
     await resetPosState();
     await testQuery("DELETE FROM approval_queue WHERE transaction_type='PRODUCT_CREATE'");
-    await testQuery("DELETE FROM products WHERE sku LIKE 'APRV-E2E-%'");
+    await testQuery("DELETE FROM products WHERE name LIKE 'APRV-E2E %'");
     // Each ON-test seeds its own workflow row; clear any leftover from a prior test.
     await testQuery('DELETE FROM approval_workflows WHERE id=?', [WORKFLOW_ID]);
   });
@@ -91,21 +91,19 @@ test.describe('Add Product Approval', () => {
     await setRequireProductConfirmation(request, false);
     await seedSession(page, DEFAULT_ADMIN);
 
-    const sku = `APRV-E2E-OFF-${Date.now()}`;
+    const name = `APRV-E2E Off Widget ${Date.now()}`;
     await fillAndSubmitProduct(page, {
-      name: 'Approval Off Widget',
-      sku,
+      name,
       description: 'Created while require_product_confirmation is OFF.',
       stock: 10,
       cost: '50',
     });
 
-    const res = await request.get(`/api/products?search=${sku}&limit=50`);
+    const res = await request.get(`/api/products?search=${encodeURIComponent(name)}&limit=50`);
     expect(res.ok(), await res.text()).toBeTruthy();
     const body = await res.json();
-    const match = (body.data ?? []).find((p: any) => p.sku === sku);
+    const match = (body.data ?? []).find((p: any) => p.name === name);
     expect(match, 'product created immediately when switch is OFF').toBeTruthy();
-    expect(match.name).toBe('Approval Off Widget');
 
     // No approval queue row should have been created.
     const queueRows = await testQuery(
@@ -130,23 +128,22 @@ test.describe('Add Product Approval', () => {
     await setRequireProductConfirmation(request, true);
     await seedSession(page, DEFAULT_ADMIN);
 
-    const sku = `APRV-E2E-ON-${Date.now()}`;
+    const name = `APRV-E2E On Widget ${Date.now()}`;
     await fillAndSubmitProduct(page, {
-      name: 'Approval On Widget',
-      sku,
+      name,
       description: 'Submitted while require_product_confirmation is ON.',
       stock: 5,
       cost: '75',
     });
 
     // Product must NOT exist yet.
-    const res = await request.get(`/api/products?search=${sku}&limit=50`);
+    const res = await request.get(`/api/products?search=${encodeURIComponent(name)}&limit=50`);
     expect(res.ok(), await res.text()).toBeTruthy();
     const body = await res.json();
-    const match = (body.data ?? []).find((p: any) => p.sku === sku);
+    const match = (body.data ?? []).find((p: any) => p.name === name);
     expect(match, 'product must not be created while pending approval').toBeFalsy();
 
-    // Queue row must exist as Pending, carrying this sku in transaction_data.
+    // Queue row must exist as Pending, carrying this product name in transaction_data.
     const queueRows = await testQuery(
       "SELECT * FROM approval_queue WHERE transaction_type='PRODUCT_CREATE' AND status='Pending'"
     );
@@ -154,7 +151,7 @@ test.describe('Add Product Approval', () => {
     const txData = typeof queueRows[0].transaction_data === 'string'
       ? JSON.parse(queueRows[0].transaction_data)
       : queueRows[0].transaction_data;
-    expect(txData.sku).toBe(sku);
+    expect(txData.name).toBe(name);
   });
 
   test('approving the queued product creates it', async ({ page, request }) => {
@@ -169,10 +166,9 @@ test.describe('Add Product Approval', () => {
     await setRequireProductConfirmation(request, true);
     await seedSession(page, DEFAULT_ADMIN);
 
-    const sku = `APRV-E2E-APPROVE-${Date.now()}`;
+    const name = `APRV-E2E Finalized Widget ${Date.now()}`;
     await fillAndSubmitProduct(page, {
-      name: 'Approval Finalized Widget',
-      sku,
+      name,
       description: 'Submitted then approved.',
       stock: 7,
       cost: '60',
@@ -202,12 +198,11 @@ test.describe('Add Product Approval', () => {
     });
     expect(approveRes.ok(), await approveRes.text()).toBeTruthy();
 
-    const res = await request.get(`/api/products?search=${sku}&limit=50`);
+    const res = await request.get(`/api/products?search=${encodeURIComponent(name)}&limit=50`);
     expect(res.ok(), await res.text()).toBeTruthy();
     const body = await res.json();
-    const match = (body.data ?? []).find((p: any) => p.sku === sku);
+    const match = (body.data ?? []).find((p: any) => p.name === name);
     expect(match, 'product created after approval').toBeTruthy();
-    expect(match.name).toBe('Approval Finalized Widget');
 
     const finalRows = await testQuery('SELECT status FROM approval_queue WHERE id=?', [queueId]);
     expect(finalRows[0].status).toBe('Approved');

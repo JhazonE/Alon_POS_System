@@ -77,7 +77,7 @@ export function useInventoryPage() {
     grouped.sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'stock') return b.stock - a.stock;
-      if (sortBy === 'sku') return a.sku.localeCompare(b.sku);
+      if (sortBy === 'sku') return (a.sku ?? '').localeCompare(b.sku ?? '');
       return 0;
     });
 

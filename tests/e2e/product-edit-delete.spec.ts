@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { testQuery } from './helpers/db';
 import { EDITABLE_PRODUCT, DELETABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/test-data';
 
 /**
@@ -29,6 +30,8 @@ test.describe('Edit product', () => {
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Edit Product')).toBeVisible();
+    // Ang legacy read-only SKU line makita ug mao ang stored value.
+    await expect(dialog.getByLabel('SKU', { exact: true })).toHaveValue(EDITABLE_PRODUCT.sku);
 
     // I-usab ang Product Name dayon i-save.
     await dialog.getByLabel('Product Name').fill(newName);
@@ -41,6 +44,39 @@ test.describe('Edit product', () => {
     const match = (body.data ?? []).find((p: any) => p.sku === EDITABLE_PRODUCT.sku);
     expect(match, 'product gihapon naa pinaagi sa SKU').toBeTruthy();
     expect(match.name).toBe(newName);
+  });
+
+  test('admin makausab ug product nga walay SKU — dili mo-require ug dili mag-set ug SKU', async ({ page, request }) => {
+    const id = 'test-no-sku-1';
+    const name = 'No SKU Widget';
+    const newName = 'No SKU Widget Renamed';
+    await testQuery('DELETE FROM products WHERE id = ?', [id]);
+    await testQuery(
+      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
+       VALUES (?, ?, 40, 5, NULL, 'Product nga walay SKU.', ?, ?, ?, 'Available')`,
+      [id, name, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure],
+    );
+    try {
+      await seedSession(page, DEFAULT_ADMIN);
+      await page.goto('/products');
+      await openRowMenu(page, name, name);
+      await page.getByRole('menuitem', { name: 'Edit Product' }).click();
+
+      const dialog = page.getByRole('dialog');
+      await expect(dialog.getByText('Edit Product')).toBeVisible();
+      // No SKU line for a product that has none.
+      await expect(dialog.getByLabel('SKU', { exact: true })).toHaveCount(0);
+
+      await dialog.getByLabel('Product Name').fill(newName);
+      await dialog.getByRole('button', { name: 'Save Changes' }).click();
+      await expect(dialog).toBeHidden();
+
+      const [row] = await testQuery('SELECT name, sku FROM products WHERE id = ?', [id]);
+      expect(row.name).toBe(newName);
+      expect(row.sku, 'SKU stays NULL, not empty string').toBeNull();
+    } finally {
+      await testQuery('DELETE FROM products WHERE id = ?', [id]);
+    }
   });
 });
 
