@@ -29,7 +29,8 @@ export const productSchema = z
     name: z.string().min(1, 'Product name is required'),
     brand: z.string().min(1, 'Brand is required'),
     department: z.string().optional(),
-    sku: z.string().min(1, 'SKU is required'),
+    // Legacy products carry a SKU; products created after SKU was retired have NULL.
+    sku: z.string().nullish(),
     // Mirrored from the base selling unit's barcode on submit — not an input.
     barcode: z.string().optional(),
     description: z.string().min(1, 'Description is required'),

@@ -12,7 +12,7 @@ import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
 export type ProductFormData = {
   name: string;
   brand: string;
-  sku: string;
+  sku?: string;
   barcode?: string;
   description: string;
   additionalDescription?: string;
@@ -707,7 +707,7 @@ export async function addProduct(
         const items = [{
           productId: 'NEW',
           productName: formData.name,
-          sku: formData.sku,
+          sku: formData.sku || '',
           barcode: formData.barcode || '',
           price: formData.price,
           cost: formData.cost || 0,
@@ -733,7 +733,9 @@ export async function addProduct(
       }
     }
 
-    const productId = `${formData.sku}-${Date.now()}`;
+    // Products carry no SKU of their own, so the id cannot derive from one.
+    // Same shape the duplicate-product flows below already use.
+    const productId = `product_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const isServiceProduct = formData.itemType === 'service';
 
     // Services are performed at the store, not stocked in a warehouse the user
@@ -773,7 +775,7 @@ export async function addProduct(
         // services: cost is required at creation precisely so cost_at_sale is
         // never NULL, and 0 is a legitimate answer for a pure-margin service.
         cost: formData.cost ?? null,
-        sku: formData.sku,
+        sku: formData.sku || null,
         barcode: formData.barcode || null,
         image_url: formData.image || null,
         image_hint: formData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -869,8 +871,7 @@ export async function addProduct(
       if (formData.supplierMappings && formData.supplierMappings.length > 0) {
         for (const mapping of formData.supplierMappings) {
           // supplier_product_mapping.id is VARCHAR(50) — a productId-prefixed id
-          // (productId is itself `${sku}-${Date.now()}`) overflows it for any
-          // non-trivial SKU. A short prefix + uuid (already imported in this
+          // can overflow it. A short prefix + uuid (already imported in this
           // file) is both well under the limit and collision-safe across
           // concurrent requests, unlike a Date.now()-based id — this project
           // runs one server per terminal against a shared DB.
@@ -920,7 +921,10 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         reorder_point: formData.reorderPoint !== undefined ? formData.reorderPoint : existing.reorder_point,
         price: formData.price !== undefined ? formData.price : existing.price,
         cost: (formData.cost !== undefined ? formData.cost : existing.cost) || null,
-        sku: formData.sku ?? existing.sku,
+        // '' or null from the form (SKU-less products, or forms that no longer
+        // collect a SKU) must not overwrite what is stored — and '' must never
+        // be written (the (sku, warehouse_id) unique index treats '' as a value).
+        sku: formData.sku || existing.sku || null,
         barcode: (formData.barcode !== undefined ? formData.barcode : existing.barcode) || null,
         image_url: (formData.image !== undefined ? formData.image : existing.image_url) || null,
         image_hint: formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : existing.image_hint,
@@ -1287,7 +1291,9 @@ export async function breakPack(
       // --- Scenario A: Auto-create a new child product ---
       if (!resolvedChildId && newProductData) {
         const newId = `product_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const newSku = `${parent.sku}-${newProductData.unitOfMeasure.replace(/\s+/g, '').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+        const newSku = parent.sku
+          ? `${parent.sku}-${newProductData.unitOfMeasure.replace(/\s+/g, '').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+          : null;
         factor = newProductData.conversionFactor;
 
         await connection.query(
@@ -1557,7 +1563,7 @@ export async function consolidatePack(
       // --- Scenario A: Auto-create a new bulk product ---
       if (!resolvedBulkId && newProductData) {
         const newId = `product_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const newSku = `${pack.sku}-BULK-${Date.now().toString(36).toUpperCase()}`;
+        const newSku = pack.sku ? `${pack.sku}-BULK-${Date.now().toString(36).toUpperCase()}` : null;
         factor = newProductData.conversionFactor;
 
         await connection.query(
