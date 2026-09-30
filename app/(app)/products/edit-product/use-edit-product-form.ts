@@ -276,7 +276,7 @@ export function useEditProductForm({
   const watchedBrandName = form.watch('brand');
   const formErrors = form.formState.errors as any;
   const tabErrors = {
-    basic: !!(formErrors.name || formErrors.brand || formErrors.sku || formErrors.description || formErrors.category),
+    basic: !!(formErrors.name || formErrors.brand || formErrors.description || formErrors.category),
     // unitOfMeasure can still error here — a Service edits it on this tab.
     inventory: !!(formErrors.unitOfMeasure),
     sellingUnits: !!formErrors.sellingUnits,
@@ -521,7 +521,7 @@ export function useEditProductForm({
         await logActivity({
           action: 'UPDATE',
           module: 'PRODUCTS',
-          description: `Updated product: ${values.name || product.name} (SKU: ${values.sku || product.sku})`,
+          description: `Updated product: ${values.name || product.name}`,
           referenceId: String(product.id),
         });
         toast({

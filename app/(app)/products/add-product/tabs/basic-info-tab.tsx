@@ -1,6 +1,5 @@
 'use client';
 
-import { Wand2 } from 'lucide-react';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +7,7 @@ import { Category, Brand } from '@/lib/types';
 
 import { useAddProductFormContext } from '../add-product-form-context';
 import { InlineEditableSelect } from '../../components/inline-editable-select';
+import { CategorySubcategoryPicker } from '../../components/category-subcategory-picker';
 import { addBrand, updateBrand, addCategory, updateCategory, addSubcategory, updateSubcategory } from '../../actions';
 
 export function BasicInfoTab() {
@@ -20,7 +20,6 @@ export function BasicInfoTab() {
     refreshBrands,
     refreshCategories,
     refreshSubcategories,
-    generateSku,
   } = useAddProductFormContext();
 
   return (
@@ -30,7 +29,7 @@ export function BasicInfoTab() {
         control={form.control}
         name="name"
         render={({ field }) => (
-          <FormItem className="col-span-2 sm:col-span-1">
+          <FormItem>
             <FormLabel>Product Name</FormLabel>
             <FormControl>
               <Input placeholder="e.g., Cola-Cola" {...field} />
@@ -76,31 +75,49 @@ export function BasicInfoTab() {
         )}
       />
 
-      {/* Row 2: SKU (barcode now lives on the base selling unit) */}
+      {/* Row 2: Category / Subcategory and Description */}
       <FormField
         control={form.control}
-        name="sku"
+        name="category"
         render={({ field }) => (
-          <FormItem className="col-span-2 sm:col-span-1">
-            <FormLabel>SKU</FormLabel>
-            <div className="relative">
-              <FormControl>
-                <Input placeholder="e.g., COKE-PC" {...field} className="pr-10" />
-              </FormControl>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
-                onClick={generateSku}
-              >
-                <Wand2 className="h-4 w-4" />
-                <span className="sr-only">Generate SKU</span>
-              </button>
-            </div>
+          <FormItem>
+            <FormLabel>Category / Subcategory</FormLabel>
+            <CategorySubcategoryPicker
+              categories={categories}
+              subcategories={subcategories}
+              isLoadingCategories={isLoadingCategories}
+              isLoadingSubcategories={isLoadingSubcategories}
+              category={field.value}
+              subcategory={form.watch('subcategory') ?? ''}
+              onCategoryChange={field.onChange}
+              onSubcategoryChange={(v) => form.setValue('subcategory', v, { shouldDirty: true, shouldValidate: true })}
+              onAddCategory={async (name) => {
+                const r = await addCategory(name, 0);
+                if (r.success) { await refreshCategories(); return name; }
+                return undefined;
+              }}
+              onRenameCategory={async (id, name) => {
+                const existing = categories.find((c: Category) => c.id === id);
+                const r = await updateCategory(id, name, existing?.markupPercentage);
+                if (r.success) { await refreshCategories(); return name; }
+                return undefined;
+              }}
+              onAddSubcategory={async (name) => {
+                const r = await addSubcategory(name, 0);
+                if (r.success) { await refreshSubcategories(); return name; }
+                return undefined;
+              }}
+              onRenameSubcategory={async (id, name) => {
+                const existing = subcategories.find((s: Category) => s.id === id);
+                const r = await updateSubcategory(id, name, existing?.markupPercentage);
+                if (r.success) { await refreshSubcategories(); return name; }
+                return undefined;
+              }}
+            />
             <FormMessage />
           </FormItem>
         )}
       />
-      {/* Row 3: Description and Additional Description */}
       <FormField
         control={form.control}
         name="description"
@@ -122,11 +139,13 @@ export function BasicInfoTab() {
           </FormItem>
         )}
       />
+
+      {/* Row 3: Additional Description (full width) */}
       <FormField
         control={form.control}
         name="additionalDescription"
         render={({ field }) => (
-          <FormItem>
+          <FormItem className="sm:col-span-2">
             <FormLabel>Additional Description (Optional)</FormLabel>
             <FormControl>
               <Textarea
@@ -139,80 +158,6 @@ export function BasicInfoTab() {
                 }}
               />
             </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {/* Row 4: Category and Subcategory */}
-      <FormField
-        control={form.control}
-        name="category"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Category</FormLabel>
-            <InlineEditableSelect
-              items={categories}
-              isLoading={isLoadingCategories}
-              value={field.value}
-              onChange={field.onChange}
-              open={selects.categories}
-              onOpenChange={(o) => setSelects((p) => ({ ...p, categories: o }))}
-              placeholder="Select a category"
-              addLabel="Add Category"
-              emptyLabel="No categories found"
-              getId={(c: Category) => c.id}
-              getValue={(c: Category) => c.name}
-              getOptionLabel={(c: Category) => c.name}
-              getName={(c: Category) => c.name}
-              onAdd={async (name) => {
-                const r = await addCategory(name, 0);
-                if (r.success) { await refreshCategories(); return name; }
-                return undefined;
-              }}
-              onRename={async (id, name) => {
-                const existing = categories.find((c: Category) => c.id === id);
-                const r = await updateCategory(id, name, existing?.markupPercentage);
-                if (r.success) { await refreshCategories(); return name; }
-                return undefined;
-              }}
-            />
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="subcategory"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Subcategory (Optional)</FormLabel>
-            <InlineEditableSelect
-              items={subcategories}
-              isLoading={isLoadingSubcategories}
-              value={field.value}
-              onChange={field.onChange}
-              open={selects.subcategories}
-              onOpenChange={(o) => setSelects((p) => ({ ...p, subcategories: o }))}
-              placeholder="Select a subcategory"
-              addLabel="Add Subcategory"
-              emptyLabel="No subcategories found"
-              getId={(s: Category) => s.id}
-              getValue={(s: Category) => s.name}
-              getOptionLabel={(s: Category) => s.name}
-              getName={(s: Category) => s.name}
-              onAdd={async (name) => {
-                const r = await addSubcategory(name, 0);
-                if (r.success) { await refreshSubcategories(); return name; }
-                return undefined;
-              }}
-              onRename={async (id, name) => {
-                const existing = subcategories.find((s: Category) => s.id === id);
-                const r = await updateSubcategory(id, name, existing?.markupPercentage);
-                if (r.success) { await refreshSubcategories(); return name; }
-                return undefined;
-              }}
-            />
             <FormMessage />
           </FormItem>
         )}

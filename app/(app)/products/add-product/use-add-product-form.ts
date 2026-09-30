@@ -142,7 +142,6 @@ export function useAddProductForm({
       reorderPoint: 0,
       price: 0,
       cost: 0,
-      sku: '',
       barcode: '',
       sellingUnits: [
         { unitName: '', qtyBase: 1, barcode: '', cost: undefined, isBase: true, prices: {} },
@@ -232,7 +231,7 @@ export function useAddProductForm({
   const watchedPrice = form.watch('price');
   const formErrors = form.formState.errors as any;
   const tabErrors = {
-    basic: !!(formErrors.name || formErrors.brand || formErrors.sku || formErrors.description || formErrors.category),
+    basic: !!(formErrors.name || formErrors.brand || formErrors.description || formErrors.category),
     // unitOfMeasure can still error here — a Service edits it on this tab.
     inventory: !!(formErrors.unitOfMeasure || formErrors.stock),
     sellingUnits: !!formErrors.sellingUnits,
@@ -506,7 +505,7 @@ export function useAddProductForm({
           cost: baseUnit?.cost ?? values.cost,
           barcode: baseUnit?.barcode ?? values.barcode,
           unitOfMeasure: baseUnit?.unitName || values.unitOfMeasure,
-          image: `https://picsum.photos/seed/${values.sku}/400/300`,
+          image: `https://picsum.photos/seed/${encodeURIComponent(values.name)}/400/300`,
         } as any,
         uid,
       );
@@ -524,7 +523,7 @@ export function useAddProductForm({
         logActivity({
           action: 'CREATE',
           module: 'PRODUCTS',
-          description: `Added product: ${values.name} (SKU: ${values.sku}) — Category: ${values.category || 'N/A'}`,
+          description: `Added product: ${values.name} — Category: ${values.category || 'N/A'}`,
           referenceId: result.productId,
         }).catch(() => {
           // Silently ignore activity logging errors
@@ -555,13 +554,6 @@ export function useAddProductForm({
       setIsSubmitting(false);
     }
   }
-
-  const generateSku = () => {
-    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const brandPart = form.getValues('brand')?.substring(0, 3).toUpperCase() || 'BRD';
-    const namePart = form.getValues('name')?.substring(0, 3).toUpperCase() || 'PRO';
-    form.setValue('sku', `${brandPart}-${namePart}-${randomPart}`);
-  };
 
   // Refresh callbacks wired to the "Manage …" dialogs.
   const refreshBrands = () => getBrands().then(setBrands);
@@ -609,7 +601,6 @@ export function useAddProductForm({
 
     // handlers
     onSubmit,
-    generateSku,
     generateUnitBarcode,
     refreshBrands,
     refreshDepartments,
