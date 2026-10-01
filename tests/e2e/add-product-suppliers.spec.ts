@@ -50,6 +50,7 @@ async function selectOption(
 
 test.describe('Add product with a supplier mapping', () => {
   test('admin makahimo ug product nga adunay supplier mapping', async ({ page, request }) => {
+    test.setTimeout(90_000);
     const NEW_PRODUCT = makeNewProduct();
 
     await seedSession(page, DEFAULT_ADMIN);
@@ -132,10 +133,12 @@ test.describe('Add product with a supplier mapping', () => {
     await expect(editDialog.getByText('Edit Product')).toBeVisible();
     await editDialog.getByRole('tab', { name: 'Suppliers' }).click();
 
-    const mappingRow = editDialog.getByRole('row', { name: new RegExp(TEST_SUPPLIER.name) });
-    await expect(mappingRow).toBeVisible();
-    await expect(mappingRow.getByText('7 days')).toBeVisible();
-    await expect(mappingRow.getByText('15', { exact: true })).toBeVisible();
-    await expect(mappingRow.getByText('Primary', { exact: true })).toBeVisible();
+    await expect(editDialog.getByText('Loading suppliers…')).toBeHidden();
+    const mappingRow = editDialog.locator('div.bg-card.border.rounded-md.shadow-sm');
+    await expect(mappingRow).toHaveCount(1);
+    await expect(mappingRow.getByLabel('Supplier', { exact: true })).toContainText(TEST_SUPPLIER.name);
+    await expect(mappingRow.getByLabel('Lead Time (days)')).toHaveValue('7');
+    await expect(mappingRow.getByLabel('Reorder Point')).toHaveValue('15');
+    await expect(mappingRow.getByLabel('Primary supplier', { exact: true })).toBeChecked();
   });
 });

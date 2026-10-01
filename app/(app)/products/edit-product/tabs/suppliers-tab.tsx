@@ -1,18 +1,20 @@
 'use client';
 
-import { useAddProductFormContext } from '../add-product-form-context';
+import { useEditProductFormContext } from '../edit-product-form-context';
 import { SupplierMappingsPanel } from '../../components/supplier-mappings-panel';
 
 export function SuppliersTab() {
   const {
     form,
-    itemType,
+    product,
     suppliers, isLoadingSuppliers,
     refreshSuppliers,
     supplierMappingFields, addSupplierMapping, removeSupplierMapping, setPrimarySupplierRow,
-  } = useAddProductFormContext();
+    isLoadingMappings, mappingsLoadError,
+  } = useEditProductFormContext();
 
-  if (itemType === 'service') return null;
+  // Services have no suppliers — the tab is not rendered for them.
+  if (product?.type === 'service') return null;
 
   return (
     <SupplierMappingsPanel
@@ -24,6 +26,8 @@ export function SuppliersTab() {
       addSupplierMapping={addSupplierMapping}
       removeSupplierMapping={removeSupplierMapping}
       setPrimarySupplierRow={setPrimarySupplierRow}
+      isLoadingMappings={isLoadingMappings}
+      loadError={mappingsLoadError}
     />
   );
 }

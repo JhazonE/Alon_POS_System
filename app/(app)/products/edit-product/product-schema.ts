@@ -2,11 +2,14 @@ import { z } from 'zod';
 import {
   sellingUnitSchema,
   sellingUnitsSuperRefine,
+  supplierMappingSchema,
+  supplierMappingsSuperRefine,
   type SellingUnitValues,
+  type SupplierMappingValues,
 } from '../add-product/product-schema';
 
-export { sellingUnitSchema, sellingUnitsSuperRefine };
-export type { SellingUnitValues };
+export { sellingUnitSchema, sellingUnitsSuperRefine, supplierMappingSchema, supplierMappingsSuperRefine };
+export type { SellingUnitValues, SupplierMappingValues };
 
 /**
  * Edit Product has no `itemType` discriminator — the product's type is
@@ -55,9 +58,14 @@ export const productSchema = z
     availability: z.string().default('Available'),
     earnsPoints: z.boolean().default(true),
     isPerishable: z.boolean().optional(),
+    // Same per-row shape as the Add form. Optional: the hook leaves it out of
+    // the submitted payload for a service, and whenever the existing mappings
+    // could not be loaded (updateProduct then leaves the stored ones alone).
+    supplierMappings: z.array(supplierMappingSchema).optional(),
   })
   .superRefine((values, ctx) => {
     sellingUnitsSuperRefine(values.sellingUnits, ctx);
+    supplierMappingsSuperRefine(values.supplierMappings, ctx);
     // No selling units = a service (the hook omits them only for a service):
     // its Inventory-tab unit is the only source, so it is still required.
     if (values.sellingUnits === undefined && !values.unitOfMeasure?.trim()) {

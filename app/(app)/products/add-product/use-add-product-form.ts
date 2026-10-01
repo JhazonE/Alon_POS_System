@@ -10,6 +10,7 @@ import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { generateSku } from '@/lib/sku';
 import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings } from '@/lib/types';
 import type { ProductType } from '@/lib/product-type';
 
@@ -24,6 +25,7 @@ import {
   getShelfLocations,
   getDepartments,
 } from '../actions';
+import { useSupplierMappings } from '../components/use-supplier-mappings';
 import { productSchema, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
 
 function getCurrentUid(): string {
@@ -61,17 +63,38 @@ export function calculatePriceLevelPrice(
 }
 
 export interface UseAddProductFormProps {
-  onProductAdded?: () => void;
+  /**
+   * `productId` is the new product's id; it is undefined (with
+   * `pendingApproval: true`) when PRODUCT_CREATE approval is on and the product
+   * was queued instead of created.
+   */
+  onProductAdded?: (productId?: string, result?: { pendingApproval: boolean }) => void;
   productOptions?: any;
   onOptionsRefresh?: () => void;
+  /** Controlled open state. Omit both to let the dialog manage its own. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Seeds the Product Name field each time the dialog opens. */
+  defaultName?: string;
+  /** Seeds the Suppliers tab with this supplier as the primary mapping on each open. */
+  defaultSupplierId?: string;
 }
 
 export function useAddProductForm({
   onProductAdded,
   productOptions: externalProductOptions,
   onOptionsRefresh,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  defaultName,
+  defaultSupplierId,
 }: UseAddProductFormProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setIsOpen = (val: boolean) => {
+    controlledOnOpenChange?.(val);
+    setInternalOpen(val);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Standard vs Service. The old parent/child `productType` selector is gone —
   // a product's units now live in its `sellingUnits` array, not in sibling rows.
@@ -157,50 +180,11 @@ export function useAddProductForm({
     name: 'sellingUnits',
   });
 
-  const { fields: supplierMappingFields, append: appendSupplierMapping, remove: removeSupplierMappingRow } = useFieldArray({
-    control: form.control as any,
-    name: 'supplierMappings',
-  });
-
-  /**
-   * The first row ever added defaults to primary — nothing else prompts the
-   * user to pick one, and an un-primaried mapping list leaves
-   * products.reorder_point at 0 while supplier_id still gets set from the
-   * client's own primary-or-first-row fallback (actions.ts reads only
-   * `.find(m => m.isPrimary)` for reorder_point), silently disagreeing with
-   * what the mapping table itself stores.
-   */
-  const addSupplierMapping = () => {
-    const existing = (form.getValues('supplierMappings' as any) as SupplierMappingValues[] | undefined) ?? [];
-    appendSupplierMapping({
-      supplierId: '',
-      supplierSku: '',
-      leadTime: 0,
-      rop: 0,
-      cost: undefined,
-      isPrimary: existing.length === 0,
-    } as any);
-  };
-
-  /** Removing the primary row promotes whichever row is now first. */
-  const removeSupplierMapping = (index: number) => {
-    const rows = (form.getValues('supplierMappings' as any) as SupplierMappingValues[] | undefined) ?? [];
-    const removedWasPrimary = rows[index]?.isPrimary;
-    removeSupplierMappingRow(index);
-    // After removal every later row shifts down one index, so "whichever
-    // row is now first" is always index 0 of the remaining rows.
-    if (removedWasPrimary && rows.length > 1) {
-      form.setValue('supplierMappings.0.isPrimary' as any, true, { shouldDirty: true });
-    }
-  };
-
-  /** Marks one row primary and clears the flag on every other row. */
-  const setPrimarySupplierRow = (index: number) => {
-    const rows = (form.getValues('supplierMappings' as any) as SupplierMappingValues[] | undefined) ?? [];
-    rows.forEach((_, i) => {
-      form.setValue(`supplierMappings.${i}.isPrimary` as any, i === index, { shouldDirty: true });
-    });
-  };
+  const {
+    supplierMappingFields, addSupplierMapping, removeSupplierMapping, setPrimarySupplierRow,
+    replaceSupplierMappings,
+    primarySupplierId, supplierCostOptions,
+  } = useSupplierMappings({ form, suppliers });
 
   const watchedSellingUnits = form.watch('sellingUnits' as any) as SellingUnitValues[] | undefined;
   const baseUnitIndex = Math.max(0, (watchedSellingUnits ?? []).findIndex((u) => u?.isBase));
@@ -261,6 +245,20 @@ export function useAddProductForm({
     if (isOpen) {
       form.reset();
 
+      // Applied after the reset (not folded into it) so the form's own
+      // defaults stay blank — a later reset after submit then can't keep them.
+      if (defaultName) form.setValue('name', defaultName);
+      if (defaultSupplierId) {
+        replaceSupplierMappings([{
+          supplierId: defaultSupplierId,
+          supplierSku: generateSku(undefined, defaultName),
+          leadTime: 0,
+          rop: 0,
+          cost: undefined,
+          isPrimary: true,
+        }]);
+      }
+
       // Set default tax rate if available and valid
       if (taxRates.length > 0) {
         const defaultTax = taxRates.find(t => t.isDefault) || taxRates[0];
@@ -313,18 +311,6 @@ export function useAddProductForm({
   const watchedCategoryName = form.watch('category');
   const watchedSubcategoryName = form.watch('subcategory');
   const watchedBrandName = form.watch('brand');
-  const watchedSupplierMappings = form.watch('supplierMappings' as any) as SupplierMappingValues[] | undefined;
-  const primarySupplierId = (watchedSupplierMappings ?? []).find((m) => m?.isPrimary)?.supplierId
-    ?? (watchedSupplierMappings ?? [])[0]?.supplierId;
-  // Costs the user can pick from for a selling unit's Cost: one entry per
-  // mapped supplier that has a cost > 0 (mapping rows without a chosen
-  // supplier or cost are skipped).
-  const supplierCostOptions = (watchedSupplierMappings ?? []).flatMap((m, i) => {
-    const cost = Number(m?.cost);
-    if (!m?.supplierId || !Number.isFinite(cost) || cost <= 0) return [];
-    const name = suppliers.find((s: Supplier) => s.id === m.supplierId)?.name ?? 'Supplier';
-    return [{ key: `${i}`, name, cost, isPrimary: !!m.isPrimary }];
-  });
 
   const [markupSource, setMarkupSource] = useState<string | null>(null);
 
@@ -516,7 +502,7 @@ export function useAddProductForm({
           description: `${values.name} was submitted and is awaiting approval.`,
         });
         form.reset();
-        onProductAdded?.();
+        onProductAdded?.(undefined, { pendingApproval: true });
         setIsOpen(false);
       } else if (result.success) {
         // Fire and forget - don't block form submission on activity logging
@@ -533,7 +519,7 @@ export function useAddProductForm({
           description: `${values.name} has been successfully added.`,
         });
         form.reset();
-        onProductAdded?.();
+        onProductAdded?.(result.productId, { pendingApproval: false });
         dispatchStockUpdate();
         setIsOpen(false);
       } else {

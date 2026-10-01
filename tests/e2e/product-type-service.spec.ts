@@ -211,10 +211,21 @@ test.describe('Service product type', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Edit Product')).toBeVisible();
 
-    // Basic Info is the default tab — the type Badge is read-only, no toggle control.
-    await expect(dialog.getByText('Service', { exact: true })).toBeVisible();
-    await expect(dialog.getByText('Cannot be changed after creation.', { exact: true })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Standard', exact: true })).toHaveCount(0);
-    await expect(dialog.getByRole('button', { name: 'Service', exact: true })).toHaveCount(0);
+    // The header mirrors Add Product's Standard/Service control, but display-only:
+    // both buttons are present and disabled, and only the product's own type is pressed.
+    const typeGroup = dialog.getByRole('group', { name: 'Product type' });
+    const standardBtn = typeGroup.getByRole('button', { name: 'Standard', exact: true });
+    const serviceBtn = typeGroup.getByRole('button', { name: 'Service', exact: true });
+    await expect(standardBtn).toBeDisabled();
+    await expect(serviceBtn).toBeDisabled();
+    await expect(serviceBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(standardBtn).toHaveAttribute('aria-pressed', 'false');
+    // The old visible 'Cannot be changed after creation.' text is now only a tooltip (title).
+    await expect(typeGroup).toHaveAttribute('title', /cannot be changed after creation/i);
+    await expect(dialog.getByText('Cannot be changed after creation.', { exact: true })).toHaveCount(0);
+
+    // Service-only tab set: no Selling Units / Suppliers tabs.
+    await expect(dialog.getByRole('tab', { name: 'Selling Units' })).toHaveCount(0);
+    await expect(dialog.getByRole('tab', { name: 'Suppliers' })).toHaveCount(0);
   });
 });

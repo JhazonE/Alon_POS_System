@@ -24,12 +24,12 @@ export function BasicInfoTab() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {/* Row 1: Name and Brand */}
+      {/* Name (full width) */}
       <FormField
         control={form.control}
         name="name"
         render={({ field }) => (
-          <FormItem>
+          <FormItem className="sm:col-span-2">
             <FormLabel>Product Name</FormLabel>
             <FormControl>
               <Input placeholder="e.g., Cola-Cola" {...field} />
@@ -75,7 +75,7 @@ export function BasicInfoTab() {
         )}
       />
 
-      {/* Row 2: Category / Subcategory and Description */}
+      {/* Category / Subcategory (beside Brand) */}
       <FormField
         control={form.control}
         name="category"
@@ -122,7 +122,7 @@ export function BasicInfoTab() {
         control={form.control}
         name="description"
         render={({ field }) => (
-          <FormItem>
+          <FormItem className="sm:col-span-2">
             <FormLabel>Description</FormLabel>
             <FormControl>
               <Textarea
@@ -140,7 +140,7 @@ export function BasicInfoTab() {
         )}
       />
 
-      {/* Row 3: Additional Description (full width) */}
+      {/* Additional Description (full width) */}
       <FormField
         control={form.control}
         name="additionalDescription"

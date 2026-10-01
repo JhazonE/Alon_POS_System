@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Search, Loader2, X } from 'lucide-react';
+import { Search, Loader2, X, PlusCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -91,11 +91,17 @@ export function DraggableSearchDialogContent({
 // ProductSelector
 // ---------------------------------------------------------------------------
 
+const ADD_NEW_PRODUCT_BUTTON_CLASS =
+  'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]';
+
 export function ProductSelector({
   onSelectProduct,
+  onAddNewProduct,
   supplierId,
 }: {
   onSelectProduct: (product: Product) => void;
+  /** Opens the host's Add Product dialog; `name` is the text typed in the search. */
+  onAddNewProduct?: (name?: string) => void;
   supplierId?: string;
 }) {
   const [inputValue, setInputValue] = useState('');
@@ -143,20 +149,45 @@ export function ProductSelector({
     }
   };
 
+  // The new product is auto-linked to the PO's supplier (that is how this list
+  // finds it again), so there must be one before the dialog can open.
+  const addNewProductTitle = supplierId ? undefined : 'Select a supplier first';
+
+  const handleAddNewProduct = (name?: string) => {
+    setSearchDialogOpen(false);
+    onAddNewProduct?.(name);
+  };
+
   return (
     <>
-      <div className="relative pb-2">
-        <Input
-          placeholder="Scan barcode, enter SKU, or type product name"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleScanOrPunch()}
-          className="pr-10 bg-background"
-        />
-        <Search
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
-          onClick={() => setSearchDialogOpen(true)}
-        />
+      <div className="flex items-start gap-2">
+        <div className="relative pb-2 flex-1">
+          <Input
+            placeholder="Scan barcode, enter SKU, or type product name"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleScanOrPunch()}
+            className="pr-10 bg-background"
+          />
+          <Search
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
+            onClick={() => setSearchDialogOpen(true)}
+          />
+        </div>
+        {onAddNewProduct && (
+          // The span carries the hint: a disabled button swallows hover.
+          <span title={addNewProductTitle}>
+            <button
+              type="button"
+              disabled={!supplierId}
+              onClick={() => handleAddNewProduct()}
+              className={ADD_NEW_PRODUCT_BUTTON_CLASS}
+            >
+              <PlusCircle className="h-4 w-4" />
+              Add New Product
+            </button>
+          </span>
+        )}
       </div>
 
       <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen} modal={false}>
@@ -192,7 +223,23 @@ export function ProductSelector({
                 onValueChange={setCommandSearch}
               />
               <CommandList>
-                <CommandEmpty>No products found.</CommandEmpty>
+                <CommandEmpty>
+                  <div className="flex flex-col items-center gap-3">
+                    <span>No products found.</span>
+                    {onAddNewProduct && (
+                      <button
+                        type="button"
+                        disabled={!supplierId}
+                        title={addNewProductTitle}
+                        onClick={() => handleAddNewProduct(commandSearch.trim())}
+                        className={ADD_NEW_PRODUCT_BUTTON_CLASS}
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                        Add New Product
+                      </button>
+                    )}
+                  </div>
+                </CommandEmpty>
                 <CommandGroup>
                   {products.map((product) => (
                     <CommandItem

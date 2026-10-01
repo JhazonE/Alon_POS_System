@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, Pencil, Loader2, Wand2 } from 'lucide-react';
+import { Pencil, Loader2, Wand2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -20,8 +20,8 @@ import { EditProductFormProvider } from './edit-product-form-context';
 import { BasicInfoTab } from './tabs/basic-info-tab';
 import { InventoryTab } from './tabs/inventory-tab';
 import { SellingUnitsTab } from './tabs/selling-units-tab';
+import { SuppliersTab } from './tabs/suppliers-tab';
 import { LoyaltyTab } from './tabs/loyalty-tab';
-import { ProductSuppliers } from '../product-suppliers/product-suppliers';
 
 export function EditProductDialog({
   product,
@@ -55,7 +55,11 @@ export function EditProductDialog({
     tabErrors,
     markupSource,
     saveChanges,
+    isLoadingMappings,
   } = controller;
+  // A product's type is immutable after creation, so the header shows it
+  // (highlighted) in the same control the Add dialog uses, but disabled.
+  const itemType = product?.type === 'service' ? 'service' : 'standard';
 
   return (
     <TooltipProvider>
@@ -80,11 +84,45 @@ export function EditProductDialog({
           </Tooltip>
         )}
         <SheetContent side="right" className="w-full sm:max-w-2xl h-full flex flex-col overflow-hidden p-0 gap-0">
-          <SheetHeader className="flex-shrink-0 px-6 py-4 border-b space-y-1.5">
-            <SheetTitle>Edit Product</SheetTitle>
-            <SheetDescription>
-              Update the details for {product.name}.
-            </SheetDescription>
+          <SheetHeader className="flex-shrink-0 px-6 py-4 border-b space-y-0">
+            {/* Same header as the Add dialog. The type control is display-only:
+                the type cannot be changed once the product exists. */}
+            <div className="flex items-start justify-between gap-4 pr-8">
+              <div className="space-y-1.5">
+                <SheetTitle>Edit Product</SheetTitle>
+                <SheetDescription>
+                  {itemType === 'service'
+                    ? `${product.name} — no stock tracking, always available for sale.`
+                    : `Update the details for ${product.name}.`}
+                </SheetDescription>
+              </div>
+              <div
+                role="group"
+                aria-label="Product type"
+                title="Product type cannot be changed after creation."
+                className="inline-flex flex-shrink-0 rounded-lg border bg-muted/40 p-0.5"
+              >
+                {([
+                  { value: 'standard', label: 'Standard' },
+                  { value: 'service', label: 'Service' },
+                ] as const).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    aria-pressed={itemType === value}
+                    className={`rounded-md px-3.5 py-1.5 text-sm font-medium cursor-not-allowed ${
+                      itemType === value
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground opacity-60'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </SheetHeader>
           <EditProductFormProvider controller={controller}>
             <div className="flex-1 overflow-y-auto px-4 py-1">
@@ -122,6 +160,7 @@ export function EditProductDialog({
                             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
                           >
                             Suppliers
+                            {tabErrors.suppliers && <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-destructive" />}
                           </TabsTrigger>
                         )}
                         <TabsTrigger
@@ -144,15 +183,7 @@ export function EditProductDialog({
                       )}
                       {product?.type !== 'service' && (
                         <TabsContent value="suppliers" className="space-y-4 p-6">
-                          {/* No onUpdate here: ProductSuppliers already refreshes its own
-                              table via loadData() after every mutation. Wiring onUpdate to
-                              onProductUpdated would refetch the parent product list while
-                              this dialog is still open — use-edit-product-form.ts's
-                              form.reset effect depends on `product`, so a changed row
-                              reference mid-session would wipe any unsaved edits on every
-                              other tab. The parent list still refreshes normally when
-                              Save Changes closes this dialog. */}
-                          <ProductSuppliers productId={product.id} />
+                          <SuppliersTab />
                         </TabsContent>
                       )}
                       <TabsContent value="loyalty" className="space-y-4 p-6">
@@ -174,7 +205,7 @@ export function EditProductDialog({
                 {markupSource}
               </span>
             )}
-            <button type="submit" form="edit-product-form" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
+            <button type="submit" form="edit-product-form" disabled={isSubmitting || isLoadingMappings} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

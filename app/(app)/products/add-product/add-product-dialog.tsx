@@ -21,8 +21,16 @@ import { SellingUnitsTab } from './tabs/selling-units-tab';
 import { SuppliersTab } from './tabs/suppliers-tab';
 import { LoyaltyTab } from './tabs/loyalty-tab';
 
-export function AddProductDialog(props: UseAddProductFormProps) {
-  const controller = useAddProductForm(props);
+export function AddProductDialog(
+  props: UseAddProductFormProps & {
+    /** Render no built-in trigger button — the host opens it via `open`. */
+    hideTrigger?: boolean;
+    /** Hide the Standard/Service toggle and keep the product Standard. */
+    lockStandard?: boolean;
+  },
+) {
+  const { hideTrigger, lockStandard, ...hookProps } = props;
+  const controller = useAddProductForm(hookProps);
   const {
     isOpen, setIsOpen,
     isSubmitting,
@@ -35,12 +43,14 @@ export function AddProductDialog(props: UseAddProductFormProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Product
-        </button>
-      </SheetTrigger>
+      {!hideTrigger && (
+        <SheetTrigger asChild>
+          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Product
+          </button>
+        </SheetTrigger>
+      )}
       <SheetContent side="right" className="w-full sm:max-w-2xl h-full flex flex-col overflow-hidden p-0 gap-0">
         <SheetHeader className="flex-shrink-0 px-6 py-4 border-b space-y-0">
           {/* The type choice sits in the header, outside the scroll area: it
@@ -56,30 +66,32 @@ export function AddProductDialog(props: UseAddProductFormProps) {
                   : 'Fill in the details below to add a new product.'}
               </SheetDescription>
             </div>
-            <div
-              role="group"
-              aria-label="Product type"
-              className="inline-flex flex-shrink-0 rounded-lg border bg-muted/40 p-0.5"
-            >
-              {([
-                { value: 'standard', label: 'Standard' },
-                { value: 'service', label: 'Service' },
-              ] as const).map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={itemType === value}
-                  onClick={() => setItemType(value)}
-                  className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-                    itemType === value
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {!lockStandard && (
+              <div
+                role="group"
+                aria-label="Product type"
+                className="inline-flex flex-shrink-0 rounded-lg border bg-muted/40 p-0.5"
+              >
+                {([
+                  { value: 'standard', label: 'Standard' },
+                  { value: 'service', label: 'Service' },
+                ] as const).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={itemType === value}
+                    onClick={() => setItemType(value)}
+                    className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+                      itemType === value
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </SheetHeader>
         <AddProductFormProvider controller={controller}>
