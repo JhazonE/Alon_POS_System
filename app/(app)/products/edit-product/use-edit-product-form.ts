@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -22,8 +22,10 @@ import {
   getWarehouses,
   getShelfLocations,
   getDepartments,
+  getSupplierMappingsStrict,
 } from '../actions';
-import { productSchema, type ProductFormValues, type SellingUnitValues } from './product-schema';
+import { useSupplierMappings } from '../components/use-supplier-mappings';
+import { productSchema, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
 
 /**
  * Calculate the price for a price level override.
@@ -124,6 +126,86 @@ function defaultLevelIdOf(priceLevels: any[]): string | undefined {
   return (priceLevels.find((l: any) => l.isDefault) || priceLevels[0])?.id;
 }
 
+/** DECIMAL columns arrive as strings ("10.0000"); the ROP schema wants an integer. */
+function toWholeNumber(value: unknown): number {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * The product's OWN products.supplier_id. `product.supplier` cannot be used for
+ * this: getProducts fills it from the primary mapping and, for family children,
+ * from the PARENT's primary mapping. The raw column rides along on the row via
+ * the `...product` spread in getProducts; callers that build a Product some
+ * other way simply have none, which makes us skip every legacy fallback below.
+ */
+function ownSupplierIdOf(product: Product): string | undefined {
+  const raw = (product as any)?.supplier_id;
+  return typeof raw === 'string' && raw ? raw : undefined;
+}
+
+/**
+ * Maps the rows `getSupplierMappingsStrict` returns onto the form's
+ * `supplierMappings` row shape, normalised so an untouched Save is stable:
+ *  - exactly ONE primary: the first primary by supplier name; if none is
+ *    flagged, the row for the product's own supplier_id, else the first row;
+ *  - rows ordered primary first, then by supplier name (so the supplier saved
+ *    to products.supplier_id never depends on MySQL row order);
+ *  - if the primary row has no reorder point of its own but the product has
+ *    one, it is pre-filled from products.reorder_point so a normal Save keeps it;
+ *  - a legacy product whose OWN supplier_id has no mapping rows gets ONE
+ *    primary row seeded from it (with the product's reorder point), so saving
+ *    does not silently drop that supplier. Family children inheriting a
+ *    parent's supplier (own supplier_id NULL) are not seeded.
+ */
+export function toFormSupplierMappings(
+  stored: Array<{
+    supplierId: string;
+    supplierName?: string | null;
+    supplierSku?: string | null;
+    supplierLeadTime?: number | string | null;
+    supplierSpecificRop?: number | string | null;
+    supplierCost?: number | string | null;
+    isPrimary?: boolean;
+  }>,
+  product: Product,
+): SupplierMappingValues[] {
+  const productRop = toWholeNumber(product.reorderPoint);
+  const ownSupplierId = ownSupplierIdOf(product);
+
+  const byName = [...stored].sort((a, b) =>
+    (a.supplierName ?? '').localeCompare(b.supplierName ?? '') || a.supplierId.localeCompare(b.supplierId));
+  const primaryId =
+    byName.find((m) => m.isPrimary)?.supplierId
+    ?? byName.find((m) => m.supplierId === ownSupplierId)?.supplierId
+    ?? byName[0]?.supplierId;
+
+  const rows: SupplierMappingValues[] = byName
+    .map((m) => ({
+      supplierId: m.supplierId,
+      supplierSku: m.supplierSku ?? '',
+      leadTime: Math.round(Number(m.supplierLeadTime)) || 0,
+      rop: toWholeNumber(m.supplierSpecificRop),
+      cost: m.supplierCost == null ? undefined : Number(m.supplierCost),
+      isPrimary: m.supplierId === primaryId,
+    }))
+    .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
+
+  if (rows.length > 0) {
+    if (!(rows[0].rop > 0) && productRop > 0) rows[0].rop = productRop;
+  } else if (ownSupplierId) {
+    rows.push({
+      supplierId: ownSupplierId,
+      supplierSku: '',
+      leadTime: 0,
+      rop: productRop,
+      cost: undefined,
+      isPrimary: true,
+    });
+  }
+  return rows;
+}
+
 export interface UseEditProductFormProps {
   product: Product;
   onProductUpdated?: () => void;
@@ -152,6 +234,7 @@ export function useEditProductForm({
   const [subcategories, setSubcategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoadingSuppliers] = useState(false);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [shelfLocations, setShelfLocations] = useState<any[]>([]);
   const [isLoadingShelfLocations, setIsLoadingShelfLocations] = useState(false);
@@ -230,6 +313,7 @@ export function useEditProductForm({
       earnsPoints: product.earnsPoints ?? true,
       isPerishable: product.isPerishable ?? false,
       description: product.description ?? '',
+      supplierMappings: [],
     },
   });
 
@@ -237,6 +321,33 @@ export function useEditProductForm({
     control: form.control as any,
     name: 'sellingUnits',
   });
+
+  const {
+    supplierMappingFields, addSupplierMapping, removeSupplierMapping, setPrimarySupplierRow,
+    replaceSupplierMappings,
+    primarySupplierId, supplierCostOptions,
+  } = useSupplierMappings({
+    form,
+    suppliers,
+    // Adding the first supplier to a product must not zero its reorder point.
+    getDefaultFirstRop: () => toWholeNumber(form.getValues('reorderPoint')),
+  });
+
+  // The product's supplier mappings are loaded when the dialog opens and edited
+  // in-form; nothing is written until Save Changes. `loading` blocks Save (so a
+  // half-loaded form can never submit), `error` makes the submit leave the
+  // stored mappings alone (`supplierMappings: undefined`, never `[]` - an empty
+  // array makes updateProduct delete every mapping).
+  const [mappingsStatus, setMappingsStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  // The rows as loaded (including a seeded legacy row), for the form.reset effect
+  // below to restore and for saveChanges to tell "user removed them all" from
+  // "there never were any".
+  const mappingsRef = useRef<{ productId: string; rows: SupplierMappingValues[] } | null>(null);
+  const hasSuppliersTab = product?.type !== 'service';
+  const isLoadingMappings = isOpen && hasSuppliersTab && (mappingsStatus === 'idle' || mappingsStatus === 'loading');
+  const mappingsLoadError = isOpen && hasSuppliersTab && mappingsStatus === 'error'
+    ? 'Could not load this product\u2019s suppliers. Supplier changes will not be saved - close and reopen to retry.'
+    : null;
 
   const watchedSellingUnits = form.watch('sellingUnits' as any) as SellingUnitValues[] | undefined;
   const baseUnitIndex = Math.max(0, (watchedSellingUnits ?? []).findIndex((u) => u?.isBase));
@@ -264,7 +375,6 @@ export function useEditProductForm({
     });
   };
 
-  const selectedSupplierId = form.watch('supplier');
   // Cost now lives on the base selling-unit row (index 0 — toFormSellingUnits
   // always sorts the base unit first, and addSellingUnit only appends;
   // nothing in this form reorders rows), not the top-level `cost` field,
@@ -280,6 +390,7 @@ export function useEditProductForm({
     // unitOfMeasure can still error here — a Service edits it on this tab.
     inventory: !!(formErrors.unitOfMeasure),
     sellingUnits: !!formErrors.sellingUnits,
+    suppliers: !!formErrors.supplierMappings,
   };
 
   // State for selected price level (for automatic price calculation)
@@ -309,6 +420,10 @@ export function useEditProductForm({
           isPerishable: product.isPerishable ?? false,
           description: product.description ?? '',
           department: product.department ?? '',
+          // Rows already loaded for THIS open session survive a re-run of this
+          // effect (a parent refetch handing us a new `product` object);
+          // otherwise the load effect below fills them in when it resolves.
+          supplierMappings: mappingsRef.current?.productId === product.id ? mappingsRef.current.rows : [],
       };
       form.reset(sanitizedProduct);
     }
@@ -322,6 +437,36 @@ export function useEditProductForm({
     // seed on the rare cold-load race.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, isOpen, form]);
+
+  // Load the product's existing supplier mappings into the form. Keyed on the
+  // product's id (not its object) so a parent refetch mid-session neither
+  // refetches nor clobbers in-progress edits; the form.reset effect above
+  // restores the loaded rows if it re-runs. A service has no Suppliers tab and
+  // never sends mappings.
+  useEffect(() => {
+    if (!isOpen || !product || product.type === 'service') return;
+    let cancelled = false;
+    setMappingsStatus('loading');
+    getSupplierMappingsStrict(product.id)
+      .then((stored) => {
+        if (cancelled) return;
+        const rows = toFormSupplierMappings(stored, product);
+        mappingsRef.current = { productId: product.id, rows };
+        replaceSupplierMappings(rows);
+        setMappingsStatus('loaded');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Failed to load supplier mappings', err);
+        setMappingsStatus('error');
+      });
+    return () => {
+      cancelled = true;
+      mappingsRef.current = null;
+    };
+    // `product` (the object) and replaceSupplierMappings are deliberately omitted - see above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, product?.id, product?.type]);
 
   // Price levels that arrive after the reset above (cold-load race) would
   // leave a migrated unit's default-level price blank. Fill ONLY those still
@@ -374,7 +519,7 @@ export function useEditProductForm({
             category: watchedCategoryName,
             subcategory: watchedSubcategoryName,
             brand: watchedBrandName,
-            supplierId: selectedSupplierId
+            supplierId: primarySupplierId
         },
         systemSettings,
         categories,
@@ -400,7 +545,7 @@ export function useEditProductForm({
     } else {
       setMarkupSource(null);
     }
-  }, [watchedBaseCost, watchedCategoryName, watchedSubcategoryName, watchedBrandName, selectedSupplierId, categories, subcategories, brands, suppliers, form, priceLevels, systemSettings, isInitialized]);
+  }, [watchedBaseCost, watchedCategoryName, watchedSubcategoryName, watchedBrandName, primarySupplierId, categories, subcategories, brands, suppliers, form, priceLevels, systemSettings, isInitialized]);
 
   // Auto-update main price when a price level is selected
   useEffect(() => {
@@ -509,12 +654,50 @@ export function useEditProductForm({
         if (Number.isFinite(entered) && entered > 0) mirroredPrice = entered;
       }
 
+      // Supplier fields. updateProduct treats `undefined` as "leave alone" and
+      // an ARRAY (even empty) as "replace every mapping", so:
+      //  - a service never sends mappings;
+      //  - if the existing mappings were not (successfully) loaded, or there were
+      //    none and there still are none, send undefined for all three - never
+      //    `[]`, which would wipe whatever is stored;
+      //  - otherwise mirror Add: supplier / reorderPoint come from the primary
+      //    row (or the first row), and removing every row clears them.
+      const mappingRows = values.supplierMappings ?? [];
+      const loadedRows = mappingsStatus === 'loaded' ? mappingsRef.current?.rows : undefined;
+      let supplierFields: {
+        supplier?: string;
+        reorderPoint?: number;
+        supplierMappings?: SupplierMappingValues[];
+      };
+      if (product.type === 'service') {
+        supplierFields = { supplierMappings: undefined };
+      } else if (!loadedRows || (mappingRows.length === 0 && loadedRows.length === 0)) {
+        supplierFields = { supplier: undefined, reorderPoint: undefined, supplierMappings: undefined };
+      } else if (mappingRows.length === 0) {
+        supplierFields = { supplier: '', reorderPoint: 0, supplierMappings: [] };
+      } else {
+        const primaryMapping = mappingRows.find((m) => m.isPrimary) ?? mappingRows[0];
+        supplierFields = {
+          supplier: primaryMapping.supplierId,
+          reorderPoint: primaryMapping.rop ?? 0,
+          supplierMappings: mappingRows.map((m) => ({
+            supplierId: m.supplierId,
+            supplierSku: m.supplierSku ?? '',
+            leadTime: m.leadTime ?? 0,
+            rop: m.rop ?? 0,
+            cost: m.cost,
+            isPrimary: !!m.isPrimary,
+          })),
+        };
+      }
+
       const result = await updateProduct(product.id, {
         ...values,
         price: mirroredPrice,
         cost: baseUnit ? baseUnit.cost : values.cost,
         barcode: baseUnit ? baseUnit.barcode : values.barcode,
         unitOfMeasure: baseUnit?.unitName || values.unitOfMeasure,
+        ...supplierFields,
       } as any);
 
       if (result.success) {
@@ -574,7 +757,7 @@ export function useEditProductForm({
     categories,
     subcategories,
     units,
-    suppliers,
+    suppliers, isLoadingSuppliers,
     warehouses,
     shelfLocations, isLoadingShelfLocations,
     priceLevels, isLoadingPriceLevels,
@@ -588,12 +771,15 @@ export function useEditProductForm({
     // field arrays
     sellingUnitFields, appendSellingUnit, addSellingUnit, removeSellingUnit,
     baseUnitIndex, baseUnitName,
+    supplierMappingFields, addSupplierMapping, removeSupplierMapping, setPrimarySupplierRow,
+    isLoadingMappings, mappingsLoadError,
 
     // watched / derived values
-    selectedSupplierId,
+    primarySupplierId,
     tabErrors,
     selectedPriceLevelId, setSelectedPriceLevelId,
     markupSource,
+    supplierCostOptions,
 
     // handlers
     generateUnitBarcode,

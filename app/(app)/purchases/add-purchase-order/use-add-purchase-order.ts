@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -236,8 +236,33 @@ export function useAddPurchaseOrder({
 
   // ---- dialog open / prefill -----------------------------------------------
 
+  // Id of a product just created from the dialog, waiting to land in `products`.
+  const pendingNewProductId = useRef<string | null>(null);
+  // The inputs the order was last initialised from. This effect re-runs whenever
+  // `products` or `suppliers` get a new array (live refresh, polling, the
+  // supplier list being re-fetched), and re-initialising then would throw away
+  // the user's edits (Edit/Reorder) or regenerate the Ref # and reset the
+  // supplier. So once the data the init needs has loaded, it runs once per open
+  // (cleared on close). Inputs are compared by id, not identity: the host
+  // refetches its own lists (e.g. the products page's `prefillProduct` row)
+  // after a save, which hands us new objects for the same product/order.
+  const initialisedFor = useRef<(string | undefined)[] | null>(null);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      initialisedFor.current = null;
+      // A product that never showed up must not be appended to a later order.
+      pendingNewProductId.current = null;
+      return;
+    }
+
+    const inputKeys = [editOrder?.id, reorderData?.id, prefillProduct?.id, prefillSupplierId];
+    if (initialisedFor.current?.every((v, i) => v === inputKeys[i])) return;
+    // Edit/Reorder rows look up stock and barcode in `products`; the new-order
+    // prefill looks up `suppliers`. Not loaded yet: init now, and again next run.
+    if (editOrder || reorderData ? products.length > 0 : suppliers.length > 0) {
+      initialisedFor.current = inputKeys;
+    }
 
     fetchWarehouses();
 
@@ -355,6 +380,24 @@ export function useAddPurchaseOrder({
       });
     }
   }
+
+  // Called by the "Add New Product" dialog. A pending-approval product has no
+  // id yet, so there is nothing to put on the order. Otherwise remember the id
+  // (`pendingNewProductId`, declared above the on-open effect): the dialog's
+  // dispatchStockUpdate() refreshes `products`, and the effect below adds the
+  // row once the new product shows up in it. (Awaiting a refetch here instead
+  // races that dispatch, which cancels and restarts it.)
+  function handleNewProductAdded(productId?: string) {
+    if (productId) pendingNewProductId.current = productId;
+  }
+
+  useEffect(() => {
+    if (!pendingNewProductId.current) return;
+    const product = products.find((p) => p.id === pendingNewProductId.current);
+    if (!product) return;
+    pendingNewProductId.current = null;
+    handleAddProduct(product);
+  }, [products]);
 
   // ---- submit --------------------------------------------------------------
 
@@ -479,6 +522,7 @@ export function useAddPurchaseOrder({
     total, vatTotal, purchaseResults,
     // handlers
     handleAddProduct,
+    handleNewProductAdded,
     fetchSuppliers,
     fetchWarehouses,
     refetchPaymentMethods,

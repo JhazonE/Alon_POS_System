@@ -136,8 +136,7 @@ export function InventoryTab() {
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {itemType === 'standard' && (
         <FormField
           control={form.control}
@@ -224,12 +223,10 @@ export function InventoryTab() {
           )}
         />
 
-      </div>
-
       {/* Unit of measure now lives on the base selling-unit row — one source of
           truth, same treatment as barcode and cost. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {itemType === 'standard' && (
+      {itemType === 'standard' && (
+        <>
           <FormField
             control={form.control}
             name="warehouse"
@@ -271,9 +268,7 @@ export function InventoryTab() {
               </FormItem>
             )}
           />
-        )}
 
-        {itemType === 'standard' && (
           <FormField
             control={form.control}
             name="shelfLocationIds"
@@ -311,12 +306,12 @@ export function InventoryTab() {
               </FormItem>
             )}
           />
-        )}
-      </div>
+        </>
+      )}
 
       {/* Cost now lives on the base selling unit row in the Selling Units tab —
-          one source of truth. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          one source of truth. Reorder point is set per supplier in the
+          Suppliers tab. */}
         <FormField
           control={form.control}
           name="stock"
@@ -330,20 +325,6 @@ export function InventoryTab() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="reorderPoint"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Reorder Point</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    </>
+    </div>
   );
 }

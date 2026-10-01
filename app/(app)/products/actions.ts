@@ -2412,38 +2412,52 @@ export async function deleteSupplierMapping(id: string) {
   }
 }
 
+async function fetchSupplierMappings(productId: string) {
+  // Column aliases match the camelCase `SupplierProductMapping` shape the
+  // UI renders (product-suppliers.tsx) — `spm.*` alone would return raw
+  // snake_case columns and every field but supplierName would render blank.
+  const sql = `
+    SELECT
+      spm.id,
+      spm.product_id as productId,
+      spm.supplier_id as supplierId,
+      s.name as supplierName,
+      spm.supplier_sku as supplierSku,
+      spm.supplier_lead_time as supplierLeadTime,
+      spm.supplier_specific_rop as supplierSpecificRop,
+      CAST(spm.supplier_cost AS DOUBLE) as supplierCost,
+      spm.is_primary as isPrimary,
+      spm.created_at as createdAt,
+      spm.updated_at as updatedAt
+    FROM supplier_product_mapping spm
+    JOIN suppliers s ON spm.supplier_id = s.id
+    WHERE spm.product_id = ?
+  `;
+  const rows: any[] = await query(sql, [productId]);
+  // MySQL has no native boolean — is_primary comes back as 0/1 through
+  // mysql2 even with a `= 1` boolean expression in SQL. Coerce here so
+  // `mapping.isPrimary && <Badge/>` in product-suppliers.tsx renders
+  // nothing for a falsy row instead of the literal text "0".
+  return rows.map((row) => ({ ...row, isPrimary: !!row.isPrimary }));
+}
+
 export async function getSupplierMappings(productId: string) {
   try {
-    // Column aliases match the camelCase `SupplierProductMapping` shape the
-    // UI renders (product-suppliers.tsx) — `spm.*` alone would return raw
-    // snake_case columns and every field but supplierName would render blank.
-    const sql = `
-      SELECT
-        spm.id,
-        spm.product_id as productId,
-        spm.supplier_id as supplierId,
-        s.name as supplierName,
-        spm.supplier_sku as supplierSku,
-        spm.supplier_lead_time as supplierLeadTime,
-        spm.supplier_specific_rop as supplierSpecificRop,
-        CAST(spm.supplier_cost AS DOUBLE) as supplierCost,
-        spm.is_primary as isPrimary,
-        spm.created_at as createdAt,
-        spm.updated_at as updatedAt
-      FROM supplier_product_mapping spm
-      JOIN suppliers s ON spm.supplier_id = s.id
-      WHERE spm.product_id = ?
-    `;
-    const rows: any[] = await query(sql, [productId]);
-    // MySQL has no native boolean — is_primary comes back as 0/1 through
-    // mysql2 even with a `= 1` boolean expression in SQL. Coerce here so
-    // `mapping.isPrimary && <Badge/>` in product-suppliers.tsx renders
-    // nothing for a falsy row instead of the literal text "0".
-    return rows.map((row) => ({ ...row, isPrimary: !!row.isPrimary }));
+    return await fetchSupplierMappings(productId);
   } catch (error) {
     console.error('Error fetching supplier mappings:', error);
     return [];
   }
+}
+
+/**
+ * Same rows as getSupplierMappings, but a failure THROWS instead of resolving
+ * to []. For callers (the Edit Product form) that must tell "this product has
+ * no mappings" apart from "the read failed" - saving a form built from a
+ * swallowed failure would make updateProduct delete every stored mapping.
+ */
+export async function getSupplierMappingsStrict(productId: string) {
+  return fetchSupplierMappings(productId);
 }
 
 export async function setPrimarySupplier(productId: string, mappingId: string) {

@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,16 +27,6 @@ export function BasicInfoTab() {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Product Type:</span>
-        <Badge variant="secondary">
-          {product.type === 'service' ? 'Service' : 'Standard'}
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          Cannot be changed after creation.
-        </span>
-      </div>
-
       {/* Legacy products only: SKU is retired for new products, but keep showing an existing one. */}
       {product.sku ? (
         <div className="space-y-2">
@@ -48,12 +37,12 @@ export function BasicInfoTab() {
       ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Row 1: Name and Brand */}
+        {/* Name (full width) */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="sm:col-span-2">
               <FormLabel>Product Name</FormLabel>
               <FormControl>
                 <Input {...field} value={field.value ?? ''} />
@@ -100,7 +89,7 @@ export function BasicInfoTab() {
           )}
         />
 
-        {/* Row 2: Category / Subcategory and Description */}
+        {/* Category / Subcategory (beside Brand) */}
         <FormField
           control={form.control}
           name="category"
@@ -146,7 +135,7 @@ export function BasicInfoTab() {
           control={form.control}
           name="description"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="sm:col-span-2">
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
@@ -164,7 +153,7 @@ export function BasicInfoTab() {
           )}
         />
 
-        {/* Row 3: Additional Description (full width) */}
+        {/* Additional Description (full width) */}
         <FormField
           control={form.control}
           name="additionalDescription"

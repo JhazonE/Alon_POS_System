@@ -6,14 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatQuantity } from '@/lib/utils';
 import { UnitOfMeasure } from '@/lib/types';
-import type { Supplier } from '@/lib/types';
 
 import { useEditProductFormContext } from '../edit-product-form-context';
 import { InlineEditableSelect } from '../../components/inline-editable-select';
 import { InlineEditableMultiSelect } from '../../components/inline-editable-multi-select';
 import {
   addDepartment, updateDepartment,
-  addSupplier, updateSupplier, getSuppliers,
   addWarehouse, updateWarehouse, getWarehouses,
   addShelfLocation, updateShelfLocation, getShelfLocations,
   addUnitOfMeasure, updateUnitOfMeasure,
@@ -25,13 +23,11 @@ export function InventoryTab() {
     product,
     departments, isLoadingDepartments,
     taxRates,
-    suppliers,
     warehouses,
     shelfLocations,
     units,
     selects, setSelects,
     refreshDepartments,
-    refreshSuppliers,
     refreshWarehouses,
     refreshShelfLocations,
     refreshUnits,
@@ -147,8 +143,7 @@ export function InventoryTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {!isServiceProduct && (
         <FormField
           control={form.control}
@@ -234,55 +229,8 @@ export function InventoryTab() {
           )}
         />
 
-        {!isServiceProduct && (
-        <FormField
-          control={form.control}
-          name="supplier"
-          render={({ field }) => (
-            <FormItem className="col-span-1">
-              <FormLabel>Supplier (Optional)</FormLabel>
-              <InlineEditableSelect
-                items={suppliers}
-                isLoading={false}
-                value={field.value}
-                onChange={field.onChange}
-                open={selects.suppliers}
-                onOpenChange={(o) => setSelects((p) => ({ ...p, suppliers: o }))}
-                placeholder="Select a supplier"
-                addLabel="Add Supplier"
-                emptyLabel="No suppliers found"
-                getId={(s: Supplier) => s.id}
-                getValue={(s: Supplier) => s.id}
-                getOptionLabel={(s: Supplier) => s.name}
-                getName={(s: Supplier) => s.name}
-                onAdd={async (name) => {
-                  const r = await addSupplier({ name });
-                  if (r.success) {
-                    await refreshSuppliers();
-                    const fresh = await getSuppliers();
-                    const created = fresh.find((s) => s.name === name);
-                    return created?.id;
-                  }
-                  return undefined;
-                }}
-                onRename={async (id, name) => {
-                  const existing = suppliers.find((s: Supplier) => s.id === id);
-                  if (!existing) return undefined;
-                  const r = await updateSupplier(id, { ...existing, name });
-                  if (r.success) { await refreshSuppliers(); return id; }
-                  return undefined;
-                }}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        )}
-      </div>
-
       {/* Unit of measure now lives on the base selling-unit row — one source of
           truth, same treatment as barcode and cost. Mirrors the Add form. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {!isServiceProduct && (
         <FormField
           control={form.control}
@@ -366,32 +314,18 @@ export function InventoryTab() {
           )}
         />
         )}
-      </div>
 
       {/* Cost now lives on the base selling unit row in the Selling Units tab —
-          one source of truth. Mirrors the Add form. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          one source of truth. Reorder point and supplier are set per supplier in
+          the Suppliers tab. Mirrors the Add form; stock itself is read-only here
+          (it changes through transactions). */}
         <div className="space-y-2">
-          <Label>Initial Stock</Label>
+          <Label>Stock</Label>
           <div>
             <Input type="text" value={formatQuantity(product.stock || 0)} disabled />
           </div>
           <p className="text-sm text-muted-foreground">Stock is updated via transactions.</p>
         </div>
-        <FormField
-          control={form.control}
-          name="reorderPoint"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Reorder Point</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="0" value={field.value != null ? formatQuantity(field.value) : ''} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
     </div>
   );
 }

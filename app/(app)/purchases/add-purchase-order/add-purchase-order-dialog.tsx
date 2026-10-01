@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
@@ -46,6 +48,7 @@ import { Loader2, Trash2, Search, ArrowRight, Wand2 } from 'lucide-react';
 import { InlineWarehouseSelect } from '../../components/inline-selects/inline-warehouse-select';
 import { InlinePaymentMethodSelect } from '../../components/inline-selects/inline-payment-method-select';
 import { InlineSupplierSelect } from '../../components/inline-selects/inline-supplier-select';
+import { AddProductDialog } from '../../products/add-product/add-product-dialog';
 
 import { calculateMarkupPercentage, calculateSuggestedPrice } from '@/lib/purchase-utils';
 import { formatQuantity, cn } from '@/lib/utils';
@@ -74,6 +77,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
     systemSettings,
     total, vatTotal, purchaseResults,
     handleAddProduct,
+    handleNewProductAdded,
     fetchSuppliers,
     fetchWarehouses,
     refetchPaymentMethods,
@@ -82,6 +86,18 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
   } = controller;
 
   const { toast } = useToast();
+
+  const [newProductOpen, setNewProductOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  // Same query key as the Products page, so the options are shared when cached.
+  const { data: productOptions, refetch: refetchProductOptions } = useQuery({
+    queryKey: ['productOptions'],
+    queryFn: async () => {
+      const { getProductOptions } = await import('../../products/actions');
+      return getProductOptions();
+    },
+    enabled: isOpen,
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={(val) => setOpen(val)}>
@@ -301,6 +317,10 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                 <div className="max-w-2xl mb-4 z-10">
                   <ProductSelector
                     onSelectProduct={handleAddProduct}
+                    onAddNewProduct={(name) => {
+                      setNewProductName(name ?? '');
+                      setNewProductOpen(true);
+                    }}
                     supplierId={form.watch('supplierId')}
                   />
                 </div>
@@ -647,6 +667,21 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
           </form>
         </Form>
       </SheetContent>
+
+      {/* Rendered outside the order <form>: React bubbles the Add Product form's
+          submit event through the portal to the nearest ancestor <form>, which
+          would otherwise submit the purchase order too. */}
+      <AddProductDialog
+        hideTrigger
+        lockStandard
+        open={newProductOpen}
+        onOpenChange={setNewProductOpen}
+        defaultName={newProductName}
+        defaultSupplierId={form.watch('supplierId') || undefined}
+        productOptions={productOptions}
+        onOptionsRefresh={refetchProductOptions}
+        onProductAdded={handleNewProductAdded}
+      />
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>

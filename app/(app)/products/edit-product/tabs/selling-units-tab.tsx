@@ -9,6 +9,8 @@ import { UnitOfMeasure } from '@/lib/types';
 import { useEditProductFormContext } from '../edit-product-form-context';
 import { calculatePriceLevelPrice } from '../use-edit-product-form';
 import { InlineEditableSelect } from '../../components/inline-editable-select';
+import { SupplierCostPicker } from '../../components/supplier-cost-picker';
+import { useSellingUnitPricing } from '../../components/use-selling-unit-pricing';
 import { addUnitOfMeasure, updateUnitOfMeasure } from '../../actions';
 
 export function SellingUnitsTab() {
@@ -20,6 +22,7 @@ export function SellingUnitsTab() {
     sellingUnitFields, addSellingUnit, removeSellingUnit,
     baseUnitIndex, baseUnitName,
     generateUnitBarcode,
+    supplierCostOptions,
   } = useEditProductFormContext();
 
   // Which row's Unit Name select is open — local, per-row state (the shared
@@ -27,67 +30,15 @@ export function SellingUnitsTab() {
   // not a list of rows that can each be open independently).
   const [openUnitRow, setOpenUnitRow] = useState<number | null>(null);
 
+  // Cost/Retail derivation (shared with the other product drawer). Called before
+  // the service early return below so hook order never changes between renders.
+  const {
+    defaultLevel, getRetail, getBaseCost,
+    onCostChange, onQtyBaseChange, onRetailChange,
+  } = useSellingUnitPricing({ form, priceLevels, baseUnitIndex, calculatePriceLevelPrice });
+
   // Services have no sellable units — the tab is not rendered for them.
   if (product?.type === 'service') return null;
-
-  /**
-   * Fills every price-level column of one row from that row's own cost and the
-   * base row's retail price. A non-base row scales by its qtyBase: one Box of
-   * 12 is priced off 12 Pieces of retail.
-   *
-   * Idempotent — clicking it again gives the same values. The retail basis is
-   * never an output of the same click:
-   * - retail-based default level (the normal case): the base row's default
-   *   price IS the retail basis (the old Price Levels tab's main price), so on
-   *   the base row it is left as entered, and a non-base row's default price is
-   *   exactly retail × qty. Re-applying the default level's own adjustment to
-   *   its own price is what compounded on every click.
-   * - cost-based default level: computed from the base row's cost, like any
-   *   cost-based level.
-   * A level whose basis is empty/0 is left untouched rather than zeroed.
-   */
-  const autoPriceRow = (index: number) => {
-    const units: any[] = form.getValues('sellingUnits' as any) || [];
-    const row = units[index];
-    if (!row) return;
-
-    const baseRow = units[baseUnitIndex];
-    const qty = row.isBase ? 1 : Number(row.qtyBase) || 0;
-    if (!qty) return;
-
-    const baseCost = Number(baseRow?.cost ?? 0) || 0;
-    // A row's own Cost is already per that unit (one Box), so it is not scaled
-    // again; only the base cost fallback is multiplied up to this unit.
-    const ownCost = row.cost === undefined || row.cost === null || row.cost === '' ? NaN : Number(row.cost);
-    const rowCost = row.isBase ? baseCost : Number.isFinite(ownCost) ? ownCost : baseCost * qty;
-
-    const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
-    const defaultIsRetailBased = !!defaultLevel && (defaultLevel.calculationBase || 'retail') === 'retail';
-    const baseRetail = !defaultLevel
-      ? 0
-      : defaultIsRetailBased
-        ? Number(baseRow?.prices?.[defaultLevel.id]?.price ?? 0) || 0
-        : calculatePriceLevelPrice(defaultLevel.id, 'cost', priceLevels, 0, baseCost);
-    const rowRetail = baseRetail * qty;
-
-    priceLevels.forEach((level: any) => {
-      const calculationBase = level.calculationBase || 'retail';
-      let value: number;
-      if (defaultIsRetailBased && level.id === defaultLevel.id) {
-        if (row.isBase) return; // the input itself — leave as entered
-        value = rowRetail;
-      } else {
-        value = calculatePriceLevelPrice(level.id, calculationBase, priceLevels, rowRetail, rowCost);
-      }
-      const basis = calculationBase === 'cost' ? rowCost : rowRetail;
-      if (!(basis > 0) || !Number.isFinite(value)) return;
-      form.setValue(
-        `sellingUnits.${index}.prices.${level.id}.price` as any,
-        parseFloat(value.toFixed(2)),
-        { shouldDirty: true },
-      );
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -184,9 +135,11 @@ export function SellingUnitsTab() {
                               step="0.000001"
                               placeholder="e.g., 12"
                               value={field.value ?? ''}
-                              onChange={(e) =>
-                                field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
-                              }
+                              onChange={(e) => {
+                                const prevQty = Number(form.getValues(`sellingUnits.${index}.qtyBase` as any)) || 0;
+                                field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value));
+                                onQtyBaseChange(index, prevQty);
+                              }}
                             />
                           </FormControl>
                           <FormDescription className="text-xs">
@@ -236,17 +189,36 @@ export function SellingUnitsTab() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs">Cost (₱)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={field.value ?? ''}
-                            onChange={(e) =>
-                              field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
-                            }
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={field.value ?? ''}
+                              // The picker sits over the right edge, so drop
+                              // the native spinner that would otherwise be underneath it.
+                              className="pr-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              onChange={(e) => {
+                                const prevBaseCost = getBaseCost();
+                                field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value));
+                                onCostChange(index, prevBaseCost);
+                              }}
+                            />
+                          </FormControl>
+                          {/* Always rendered (disabled when nothing to pick). Supplier costs
+                              are per base unit, so a non-base row is offered the cost scaled
+                              by its Qty Base. Picks fill Cost, which stays editable. */}
+                          <SupplierCostPicker
+                            options={supplierCostOptions}
+                            rowQty={isBaseRow ? 1 : Number(form.watch(`sellingUnits.${index}.qtyBase` as any)) || 0}
+                            onPick={(cost) => {
+                              const prevBaseCost = getBaseCost();
+                              field.onChange(cost);
+                              onCostChange(index, prevBaseCost);
+                            }}
                           />
-                        </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -271,9 +243,14 @@ export function SellingUnitsTab() {
                                 step="0.01"
                                 placeholder="0.00"
                                 value={field.value ?? ''}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
-                                }
+                                onChange={(e) => {
+                                  const next = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                  const prevBaseRetail = getRetail(form.getValues(`sellingUnits.${baseUnitIndex}` as any));
+                                  field.onChange(next);
+                                  if (level.id === defaultLevel?.id && next !== undefined) {
+                                    onRetailChange(index, next, prevBaseRetail);
+                                  }
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -285,14 +262,6 @@ export function SellingUnitsTab() {
                 </div>
 
                 <div className="absolute right-3 top-3 flex items-center gap-1">
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground"
-                    onClick={() => autoPriceRow(index)}
-                  >
-                    <Wand2 className="h-4 w-4" />
-                    <span className="sr-only">Auto-fill prices for this unit</span>
-                  </button>
                   {!isBaseRow && (
                     <button
                       type="button"
