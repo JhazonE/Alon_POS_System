@@ -7,6 +7,7 @@ import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMea
 import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
 import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
+import { baseUnitPriceLevelRows } from '@/lib/base-unit-price-level-rows';
 
 
 export type ProductFormData = {
@@ -654,8 +655,9 @@ function validPrice(entry: { price?: unknown } | null | undefined): number | und
  * Upserts on the table's real PRIMARY KEY (product_id, price_level_id), the
  * same way PO receiving and bulk price update do — a check filtered on
  * min_quantity can miss an existing tiered row and then collide on INSERT.
- * On conflict only `price` changes, so an existing row's min_quantity (which
- * the tab cannot display or edit) is preserved; new rows get 0.
+ * On conflict both `price` and `min_quantity` are written, so clearing a
+ * minimum in the tab clears the stored tier. A level with no minimum stores 0,
+ * which the POS reads as "no minimum".
  *
  * `removedLevelIds` are deleted: levels the caller established the user
  * explicitly removed (see updateProduct). Nothing else is ever deleted here —
@@ -668,14 +670,12 @@ async function writeBaseUnitPriceLevels(
   baseUnit: NonNullable<ProductFormData['sellingUnits']>[number],
   removedLevelIds: string[] = [],
 ) {
-  for (const [levelId, entry] of Object.entries(baseUnit.prices || {})) {
-    const price = validPrice(entry);
-    if (price === undefined) continue;
+  for (const row of baseUnitPriceLevelRows(baseUnit.prices as any)) {
     await connection.query(
       `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
-       VALUES (?, ?, ?, 0)
-       ON DUPLICATE KEY UPDATE price = VALUES(price)`,
-      [productId, levelId, price],
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE price = VALUES(price), min_quantity = VALUES(min_quantity)`,
+      [productId, row.levelId, row.price, row.minQuantity],
     );
   }
   for (const levelId of removedLevelIds) {
