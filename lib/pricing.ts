@@ -32,6 +32,7 @@ function bestRowForLevel(
   for (const pl of product.priceLevels || []) {
     if (pl.levelId !== levelId) continue;
 
+    if ((pl.price as unknown) == null || (pl.price as any) === '') continue;
     const price = Number(pl.price);
     if (!Number.isFinite(price)) continue;
 

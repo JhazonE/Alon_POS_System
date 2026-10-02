@@ -94,6 +94,48 @@ const tie = p(100, [
 ]);
 assert.equal(calculateEffectivePrice(tie, 10, RETAIL, RETAIL), 85, 'a tie on minQuantity resolves to the lower price');
 
+// --- null and blank prices are rejected, falling through to base price ---
+const nullPrice = p(100, [
+  { levelId: RETAIL, price: null, minQuantity: 0 },
+] as any);
+assert.equal(calculateEffectivePrice(nullPrice, 1, RETAIL, RETAIL), 100, 'a level row with price: null falls through to base price');
+
+const blankPrice = p(100, [
+  { levelId: RETAIL, price: '', minQuantity: 0 },
+] as any);
+assert.equal(calculateEffectivePrice(blankPrice, 1, RETAIL, RETAIL), 100, 'a level row with price: empty string falls through to base price');
+
+// --- higher-minimum tier that is MORE EXPENSIVE still wins ---
+const expensiveTier = p(100, [
+  { levelId: RETAIL, price: 85, minQuantity: 10 },
+  { levelId: RETAIL, price: 95, minQuantity: 50 },
+]);
+assert.equal(calculateEffectivePrice(expensiveTier, 50, RETAIL, RETAIL), 95, 'a higher-minimum tier that is more expensive still wins (highest minQuantity rule)');
+
+// --- row-order independence: same tier set in descending order resolves identically ---
+const descendingOrder = p(100, [
+  { levelId: RETAIL, price: 75, minQuantity: 50 },
+  { levelId: RETAIL, price: 85, minQuantity: 10 },
+  { levelId: RETAIL, price: 100, minQuantity: 0 },
+]);
+assert.equal(calculateEffectivePrice(descendingOrder, 1, RETAIL, RETAIL), 100, 'descending order: below tier');
+assert.equal(calculateEffectivePrice(descendingOrder, 10, RETAIL, RETAIL), 85, 'descending order: first tier');
+assert.equal(calculateEffectivePrice(descendingOrder, 50, RETAIL, RETAIL), 75, 'descending order: highest tier');
+
+// --- tie on minQuantity where cheaper row is listed first ---
+const tieFirstCheaper = p(100, [
+  { levelId: RETAIL, price: 75, minQuantity: 10 },
+  { levelId: RETAIL, price: 85, minQuantity: 10 },
+]);
+assert.equal(calculateEffectivePrice(tieFirstCheaper, 10, RETAIL, RETAIL), 75, 'a tie on minQuantity with the cheaper row listed first resolves to the lower price');
+
+// --- active level above base beats default level below ---
+const activeAboveDefault = p(100, [
+  { levelId: WHOLESALE, price: 130, minQuantity: 0 },
+  { levelId: RETAIL, price: 80, minQuantity: 0 },
+]);
+assert.equal(calculateEffectivePrice(activeAboveDefault, 1, WHOLESALE, RETAIL), 130, 'active level priced above base beats cheaper default level');
+
 // --- resolvePriceLevel reports what was used (for the POS badge) ---
 const r1 = resolvePriceLevel(tiered, 10, RETAIL, RETAIL);
 assert.equal(r1.price, 85, 'resolvePriceLevel returns the tier price');

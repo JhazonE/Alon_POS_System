@@ -646,10 +646,10 @@ function validPrice(entry: { price?: unknown } | null | undefined): number | und
 /**
  * Dual-write bridge: mirrors the BASE selling unit's per-level prices into the
  * legacy `product_price_levels` table, which POS checkout
- * (lib/pricing.ts calculateEffectivePrice, a Math.min over products.price and
- * these rows) and the products list (getProducts' effectivePrice) still read.
+ * (lib/pricing.ts calculateEffectivePrice, level-scoped resolution: active level,
+ * then default level, then base price) and the products list (getProducts' effectivePrice) still read.
  * Without it a price entered in the Selling Units tab never reaches the POS,
- * and a stale lower row keeps winning the Math.min.
+ * and a stale row for the wrong level could incorrectly apply.
  *
  * Upserts on the table's real PRIMARY KEY (product_id, price_level_id), the
  * same way PO receiving and bulk price update do — a check filtered on
