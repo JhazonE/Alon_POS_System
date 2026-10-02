@@ -7,6 +7,8 @@ import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMea
 import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
 import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
+import { baseUnitPriceLevelRows } from '@/lib/base-unit-price-level-rows';
+import { baseOverrideRow, defaultLevelFlatPrice, resolveBaseUnitPrice } from '@/lib/base-price-resolution';
 
 
 export type ProductFormData = {
@@ -298,12 +300,13 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
 
     return products.map((product: any) => {
       const productPriceLevels = plMap.get(product.id) || [];
-      const retailPriceOverrides = productPriceLevels
-        .filter((pl: any) => pl.levelId === defaultLevelId)
-        .sort((a: any, b: any) => (a.minQuantity || 0) - (b.minQuantity || 0));
-      
-      const effectivePrice = retailPriceOverrides.length > 0 
-        ? retailPriceOverrides[0].price 
+      // Only a default-level row with no real minimum may stand in for the base
+      // price. A tiered row is not a base price: lib/pricing.ts applies it via
+      // resolvePriceLevel once the quantity is reached. When no row qualifies,
+      // products.price is kept. Same rule as MySqlProductRepository.findAll.
+      const baseOverride = baseOverrideRow(productPriceLevels, defaultLevelId);
+      const effectivePrice = baseOverride
+        ? baseOverride.price
         : (parseFloat(product.price) || 0);
 
       return {
@@ -520,16 +523,21 @@ async function writeSellingUnits(
     const u = units[i];
     const unitId = u.id || `psu_${uuidv4()}`;
 
-    // product_selling_units.price is the unit's default-level price. Resolve
-    // it from, in order: the submitted default-level entry; for a kept unit,
-    // the price already stored on the row; any other submitted level; 0.
+    // product_selling_units.price is the unit's base price. Resolve it from,
+    // in order: the submitted default-level entry, if it has no minimum; for a
+    // kept unit, the price already stored on the row; any other submitted
+    // level's entry that has no minimum; the lowest tier if every entry is
+    // tiered; 0 only when there is no entry at all. A quantity tier is never a
+    // base price (see lib/base-price-resolution.ts) — the lowest-tier fallback
+    // exists because a 0 in a price column is a free sale on a payments path,
+    // whereas a tier is at worst a discount the shopkeeper already authorised.
     //
     // The stored-price step matters: units written by the parent/child data
     // migration (120) have a real `price` but no product_selling_unit_prices
     // rows, and a form session that never renders the Selling Units tab
     // (Radix unmounts inactive tabs) submits an empty `prices` map for them.
     // Without this step such a save silently zeroed the unit's price.
-    const defaultLevelPrice = defaultPriceLevelId ? validPrice(u.prices?.[defaultPriceLevelId]) : undefined;
+    const defaultLevelPrice = defaultLevelFlatPrice(u.prices, defaultPriceLevelId);
     let storedPrice: number | undefined;
     if (u.id && defaultLevelPrice === undefined) {
       const [storedRows]: any = await connection.query(
@@ -539,10 +547,7 @@ async function writeSellingUnits(
       const stored = Number(storedRows?.[0]?.price);
       if (Number.isFinite(stored) && stored > 0) storedPrice = stored;
     }
-    const firstAnyPrice = Object.values(u.prices || {})
-      .map(validPrice)
-      .find((p) => p !== undefined);
-    const resolvedPrice = defaultLevelPrice ?? storedPrice ?? firstAnyPrice;
+    const resolvedPrice = resolveBaseUnitPrice(u.prices, defaultPriceLevelId, storedPrice);
     const unitPrice = resolvedPrice ?? 0;
     if (u === baseUnit) basePrice = resolvedPrice;
 
@@ -646,16 +651,17 @@ function validPrice(entry: { price?: unknown } | null | undefined): number | und
 /**
  * Dual-write bridge: mirrors the BASE selling unit's per-level prices into the
  * legacy `product_price_levels` table, which POS checkout
- * (lib/pricing.ts calculateEffectivePrice, a Math.min over products.price and
- * these rows) and the products list (getProducts' effectivePrice) still read.
+ * (lib/pricing.ts calculateEffectivePrice, level-scoped resolution: active level,
+ * then default level, then base price) and the products list (getProducts' effectivePrice) still read.
  * Without it a price entered in the Selling Units tab never reaches the POS,
- * and a stale lower row keeps winning the Math.min.
+ * and a stale row for the wrong level could incorrectly apply.
  *
  * Upserts on the table's real PRIMARY KEY (product_id, price_level_id), the
  * same way PO receiving and bulk price update do — a check filtered on
  * min_quantity can miss an existing tiered row and then collide on INSERT.
- * On conflict only `price` changes, so an existing row's min_quantity (which
- * the tab cannot display or edit) is preserved; new rows get 0.
+ * On conflict both `price` and `min_quantity` are written, so clearing a
+ * minimum in the tab clears the stored tier. A level with no minimum stores 0,
+ * which the POS reads as "no minimum".
  *
  * `removedLevelIds` are deleted: levels the caller established the user
  * explicitly removed (see updateProduct). Nothing else is ever deleted here —
@@ -668,14 +674,12 @@ async function writeBaseUnitPriceLevels(
   baseUnit: NonNullable<ProductFormData['sellingUnits']>[number],
   removedLevelIds: string[] = [],
 ) {
-  for (const [levelId, entry] of Object.entries(baseUnit.prices || {})) {
-    const price = validPrice(entry);
-    if (price === undefined) continue;
+  for (const row of baseUnitPriceLevelRows(baseUnit.prices)) {
     await connection.query(
       `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
-       VALUES (?, ?, ?, 0)
-       ON DUPLICATE KEY UPDATE price = VALUES(price)`,
-      [productId, levelId, price],
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE price = VALUES(price), min_quantity = VALUES(min_quantity)`,
+      [productId, row.levelId, row.price, row.minQuantity],
     );
   }
   for (const levelId of removedLevelIds) {
@@ -1133,21 +1137,18 @@ export async function updateProductPrice(id: string, newPrice: number) {
     const defaultLevelId = defaultPriceLevelResult.length > 0 ? defaultPriceLevelResult[0].id : 'retail-level';
 
     await withTransaction(async (connection) => {
-      const checkSql = `SELECT * FROM product_price_levels WHERE product_id = ? AND price_level_id = ? AND (min_quantity IS NULL OR min_quantity = 0)`;
-      const existing = await connection.query(checkSql, [id, defaultLevelId]);
+      // product_price_levels' PK is (product_id, price_level_id) — min_quantity is
+      // not part of it, so a SELECT filtered on min_quantity misses a tiered row
+      // and the follow-up INSERT collides on the PK. Upsert on the real PK and
+      // touch only `price` on conflict: this path is not the Selling Units tab, so
+      // it does not own the minimum and must not reset a stored one.
+      await connection.query(
+        `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
+         VALUES (?, ?, ?, 0)
+         ON DUPLICATE KEY UPDATE price = VALUES(price)`,
+        [id, defaultLevelId, newPrice],
+      );
 
-      if (existing.length > 0) {
-        await connection.query(
-          'UPDATE product_price_levels SET price = ? WHERE product_id = ? AND price_level_id = ? AND (min_quantity IS NULL OR min_quantity = 0)',
-          [newPrice, id, defaultLevelId]
-        );
-      } else {
-        await connection.query(
-          'INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, 0)',
-          [id, defaultLevelId, newPrice]
-        );
-      }
-      
       await connection.query('UPDATE products SET price = ? WHERE id = ?', [newPrice, id]);
       // Keep the base selling unit (what the Edit form hydrates from) in step.
       await syncBaseSellingUnit(connection, id, {

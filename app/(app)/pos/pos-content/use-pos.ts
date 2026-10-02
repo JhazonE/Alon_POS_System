@@ -7,7 +7,9 @@ import { useProducts } from '@/hooks/use-api';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useCustomerDisplay } from '@/hooks/use-customer-display';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
-import { calculateEffectivePrice } from '@/lib/pricing';
+import { resolvePriceLevel } from '@/lib/pricing';
+import { priceLevelLabel } from '@/lib/price-level-badge';
+import { repriceCartLines } from '@/lib/cart-reprice';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
@@ -562,17 +564,30 @@ export function usePOS() {
   const activeLevelId = useMemo(() => selectedCustomer?.priceLevelId || selectedPriceLevelId || defaultLevelId, [selectedCustomer, selectedPriceLevelId, defaultLevelId]);
   const activeLevelName = useMemo(() => priceLevels.find((l: any) => l.id === activeLevelId)?.name || 'Retail', [activeLevelId, priceLevels]);
 
+  // Price + badge for one line, so the cashier can see which level and tier
+  // produced the price.
+  const priceLine = useCallback((product: any, qty: number) => {
+    const resolved = resolvePriceLevel(product, qty, activeLevelId, defaultLevelId);
+    return { price: resolved.price, priceLevelLabel: priceLevelLabel(resolved, priceLevels) };
+  }, [activeLevelId, defaultLevelId, priceLevels]);
+
   // Re-price items when price level changes
   useEffect(() => {
     if (!activeLevelId) return;
-    setItems(currentItems => {
-      if (currentItems.length === 0) return currentItems;
-      const updated = currentItems.map(item => ({ ...item, price: calculateEffectivePrice(item, item.quantity, activeLevelId, defaultLevelId) }));
-      const changed = JSON.stringify(currentItems.map(i => i.price)) !== JSON.stringify(updated.map(i => i.price));
-      return changed ? updated : currentItems;
-    });
+    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLevelId]);
+
+  // When the price level list arrives (it loads asynchronously, after a saved cart may
+  // already have been restored), fill in the badges only. Prices are deliberately NOT
+  // touched here: a restored line may carry a price the cashier typed by hand, and the
+  // list loading is not a reason to overwrite it. Only an actual level switch (above)
+  // reprices.
+  useEffect(() => {
+    if (priceLevels.length === 0) return;
+    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine, { labelsOnly: true })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceLevels]);
 
   // Handlers
   const handleAddItem = (product: any | undefined) => {
@@ -598,12 +613,11 @@ export function usePOS() {
         const existing = prevItems.find(item => item.id === product.id);
         if (existing) {
           const newQty = existing.quantity + 1;
-          const newPrice = calculateEffectivePrice(product, newQty, activeLevelId, defaultLevelId);
-          return prevItems.map(item => item.id === product.id ? { ...item, quantity: newQty, price: newPrice } : item);
+          return prevItems.map(item => item.id === product.id ? { ...item, quantity: newQty, ...priceLine(product, newQty) } : item);
         } else {
           const newItem: SaleItem = {
             ...product, quantity: 1, discount: 0, name: product.name,
-            price: calculateEffectivePrice(product, 1, activeLevelId, defaultLevelId),
+            ...priceLine(product, 1),
             taxType: mapVatStatusToTaxType(product.vatStatus),
           };
           setSelectedItemId(newItem.id);
@@ -675,7 +689,7 @@ export function usePOS() {
       setItems(prevItems => prevItems.map(item => {
         if (item.id === productId) {
           const original = products?.find(p => p.id === productId);
-          return { ...item, quantity: newQuantity, price: calculateEffectivePrice(original || item, newQuantity, activeLevelId, defaultLevelId) };
+          return { ...item, quantity: newQuantity, ...priceLine(original || item, newQuantity) };
         }
         return item;
       }));
@@ -683,7 +697,10 @@ export function usePOS() {
   };
 
   const handleUpdateItem = (itemId: string, newName: string, newQty: number, newPrice: number, newDiscount: number) => {
-    setItems(prev => prev.map(item => item.id === itemId ? { ...item, name: newName, quantity: newQty, price: newPrice, discount: newDiscount } : item));
+    // A hand-edited price is no longer the level's price, so drop the badge rather than let it say otherwise.
+    setItems(prev => prev.map(item => item.id === itemId
+      ? { ...item, name: newName, quantity: newQty, price: newPrice, discount: newDiscount, priceLevelLabel: newPrice !== item.price ? undefined : item.priceLevelLabel }
+      : item));
   };
 
   const handleVoidLine = (itemId: string | null) => {

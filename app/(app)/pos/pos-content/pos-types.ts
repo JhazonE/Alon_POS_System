@@ -32,6 +32,8 @@ export type SaleItem = Product & {
   discountHolderName?: string;
   name: string;
   taxType?: 'VAT' | 'NON_VAT' | 'ZERO_RATED' | 'VAT_EXEMPT';
+  /** Short badge showing which price level and tier set this line's price. */
+  priceLevelLabel?: string;
 };
 
 export function mapVatStatusToTaxType(vatStatus?: string): 'VAT' | 'NON_VAT' | 'ZERO_RATED' | 'VAT_EXEMPT' {

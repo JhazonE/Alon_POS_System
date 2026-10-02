@@ -1,4 +1,5 @@
 import { query } from '../../../lib/mysql';
+import { baseOverrideRow } from '../../../lib/base-price-resolution';
 import { ProductRepository, GetProductsFilters } from '../../core/products/domain/IProductRepository';
 import { ProductEntity } from '../../core/products/domain/Product';
 
@@ -114,12 +115,14 @@ export class MySqlProductRepository implements ProductRepository {
         delete product.shelfQuantitiesRaw;
 
         if (defaultLevelId) {
-            const retailOverrides = productSpecificLevels
-                .filter((pl: any) => pl.price_level_id === defaultLevelId)
-                .sort((a: any, b: any) => (a.min_quantity || 0) - (b.min_quantity || 0));
-            
-            if (retailOverrides.length > 0) {
-                product.price = parseFloat(retailOverrides[0].price);
+            // Only a default-level row with no real minimum may stand in for the
+            // base price. A tiered row is not a base price: lib/pricing.ts applies
+            // it via resolvePriceLevel once the quantity is reached, and using it
+            // here would charge the tier price at quantity 1. When no row
+            // qualifies, products.price is kept. Same rule as getProducts.
+            const baseOverride = baseOverrideRow(product.priceLevels, defaultLevelId);
+            if (baseOverride) {
+                product.price = baseOverride.price;
             }
         }
       });

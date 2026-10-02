@@ -135,6 +135,9 @@ async function applyPriceUpdateBatch(items: PriceUpdateItem[]): Promise<PriceUpd
         // the INSERT branch, and hit a duplicate-PK error that aborts the
         // whole batch. Upsert on the real PK instead; only touch `price` on
         // conflict so an existing row's min_quantity is never silently reset.
+        // The product form's Selling Units tab owns min_quantity (see
+        // writeBaseUnitPriceLevels in ../actions.ts): a product Save writes it from the
+        // tab, so this bulk path deliberately leaves it alone.
         await connection.query(
           `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
            VALUES (?, ?, ?, 0)

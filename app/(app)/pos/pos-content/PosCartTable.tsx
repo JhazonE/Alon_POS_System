@@ -225,6 +225,7 @@ export function PosCartTable({
                           >
                             {item.name}
                           </button>
+                          {item.priceLevelLabel && <span className="text-[10px] text-muted-foreground">{item.priceLevelLabel}</span>}
                           {item.discount > 0 && <span className="text-[10px] text-green-600 font-medium">Discount: {item.discount}%</span>}
                         </div>
                       )}
