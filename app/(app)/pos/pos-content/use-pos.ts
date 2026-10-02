@@ -580,8 +580,9 @@ export function usePOS() {
       const changed = JSON.stringify(currentItems.map(i => [i.price, i.priceLevelLabel])) !== JSON.stringify(updated.map(i => [i.price, i.priceLevelLabel]));
       return changed ? updated : currentItems;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLevelId]);
+    // priceLine changes exactly when activeLevelId, defaultLevelId or priceLevels do, so the
+    // effect also re-runs when the level list arrives (no default level => activeLevelId never changes).
+  }, [activeLevelId, priceLine]);
 
   // Handlers
   const handleAddItem = (product: any | undefined) => {
