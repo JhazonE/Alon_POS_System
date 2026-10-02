@@ -46,4 +46,5 @@ import './selling-units-migration.test';
 import './selling-unit-min-qty-schema.test';
 import './effective-price.test';
 import './base-unit-price-level-rows.test';
+import './price-level-badge.test';
 import './business-date-lock-lifecycle.test';
