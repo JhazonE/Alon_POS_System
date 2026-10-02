@@ -1133,21 +1133,18 @@ export async function updateProductPrice(id: string, newPrice: number) {
     const defaultLevelId = defaultPriceLevelResult.length > 0 ? defaultPriceLevelResult[0].id : 'retail-level';
 
     await withTransaction(async (connection) => {
-      const checkSql = `SELECT * FROM product_price_levels WHERE product_id = ? AND price_level_id = ? AND (min_quantity IS NULL OR min_quantity = 0)`;
-      const existing = await connection.query(checkSql, [id, defaultLevelId]);
+      // product_price_levels' PK is (product_id, price_level_id) — min_quantity is
+      // not part of it, so a SELECT filtered on min_quantity misses a tiered row
+      // and the follow-up INSERT collides on the PK. Upsert on the real PK and
+      // touch only `price` on conflict: this path is not the Selling Units tab, so
+      // it does not own the minimum and must not reset a stored one.
+      await connection.query(
+        `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
+         VALUES (?, ?, ?, 0)
+         ON DUPLICATE KEY UPDATE price = VALUES(price)`,
+        [id, defaultLevelId, newPrice],
+      );
 
-      if (existing.length > 0) {
-        await connection.query(
-          'UPDATE product_price_levels SET price = ? WHERE product_id = ? AND price_level_id = ? AND (min_quantity IS NULL OR min_quantity = 0)',
-          [newPrice, id, defaultLevelId]
-        );
-      } else {
-        await connection.query(
-          'INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, 0)',
-          [id, defaultLevelId, newPrice]
-        );
-      }
-      
       await connection.query('UPDATE products SET price = ? WHERE id = ?', [newPrice, id]);
       // Keep the base selling unit (what the Edit form hydrates from) in step.
       await syncBaseSellingUnit(connection, id, {
