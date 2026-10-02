@@ -44,4 +44,5 @@ import './terminal-lock-check.test';
 import './checkout-terminal-lock.test';
 import './selling-units-migration.test';
 import './selling-unit-min-qty-schema.test';
+import './effective-price.test';
 import './business-date-lock-lifecycle.test';
