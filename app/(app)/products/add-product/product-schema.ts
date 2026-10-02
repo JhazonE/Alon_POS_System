@@ -19,7 +19,7 @@ export const sellingUnitSchema = z.object({
   isBase: z.boolean(),
   prices: z.record(z.string(), z.object({
     price: z.coerce.number().min(0),
-    minQuantity: z.number().min(0).optional(),
+    minQuantity: z.coerce.number().int('Min quantity must be a whole number').min(0).optional(),
   })),
 });
 
