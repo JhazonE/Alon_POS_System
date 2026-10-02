@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
     const salesArea = searchParams.get('salesArea');
     const reference = searchParams.get('reference');
     const search = searchParams.get('search');
+    // Single-order lookup (the Edit page loads one order by id).
+    const id = searchParams.get('id');
 
     // Query to fetch all sales orders with customer information
     let baseQuery = `
@@ -65,6 +67,11 @@ export async function GET(request: NextRequest) {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    if (id) {
+      baseQuery += ' AND so.id = ?';
+      params.push(id);
+    }
 
     if (warehouseId) {
       baseQuery += ' AND so.warehouse_id = ?';

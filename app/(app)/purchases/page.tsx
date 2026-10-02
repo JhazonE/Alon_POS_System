@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -37,7 +38,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Search, X, Download, ChevronDown, PlusCircle } from 'lucide-react';
 
-import { AddPurchaseOrderDialog } from './add-purchase-order/add-purchase-order-dialog';
 import { ReceivePurchaseOrderDialog } from './receive-purchase-order/receive-purchase-order-dialog';
 import { ViewPurchaseOrderDialog } from './view-purchase-order/view-purchase-order-dialog';
 import { ScheduledOrdersDialog } from './scheduled-orders-dialog';
@@ -61,26 +61,20 @@ export default function PurchasesPage() {
     pageSize, setPageSize,
     hasActiveFilters,
 
-    editingOrder,
-    isEditOpen, setIsEditOpen,
-    reorderData,
-    isReorderOpen, setIsReorderOpen,
     isReceiveDialogOpen, setIsReceiveDialogOpen,
     orderToReceive,
     viewingOrder, setViewingOrder,
-    isScheduledOrderOpen, setIsScheduledOrderOpen,
-    scheduledSupplierId, setScheduledSupplierId,
 
     updatePurchaseOrder,
     handleReceiveConfirm,
     handleReceiveOpen,
-    addPurchaseOrder,
     handleSearch,
     resetFilters,
     handlePrint,
     handleExport,
     handleEdit,
     handleReorder,
+    handleCreateScheduledOrder,
     handleViewDetails,
   } = controller;
 
@@ -97,10 +91,7 @@ export default function PurchasesPage() {
 
           <div className="flex items-center gap-2">
             <ScheduledOrdersDialog
-              onCreateOrder={(supplierId) => {
-                setScheduledSupplierId(supplierId);
-                setIsScheduledOrderOpen(true);
-              }}
+              onCreateOrder={handleCreateScheduledOrder}
             />
 
             <DropdownMenu>
@@ -117,51 +108,10 @@ export default function PurchasesPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <AddPurchaseOrderDialog
-              onAddOrder={addPurchaseOrder}
-              trigger={
-                <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add New Purchase Order
-                </button>
-              }
-            />
-
-            {isScheduledOrderOpen && (
-              <AddPurchaseOrderDialog
-                open={isScheduledOrderOpen}
-                onOpenChange={setIsScheduledOrderOpen}
-                prefillSupplierId={scheduledSupplierId}
-                onAddOrder={(order) => {
-                  addPurchaseOrder(order);
-                  setIsScheduledOrderOpen(false);
-                }}
-              />
-            )}
-
-            {isEditOpen && editingOrder && (
-              <AddPurchaseOrderDialog
-                editOrder={editingOrder}
-                open={isEditOpen}
-                onOpenChange={setIsEditOpen}
-                onAddOrder={(order) => {
-                  addPurchaseOrder(order);
-                  setIsEditOpen(false);
-                }}
-              />
-            )}
-
-            {isReorderOpen && reorderData && (
-              <AddPurchaseOrderDialog
-                reorderData={reorderData}
-                open={isReorderOpen}
-                onOpenChange={setIsReorderOpen}
-                onAddOrder={(order) => {
-                  addPurchaseOrder(order);
-                  setIsReorderOpen(false);
-                }}
-              />
-            )}
+            <Link href="/purchases/new" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New Purchase Order
+            </Link>
 
             {orderToReceive && (
               <ReceivePurchaseOrderDialog

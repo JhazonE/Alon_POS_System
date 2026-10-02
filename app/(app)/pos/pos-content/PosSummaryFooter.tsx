@@ -35,6 +35,10 @@ type Props = {
 
 const peso = (value: number) => `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
 
+// The total sits beside the TENDER button in a fixed-width panel, so step the font down as the figure grows.
+const totalFontSize = (chars: number) =>
+  chars <= 6 ? 'text-5xl' : chars <= 8 ? 'text-4xl' : chars <= 10 ? 'text-3xl' : 'text-2xl';
+
 export function PosSummaryFooter({
   businessSettings, currentTerminalName, currentUser,
   selectedCustomer, handleSelectCustomer, setIsCustomerSelectOpen,
@@ -42,6 +46,7 @@ export function PosSummaryFooter({
   items, handleDefaultTender, isFrontliner, handleSendToQueue, posMode,
 }: Props) {
   const discount = items.reduce((acc, item) => acc + item.price * item.quantity, 0) - totalDue;
+  const totalText = totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
   return (
     <footer className="flex shrink-0 items-stretch border-t bg-background shadow-[0_-10px_25px_-15px_rgba(0,0,0,0.3)] z-20">
@@ -153,13 +158,13 @@ export function PosSummaryFooter({
       </div>
 
       {/* Total + action */}
-      <div className="flex w-[23rem] shrink-0 items-center gap-4 bg-muted/20 px-5 py-3">
+      <div className="flex w-[26rem] shrink-0 items-center gap-4 bg-muted/20 px-5 py-3">
         <div className="min-w-0 flex-1 text-right">
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Total Amount</span>
           <div className="flex items-start justify-end">
             <span className="mr-1 mt-1.5 text-xl font-bold text-primary">₱</span>
-            <span className="truncate text-5xl font-black leading-none tracking-tighter tabular-nums text-primary">
-              {totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+            <span className={`whitespace-nowrap font-black leading-none tracking-tighter tabular-nums text-primary ${totalFontSize(totalText.length)}`}>
+              {totalText}
             </span>
           </div>
           <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">

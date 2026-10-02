@@ -353,7 +353,7 @@ export const TEST_WAREHOUSE = { id: 'wh-test', name: 'Test Warehouse' };
 
 /**
  * Product nga naka-assign sa TEST_WAREHOUSE — gikinahanglan sa bulk-price-update
- * e2e test kay ang Bulk Update Price drawer's product picker mo-filter pinaagi
+ * e2e test kay ang Pricing page's product picker mo-filter pinaagi
  * sa warehouse_id, ug ang TEST_PRODUCTS naa'y NULL warehouse_id (dili sila
  * motungha bisan unsang warehouse ang piliin).
  */

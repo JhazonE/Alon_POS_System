@@ -28,7 +28,7 @@ assert.throws(
 
 // isValidPriceValue — the gate that keeps NaN/negative bulk-price-update
 // values (Excel non-numeric cells, corrupt-cost markup computations) out of
-// the DB. See app/(app)/products/bulk-price-update/actions.ts.
+// the DB. See app/(app)/inventory/pricing/actions.ts.
 assert.equal(isValidPriceValue(0), true, '0 is a valid price');
 assert.equal(isValidPriceValue(19.99), true, 'a normal positive price is valid');
 assert.equal(isValidPriceValue(-1), false, 'a negative price is invalid');

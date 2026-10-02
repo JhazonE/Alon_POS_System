@@ -15,14 +15,15 @@ import { badOrderSchema, type BadOrderFormValues } from './bad-order-schema';
 
 export interface UseRecordBadOrderProps {
   onSuccess: () => void;
+  /** Leaves the page after a successful save. */
+  onClose: () => void;
 }
 
-export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
+export function useRecordBadOrder({ onSuccess, onClose }: UseRecordBadOrderProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const { suppliers } = useSuppliers();
 
-  const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [posSettings, setPosSettings] = useState<any>(null);
@@ -84,13 +85,12 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
   };
 
   useEffect(() => {
-    if (!open) return;
     loadPosSettings();
     loadLocations();
     if (user?.email && !form.getValues('reportedBy')) {
       form.setValue('reportedBy', user.email);
     }
-  }, [open, user, form]);
+  }, [user, form]);
 
   // ---- total calculation ---------------------------------------------------
 
@@ -257,7 +257,7 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
       toast({ title: 'Bad Order Recorded', description: 'The bad order has been recorded successfully.' });
 
       form.reset();
-      setOpen(false);
+      onClose();
       onSuccess();
       dispatchStockUpdate();
     } catch (error) {
@@ -272,14 +272,8 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
     }
   }
 
-  const handleOpenChange = (val: boolean) => {
-    setOpen(val);
-    if (!val) form.reset();
-  };
-
   return {
-    // dialog state
-    open, handleOpenChange,
+    // submit state
     isSubmitting,
     isConfirmOpen, setIsConfirmOpen,
     supplierChangeConfirm,

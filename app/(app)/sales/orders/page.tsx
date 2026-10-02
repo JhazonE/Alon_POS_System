@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SortingState, VisibilityState } from '@tanstack/react-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -16,10 +17,10 @@ import { OrdersSummaryCards } from './OrdersSummaryCards';
 import { OrdersFilterBar } from './OrdersFilterBar';
 import { OrdersTable } from './OrdersTable';
 import { OrdersFilterDialogs } from './OrdersFilterDialogs';
-import { AddSalesOrderDialog } from './add-order/add-sales-order-dialog';
 import { OrderDetailsDialog, OrderDialogMode } from './order-details/order-details-dialog';
 
 export default function SalesOrdersPage() {
+  const router = useRouter();
   const f = useOrdersFilters();
 
   const { sales, summary, totalPages, isLoading, refetch } = useOrdersQuery({
@@ -32,10 +33,6 @@ export default function SalesOrdersPage() {
   const { data: salesPersons = [] } = useSalesPersonsQuery();
   const { data: customers = [] } = useCustomersQuery();
   const { deleteMutation, makeDeliveryMutation, makeInvoiceMutation } = useOrdersMutations();
-
-  // Edit state
-  const [orderToEdit, setOrderToEdit] = useState<Sale | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Delete state
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
@@ -70,7 +67,7 @@ export default function SalesOrdersPage() {
   const { table, columns } = useOrdersTable({
     sales, sorting, setSorting, columnVisibility, setColumnVisibility, totalPages,
     onViewDetails: handleViewDetails,
-    onEdit: (sale) => { setOrderToEdit(sale); setIsEditOpen(true); },
+    onEdit: (sale) => router.push(`/sales/orders/${sale.id}/edit`),
     onDelete: (id) => setOrderToDelete(id),
     onMakeInvoice: handleMakeInvoice,
     makeDeliveryMutation,
@@ -115,15 +112,6 @@ export default function SalesOrdersPage() {
           salesCount={sales.length}
         />
       </CardContent>
-
-      {/* Edit Dialog */}
-      <AddSalesOrderDialog
-        isOpen={isEditOpen}
-        hideTrigger
-        onOpenChange={(open) => { setIsEditOpen(open); if (!open) setOrderToEdit(null); }}
-        initialData={orderToEdit || undefined}
-        onSuccess={() => { refetch(); setIsEditOpen(false); setOrderToEdit(null); }}
-      />
 
       {/* Delete Alert */}
       <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>

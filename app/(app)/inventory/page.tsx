@@ -31,6 +31,7 @@ import {
   Layers,
   Rows3,
   PackageOpen,
+  Tag,
 } from 'lucide-react';
 
 import { BatchInventoryDrawer } from './batch-inventory/BatchInventoryDrawer';
@@ -105,6 +106,15 @@ export default function InventoryPage() {
                   <button className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 font-bold text-primary hover:text-primary hover:bg-primary/10 px-3 transition-colors flex-shrink-0">
                       <Layers className="h-4 w-4" />
                       <span className="text-xs">Bulk Adjustment</span>
+                  </button>
+                </Link>
+
+                <div className="h-4 w-px bg-border/60 mx-1 flex-shrink-0" />
+
+                <Link href="/inventory/pricing">
+                  <button className="inline-flex items-center justify-center rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring text-xs rounded-lg h-8 gap-2 hover:bg-muted font-medium px-3 flex-shrink-0">
+                      <Tag className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs">Pricing</span>
                   </button>
                 </Link>
 

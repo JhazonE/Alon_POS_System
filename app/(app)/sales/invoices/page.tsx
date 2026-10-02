@@ -46,7 +46,7 @@ export default function SalesInvoicesPage() {
     applyStatus, applyDateRange, applySalesPerson, applyCustomer,
     applyTransactionSource, applyReferenceType, applyReferenceNumber, applyReceiptNumber,
     loading, error, settings,
-    voidMutation, invalidateInvoices,
+    voidMutation,
     uniqueSalesPersons, summaryTotals,
     table,
   } = useInvoicesPage();
@@ -74,7 +74,6 @@ export default function SalesInvoicesPage() {
             onOpenReferenceType={() => { setTempReferenceType(referenceTypeFilter); setReferenceTypeDialogOpen(true); }}
             onOpenReferenceNumber={() => { setTempReferenceNumber(referenceNumberFilter); setReferenceNumberDialogOpen(true); }}
             onOpenReceiptNumber={() => { setTempReceiptNumber(receiptNumberFilter); setReceiptNumberDialogOpen(true); }}
-            onAddSuccess={invalidateInvoices}
             table={table}
           />
         </div>

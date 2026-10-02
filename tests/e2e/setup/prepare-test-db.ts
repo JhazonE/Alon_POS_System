@@ -336,7 +336,7 @@ async function seedFixtures(): Promise<void> {
   await conn.query('INSERT INTO suppliers (id, name) VALUES (?, ?)', [TEST_SUPPLIER.id, TEST_SUPPLIER.name]);
   await conn.query('INSERT INTO warehouses (id, name) VALUES (?, ?)', [TEST_WAREHOUSE.id, TEST_WAREHOUSE.name]);
 
-  // Product assigned to TEST_WAREHOUSE — the Bulk Update Price drawer's product
+  // Product assigned to TEST_WAREHOUSE — the Pricing page's product
   // picker filters by warehouse_id, and TEST_PRODUCTS all have NULL warehouse_id.
   await conn.query(
     `INSERT INTO products (id, name, price, cost, stock, sku, barcode, warehouse_id, availability)

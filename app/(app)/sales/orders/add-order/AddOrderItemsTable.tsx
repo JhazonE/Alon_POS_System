@@ -12,39 +12,48 @@ type Props = {
   form: UseFormReturn<SalesOrderFormValues>;
   fields: FieldArrayWithId<SalesOrderFormValues, 'items', 'id'>[];
   remove: (index: number) => void;
-  total: number;
 };
 
-export function AddOrderItemsTable({ form, fields, remove, total }: Props) {
+/** Column widths (px) in table order; the leading `0` (Product) flexes to fill. */
+const COLUMN_WIDTHS = [0, 110, 140, 150, 56];
+
+export function AddOrderItemsTable({ form, fields, remove }: Props) {
   return (
-    <div className="flex-1 rounded-lg border bg-background shadow-sm overflow-hidden flex flex-col relative">
-      <div className="overflow-y-auto flex-1 h-full relative">
-        <table className="w-full caption-bottom text-sm text-left border-collapse">
+    <div className="flex-1 min-h-0 rounded-lg border bg-background shadow-sm overflow-hidden flex flex-col relative">
+      <div className="overflow-auto flex-1 h-full relative">
+        <table className="w-full min-w-[640px] table-fixed caption-bottom text-sm text-left border-separate border-spacing-0">
+          <colgroup>
+            {COLUMN_WIDTHS.map((w, i) => (
+              <col key={i} style={w ? { width: w } : undefined} />
+            ))}
+          </colgroup>
           <TableHeader className="sticky top-0 bg-background z-50 shadow-sm">
-            <TableRow className="hover:bg-transparent border-b">
-              <TableHead className="w-[40%] pl-4 h-10">Product</TableHead>
-              <TableHead className="w-[15%] text-center h-10">Qty</TableHead>
-              <TableHead className="w-[20%] text-right h-10">Price</TableHead>
-              <TableHead className="w-[20%] text-right pr-4 h-10">Total</TableHead>
-              <TableHead className="w-[5%] h-10" />
+            <TableRow className="hover:bg-transparent [&>th]:border-b">
+              <TableHead className="pl-4 pr-2 h-10">Product</TableHead>
+              <TableHead className="px-2 text-center h-10">Qty</TableHead>
+              <TableHead className="px-2 text-right h-10">Price</TableHead>
+              <TableHead className="px-2 text-right pr-4 h-10">Total</TableHead>
+              <TableHead className="h-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {fields.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-[300px] text-center text-muted-foreground flex flex-col items-center justify-center border-none">
-                  <div className="bg-muted p-4 rounded-full mb-4"><Search className="h-8 w-8 opacity-20" /></div>
-                  <p className="font-medium">No items added</p>
-                  <p className="text-xs text-muted-foreground">Scan barcode or search above to add products.</p>
+                <TableCell colSpan={5} className="h-[40vh] min-h-[200px] text-center text-muted-foreground border-none">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-muted p-4 rounded-full mb-4"><Search className="h-8 w-8 opacity-20" /></div>
+                    <p className="font-medium">No items added</p>
+                    <p className="text-xs text-muted-foreground">Scan barcode or search above to add products.</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               fields.map((field, index) => (
-                <TableRow key={field.id} className="group hover:bg-muted/50 border-b">
-                  <TableCell className="font-medium pl-4 py-2">
-                    <div className="font-medium">{field.product.name}</div>
-                    <div className="text-xs text-muted-foreground flex gap-2">
-                      <span>{field.product.sku || 'No SKU'}</span>
+                <TableRow key={field.id} className="group hover:bg-muted/50 [&>td]:border-b">
+                  <TableCell className="font-medium pl-4 pr-2 py-1">
+                    <div className="truncate font-bold text-sm leading-tight" title={field.product.name}>{field.product.name}</div>
+                    <div className="flex gap-2 text-[11px] leading-tight text-muted-foreground">
+                      <span className="truncate">{field.product.sku || 'No SKU'}</span>
                       {field.product.stock !== undefined && (
                         <span className={field.product.stock <= 0 ? 'text-destructive' : 'text-emerald-600'}>
                           Stock: {formatStockQuantity(field.product.stock)}
@@ -52,7 +61,7 @@ export function AddOrderItemsTable({ form, fields, remove, total }: Props) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="py-2">
+                  <TableCell className="px-2 py-1">
                     <div className="flex justify-center">
                       <FormField
                         control={form.control}
@@ -60,7 +69,7 @@ export function AddOrderItemsTable({ form, fields, remove, total }: Props) {
                         render={({ field }) => (
                           <Input
                             type="number"
-                            className="h-8 w-20 text-center bg-background"
+                            className="h-8 w-full max-w-[5rem] text-center bg-background"
                             {...field}
                             onFocus={e => e.target.select()}
                           />
@@ -68,7 +77,7 @@ export function AddOrderItemsTable({ form, fields, remove, total }: Props) {
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="py-2 text-right">
+                  <TableCell className="px-2 py-1 text-right">
                     <FormField
                       control={form.control}
                       name={`items.${index}.price`}
@@ -76,19 +85,20 @@ export function AddOrderItemsTable({ form, fields, remove, total }: Props) {
                         <Input
                           type="number"
                           step="0.01"
-                          className="h-8 w-24 text-right ml-auto border-transparent hover:border-input focus:border-input bg-background"
+                          className="h-8 w-full text-right ml-auto border-transparent hover:border-input focus:border-input bg-background"
                           {...field}
                         />
                       )}
                     />
                   </TableCell>
-                  <TableCell className="text-right py-2 pr-4 font-mono">
+                  <TableCell className="text-right px-2 py-1 pr-4 font-mono">
                     ₱{(Number(form.watch(`items.${index}.price`) || 0) * Number(form.watch(`items.${index}.quantity`) || 0)).toFixed(2)}
                   </TableCell>
-                  <TableCell className="py-2">
+                  <TableCell className="px-2 py-1">
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove item"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                       onClick={() => remove(index)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -99,25 +109,6 @@ export function AddOrderItemsTable({ form, fields, remove, total }: Props) {
             )}
           </TableBody>
         </table>
-      </div>
-
-      {/* Footer Totals */}
-      <div className="bg-muted/30 p-4 border-t grid grid-cols-12 gap-4">
-        <div className="col-span-8" />
-        <div className="col-span-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span>₱{(total - Number(form.watch('shipping') || 0)).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Shipping</span>
-            <span>₱{Number(form.watch('shipping') || 0).toFixed(2)}</span>
-          </div>
-          <div className="border-t pt-2 flex justify-between items-center">
-            <span className="font-semibold text-lg">Total</span>
-            <span className="font-bold text-xl text-primary">₱{total.toFixed(2)}</span>
-          </div>
-        </div>
       </div>
     </div>
   );

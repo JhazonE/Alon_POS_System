@@ -6,11 +6,11 @@ import { BULK_PRICE_PRODUCT } from './fixtures/test-data';
 const WORKFLOW_ID = 'wf-priceupdate-e2e';
 
 /**
- * Bulk Price Update (DB-backed) — drives the "Bulk Update Price" drawer and its
- * Excel upload path on /products against the seeded alon_pos_test DB.
+ * Pricing page (DB-backed) — drives the bulk price update form and its Excel
+ * upload path on /inventory/pricing against the seeded alon_pos_test DB.
  *
  * Uses BULK_PRICE_PRODUCT, the only seeded product with a non-NULL warehouse_id
- * (see fixtures/test-data.ts) — the drawer's product picker filters by warehouse,
+ * (see fixtures/test-data.ts) — the page's product picker filters by warehouse,
  * and every other seeded product has warehouse_id = NULL.
  *
  * Selectors were verified against the real rendered markup (not assumed from the
@@ -19,25 +19,24 @@ const WORKFLOW_ID = 'wf-priceupdate-e2e';
  * Select uses SelectValue placeholder text "Select a warehouse".
  */
 
-async function openDrawerAndSelectWarehouse(page: import('@playwright/test').Page) {
+async function openPricingAndSelectWarehouse(page: import('@playwright/test').Page) {
   await seedSession(page, DEFAULT_ADMIN);
-  await page.goto('/products');
-  await page.getByRole('button', { name: 'Bulk Update Price' }).click();
+  await page.goto('/inventory/pricing');
 
-  const drawer = page.getByRole('dialog');
-  await expect(drawer.getByText('Bulk Update Price')).toBeVisible();
+  const pricing = page.locator('main');
+  await expect(pricing.getByRole('heading', { name: 'Pricing' })).toBeVisible();
 
-  await drawer.getByText('Select a warehouse').click();
+  await pricing.getByText('Select a warehouse').click();
   await page.getByRole('option', { name: 'Test Warehouse' }).click();
 
   // Product table only renders once a warehouse is selected. The table
   // shows Barcode, not SKU (changed after this spec was first written —
   // see commit cf83d36).
-  await expect(drawer.getByText(BULK_PRICE_PRODUCT.barcode)).toBeVisible();
-  return drawer;
+  await expect(pricing.getByText(BULK_PRICE_PRODUCT.barcode)).toBeVisible();
+  return pricing;
 }
 
-test.describe('Bulk Price Update', () => {
+test.describe('Pricing', () => {
   test.afterAll(async ({ request }) => {
     // Safety net in case a mid-test failure skipped the inline cleanup — a
     // leftover workflow row or a left-on switch would break later specs that
@@ -46,7 +45,7 @@ test.describe('Bulk Price Update', () => {
     await request.post('/api/pos-settings', { data: { requirePriceUpdateConfirmation: false } });
   });
 
-  test('drawer: approval OFF applies immediately', async ({ page, request }) => {
+  test('approval OFF applies immediately', async ({ page, request }) => {
     await request.post('/api/pos-settings', { data: { requirePriceUpdateConfirmation: false } });
 
     // Baseline price straight from the DB — don't assume the seeded value in case
@@ -57,18 +56,18 @@ test.describe('Bulk Price Update', () => {
     expect(beforeProduct, 'seeded bulk-price product should exist').toBeTruthy();
     const priceBefore = parseFloat(beforeProduct.price);
 
-    const drawer = await openDrawerAndSelectWarehouse(page);
+    const pricing = await openPricingAndSelectWarehouse(page);
 
     // Select the (only) product row's checkbox — shadcn Checkbox renders as
     // button[role="checkbox"], not a native input.
-    const table = drawer.locator('table').first();
+    const table = pricing.locator('table').first();
     await table.locator('tbody tr').first().getByRole('checkbox').check();
 
     // "Value" Label/Input are siblings with no htmlFor/id link, so getByLabel
-    // doesn't resolve it — target the (only) number input in the drawer instead.
-    await drawer.locator('input[type="number"]').fill('10');
+    // doesn't resolve it — target the (only) number input on the page instead.
+    await pricing.locator('input[type="number"]').fill('10');
 
-    const submitButton = drawer.getByRole('button', { name: /Update 1 Product/ });
+    const submitButton = pricing.getByRole('button', { name: /Update 1 Product/ });
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
@@ -84,7 +83,7 @@ test.describe('Bulk Price Update', () => {
     }).toPass({ timeout: 10_000 });
   });
 
-  test('drawer: approval ON queues instead of applying', async ({ page, request }) => {
+  test('approval ON queues instead of applying', async ({ page, request }) => {
     // checkApprovalRequired('PRICE_UPDATE') needs BOTH the pos_settings switch AND
     // an approval_workflows row for the type (see lib/approvals.ts) — the schema
     // clone carries no data, so alon_pos_test has no workflow rows out of the box.
@@ -105,13 +104,13 @@ test.describe('Bulk Price Update', () => {
     const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
     const priceBefore = parseFloat(beforeProduct.price);
 
-    const drawer = await openDrawerAndSelectWarehouse(page);
+    const pricing = await openPricingAndSelectWarehouse(page);
 
-    const table = drawer.locator('table').first();
+    const table = pricing.locator('table').first();
     await table.locator('tbody tr').first().getByRole('checkbox').check();
-    await drawer.locator('input[type="number"]').fill('5');
+    await pricing.locator('input[type="number"]').fill('5');
 
-    const submitButton = drawer.getByRole('button', { name: /Update 1 Product/ });
+    const submitButton = pricing.getByRole('button', { name: /Update 1 Product/ });
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
@@ -178,7 +177,7 @@ test.describe('Bulk Price Update', () => {
   test('excel upload: valid + invalid rows in one file', async ({ page, request }) => {
     await request.post('/api/pos-settings', { data: { requirePriceUpdateConfirmation: false } });
 
-    // Baseline price straight from the DB, same discipline as the drawer tests —
+    // Baseline price straight from the DB, same discipline as the tests above —
     // don't assume the seeded value, and revert to it afterward.
     const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
     const beforeBody = await before.json();
@@ -188,9 +187,9 @@ test.describe('Bulk Price Update', () => {
     const newPrice = 123.45;
 
     try {
-      const drawer = await openDrawerAndSelectWarehouse(page);
+      const pricing = await openPricingAndSelectWarehouse(page);
 
-      await drawer.getByRole('button', { name: 'Upload Excel' }).click();
+      await pricing.getByRole('button', { name: 'Upload Excel' }).click();
 
       const uploadDialog = page.getByRole('dialog').filter({ hasText: 'Upload Price List' });
       await expect(uploadDialog).toBeVisible();
@@ -233,7 +232,7 @@ test.describe('Bulk Price Update', () => {
       }).toPass({ timeout: 10_000 });
     } finally {
       // Revert so this test's mutation doesn't bleed into a re-run of this spec
-      // file, same discipline as the drawer tests.
+      // file, same discipline as the tests above.
       await testQuery('UPDATE products SET price = ? WHERE id = ?', [priceBefore, BULK_PRICE_PRODUCT.id]);
     }
   });
@@ -250,9 +249,9 @@ test.describe('Bulk Price Update', () => {
     const newSku = 'E2E-NEW-PRODUCT-' + Date.now();
 
     try {
-      const drawer = await openDrawerAndSelectWarehouse(page);
+      const pricing = await openPricingAndSelectWarehouse(page);
 
-      await drawer.getByRole('button', { name: 'Upload Excel' }).click();
+      await pricing.getByRole('button', { name: 'Upload Excel' }).click();
 
       const uploadDialog = page.getByRole('dialog').filter({ hasText: 'Upload Price List' });
       await expect(uploadDialog).toBeVisible();
@@ -307,5 +306,18 @@ test.describe('Bulk Price Update', () => {
       await testQuery('UPDATE products SET price = ? WHERE id = ?', [priceBefore, BULK_PRICE_PRODUCT.id]);
       await testQuery('DELETE FROM products WHERE sku = ?', [newSku]);
     }
+  });
+
+  test('Inventory page links to Pricing; Products page no longer has Bulk Update Price', async ({ page }) => {
+    await seedSession(page, DEFAULT_ADMIN);
+
+    await page.goto('/inventory');
+    await page.getByRole('link', { name: 'Pricing' }).click();
+    await expect(page).toHaveURL(/\/inventory\/pricing$/);
+    await expect(page.locator('main').getByRole('heading', { name: 'Pricing' })).toBeVisible();
+
+    await page.goto('/products');
+    await expect(page.getByRole('button', { name: 'Add Product' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bulk Update Price' })).toHaveCount(0);
   });
 });

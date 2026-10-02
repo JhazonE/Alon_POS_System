@@ -38,7 +38,7 @@ export type ProductFormData = {
    *
    * Absent (not empty) means "do not touch the selling-unit tables" — the
    * bulk-price-update / Excel import path at
-   * app/(app)/products/bulk-price-update/actions.ts:324 calls addProduct
+   * app/(app)/inventory/pricing/actions.ts:324 calls addProduct
    * without them, and a service edit submits none.
    */
   sellingUnits?: {

@@ -15,14 +15,14 @@ import {
 } from './fixtures/test-data';
 
 /**
- * "Add New Product" sulod sa New Purchase Order dialog (DB-backed).
+ * "Add New Product" sulod sa New Purchase Order page (/purchases/new) (DB-backed).
  *
  * Coverage:
  *  1. Ang button disabled samtang walay supplier; human mapili ang supplier,
  *     mo-abli ang Add Product sheet sa ibabaw sa PO, Standard-only, ug ang
  *     supplier naka-prefill isip primary mapping.
  *  2. Human ma-save, ang bag-ong product mo-gawas isip PO item row (qty 1 + cost).
- *  3. Ang "No products found." empty state sa search dialog naghatag sa samang
+ *  3. Ang "No products found." empty state sa autocomplete dropdown naghatag sa samang
  *     action, nga ang gi-type nga text prefilled isip product name.
  *  4. Edit PO: ang wala-pa-ma-save nga edit sa order dili ma-reset human mag-add
  *     ug bag-ong product.
@@ -36,12 +36,13 @@ async function selectOption(page: Page, dialog: Locator, label: string | RegExp,
   await page.getByRole('option', { name: optionName }).click();
 }
 
-/** Open a fresh PO dialog on /purchases and return its locator. */
+/** Open a fresh PO page (/purchases/new) from /purchases and return its locator. */
 async function openPurchaseOrder(page: Page) {
   await seedSession(page, DEFAULT_ADMIN);
   await page.goto('/purchases');
-  await page.getByRole('button', { name: 'Add New Purchase Order' }).click();
-  const poDialog = page.getByRole('dialog', { name: 'New Purchase Order' });
+  await page.getByRole('link', { name: 'Add New Purchase Order' }).click();
+  await expect(page).toHaveURL(/\/purchases\/new/);
+  const poDialog = page.getByRole('main');
   await expect(poDialog.getByRole('button', { name: 'Create Order' })).toBeVisible();
   return poDialog;
 }
@@ -117,6 +118,48 @@ test.describe('Purchase order: Add New Product', () => {
     await expect(row.locator('input[name="items.0.cost"]')).toHaveValue(/80/);
   });
 
+  test('autocomplete: typing suggests products; click and exact-SKU Enter both add a row', async ({ page }) => {
+    test.setTimeout(90_000);
+    const poDialog = await openPurchaseOrder(page);
+    await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
+    const search = poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name');
+
+    // Partial name -> inline suggestion; clicking it adds the row and clears the input.
+    await search.fill('PO Line');
+    await poDialog.getByRole('option', { name: new RegExp(PO_PRODUCT.name) }).click();
+    const row = poDialog.getByRole('row', { name: new RegExp(PO_PRODUCT.name) });
+    await expect(row.locator('input[name="items.0.quantity"]')).toHaveValue('1');
+    await expect(search).toHaveValue('');
+
+    // Exact SKU + Enter adds again (bumps the qty of the same product).
+    await search.fill(PO_PRODUCT.sku);
+    await page.keyboard.press('Enter');
+    await expect(row.locator('input[name="items.0.quantity"]')).toHaveValue('2');
+  });
+
+  test('Back asks to discard an order with unsaved items, and Discard returns to the list', async ({ page }) => {
+    test.setTimeout(90_000);
+    const poDialog = await openPurchaseOrder(page);
+    await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
+
+    // Add an item so the form is dirty.
+    await poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name').fill(PO_PRODUCT.sku);
+    await page.keyboard.press('Enter');
+    await expect(poDialog.getByRole('row', { name: new RegExp(PO_PRODUCT.name) })).toBeVisible();
+
+    await poDialog.getByRole('button', { name: 'Back to purchase orders' }).click();
+    const confirm = page.getByRole('alertdialog', { name: 'Discard this purchase order?' });
+    await expect(confirm).toBeVisible();
+
+    await confirm.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(confirm).toBeHidden();
+    await expect(page).toHaveURL(/\/purchases\/new/);
+
+    await poDialog.getByRole('button', { name: 'Cancel' }).click();
+    await confirm.getByRole('button', { name: 'Discard' }).click();
+    await expect(page).toHaveURL(/\/purchases$/);
+  });
+
   test('"No products found." offers Add New Product with the typed text as the name', async ({ page }) => {
     test.setTimeout(90_000);
     const typed = `Zzz Not Stocked ${Date.now()}`;
@@ -124,17 +167,14 @@ test.describe('Purchase order: Add New Product', () => {
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
 
     await poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name').fill(typed);
-    await page.keyboard.press('Enter');
 
-    const searchDialog = page.getByRole('dialog', { name: 'Search Products' });
-    await expect(searchDialog.getByText('No products found.')).toBeVisible();
-    await searchDialog.getByRole('button', { name: 'Add New Product' }).click();
+    // The suggestions open inline under the input (no separate search dialog).
+    await expect(poDialog.getByText('No products found.')).toBeVisible();
+    await poDialog.locator('[cmdk-empty]').getByRole('button', { name: 'Add New Product' }).click();
 
     const addDialog = page.getByRole('dialog', { name: 'Add New Product' });
     await expect(addDialog).toBeVisible();
     await expect(addDialog.getByLabel('Product Name')).toHaveValue(typed);
-    // The search dialog gets out of the way (it is z-200, above the sheet).
-    await expect(searchDialog).toBeHidden();
   });
 
   test('Edit PO: adding a product keeps the order\'s unsaved edits and appends the new row', async ({ page, request }) => {
@@ -178,7 +218,8 @@ test.describe('Purchase order: Add New Product', () => {
     await listRow.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
 
-    const poDialog = page.getByRole('dialog', { name: 'Edit Purchase Order' });
+    await expect(page).toHaveURL(new RegExp('/purchases/.+/edit'));
+    const poDialog = page.getByRole('main');
     const existingRow = poDialog.getByRole('row', { name: new RegExp(PO_PRODUCT.name) });
     await expect(existingRow).toBeVisible();
 
@@ -219,7 +260,8 @@ test.describe('Purchase order: Add New Product', () => {
     await page.getByRole('menuitem', { name: 'Restock' }).click();
 
     // Restock prefills the product's own supplier; the user switches to another.
-    const poDialog = page.getByRole('dialog', { name: 'New Purchase Order' });
+    await expect(page).toHaveURL(/\/purchases\/new\?productId=/);
+    const poDialog = page.getByRole('main');
     await expect(poDialog.getByRole('combobox', { name: 'Supplier' })).toContainText(TEST_SUPPLIER.name);
     await selectOption(page, poDialog, 'Supplier', otherSupplier.name);
     await expect(poDialog.getByRole('combobox', { name: 'Supplier' })).toContainText(otherSupplier.name);
