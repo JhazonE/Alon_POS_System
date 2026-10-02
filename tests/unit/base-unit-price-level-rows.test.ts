@@ -8,7 +8,7 @@ assert.deepEqual(
   'an explicit minimum is carried through',
 );
 
-// Review Focus 5: a blank minimum clears the tier back to 0 rather than preserving a stale one
+// a blank minimum clears the tier back to 0 rather than preserving a stale one
 assert.deepEqual(
   baseUnitPriceLevelRows({ 'retail-level': { price: 100 } }),
   [{ levelId: 'retail-level', price: 100, minQuantity: 0 }],
@@ -64,6 +64,20 @@ assert.deepEqual(
     { levelId: 'wholesale-level', price: 90, minQuantity: 10 },
   ],
   'several levels are returned in insertion order',
+);
+
+// a non-numeric price is skipped entirely
+assert.deepEqual(
+  baseUnitPriceLevelRows({ 'retail-level': { price: 'abc', minQuantity: 10 } } as any),
+  [],
+  'a row with a non-numeric price is skipped',
+);
+
+// minQuantity: null becomes 0
+assert.deepEqual(
+  baseUnitPriceLevelRows({ 'retail-level': { price: 100, minQuantity: null } } as any),
+  [{ levelId: 'retail-level', price: 100, minQuantity: 0 }],
+  'a null minimum becomes 0',
 );
 
 // no prices at all

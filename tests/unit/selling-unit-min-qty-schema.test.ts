@@ -39,4 +39,25 @@ const negative = sellingUnitSchema.safeParse({
 });
 assert.equal(negative.success, false, 'rejects a negative min quantity');
 
+// a fractional min quantity is rejected (must be whole number)
+const fractional = sellingUnitSchema.safeParse({
+  ...base,
+  prices: { 'retail-level': { price: 100, minQuantity: 2.5 } },
+});
+assert.equal(fractional.success, false, 'rejects a fractional min quantity');
+
+// a fractional min quantity from a string is rejected
+const fractionalString = sellingUnitSchema.safeParse({
+  ...base,
+  prices: { 'retail-level': { price: 100, minQuantity: '2.5' } },
+});
+assert.equal(fractionalString.success, false, 'rejects a fractional min quantity from a form string');
+
+// minQuantity: null yields a successful parse (null coerces to falsy in the field)
+const nullMin = sellingUnitSchema.safeParse({
+  ...base,
+  prices: { 'retail-level': { price: 100, minQuantity: null } },
+});
+assert.equal(nullMin.success, true, 'null min quantity is accepted and coerced');
+
 console.log('selling-unit-min-qty-schema: all assertions passed');

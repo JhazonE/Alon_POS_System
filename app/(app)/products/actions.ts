@@ -670,7 +670,7 @@ async function writeBaseUnitPriceLevels(
   baseUnit: NonNullable<ProductFormData['sellingUnits']>[number],
   removedLevelIds: string[] = [],
 ) {
-  for (const row of baseUnitPriceLevelRows(baseUnit.prices as any)) {
+  for (const row of baseUnitPriceLevelRows(baseUnit.prices)) {
     await connection.query(
       `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
        VALUES (?, ?, ?, ?)

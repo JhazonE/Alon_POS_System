@@ -276,7 +276,7 @@ export function SellingUnitsTab() {
                                     placeholder="0"
                                     value={field.value ?? ''}
                                     onChange={(e) =>
-                                      field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
+                                      field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))
                                     }
                                   />
                                 </FormControl>
