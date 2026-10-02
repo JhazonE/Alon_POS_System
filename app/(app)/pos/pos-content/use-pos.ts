@@ -9,6 +9,7 @@ import { useCustomerDisplay } from '@/hooks/use-customer-display';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { resolvePriceLevel } from '@/lib/pricing';
 import { priceLevelLabel } from '@/lib/price-level-badge';
+import { repriceCartLines } from '@/lib/cart-reprice';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
@@ -573,16 +574,20 @@ export function usePOS() {
   // Re-price items when price level changes
   useEffect(() => {
     if (!activeLevelId) return;
-    setItems(currentItems => {
-      if (currentItems.length === 0) return currentItems;
-      const updated = currentItems.map(item => ({ ...item, ...priceLine(item, item.quantity) }));
-      // Compare the badge too: a level switch can change the label while the price stays the same.
-      const changed = JSON.stringify(currentItems.map(i => [i.price, i.priceLevelLabel])) !== JSON.stringify(updated.map(i => [i.price, i.priceLevelLabel]));
-      return changed ? updated : currentItems;
-    });
-    // priceLine changes exactly when activeLevelId, defaultLevelId or priceLevels do, so the
-    // effect also re-runs when the level list arrives (no default level => activeLevelId never changes).
-  }, [activeLevelId, priceLine]);
+    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLevelId]);
+
+  // When the price level list arrives (it loads asynchronously, after a saved cart may
+  // already have been restored), fill in the badges only. Prices are deliberately NOT
+  // touched here: a restored line may carry a price the cashier typed by hand, and the
+  // list loading is not a reason to overwrite it. Only an actual level switch (above)
+  // reprices.
+  useEffect(() => {
+    if (priceLevels.length === 0) return;
+    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine, { labelsOnly: true })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceLevels]);
 
   // Handlers
   const handleAddItem = (product: any | undefined) => {
@@ -692,7 +697,10 @@ export function usePOS() {
   };
 
   const handleUpdateItem = (itemId: string, newName: string, newQty: number, newPrice: number, newDiscount: number) => {
-    setItems(prev => prev.map(item => item.id === itemId ? { ...item, name: newName, quantity: newQty, price: newPrice, discount: newDiscount } : item));
+    // A hand-edited price is no longer the level's price, so drop the badge rather than let it say otherwise.
+    setItems(prev => prev.map(item => item.id === itemId
+      ? { ...item, name: newName, quantity: newQty, price: newPrice, discount: newDiscount, priceLevelLabel: newPrice !== item.price ? undefined : item.priceLevelLabel }
+      : item));
   };
 
   const handleVoidLine = (itemId: string | null) => {
