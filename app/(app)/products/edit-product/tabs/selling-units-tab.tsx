@@ -228,35 +228,64 @@ export function SellingUnitsTab() {
                     <div className="text-xs text-muted-foreground self-end pb-2">Loading price levels…</div>
                   ) : (
                     priceLevels.map((level: any) => (
-                      <FormField
-                        key={level.id}
-                        control={form.control}
-                        name={`sellingUnits.${index}.prices.${level.id}.price` as any}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs truncate" title={level.name}>
-                              {level.name} (₱)
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={field.value ?? ''}
-                                onChange={(e) => {
-                                  const next = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                                  const prevBaseRetail = getRetail(form.getValues(`sellingUnits.${baseUnitIndex}` as any));
-                                  field.onChange(next);
-                                  if (level.id === defaultLevel?.id && next !== undefined) {
-                                    onRetailChange(index, next, prevBaseRetail);
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                      <div key={level.id} className="contents">
+                        <FormField
+                          control={form.control}
+                          name={`sellingUnits.${index}.prices.${level.id}.price` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs truncate" title={level.name}>
+                                {level.name} (₱)
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={field.value ?? ''}
+                                  onChange={(e) => {
+                                    const next = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                    const prevBaseRetail = getRetail(form.getValues(`sellingUnits.${baseUnitIndex}` as any));
+                                    field.onChange(next);
+                                    if (level.id === defaultLevel?.id && next !== undefined) {
+                                      onRetailChange(index, next, prevBaseRetail);
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        {/* Min Qty is base-unit only: the POS prices the base unit, so a minimum
+                            on another row would be collected and never applied. */}
+                        {index === baseUnitIndex && (
+                          <FormField
+                            control={form.control}
+                            name={`sellingUnits.${index}.prices.${level.id}.minQuantity` as any}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs truncate" title={`${level.name} minimum quantity`}>
+                                  {level.name} Min Qty
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    min="0"
+                                    placeholder="0"
+                                    value={field.value ?? ''}
+                                    onChange={(e) =>
+                                      field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
+                                    }
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
-                      />
+                      </div>
                     ))
                   )}
                 </div>
