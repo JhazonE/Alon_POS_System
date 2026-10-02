@@ -48,4 +48,5 @@ import './effective-price.test';
 import './base-unit-price-level-rows.test';
 import './price-level-badge.test';
 import './cart-reprice.test';
+import './base-price-resolution.test';
 import './business-date-lock-lifecycle.test';

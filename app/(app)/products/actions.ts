@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
 import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
 import { baseUnitPriceLevelRows } from '@/lib/base-unit-price-level-rows';
+import { baseOverrideRow, defaultLevelFlatPrice, resolveBaseUnitPrice } from '@/lib/base-price-resolution';
 
 
 export type ProductFormData = {
@@ -299,12 +300,13 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
 
     return products.map((product: any) => {
       const productPriceLevels = plMap.get(product.id) || [];
-      const retailPriceOverrides = productPriceLevels
-        .filter((pl: any) => pl.levelId === defaultLevelId)
-        .sort((a: any, b: any) => (a.minQuantity || 0) - (b.minQuantity || 0));
-      
-      const effectivePrice = retailPriceOverrides.length > 0 
-        ? retailPriceOverrides[0].price 
+      // Only a default-level row with no real minimum may stand in for the base
+      // price. A tiered row is not a base price: lib/pricing.ts applies it via
+      // resolvePriceLevel once the quantity is reached. When no row qualifies,
+      // products.price is kept. Same rule as MySqlProductRepository.findAll.
+      const baseOverride = baseOverrideRow(productPriceLevels, defaultLevelId);
+      const effectivePrice = baseOverride
+        ? baseOverride.price
         : (parseFloat(product.price) || 0);
 
       return {
@@ -521,16 +523,21 @@ async function writeSellingUnits(
     const u = units[i];
     const unitId = u.id || `psu_${uuidv4()}`;
 
-    // product_selling_units.price is the unit's default-level price. Resolve
-    // it from, in order: the submitted default-level entry; for a kept unit,
-    // the price already stored on the row; any other submitted level; 0.
+    // product_selling_units.price is the unit's base price. Resolve it from,
+    // in order: the submitted default-level entry, if it has no minimum; for a
+    // kept unit, the price already stored on the row; any other submitted
+    // level's entry that has no minimum; the lowest tier if every entry is
+    // tiered; 0 only when there is no entry at all. A quantity tier is never a
+    // base price (see lib/base-price-resolution.ts) — the lowest-tier fallback
+    // exists because a 0 in a price column is a free sale on a payments path,
+    // whereas a tier is at worst a discount the shopkeeper already authorised.
     //
     // The stored-price step matters: units written by the parent/child data
     // migration (120) have a real `price` but no product_selling_unit_prices
     // rows, and a form session that never renders the Selling Units tab
     // (Radix unmounts inactive tabs) submits an empty `prices` map for them.
     // Without this step such a save silently zeroed the unit's price.
-    const defaultLevelPrice = defaultPriceLevelId ? validPrice(u.prices?.[defaultPriceLevelId]) : undefined;
+    const defaultLevelPrice = defaultLevelFlatPrice(u.prices, defaultPriceLevelId);
     let storedPrice: number | undefined;
     if (u.id && defaultLevelPrice === undefined) {
       const [storedRows]: any = await connection.query(
@@ -540,10 +547,7 @@ async function writeSellingUnits(
       const stored = Number(storedRows?.[0]?.price);
       if (Number.isFinite(stored) && stored > 0) storedPrice = stored;
     }
-    const firstAnyPrice = Object.values(u.prices || {})
-      .map(validPrice)
-      .find((p) => p !== undefined);
-    const resolvedPrice = defaultLevelPrice ?? storedPrice ?? firstAnyPrice;
+    const resolvedPrice = resolveBaseUnitPrice(u.prices, defaultPriceLevelId, storedPrice);
     const unitPrice = resolvedPrice ?? 0;
     if (u === baseUnit) basePrice = resolvedPrice;
 
