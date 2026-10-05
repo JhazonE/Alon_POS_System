@@ -114,7 +114,15 @@ clears its session, and routes to `/login`.
 
 ### 4. Middleware (deny-by-default)
 
-A single root `middleware.ts` matching `/api/:path*`. Every request must carry
+A single root **`proxy.ts`**, scoped in code to `/api` paths. Verified against
+this repo's Next 16.2.6: `middleware.ts` is deprecated in Next 16, and
+middleware runs on the Edge Runtime, where Node's `crypto` — which
+`verifySession` needs — is unavailable (`A Node.js module is loaded ('crypto')
+which is not supported in the Edge Runtime`). A proxy file always runs on the
+Node.js runtime. It must not export a `config` object, so there is no
+`matcher`; the proxy returns early for non-`/api` paths itself.
+
+Every request must carry
 a valid `Authorization: Bearer <token>`, except an explicit public allowlist:
 
 | Public route | Reason |
