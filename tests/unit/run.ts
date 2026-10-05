@@ -62,6 +62,7 @@ const TEST_FILES = [
   'price-level-price-calc.test',
   'inline-editable-select-optional-value.test',
   'session.test',
+  'session-secret.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
