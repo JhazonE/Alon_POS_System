@@ -17,7 +17,11 @@ import {
 export interface InlineEditableSelectProps<T> {
   items: T[];
   isLoading: boolean;
-  value: string;
+  // Admits undefined: this is bound to optional react-hook-form fields
+  // (Department, Warehouse), whose value is undefined until something is
+  // picked. Radix reads undefined as "no selection" and shows the placeholder
+  // — which is why it is passed through rather than coerced to ''.
+  value: string | undefined;
   onChange: (value: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;

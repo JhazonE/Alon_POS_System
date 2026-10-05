@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { toLocalYmd } from './fiscal-utils';
 export { formatSINumber, validateSINumber } from './si-number';
 
 // Load environment variables
@@ -200,7 +201,10 @@ export async function getNextXReadingNumber(terminalId: string): Promise<string>
     }
     
     const nextVal = rows[0].next_val;
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    // toLocalYmd, not toISOString: the embedded date is the store's local
+    // business date. At UTC+8 toISOString() would stamp the previous day on
+    // any reading generated before 08:00 local.
+    const dateStr = toLocalYmd(new Date()).replace(/-/g, '');
     return `X-${dateStr}-${nextVal.toString().padStart(3, '0')}`;
   });
 }
@@ -229,7 +233,10 @@ export async function getNextZReadingNumber(terminalId: string): Promise<string>
     }
     
     const nextVal = rows[0].next_val;
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    // toLocalYmd, not toISOString: the embedded date is the store's local
+    // business date. At UTC+8 toISOString() would stamp the previous day on
+    // any reading generated before 08:00 local.
+    const dateStr = toLocalYmd(new Date()).replace(/-/g, '');
     return `Z-${dateStr}-${nextVal.toString().padStart(3, '0')}`;
   });
 }
