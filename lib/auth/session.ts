@@ -72,7 +72,7 @@ export function signSession(input: Omit<SessionPayload, 'iat' | 'exp'>): string 
 }
 
 export function verifySession(token: string | null | undefined): SessionPayload | null {
-  if (!token) return null;
+  if (typeof token !== 'string' || !token) return null;
 
   const parts = token.split('.');
   if (parts.length !== 2) return null;

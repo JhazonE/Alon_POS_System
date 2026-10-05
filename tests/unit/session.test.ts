@@ -6,6 +6,8 @@ process.env.SERVER_SESSION_SECRET = 'test-secret-do-not-use-in-production';
 
 import { signSession, verifySession, SESSION_TTL_SECONDS } from '../../lib/auth/session';
 
+assert.equal(SESSION_TTL_SECONDS, 43200, 'the TTL is 12 hours in seconds');
+
 const USER = {
   uid: 'u-1',
   username: 'cashier1',
@@ -101,6 +103,10 @@ for (const bad of [
   'too.many.dots.here',
   '!!!not-base64!!!.!!!also-not!!!',
   '.',
+  123,
+  {},
+  [],
+  true,
 ]) {
   assert.equal(
     verifySession(bad as any),
