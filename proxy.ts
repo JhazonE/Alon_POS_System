@@ -39,9 +39,7 @@ export default function proxy(request: NextRequest) {
   // Strip any client-supplied identity headers up front, on every API path,
   // so they can never reach a route handler from the outside.
   const headers = new Headers(request.headers);
-  headers.delete('x-auth-uid');
-  headers.delete('x-auth-user-type');
-  headers.delete('x-auth-permissions');
+  for (const name of Object.values(AUTH_HEADERS)) headers.delete(name);
 
   if (isPublicApiRoute(request.method, pathname)) {
     return NextResponse.next({ request: { headers } });
@@ -60,13 +58,18 @@ export default function proxy(request: NextRequest) {
     // (SERVER_SESSION_SECRET unset in production). That is a misconfigured
     // server, not an unauthenticated caller, so it must NOT become a 401 —
     // that would hide the misconfiguration behind "please log in".
-    console.error('[auth] session verification failed:', error);
+    console.error(
+      '[auth] session verification failed - is SERVER_SESSION_SECRET set? ' +
+        'It must be set when NODE_ENV=production.',
+      error
+    );
     return NextResponse.json(
       {
         success: false,
-        error:
-          'Server authentication is misconfigured: SERVER_SESSION_SECRET is not set. ' +
-          'Set it in .env and restart the server.',
+        // Deliberately generic: naming the env var here would let any
+        // anonymous caller probe whether the server is missing its secret.
+        // The actionable detail (SERVER_SESSION_SECRET) is in the log above.
+        error: 'Server configuration error',
       },
       { status: 500 }
     );
