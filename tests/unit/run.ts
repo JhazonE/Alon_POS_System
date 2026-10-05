@@ -63,6 +63,7 @@ const TEST_FILES = [
   'inline-editable-select-optional-value.test',
   'session.test',
   'session-secret.test',
+  'proxy-allowlist.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
