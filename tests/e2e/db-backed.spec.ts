@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { realLogin } from './helpers/auth';
 import { TEST_USERS, TEST_PRODUCTS, TEST_PASSWORD, BUSINESS_NAME } from './fixtures/test-data';
 

@@ -1,4 +1,12 @@
 import type { Page } from '@playwright/test';
+import { signSession } from '../../../lib/auth/session';
+
+// The test process mints tokens and the Playwright webServer verifies them, so
+// both must share one secret. playwright.config.ts passes this same value to
+// the server; setting it here (before the first signSession call, since the
+// secret is read lazily and cached) keeps the two in agreement even when a
+// spec is run without going through the config's env.
+process.env.SERVER_SESSION_SECRET ??= 'e2e-test-secret';
 
 /**
  * Auth helpers para sa e2e tests.
@@ -63,13 +71,33 @@ export async function mockLoginEndpoint(
  * I-prepopulate ang localStorage session aron makasulod direkta sa protected
  * routes nga dili mo-agi sa login form. Itawag ni una mo-navigate.
  */
+/**
+ * Mint a real signed session token for `user` (what /api/auth/login would
+ * issue). Shared by seedSession (browser) and the authenticated `request`
+ * fixture in authed-test.ts (API calls made directly from test code).
+ */
+export function mintSessionToken(user: SessionUser = DEFAULT_ADMIN): string {
+  return signSession({
+    uid: user.uid,
+    username: user.username,
+    userType: user.userType,
+    roleId: user.roleId != null ? String(user.roleId) : null,
+    permissions: user.permissions ?? [],
+  });
+}
+
 export async function seedSession(page: Page, user: SessionUser = DEFAULT_ADMIN): Promise<void> {
-  await page.addInitScript((u) => {
-    window.localStorage.setItem(
-      'mock-user-session',
-      JSON.stringify({ ...u, email: u.username }),
-    );
-  }, user);
+  // A real signed token, not a fabricated one: the middleware verifies it, so
+  // seeding only localStorage would 401 every request.
+  const token = mintSessionToken(user);
+
+  await page.addInitScript(
+    ({ u, t }) => {
+      window.localStorage.setItem('mock-user-session', JSON.stringify({ ...u, email: u.username }));
+      window.localStorage.setItem('alon-session-token', t);
+    },
+    { u: user, t: token },
+  );
 }
 
 /** Buhata ang tinuod nga login UI flow batok sa gi-mock nga endpoint. */

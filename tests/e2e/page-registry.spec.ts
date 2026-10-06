@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import {
   PAGE_REGISTRY,
   TOGGLEABLE_PAGES,

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { mockLoginEndpoint, seedSession, loginViaUI, DEFAULT_ADMIN } from './helpers/auth';
 
 /**

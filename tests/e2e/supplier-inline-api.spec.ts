@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 
 /**
  * Supplier write-API behavior nga gikinahanglan sa inline add/rename.

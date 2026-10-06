@@ -13,6 +13,11 @@ import { defineConfig, devices } from '@playwright/test';
 const TEST_PORT = 3100;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
 
+// Shared by the test process (which signs seeded session tokens) and the
+// webServer (which verifies them). Set on process.env so Playwright workers,
+// forked after this config loads, inherit the same value.
+process.env.SERVER_SESSION_SECRET ??= 'e2e-test-secret';
+
 export default defineConfig({
   testDir: './tests/e2e',
   globalSetup: './tests/e2e/setup/global-setup.ts',
@@ -50,6 +55,7 @@ export default defineConfig({
     // logActivity (nga naka-hardcode sa 3000 gikan sa .env).
     env: {
       ...process.env,
+      SERVER_SESSION_SECRET: process.env.SERVER_SESSION_SECRET ?? 'e2e-test-secret',
       DB_NAME: 'alon_pos_test',
       NEXT_PUBLIC_API_BASE_URL: `${BASE_URL}/api`,
       // Separate dist dir aron makasabay sa usa ka running nga dev server (3000)

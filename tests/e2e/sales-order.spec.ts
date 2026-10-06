@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { testQuery } from './helpers/db';
 import { SO_CUSTOMER, SO_PRODUCT, SO_SERVICE } from './fixtures/test-data';
 

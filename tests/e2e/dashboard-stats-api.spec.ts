@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { getSamePeriodLastMonth } from '../../lib/fiscal-utils';
 
 /**

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { selectCategory } from './helpers/product-form';
 import {

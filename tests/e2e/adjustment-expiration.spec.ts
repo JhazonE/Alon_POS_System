@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery } from './helpers/db';
 import { INVENTORY_PRODUCT, PERISHABLE_PRODUCT, PERISHABLE_FAMILY_PARENT, PERISHABLE_FAMILY_CHILD } from './fixtures/test-data';

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/authed-test';
 import { TEST_USERS, TEST_PRODUCTS } from './fixtures/test-data';
 import { resetPosState } from './helpers/db';
 
