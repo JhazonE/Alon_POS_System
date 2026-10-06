@@ -64,6 +64,7 @@ const TEST_FILES = [
   'session.test',
   'session-secret.test',
   'proxy-allowlist.test',
+  'require-permission.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
