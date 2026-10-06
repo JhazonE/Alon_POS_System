@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/mysql';
 import { v4 as uuidv4 } from 'uuid';
 import { hash } from 'bcryptjs';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 export type UserWithPermissions = {
   uid: string;
@@ -47,6 +48,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   console.log('[ROOT API/Users] POST request received');
   try {
     const body = await request.json();
@@ -109,6 +113,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/users - Update user permissions
 export async function PATCH(request: NextRequest) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const { uid, permissions, disabled } = await request.json();
 
@@ -148,6 +155,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE /api/users - Delete a user
 export async function DELETE(request: NextRequest) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(request.url);
     const uid = searchParams.get('uid');

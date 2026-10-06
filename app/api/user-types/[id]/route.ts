@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/mysql';
 import { v4 as uuidv4 } from 'uuid';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -56,6 +60,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const { id } = await params;
 

@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/mysql';
 import { v4 as uuidv4 } from 'uuid';
 import { hash } from 'bcryptjs';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 // PUT /api/users/[uid] - Update user details and permissions
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ uid: string }> }
 ) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const { uid } = await params;
     const body = await request.json();

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '../../../../lib/mysql';
 import { DEFAULT_UNITS_OF_MEASURE } from '../../../../lib/default-units';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 export async function POST(request: NextRequest) {
+  const denied = requirePermission(request, 'manage_settings');
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { action } = body;

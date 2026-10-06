@@ -1,10 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
 import { compare } from 'bcryptjs';
+import { signSession } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
     try {
-        const { username, password } = await request.json();
+        // Parse the body once: a Request body can only be read a single time, so
+        // the dev-preview flag below must come from this same object.
+        const body = await request.json();
+        const { username, password } = body;
+
+        // Dev-only: app/(app)/use-app-layout.ts previews the back office
+        // without credentials. It used to fabricate a client-side session;
+        // now it must get a REAL signed token, through this same path, so
+        // there is no separate trust mechanism. Compiled out in production.
+        if (process.env.NODE_ENV !== 'production' && body?.devPreview === true) {
+            const devPermissions = [
+                'access_pos', 'view_dashboard', 'manage_products', 'manage_inventory',
+                'view_sales', 'manage_purchases', 'manage_customers', 'manage_suppliers',
+                'view_reports', 'manage_users', 'manage_settings', 'view_approvals',
+                'manage_approval_settings',
+            ];
+            const devUser = {
+                uid: 'dev-preview',
+                username: 'dev-preview',
+                userType: 'Super Admin',
+                roleId: null,
+                permissions: devPermissions,
+            };
+            return NextResponse.json({
+                token: signSession(devUser),
+                ...devUser,
+                email: 'dev-preview',
+                displayName: 'Dev Preview (no login)',
+                photoURL: null,
+            });
+        }
 
         if (!username || !password) {
             return NextResponse.json(
@@ -58,8 +89,19 @@ export async function POST(request: NextRequest) {
 
         const userPermissions = permissions.map((p: any) => p.permission);
 
-        // Return user session data
+        // The token is what the server will actually trust on later requests;
+        // the rest of this object is kept for the 18 client files that read
+        // the `mock-user-session` shape.
+        const token = signSession({
+            uid: user.uid,
+            username: user.username,
+            userType: user.userType,
+            roleId: user.roleId ?? null,
+            permissions: userPermissions,
+        });
+
         return NextResponse.json({
+            token,
             uid: user.uid,
             username: user.username, // using "username" as the field
             email: user.username, // keeping "email" for compatibility if frontend expects it, or we can just use username

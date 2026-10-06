@@ -3,6 +3,7 @@ import { query, getNextZReadingNumber } from '@/lib/mysql';
 import { format } from 'date-fns';
 import { saveEJournalFiles } from '@/lib/ejournal/ejournal-writer';
 import { sendZReadingToStaLucia } from '@/lib/integrations/sta-lucia/send-z-reading';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 const safeParseFloat = (val: any): number => {
     if (val === null || val === undefined) return 0;
@@ -599,6 +600,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const denied = requirePermission(request, 'view_sales');
+    if (denied) return denied;
+
     try {
         await ensureZReadingsSchema();
 

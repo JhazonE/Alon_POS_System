@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
 import { hash } from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 export async function POST(request: NextRequest) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const { email, password } = await request.json();
 

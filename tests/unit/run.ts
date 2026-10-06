@@ -65,6 +65,7 @@ const TEST_FILES = [
   'session-secret.test',
   'proxy-allowlist.test',
   'require-permission.test',
+  'destructive-route-guards.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];

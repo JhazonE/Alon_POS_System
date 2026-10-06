@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/mysql';
 import { v4 as uuidv4 } from 'uuid';
+import { requirePermission } from '@/lib/auth/require-permission';
 
 export async function GET() {
   try {
@@ -26,6 +27,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = requirePermission(request, 'manage_users');
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { name, description, permissions } = body;
