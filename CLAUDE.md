@@ -60,6 +60,7 @@ npm run test:e2e:db          # Re-seed the test database only
 | `LICENSE_ADMIN_SECRET` | HMAC secret for license dashboard sessions |
 | `LICENSE_UI_PORT` | License server port (default `4100`) |
 | `GEMINI_API_KEY` | Optional — AI features |
+| `SERVER_SESSION_SECRET` | **Required in production.** HMAC secret for API session tokens; the server refuses to sign or verify sessions without it |
 
 ---
 
@@ -71,7 +72,56 @@ npm run test:e2e:db          # Re-seed the test database only
 - `(app)/` — All authenticated pages (dashboard, inventory, sales, purchases, suppliers, customers, reports, POS, settings, approvals, user management)
 - `api/` — 150+ REST route handlers. All database logic lives here, not in Server Components.
 
-**Auth pattern** — `POST /api/auth/login` returns `{ uid, displayName, userType, permissions[] }` stored in `localStorage` as `mock-user-session`. Every API route reads it from the request body or headers. POS-type users are hard-redirected to `/pos`.
+**Auth pattern** — `POST /api/auth/login` verifies the password and returns
+`{ token, uid, displayName, userType, permissions[] }`. The token is an
+HMAC-SHA256-signed bearer token (`lib/auth/session.ts`, 12h TTL, signed with
+`SERVER_SESSION_SECRET`); the rest is stored in `localStorage` as
+`mock-user-session` for the UI.
+
+Root `proxy.ts` enforces authentication on every `/api` path
+**deny-by-default** — every route requires a valid token except the small
+per-method allowlist in `lib/auth/public-routes.ts` (login, license
+activate/activate-online/status/heartbeat, and the dev mock). It is a per-route
+list, never a prefix wildcard: `POST /api/license/deactivate` takes no
+arguments and halts the store, so it is guarded.
+
+It is `proxy.ts`, not `middleware.ts`: Next 16 deprecated the `middleware`
+convention, and middleware runs on the Edge Runtime where Node's `crypto` —
+which session verification needs — is unavailable. A proxy file always runs on
+the Node.js runtime, and must not export a `config` object (that is a build
+error), so it filters non-`/api` paths in code rather than via a `matcher`.
+
+The proxy forwards the verified identity as `x-auth-uid` / `x-auth-user-type`
+/ `x-auth-permissions`, **deleting any inbound copy first** so a client cannot
+inject its own identity. Route handlers read identity from those headers via
+`getAuthContext()` — never from the request body.
+
+Destructive routes additionally call `requirePermission(request, '<perm>')`
+(`lib/auth/require-permission.ts`), which returns 403 (not 401, which would log
+a cashier out mid-sale). Permissions are the 13 seeded by migration 070;
+`super_admin` is deliberately NOT a server-side bypass.
+
+Client code calls this app's API through `authFetch()` in `lib/api-config.ts`,
+which attaches the token and handles 401 centrally. It includes supervisor
+elevation support: a 2-minute, separately-keyed token (`alon-elevation-token`)
+stored by `setElevatedToken()` and preferred over the cashier's own session.
+The POS collects manager credentials to authorize a single destructive action
+(Z-reading, void, price edit) without replacing the cashier's session; the
+elevated token expires after use. `clearStoredSession()` drops both keys.
+
+`authFetch()` suppresses its 401-redirect on `/pos` and `/pos/*`, because the
+POS renders its own login overlay and fires settings/terminal fetches on mount
+before a cashier signs in; redirecting would lock the cashier out of the login
+screen. Trade-off: a token expiring mid-shift on `/pos` fails quietly rather
+than redirecting.
+
+**Do not use `authFetch` for outbound third-party calls** — `lib/integrations/sta-lucia/` (the mall
+consolidator) and `app/api/license/heartbeat/route.ts` (the license server) use
+plain `fetch`, because sending them our token would leak a credential.
+
+Phase 1 scope: all routes are authenticated; only the destructive ones are
+permission-checked. Mapping the remaining ~150 routes to permissions is Phase 2
+(see `docs/superpowers/specs/2026-10-05-api-authentication-design.md`).
 
 **No ORM** — raw `mysql2/promise` queries everywhere via `lib/mysql.ts`. Two pools: local (`query()`) and cloud (`cloudQuery()`). The cloud pool is lazily initialized and never blocks the app if Railway is unreachable.
 
