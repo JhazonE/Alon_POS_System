@@ -70,6 +70,92 @@ assert.ok(
   'the token storage key lives in api-config.ts'
 );
 
+// --- supervisor elevation: a SEPARATE, time-boxed token ---
+// The POS override dialog collects manager credentials for one action the
+// cashier's permissions don't cover. The manager's token must not replace the
+// cashier's session, and must expire on its own (10+ call sites, so no caller
+// can be trusted to clear it).
+
+assert.match(
+  apiConfig,
+  /getElevatedToken\(\)\s*\?\?\s*getStoredToken\(\)/,
+  'authFetch prefers a live elevation token over the stored session token'
+);
+const adminAuth = read('app/(app)/pos/admin-auth/use-admin-auth.ts');
+const successBranch = adminAuth.slice(
+  adminAuth.indexOf('if (hasPermission)'),
+  adminAuth.indexOf('onSuccess();', adminAuth.indexOf('if (hasPermission)'))
+);
+assert.ok(
+  /setElevatedToken\(result\.token\)/.test(successBranch),
+  'use-admin-auth stores the supervisor token as an elevation (not the session token) before onSuccess()'
+);
+assert.equal(
+  /setStoredToken/.test(adminAuth),
+  false,
+  'a supervisor override must never overwrite the cashier session token'
+);
+
+{
+  // Minimal localStorage stub on globalThis.window; always torn down so other
+  // unit tests (which branch on `typeof window`) are unaffected.
+  const store = new Map<string, string>();
+  const g = globalThis as any;
+  const hadWindow = 'window' in g;
+  const previousWindow = g.window;
+  g.window = {
+    localStorage: {
+      getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+      setItem: (k: string, v: string) => void store.set(k, String(v)),
+      removeItem: (k: string) => void store.delete(k),
+    },
+  };
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const cfg = require('../../lib/api-config') as typeof import('../../lib/api-config');
+    const ELEV = 'alon-elevation-token';
+
+    // round trip, and the cashier session token is left alone
+    cfg.setStoredToken('cashier-token');
+    cfg.setElevatedToken('manager-token');
+    assert.equal(cfg.getElevatedToken(), 'manager-token', 'elevation round-trips');
+    assert.equal(cfg.getStoredToken(), 'cashier-token', 'elevation does not replace the session token');
+
+    // expired elevation: null AND the key is removed
+    store.set(ELEV, JSON.stringify({ token: 'manager-token', expiresAt: Date.now() - 1 }));
+    assert.equal(cfg.getElevatedToken(), null, 'an expired elevation is not returned');
+    assert.equal(store.has(ELEV), false, 'an expired elevation is removed from storage');
+    assert.equal(cfg.getStoredToken(), 'cashier-token', 'expiry leaves the cashier session alone');
+
+    // TTL is short: ~2 minutes, not hours
+    cfg.setElevatedToken('manager-token');
+    const { expiresAt } = JSON.parse(store.get(ELEV)!);
+    const ttl = expiresAt - Date.now();
+    assert.ok(ttl > 0 && ttl <= 2 * 60 * 1000, `elevation TTL is at most 2 minutes (got ${ttl}ms)`);
+
+    // malformed values never throw
+    store.set(ELEV, '{not json');
+    assert.equal(cfg.getElevatedToken(), null, 'malformed JSON yields null');
+    store.set(ELEV, JSON.stringify({ token: 42, expiresAt: Date.now() + 60000 }));
+    assert.equal(cfg.getElevatedToken(), null, 'a non-string token yields null');
+    store.set(ELEV, JSON.stringify({ token: 'x' }));
+    assert.equal(cfg.getElevatedToken(), null, 'a missing expiry yields null');
+
+    // clearStoredSession drops both
+    cfg.setElevatedToken('manager-token');
+    cfg.clearStoredSession();
+    assert.equal(store.has(ELEV), false, 'clearStoredSession() also removes the elevation');
+    assert.equal(cfg.getStoredToken(), null, 'clearStoredSession() removes the session token');
+
+    cfg.setElevatedToken('manager-token');
+    cfg.clearElevatedToken();
+    assert.equal(cfg.getElevatedToken(), null, 'clearElevatedToken() removes it');
+  } finally {
+    if (hadWindow) g.window = previousWindow;
+    else delete g.window;
+  }
+}
+
 // --- no client call site still uses bare fetch for our API, except the
 // --- deliberately pre-token ones ---
 

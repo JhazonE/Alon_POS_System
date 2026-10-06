@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, setElevatedToken } from '@/lib/api-config';
 
 type Options = {
   isOpen: boolean;
@@ -63,6 +63,10 @@ export function useAdminAuth({ isOpen, onSuccess, onOpenChange, requiredCredenti
           permissions.includes('edit_price') || permissions.includes('super_admin');
 
         if (hasPermission) {
+          // Keep the supervisor's token SEPARATE from the cashier's session
+          // token (which must survive the override) and time-boxed, so the
+          // guarded route the caller hits next is authorized as the supervisor.
+          if (result.token) setElevatedToken(result.token);
           onSuccess();
           onOpenChange(false);
         } else {

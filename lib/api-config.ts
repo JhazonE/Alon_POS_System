@@ -87,6 +87,8 @@ export const getApiUrl = (path: string) => {
 
 const TOKEN_STORAGE_KEY = 'alon-session-token';
 const SESSION_STORAGE_KEY = 'mock-user-session';
+const ELEVATION_STORAGE_KEY = 'alon-elevation-token';
+const ELEVATION_TTL_MS = 2 * 60 * 1000; // 2 minutes: one privileged action
 
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -111,6 +113,55 @@ export function clearStoredSession(): void {
   try {
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    // A logout or a 401 drops any supervisor elevation too.
+    window.localStorage.removeItem(ELEVATION_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * A supervisor override's token, kept separate from the signed-in cashier's.
+ *
+ * The POS collects manager credentials to authorize a single action the
+ * cashier's own permissions do not cover (Z-reading, voids, price edits). The
+ * cashier's session must survive that override untouched, so this is a second
+ * key rather than a replacement — and it is time-boxed rather than cleared by
+ * each caller, because there are 10+ override call sites and a missed clear
+ * would leave a terminal elevated.
+ */
+export function setElevatedToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      ELEVATION_STORAGE_KEY,
+      JSON.stringify({ token, expiresAt: Date.now() + ELEVATION_TTL_MS })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getElevatedToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(ELEVATION_STORAGE_KEY);
+    if (!raw) return null;
+    const { token, expiresAt } = JSON.parse(raw);
+    if (typeof expiresAt !== 'number' || Date.now() > expiresAt) {
+      window.localStorage.removeItem(ELEVATION_STORAGE_KEY);
+      return null;
+    }
+    return typeof token === 'string' ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearElevatedToken(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(ELEVATION_STORAGE_KEY);
   } catch {
     /* ignore */
   }
@@ -128,7 +179,9 @@ export function clearStoredSession(): void {
  * would turn "invalid credentials" into a redirect to /login.
  */
 export async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const token = getStoredToken();
+  // A live supervisor elevation (see setElevatedToken) wins over the cashier's
+  // own token for the few minutes it is valid.
+  const token = getElevatedToken() ?? getStoredToken();
 
   const headers = new Headers(init.headers ?? {});
   if (token) headers.set('Authorization', `Bearer ${token}`);
