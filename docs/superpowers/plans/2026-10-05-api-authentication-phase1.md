@@ -1120,15 +1120,17 @@ Then replace the success response (the `return NextResponse.json({ uid: user.uid
 
 - [ ] **Step 4: Add the dev-preview login path**
 
-Still in `app/api/auth/login/route.ts`, immediately after `const { username, password } = await request.json();` add:
+Still in `app/api/auth/login/route.ts`. **Parse the request body ONCE** and destructure from it — do not call `request.json()` (or `request.clone().json()`) a second time. A `Request` body is a single-use stream: a second read throws, and since this branch runs on every non-production login, that would turn every dev login into a 500. Replace the existing `const { username, password } = await request.json();` with:
 
 ```typescript
+        const body = await request.json().catch(() => ({} as any));
+        const { username, password } = body;
+
         // Dev-only: app/(app)/use-app-layout.ts previews the back office
         // without credentials. It used to fabricate a client-side session;
         // now it must get a REAL signed token, through this same path, so
         // there is no separate trust mechanism. Compiled out in production.
         if (process.env.NODE_ENV !== 'production') {
-            const body = await request.clone().json().catch(() => ({}));
             if (body?.devPreview === true) {
                 const devPermissions = [
                     'access_pos', 'view_dashboard', 'manage_products', 'manage_inventory',
