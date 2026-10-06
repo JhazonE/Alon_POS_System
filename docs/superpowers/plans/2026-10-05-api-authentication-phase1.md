@@ -1173,11 +1173,13 @@ Guard body, placed as the first statement inside the handler, before `try`:
   if (denied) return denied;
 ```
 
-These are the **actual** handlers present in each file — verified, not assumed. Note the asymmetry: `users/route.ts` has a `DELETE` (it deletes by `?uid=` query param, and is today unauthenticated), `users/[uid]/route.ts` has only `PUT`, and `user-types/[id]/route.ts` uses `PATCH`, not `PUT`.
+These are the **actual** handlers present in each file — verified, not assumed. Note the asymmetry: `users/route.ts` has three mutating handlers (`POST`, `PATCH`, `DELETE`), `users/[uid]/route.ts` has only `PUT`, and `user-types/[id]/route.ts` uses `PATCH`, not `PUT`. Twelve handlers in total.
+
+`PATCH /api/users` deserves specific attention: it reads `{ uid, permissions, disabled }` from the body and rewrites that user's rows in `user_permissions` (DELETE then re-INSERT), as well as flipping `disabled`. It is the most direct privilege-escalation path in this set — an unauthenticated caller could grant themselves `manage_users` on an existing account, or disable the owner's login. `DELETE /api/users` likewise removes a user by `?uid=` query param.
 
 | File | Handlers to guard | Permission |
 |---|---|---|
-| `app/api/users/route.ts` | POST, DELETE | `manage_users` |
+| `app/api/users/route.ts` | POST, PATCH, DELETE | `manage_users` |
 | `app/api/users/[uid]/route.ts` | PUT | `manage_users` |
 | `app/api/auth/signup/route.ts` | POST | `manage_users` |
 | `app/api/user-types/route.ts` | POST | `manage_users` |
