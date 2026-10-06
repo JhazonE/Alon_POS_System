@@ -78,7 +78,7 @@ export function useManageShelfLocations({ open, onOpenChange, onLocationAdded }:
       const url = isEditing ? `/api/shelf-locations/${editingId}` : '/api/shelf-locations';
       const method = isEditing ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description, isActive: true }),

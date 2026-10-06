@@ -121,10 +121,32 @@ const PRE_TOKEN_PLAIN_FETCH: { file: string; needle: string }[] = [
   { file: 'components/license-gate.tsx', needle: "fetch('/api/license/activate-online'" },
 ];
 
-const remaining = [
-  ...gitGrep('fetch\\(getApiUrl\\(', CLIENT_PATHSPECS),
-  ...gitGrep('fetch\\([\'"`]/api/', CLIENT_PATHSPECS),
+/**
+ * Variable-URL plain `fetch` sites that are legitimately NOT our API. Every
+ * other bare `fetch(` in client/lib code is a bug: it ships no token and, worse,
+ * bypasses authFetch's central 401 handling (silent failure inside a form).
+ */
+const LEGIT_INDIRECT_PLAIN_FETCH: { file: string; needle: string }[] = [
+  // authFetch's own call
+  { file: 'lib/api-config.ts', needle: 'fetch(input, { ...init, headers })' },
+  // third-party accounting API (apiConfig.apiEndpoint)
+  { file: 'lib/scheduler.ts', needle: 'fetch(url)' },
+  { file: 'lib/services/external-accounting-api.ts', needle: 'fetch(endpoint,' },
+  // probes a user-typed host; our token must not be sent there
+  {
+    file: 'app/(app)/pos/connection-settings/use-connection-settings.ts',
+    needle: "fetch(formatApiUrl(serverIp.trim(), '/pos-settings')",
+  },
 ];
+
+const ALLOWED_PLAIN_FETCH = [...PRE_TOKEN_PLAIN_FETCH, ...LEGIT_INDIRECT_PLAIN_FETCH];
+
+// ANY bare fetch( — mechanical shapes AND variable-URL ones (fetch(url, ...)).
+// Comment lines are ignored; `authFetch(` / `refetch(` never match.
+const remaining = gitGrep('(^|[^A-Za-z_])fetch\\(', CLIENT_PATHSPECS).filter((hit) => {
+  const content = hit.replace(/^.+?:\d+:/, '').trimStart();
+  return !content.startsWith('//') && !content.startsWith('*');
+});
 
 const unexpected: string[] = [];
 const matchedCount = new Map<number, number>();
@@ -133,9 +155,7 @@ for (const hit of remaining) {
   const m = /^(.+?):(\d+):(.*)$/.exec(hit);
   assert.ok(m, `unparseable git grep line: ${hit}`);
   const [, file, , content] = m;
-  const idx = PRE_TOKEN_PLAIN_FETCH.findIndex(
-    (e) => e.file === file && content.includes(e.needle)
-  );
+  const idx = ALLOWED_PLAIN_FETCH.findIndex((e) => e.file === file && content.includes(e.needle));
   if (idx === -1) unexpected.push(hit);
   else matchedCount.set(idx, (matchedCount.get(idx) ?? 0) + 1);
 }
@@ -143,20 +163,25 @@ for (const hit of remaining) {
 assert.deepEqual(
   unexpected,
   [],
-  'no client call site may still use bare fetch for our API — migrate it to ' +
-    `authFetch. Unexpected:\n${unexpected.slice(0, 20).join('\n')}`
+  'no client call site may still use bare fetch — migrate it to authFetch (or, if it ' +
+    'is genuinely third-party / pre-token, add it to the allowlists above). ' +
+    `Unexpected:\n${unexpected.slice(0, 20).join('\n')}`
 );
 
-PRE_TOKEN_PLAIN_FETCH.forEach((entry, idx) => {
+ALLOWED_PLAIN_FETCH.forEach((entry, idx) => {
   assert.equal(
     matchedCount.get(idx),
     1,
-    `${entry.file} must still call ${entry.needle} with plain fetch (a pre-token ` +
-      'public route) — exactly once. If this fails, someone migrated it to authFetch ' +
-      'or the call moved; check lib/auth/public-routes.ts before changing this list.'
+    `${entry.file} must still call ${entry.needle} with plain fetch — exactly once. ` +
+      'If this fails, someone migrated it to authFetch or the call moved; for pre-token ' +
+      'sites check lib/auth/public-routes.ts before changing the list.'
   );
 });
-assert.equal(remaining.length, PRE_TOKEN_PLAIN_FETCH.length, 'exactly 13 pre-token sites remain');
+assert.equal(
+  remaining.length,
+  ALLOWED_PLAIN_FETCH.length,
+  '13 pre-token + 4 legitimate indirect plain-fetch sites remain, and nothing else'
+);
 
 // A public-route call site must never also be wrapped in authFetch.
 for (const entry of PRE_TOKEN_PLAIN_FETCH) {
