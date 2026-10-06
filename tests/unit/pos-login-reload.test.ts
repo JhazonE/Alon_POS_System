@@ -33,7 +33,7 @@ assert.match(fetchBody, /return merged;/, 'fetchSettings returns the merged sett
 // --- the frontliner gate reads the fetched value, not the stale state ---
 assert.match(
   login,
-  /const settings = businessSettings \?\? \(await fetchSettings\(\)\);/,
+  /const settings = businessSettings \?\? \(await fetchSettings\(/,
   'login success obtains settings from fetchSettings when the state is empty'
 );
 assert.match(
@@ -41,6 +41,14 @@ assert.match(
   /userIsFrontliner && settings\?\.posMode !== 'pharmacy'/,
   'the frontliner gate reads the value derived from fetchSettings'
 );
+// authFetch has no timeout, and login awaits this call: it must carry an abort
+// signal or a hanging server stalls POS login indefinitely.
+assert.match(
+  login,
+  /await fetchSettings\(AbortSignal\.timeout\(SETTINGS_LOGIN_TIMEOUT_MS\)\)/,
+  'the awaited settings fetch in login is bounded by a timeout signal'
+);
+assert.match(src, /const SETTINGS_LOGIN_TIMEOUT_MS = \d+;/, 'the login timeout is a named constant');
 assert.equal(
   login.includes('businessSettings?.posMode'),
   false,
