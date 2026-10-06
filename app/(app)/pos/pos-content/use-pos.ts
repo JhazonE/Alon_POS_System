@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTheme } from 'next-themes';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/use-api';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -41,6 +42,7 @@ export function usePOS() {
   }, []);
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [currentTime, setCurrentTime] = useState('');
   const [items, setItems] = useState<SaleItem[]>([]);
@@ -362,6 +364,54 @@ export function usePOS() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, enableCustomerDisplay]);
 
+  // Terminals and payment methods are fetched on mount, which on a cold
+  // terminal is BEFORE anyone has signed in (the POS renders its own login
+  // overlay), so those first calls 401 without a token. They are therefore
+  // callable again from handlePosLoginSuccess, once a token exists.
+  const loadTerminals = useCallback(async (): Promise<string | null> => {
+    try {
+      const response = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (result.success) {
+        const terminalsData = result.data;
+        setTerminals(terminalsData);
+        const clientIp = result.clientIp;
+        const autoMatch = terminalsData.find((t: any) => t.ipAddress === clientIp);
+        const storedId = localStorage.getItem('pos_terminal_id');
+        const storedTerminal = terminalsData.find((t: any) => t.id === storedId);
+
+        if (autoMatch) {
+          setSelectedTerminalId(autoMatch.id);
+          localStorage.setItem('pos_terminal_id', autoMatch.id);
+          toast({ title: 'Terminal Connected', description: `Automatically connected to ${autoMatch.terminalDescription} (${clientIp})` });
+          return autoMatch.id;
+        } else if (storedTerminal) {
+          setSelectedTerminalId(storedTerminal.id);
+          toast({ title: 'Manual Terminal Connected', description: `Connected to ${storedTerminal.terminalDescription} (Note: This machine IP is ${clientIp})` });
+          return storedTerminal.id;
+        } else {
+          toast({ variant: 'destructive', title: 'Terminal Not Found', description: `No terminal configured for IP: ${clientIp}. Please register this IP in Terminals page.` });
+          if (terminalsData.length > 0) {
+            setSelectedTerminalId(terminalsData[0].id);
+            localStorage.setItem('pos_terminal_id', terminalsData[0].id);
+            return terminalsData[0].id;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  }, []);
+
+  const loadPaymentMethods = useCallback(async () => {
+    try {
+      const response = await authFetch(getApiUrl('/payment-methods?activeOnly=true'));
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (result.success && result.data) setPaymentMethods(result.data);
+    } catch {}
+  }, []);
+
   // Fetch initial data
   useEffect(() => {
     const fetchPriceLevels = async () => {
@@ -373,49 +423,9 @@ export function usePOS() {
       } catch {}
     };
     fetchPriceLevels();
-
-    const fetchTerminals = async () => {
-      try {
-        const response = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        if (result.success) {
-          const terminalsData = result.data;
-          setTerminals(terminalsData);
-          const clientIp = result.clientIp;
-          const autoMatch = terminalsData.find((t: any) => t.ipAddress === clientIp);
-          const storedId = localStorage.getItem('pos_terminal_id');
-          const storedTerminal = terminalsData.find((t: any) => t.id === storedId);
-
-          if (autoMatch) {
-            setSelectedTerminalId(autoMatch.id);
-            localStorage.setItem('pos_terminal_id', autoMatch.id);
-            toast({ title: 'Terminal Connected', description: `Automatically connected to ${autoMatch.terminalDescription} (${clientIp})` });
-          } else if (storedTerminal) {
-            setSelectedTerminalId(storedTerminal.id);
-            toast({ title: 'Manual Terminal Connected', description: `Connected to ${storedTerminal.terminalDescription} (Note: This machine IP is ${clientIp})` });
-          } else {
-            toast({ variant: 'destructive', title: 'Terminal Not Found', description: `No terminal configured for IP: ${clientIp}. Please register this IP in Terminals page.` });
-            if (terminalsData.length > 0) {
-              setSelectedTerminalId(terminalsData[0].id);
-              localStorage.setItem('pos_terminal_id', terminalsData[0].id);
-            }
-          }
-        }
-      } catch {}
-    };
-    fetchTerminals();
-
-    const fetchPaymentMethods = async () => {
-      try {
-        const response = await authFetch(getApiUrl('/payment-methods?activeOnly=true'));
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        if (result.success && result.data) setPaymentMethods(result.data);
-      } catch {}
-    };
-    fetchPaymentMethods();
-  }, []);
+    loadTerminals();
+    loadPaymentMethods();
+  }, [loadTerminals, loadPaymentMethods]);
 
   // Terminal heartbeat
   useEffect(() => {
@@ -983,6 +993,12 @@ export function usePOS() {
   };
 
   const handlePosLoginSuccess = async (user: any) => {
+    // The data the POS fetched on mount ran without a token (nobody was signed
+    // in yet) and was rejected. Now that login has stored one, load it again.
+    fetchSettings();
+    loadPaymentMethods();
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+
     const userIsFrontliner = !!(user?.permissions as string[] | undefined)?.includes('pos_frontliner');
 
     // Block frontliner when POS is not in pharmacy mode
@@ -1019,7 +1035,10 @@ export function usePOS() {
     }
 
     const loginUserId = user.id || user.uid;
-    const terminalId = selectedTerminalId;
+    // selectedTerminalId is still empty if the mount-time terminal fetch was
+    // rejected for lack of a token; resolve it now rather than skipping the
+    // active-shift lookup (which would offer a new shift over a live one).
+    const terminalId = selectedTerminalId || (await loadTerminals());
     if (terminalId) {
       try {
         const activeRes = await authFetch(getApiUrl(`/pos/shifts?terminalId=${terminalId}&status=active`));
