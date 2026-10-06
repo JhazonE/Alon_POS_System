@@ -18,6 +18,10 @@ import { WALK_IN_CUSTOMER } from '../customer-account/customer-account-types';
 import { type SaleItem, type SuspendedTransaction, type QueuedOrder, mapVatStatusToTaxType } from './pos-types';
 import type { Customer, SystemSettings } from '@/lib/types';
 
+// Longest the POS login will wait on the settings fetch before treating the
+// POS mode as unverifiable.
+const SETTINGS_LOGIN_TIMEOUT_MS = 8000;
+
 export function usePOS() {
   const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
   const [showEndShiftReport, setShowEndShiftReport] = useState(false);
@@ -1018,7 +1022,16 @@ export function usePOS() {
     // Settings are consumed from fetchSettings' RETURN value, not from the
     // `businessSettings` state: this function closes over this render's state,
     // which is still null on a cold terminal whose mount fetch was rejected.
-    const settings = businessSettings ?? (await fetchSettings());
+    //
+    // Bounded: login awaits this, and authFetch has no timeout of its own, so
+    // an unresponsive (hanging, not refusing) server would otherwise stall the
+    // login screen indefinitely. On timeout fetchSettings returns null (the
+    // abort takes its normal failure path, no state is touched), which the
+    // frontliner gate below treats as "could not verify" - fail-closed. No
+    // toast here: that gate shows its own dialog, and a regular cashier is not
+    // blocked by a missing settings payload (the 30s poll retries it).
+    // AbortSignal.timeout needs Chromium 103+; Electron 33 ships Chromium 130.
+    const settings = businessSettings ?? (await fetchSettings(AbortSignal.timeout(SETTINGS_LOGIN_TIMEOUT_MS)));
     loadPaymentMethods({ notifyOnError: true });
     queryClient.invalidateQueries({ queryKey: ['products'] });
 
