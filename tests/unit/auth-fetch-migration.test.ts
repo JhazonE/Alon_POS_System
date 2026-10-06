@@ -34,6 +34,37 @@ assert.equal(
   false,
   'the 403 path never clears the session — logging a cashier out mid-sale loses the sale'
 );
+// The 401 branch: always clears the stale session, but does not redirect away
+// from /pos (it owns its own login overlay and fires fetches on mount, before
+// a cashier signs in) or from /login (a failed login must not redirect to itself).
+const branch401Start = apiConfig.indexOf('response.status === 401');
+const branch401 = apiConfig.slice(branch401Start, apiConfig.indexOf('response.status === 403'));
+assert.ok(branch401Start > -1, 'authFetch has a 401 branch');
+const clearIdx = branch401.indexOf('clearStoredSession()');
+const redirectIdx = branch401.indexOf("window.location.href = '/login'");
+assert.ok(clearIdx > -1, '401 clears the stored session');
+assert.ok(redirectIdx > -1, '401 redirects to /login');
+assert.match(
+  branch401,
+  /pathname\s*===\s*'\/pos'[\s\S]*pathname\.startsWith\('\/pos\/'\)/,
+  'the 401 branch recognises /pos and /pos/* pages'
+);
+assert.ok(
+  clearIdx < redirectIdx && /!onPos/.test(branch401.slice(clearIdx, redirectIdx)),
+  'clearStoredSession() runs before, and independent of, the redirect, which is suppressed on /pos'
+);
+assert.match(
+  branch401.slice(clearIdx, redirectIdx),
+  /pathname\s*!==\s*'\/login'/,
+  'the redirect is still suppressed on /login'
+);
+// clearStoredSession() sits directly inside the 401 `if`, not nested in a
+// condition: it must run unconditionally on every 401, including on /pos.
+assert.match(
+  branch401,
+  /\{\s*clearStoredSession\(\);/,
+  'clearStoredSession() is the first statement of the 401 branch (unconditional)'
+);
 assert.ok(
   apiConfig.includes("'alon-session-token'"),
   'the token storage key lives in api-config.ts'

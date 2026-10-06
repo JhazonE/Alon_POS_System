@@ -140,7 +140,16 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
   // to login.
   if (response.status === 401 && typeof window !== 'undefined') {
     clearStoredSession();
-    if (window.location.pathname !== '/login') {
+
+    // /pos renders its own login overlay (app/(app)/pos/page.tsx) and fires
+    // settings/terminal fetches on mount, before a cashier has signed in.
+    // Redirecting here would navigate away from the only screen that can log
+    // a POS terminal in, so a cold terminal could never start. The overlay is
+    // already showing; let it collect credentials and write a fresh token.
+    const onPos = window.location.pathname === '/pos'
+      || window.location.pathname.startsWith('/pos/');
+
+    if (!onPos && window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
   }
