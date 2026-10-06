@@ -210,6 +210,7 @@ function POSContent() {
       <FrontlinerModePrompt
         open={pos.isFrontlinerPromptOpen}
         blocked={pos.isFrontlinerBlocked}
+        blockReason={pos.frontlinerBlockReason}
         userName={pos.currentUser?.name || pos.currentUser?.username}
         onOpenChange={pos.setIsFrontlinerPromptOpen}
       />

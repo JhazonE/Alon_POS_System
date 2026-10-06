@@ -110,6 +110,9 @@ export function usePOS() {
   const [isSendToQueueOpen, setIsSendToQueueOpen] = useState(false);
   const [isFrontlinerPromptOpen, setIsFrontlinerPromptOpen] = useState(false);
   const [isFrontlinerBlocked, setIsFrontlinerBlocked] = useState(false);
+  // 'unverified' = the POS mode could not be read (a failed fetch), as opposed
+  // to 'default-mode' = it was read and is not pharmacy.
+  const [frontlinerBlockReason, setFrontlinerBlockReason] = useState<'default-mode' | 'unverified'>('default-mode');
   const [selectedPriceLevelId, setSelectedPriceLevelId] = useState<string>('');
 
   const [enableNegativeInventory, setEnableNegativeInventory] = useState(false);
@@ -276,7 +279,10 @@ export function usePOS() {
     else unlockInlinePrice(itemId);
   };
 
-  const fetchSettings = useCallback(async (signal?: AbortSignal) => {
+  // Returns the settings it just loaded (or null on failure) so a caller that
+  // needs them immediately - handlePosLoginSuccess - can use the value rather
+  // than the `businessSettings` state, which is stale within the same tick.
+  const fetchSettings = useCallback(async (signal?: AbortSignal): Promise<SystemSettings | null> => {
     try {
       const response = await authFetch(getApiUrl('/pos-settings'), { signal });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -300,17 +306,20 @@ export function usePOS() {
         const localPrinterName = localStorage.getItem('pos_printer_name');
         const localPaperSize = localStorage.getItem('pos_paper_size');
         const localTwoReceipts = localStorage.getItem('pos_print_two_receipts');
-        setBusinessSettings({
+        const merged = {
           ...result.data,
           ...(localPrintMode ? { printMode: localPrintMode } : {}),
           ...(localPrinterName ? { nativePrinterName: localPrinterName } : {}),
           ...(localPaperSize ? { paperSize: localPaperSize } : {}),
           ...(localTwoReceipts !== null ? { printTwoReceipts: localTwoReceipts === 'true' } : {}),
-        });
+        };
+        setBusinessSettings(merged);
+        return merged;
       }
     } catch (error: any) {
-      if (error?.name === 'AbortError') return;
+      if (error?.name === 'AbortError') return null;
     }
+    return null;
   }, []);
 
   useEffect(() => {
@@ -368,7 +377,7 @@ export function usePOS() {
   // terminal is BEFORE anyone has signed in (the POS renders its own login
   // overlay), so those first calls 401 without a token. They are therefore
   // callable again from handlePosLoginSuccess, once a token exists.
-  const loadTerminals = useCallback(async (): Promise<string | null> => {
+  const loadTerminals = useCallback(async (opts: { notifyOnError?: boolean } = {}): Promise<string | null> => {
     try {
       const response = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -399,17 +408,27 @@ export function usePOS() {
           }
         }
       }
-    } catch {}
+    } catch (error) {
+      console.error('[pos] could not load terminals', error);
+      if (opts.notifyOnError) {
+        toast({ variant: 'destructive', title: 'Could not load the POS terminal', description: 'Check the connection and try logging in again.' });
+      }
+    }
     return null;
   }, []);
 
-  const loadPaymentMethods = useCallback(async () => {
+  const loadPaymentMethods = useCallback(async (opts: { notifyOnError?: boolean } = {}) => {
     try {
       const response = await authFetch(getApiUrl('/payment-methods?activeOnly=true'));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
       if (result.success && result.data) setPaymentMethods(result.data);
-    } catch {}
+    } catch (error) {
+      console.error('[pos] could not load payment methods', error);
+      if (opts.notifyOnError) {
+        toast({ variant: 'destructive', title: 'Could not load payment methods', description: 'Tender options may be missing. Check the connection and log in again.' });
+      }
+    }
   }, []);
 
   // Fetch initial data
@@ -995,15 +1014,23 @@ export function usePOS() {
   const handlePosLoginSuccess = async (user: any) => {
     // The data the POS fetched on mount ran without a token (nobody was signed
     // in yet) and was rejected. Now that login has stored one, load it again.
-    fetchSettings();
-    loadPaymentMethods();
+    //
+    // Settings are consumed from fetchSettings' RETURN value, not from the
+    // `businessSettings` state: this function closes over this render's state,
+    // which is still null on a cold terminal whose mount fetch was rejected.
+    const settings = businessSettings ?? (await fetchSettings());
+    loadPaymentMethods({ notifyOnError: true });
     queryClient.invalidateQueries({ queryKey: ['products'] });
 
     const userIsFrontliner = !!(user?.permissions as string[] | undefined)?.includes('pos_frontliner');
 
-    // Block frontliner when POS is not in pharmacy mode
-    if (userIsFrontliner && businessSettings?.posMode !== 'pharmacy') {
+    // Block frontliner when POS is not in pharmacy mode. A null `settings`
+    // (the fetch failed) also blocks - a frontliner must not transact in
+    // default mode - but is reported as unverified, not as a configuration
+    // error.
+    if (userIsFrontliner && settings?.posMode !== 'pharmacy') {
       setCurrentUser(user);
+      setFrontlinerBlockReason(settings ? 'default-mode' : 'unverified');
       setIsFrontlinerBlocked(true);
       setIsFrontlinerPromptOpen(true);
       return;
@@ -1038,7 +1065,7 @@ export function usePOS() {
     // selectedTerminalId is still empty if the mount-time terminal fetch was
     // rejected for lack of a token; resolve it now rather than skipping the
     // active-shift lookup (which would offer a new shift over a live one).
-    const terminalId = selectedTerminalId || (await loadTerminals());
+    const terminalId = selectedTerminalId || (await loadTerminals({ notifyOnError: true }));
     if (terminalId) {
       try {
         const activeRes = await authFetch(getApiUrl(`/pos/shifts?terminalId=${terminalId}&status=active`));
@@ -1058,7 +1085,21 @@ export function usePOS() {
           setShiftActive(false);
           setCurrentShiftId(null);
         }
-      } catch {} finally {
+      } catch (error) {
+        // "Could not determine" is not "no active shift": falling through to
+        // StartShiftDialog would invite a second shift over a live one, and the
+        // server does not enforce one active shift per terminal. Return to the
+        // login overlay instead.
+        console.error('[pos] active-shift lookup failed', error);
+        toast({
+          variant: 'destructive',
+          title: 'Could not check for an open shift',
+          description: 'Check the connection and log in again before starting a shift.',
+        });
+        localStorage.removeItem('pos_current_user');
+        setCurrentUser(null);
+        setIsPosLoggedIn(false);
+      } finally {
         setIsCheckingShift(false);
       }
     } else {
@@ -1298,7 +1339,7 @@ export function usePOS() {
     isFrontliner, queuedOrders, isQueuePanelOpen, setIsQueuePanelOpen,
     isSendToQueueOpen, setIsSendToQueueOpen,
     isFrontlinerPromptOpen, setIsFrontlinerPromptOpen,
-    isFrontlinerBlocked,
+    isFrontlinerBlocked, frontlinerBlockReason,
     handleSendToQueue, handleConfirmSendToQueue, handleClaimQueuedOrder,
     // shift dialogs
     isCashCountAuthOpen, setIsCashCountAuthOpen,

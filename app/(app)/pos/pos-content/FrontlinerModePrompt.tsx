@@ -9,10 +9,12 @@ type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   blocked?: boolean;
+  /** 'unverified': the POS mode could not be read (failed fetch); not a configuration error. */
+  blockReason?: 'default-mode' | 'unverified';
   userName?: string;
 };
 
-export function FrontlinerModePrompt({ open, onOpenChange, blocked = false, userName }: Props) {
+export function FrontlinerModePrompt({ open, onOpenChange, blocked = false, blockReason = 'default-mode', userName }: Props) {
   if (blocked) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,16 +52,22 @@ export function FrontlinerModePrompt({ open, onOpenChange, blocked = false, user
               <div className="flex items-start gap-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 px-3 py-2.5">
                 <Store className="h-4 w-4 text-rose-500 shrink-0 mt-px" />
                 <div>
-                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">POS is in Default Mode</p>
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                    {blockReason === 'unverified' ? 'Could not verify POS mode' : 'POS is in Default Mode'}
+                  </p>
                   <p className="text-[11px] text-rose-500/80 dark:text-rose-500 mt-0.5">
-                    Frontliner accounts are only allowed when Pharmacy Mode is enabled in POS Settings.
+                    {blockReason === 'unverified'
+                      ? 'Could not verify POS mode. Check the connection and try again.'
+                      : 'Frontliner accounts are only allowed when Pharmacy Mode is enabled in POS Settings.'}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5 rounded-lg bg-muted/40 border px-3 py-2.5">
                 <Ban className="h-4 w-4 text-muted-foreground shrink-0 mt-px" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Please contact your administrator to switch the POS to Pharmacy Mode, or log in with a regular cashier account.
+                  {blockReason === 'unverified'
+                    ? 'This is usually a temporary connection problem. Go back and log in again.'
+                    : 'Please contact your administrator to switch the POS to Pharmacy Mode, or log in with a regular cashier account.'}
                 </p>
               </div>
             </div>
