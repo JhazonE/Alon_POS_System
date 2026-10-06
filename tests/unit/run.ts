@@ -67,6 +67,7 @@ const TEST_FILES = [
   'require-permission.test',
   'destructive-route-guards.test',
   'auth-fetch-migration.test',
+  'pos-login-reload.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
