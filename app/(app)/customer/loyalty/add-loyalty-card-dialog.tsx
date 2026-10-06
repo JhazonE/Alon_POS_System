@@ -35,7 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Customer } from '@/lib/types';
 
 interface CustomerWithLoyalty extends Customer {
@@ -107,7 +107,7 @@ export function AddLoyaltyCardDialog({
       // Fetch loyalty settings
       const fetchSettings = async () => {
         try {
-          const response = await fetch(getApiUrl('/loyalty-settings'));
+          const response = await authFetch(getApiUrl('/loyalty-settings'));
           if (response.ok) {
             const result = await response.json();
             setLoyaltySettings(result.data || []);
@@ -126,7 +126,7 @@ export function AddLoyaltyCardDialog({
         // Fetch customers when dialog opens and no specific customer is provided
         const fetchCustomers = async () => {
           try {
-            const response = await fetch(getApiUrl('/customers'));
+            const response = await authFetch(getApiUrl('/customers'));
             if (response.ok) {
               const result = await response.json();
               setCustomers(result.data || []);
@@ -154,7 +154,7 @@ export function AddLoyaltyCardDialog({
     }
 
     try {
-      const response = await fetch(getApiUrl('/customer-loyalty'), {
+      const response = await authFetch(getApiUrl('/customer-loyalty'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

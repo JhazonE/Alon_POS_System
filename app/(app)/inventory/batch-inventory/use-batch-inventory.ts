@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -40,7 +41,7 @@ export function useBatchInventory(open: boolean) {
         page: String(currentPage),
         pageSize: String(pageSize),
       });
-      const res = await fetch(`/api/inventory-batches?${params}`);
+      const res = await authFetch(`/api/inventory-batches?${params}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setBatches(data.data ?? []);

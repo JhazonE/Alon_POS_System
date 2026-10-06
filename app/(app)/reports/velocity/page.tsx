@@ -20,7 +20,7 @@ import { Loader2, TrendingUp, TrendingDown, Printer, MinusCircle, FileSpreadshee
 import { formatCurrency, formatQuantity } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
 import { ReportHeader } from '@/components/reports/ReportHeader';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 import { useToast } from '@/hooks/use-toast';
@@ -71,7 +71,7 @@ export default function FastSlowMovingReportPage() {
 
       let rows: VelocityProduct[] = products;
       try {
-        const res = await fetch(getApiUrl(`/reports/velocity?${params.toString()}`));
+        const res = await authFetch(getApiUrl(`/reports/velocity?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) rows = data.data;
       } catch {
@@ -121,7 +121,7 @@ export default function FastSlowMovingReportPage() {
 
       let rows: VelocityProduct[] = products;
       try {
-        const res = await fetch(getApiUrl(`/reports/velocity?${params.toString()}`));
+        const res = await authFetch(getApiUrl(`/reports/velocity?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) rows = data.data;
       } catch {
@@ -179,7 +179,7 @@ export default function FastSlowMovingReportPage() {
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
 
-      const res = await fetch(getApiUrl(`/reports/velocity?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/reports/velocity?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       

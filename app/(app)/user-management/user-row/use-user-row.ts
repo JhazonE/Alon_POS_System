@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { User } from './user-row-types';
 
 export function useUserRow(user: User, onUserUpdated: () => void) {
@@ -13,7 +13,7 @@ export function useUserRow(user: User, onUserUpdated: () => void) {
 
   const handleToggleStatus = async () => {
     try {
-      const res = await fetch(getApiUrl('/users'), {
+      const res = await authFetch(getApiUrl('/users'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: user.uid, disabled: !user.disabled }),
@@ -40,7 +40,7 @@ export function useUserRow(user: User, onUserUpdated: () => void) {
   const handleDeleteConfirm = async () => {
     try {
       setIsDeleting(true);
-      const res = await fetch(getApiUrl(`/users?uid=${user.uid}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/users?uid=${user.uid}`), { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete user');
       await logActivity({

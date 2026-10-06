@@ -52,7 +52,7 @@ import { CalendarIcon, TrendingUp, AlertCircle, FileText, Search, MoreHorizontal
 
 import { cn, formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { DateRange } from "react-day-picker";
 import {
   Command,
@@ -94,7 +94,7 @@ function OutstandingInvoices() {
             params.append('page', pagination.currentPage.toString());
             params.append('limit', pagination.pageSize.toString());
 
-            const response = await fetch(getApiUrl(`/customers/invoices/outstanding?${params.toString()}`));
+            const response = await authFetch(getApiUrl(`/customers/invoices/outstanding?${params.toString()}`));
             if (!response.ok) throw new Error(`API error ${response.status}`);
             const result = await response.json();
             if (result.success) {
@@ -290,7 +290,7 @@ function PaymentHistory() {
             params.append('page', pagination.currentPage.toString());
             params.append('limit', pagination.pageSize.toString());
 
-            const response = await fetch(getApiUrl(`/customers/payments?${params.toString()}`));
+            const response = await authFetch(getApiUrl(`/customers/payments?${params.toString()}`));
             if (!response.ok) throw new Error(`API error ${response.status}`);
             const result = await response.json();
             if (result.success) {
@@ -313,7 +313,7 @@ function PaymentHistory() {
 
     const fetchPaymentMethods = async () => {
         try {
-            const response = await fetch(getApiUrl('/payment-methods?activeOnly=true'));
+            const response = await authFetch(getApiUrl('/payment-methods?activeOnly=true'));
             if (!response.ok) throw new Error(`API error ${response.status}`);
             const result = await response.json();
             if (result.success) {
@@ -340,7 +340,7 @@ function PaymentHistory() {
             params.append('page', '1');
             params.append('limit', '1000000'); // Fetch all
 
-            const response = await fetch(getApiUrl(`/customers/payments?${params.toString()}`));
+            const response = await authFetch(getApiUrl(`/customers/payments?${params.toString()}`));
             if (!response.ok) throw new Error(`API error ${response.status}`);
             const result = await response.json();
             if (result.success) return result.data;
@@ -399,7 +399,7 @@ function PaymentHistory() {
             // Fetch Business Name
             let businessName = 'BUSINESS NAME';
             try {
-                const settingsRes = await fetch(getApiUrl('/pos-settings'));
+                const settingsRes = await authFetch(getApiUrl('/pos-settings'));
                 if (!settingsRes.ok) throw new Error(`API error ${settingsRes.status}`);
                 const settings = await settingsRes.json();
                 if (settings.success && settings.data?.businessName) {
@@ -689,7 +689,7 @@ function StatementOfAccount() {
     const { toast } = useToast();
 
     useEffect(() => {
-        fetch(getApiUrl('/customers')).then(res => res.json()).then(res => {
+        authFetch(getApiUrl('/customers')).then(res => res.json()).then(res => {
             if(res.success) setCustomers(res.data);
         });
     }, []);
@@ -709,7 +709,7 @@ function StatementOfAccount() {
                 from: format(dateRange.from, 'yyyy-MM-dd'),
                 to: format(dateRange.to, 'yyyy-MM-dd'),
             });
-            const res = await fetch(getApiUrl(`/reports/soa?${params.toString()}`));
+            const res = await authFetch(getApiUrl(`/reports/soa?${params.toString()}`));
             if (!res.ok) throw new Error(`API error ${res.status}`);
             const data = await res.json();
             if (data.success) setSoaData(data.data);

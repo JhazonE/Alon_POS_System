@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { ActivityLog } from './user-logs-types';
 
 export function useUserLogs() {
@@ -30,7 +30,7 @@ export function useUserLogs() {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
 
-      const res = await fetch(getApiUrl(`/user-activity-logs?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/user-activity-logs?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       if (data.success) {

@@ -12,7 +12,7 @@ import { Logo } from '@/components/logo';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 
 const signupSchema = z.object({
@@ -43,7 +43,7 @@ export default function SignupPage() {
       setError(null);
 
       try {
-        const response = await fetch(getApiUrl('/auth/signup'), {
+        const response = await authFetch(getApiUrl('/auth/signup'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

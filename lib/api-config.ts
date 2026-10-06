@@ -84,3 +84,86 @@ export const getApiUrl = (path: string) => {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${cleanBase}${cleanPath}`;
 };
+
+const TOKEN_STORAGE_KEY = 'alon-session-token';
+const SESSION_STORAGE_KEY = 'mock-user-session';
+
+export function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } catch {
+    /* private mode / blocked storage — the next request 401s and re-logs in */
+  }
+}
+
+export function clearStoredSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * fetch for OUR API: attaches the session token and handles 401 centrally.
+ *
+ * Use this for every call to this app's /api routes. Do NOT use it for
+ * outbound third-party calls (the Sta. Lucia mall consolidator in
+ * lib/integrations/sta-lucia/, the license server) — those share the /api/
+ * path shape but belong to other systems, and sending them our token would
+ * leak a credential. Also do NOT use it for the public pre-token routes
+ * (/api/auth/login, /api/license/*): a failed login is a 401, and authFetch
+ * would turn "invalid credentials" into a redirect to /login.
+ */
+export async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const token = getStoredToken();
+
+  const headers = new Headers(init.headers ?? {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const response = await fetch(input, { ...init, headers });
+
+  // 401 means the token is absent, tampered with, or expired (a 12h TTL means
+  // a shift that starts before midnight can cross it). Clear and send the user
+  // to login.
+  if (response.status === 401 && typeof window !== 'undefined') {
+    clearStoredSession();
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+
+  // 403 is NOT a logout: the caller is authenticated and merely lacks a
+  // permission. Logging a cashier out here would lose an in-progress sale.
+  // Surface it and let the caller carry on handling the response.
+  if (response.status === 403 && typeof window !== 'undefined') {
+    // Loaded lazily: use-toast is a client-only React module, and this file is
+    // also imported by server-side code (lib/external-api-config.ts and
+    // friends), which must not pull React in at import time.
+    import('@/hooks/use-toast')
+      .then(({ toast }) =>
+        toast({
+          variant: 'destructive',
+          title: 'Not permitted',
+          description: "You don't have permission to do that.",
+        })
+      )
+      .catch(() => {
+        /* a toast failing to render must never break the caller */
+      });
+  }
+
+  return response;
+}

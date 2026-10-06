@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { PaymentMethod } from '@/lib/types';
 
 interface PaymentMethodDialogProps {
@@ -126,7 +126,7 @@ export function PaymentMethodRow({ paymentMethod, paymentMethods, onUpdate, onDe
       toast({ variant: 'destructive', title: 'Duplicate Payment Method', description: `A payment method with the name "${name}" already exists.` });
       throw new Error('Payment method already exists');
     }
-    const response = await fetch(getApiUrl(`/payment-methods/${paymentMethod.id}`), {
+    const response = await authFetch(getApiUrl(`/payment-methods/${paymentMethod.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, isReferenceRequired, pointsAmount, currencyEquivalent }),
@@ -139,7 +139,7 @@ export function PaymentMethodRow({ paymentMethod, paymentMethods, onUpdate, onDe
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(getApiUrl(`/payment-methods/${paymentMethod.id}`), { method: 'DELETE' });
+      const response = await authFetch(getApiUrl(`/payment-methods/${paymentMethod.id}`), { method: 'DELETE' });
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to delete payment method');
       toast({ title: 'Payment Method Deleted', description: `Payment method "${paymentMethod.name}" has been deleted.` });

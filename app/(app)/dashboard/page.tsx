@@ -11,7 +11,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatFiscalYear } from '@/lib/fiscal-utils';
 import type { ChartConfig } from '@/components/ui/chart';
 import { SupplierScheduleCard } from './supplier-schedule-card';
@@ -51,7 +51,7 @@ export default function DashboardPage() {
     setError(null);
     try {
       const fyParam = selectedFiscalYear !== 'current' ? `?fiscalYear=${selectedFiscalYear}` : '';
-      const res = await fetch(getApiUrl(`/reports/stats${fyParam}`));
+      const res = await authFetch(getApiUrl(`/reports/stats${fyParam}`));
       if (!res.ok) {
         // Prefer the server-provided message (e.g. "Database unavailable")
         // over a generic status string.

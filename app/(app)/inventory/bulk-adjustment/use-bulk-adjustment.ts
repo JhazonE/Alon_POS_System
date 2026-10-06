@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -91,8 +92,8 @@ export function useBulkAdjustment() {
   const loadMetadata = async () => {
     try {
       const [whRes, supRes] = await Promise.all([
-        fetch('/api/warehouses?activeOnly=true').then(r => r.json()),
-        fetch('/api/suppliers').then(r => r.json())
+        authFetch('/api/warehouses?activeOnly=true').then(r => r.json()),
+        authFetch('/api/suppliers').then(r => r.json())
       ]);
       if (whRes.success) setWarehouses(whRes.data);
       if (supRes.success) setSuppliers(supRes.data);
@@ -158,7 +159,7 @@ export function useBulkAdjustment() {
         notes: note || 'Bulk Stock Adjustment',
         userId, warehouseId, targetWarehouseId, referenceNo, supplierId, adjustmentType
       };
-      const response = await fetch('/api/inventory/adjust/bulk', {
+      const response = await authFetch('/api/inventory/adjust/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

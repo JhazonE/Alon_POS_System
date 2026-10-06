@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Customer } from '@/lib/types';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 type Options = {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export function useSelectCustomer({
       if (query) {
         params.append('search', query);
       }
-      const response = await fetch(getApiUrl(`/customers?${params.toString()}`));
+      const response = await authFetch(getApiUrl(`/customers?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

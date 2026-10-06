@@ -9,7 +9,7 @@ import { ZReadingPreview, BusinessSettings } from '../../sales/z-reading/z-readi
 import type { ZReadingData } from '@/lib/types';
 import { usePrinter } from '@/lib/use-printer';
 import { ZReadingGenerator } from '@/lib/z-reading-generator';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { useReactToPrint } from 'react-to-print';
 import type { ZReadingDialogProps } from './z-reading-report-types';
 
@@ -43,7 +43,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
     const fetchData = async () => {
       if (initialData) {
         try {
-          const settingsRes = await fetch(getApiUrl('/pos-settings'));
+          const settingsRes = await authFetch(getApiUrl('/pos-settings'));
           if (!settingsRes.ok) throw new Error(`API error ${settingsRes.status}`);
           const settingsResult = await settingsRes.json();
           if (settingsResult.success) setBusinessSettings(settingsResult.data);
@@ -53,11 +53,11 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
       }
       setIsLoading(true);
       try {
-        const settingsRes = await fetch(getApiUrl('/pos-settings'));
+        const settingsRes = await authFetch(getApiUrl('/pos-settings'));
         if (!settingsRes.ok) throw new Error(`API error ${settingsRes.status}`);
         const settingsResult = await settingsRes.json();
         if (settingsResult.success) setBusinessSettings(settingsResult.data);
-        const response = await fetch(getApiUrl(`/sales/z-reading?mode=current&terminalId=${terminalId || 'all'}`));
+        const response = await authFetch(getApiUrl(`/sales/z-reading?mode=current&terminalId=${terminalId || 'all'}`));
         if (!response.ok) throw new Error(`API error ${response.status}`);
         const result = await response.json();
         if (result.success && result.data.length > 0) {
@@ -94,7 +94,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
       }
       if (data.id === 'PREVIEW') {
         setIsLoading(true);
-        const saveResponse = await fetch(getApiUrl('/sales/z-reading'), {
+        const saveResponse = await authFetch(getApiUrl('/sales/z-reading'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...data, terminalId: terminalId || 'all', cashierName: data.cashierName || 'Admin' })

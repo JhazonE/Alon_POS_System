@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 interface LoyaltySetting {
   id: string;
@@ -77,7 +77,7 @@ export function useAddCustomer({ open, onOpenChange, onSave, customer }: Options
   const fetchLoyaltySettings = async () => {
     try {
       setIsLoadingLoyaltySettings(true);
-      const response = await fetch(getApiUrl('/loyalty-settings'));
+      const response = await authFetch(getApiUrl('/loyalty-settings'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
 
@@ -108,7 +108,7 @@ export function useAddCustomer({ open, onOpenChange, onSave, customer }: Options
   const fetchPaymentTerms = async () => {
     try {
       setIsLoadingPaymentTerms(true);
-      const response = await fetch(getApiUrl('/payment-terms'));
+      const response = await authFetch(getApiUrl('/payment-terms'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

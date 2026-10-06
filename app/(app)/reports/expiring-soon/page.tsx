@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useEffect, useState } from 'react';
 
@@ -33,7 +34,7 @@ export default function ExpiringSoonPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/reports/expiring-soon?days=${days}`)
+    authFetch(`/api/reports/expiring-soon?days=${days}`)
       .then(r => r.json())
       .then(d => setItems(d.success ? d.items : []))
       .catch(() => setItems([]))

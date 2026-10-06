@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { BackupFile, BackupSchedule, ResetAction } from './data-management-types';
 
 type CsvKey = 'products' | 'customers' | 'suppliers';
@@ -39,7 +39,7 @@ export function useDataManagement() {
   const testConnection = async () => {
     setIsTesting(true); setConnectionStatus('none'); setStatusMessage('');
     try {
-      const res = await fetch(getApiUrl('/settings/database'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...dbConfig, action: 'test' }) });
+      const res = await authFetch(getApiUrl('/settings/database'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...dbConfig, action: 'test' }) });
       const data = await res.json();
       if (res.ok) { setConnectionStatus('success'); setStatusMessage(data.message); toast({ title: 'Connection Successful', description: 'Successfully connected to the database.' }); }
       else { setConnectionStatus('error'); setStatusMessage(data.message); toast({ title: 'Connection Failed', description: data.message, variant: 'destructive' }); }
@@ -50,7 +50,7 @@ export function useDataManagement() {
   const saveConfiguration = async () => {
     setLoading(true);
     try {
-      const res = await fetch(getApiUrl('/settings/database'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...dbConfig, action: 'save' }) });
+      const res = await authFetch(getApiUrl('/settings/database'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...dbConfig, action: 'save' }) });
       const data = await res.json();
       if (res.ok) toast({ title: 'Settings Saved', description: data.message });
       else toast({ title: 'Error Saving', description: data.message, variant: 'destructive' });
@@ -69,19 +69,19 @@ export function useDataManagement() {
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   const fetchBackups = async () => {
-    try { const res = await fetch(getApiUrl('/settings/backup/files')); if (res.ok) setBackups(await res.json()); }
+    try { const res = await authFetch(getApiUrl('/settings/backup/files')); if (res.ok) setBackups(await res.json()); }
     catch (e) { console.error('Failed to load backups', e); }
   };
 
   const fetchSchedule = async () => {
-    try { const res = await fetch(getApiUrl('/settings/backup/schedule')); if (res.ok) setSchedule(await res.json()); }
+    try { const res = await authFetch(getApiUrl('/settings/backup/schedule')); if (res.ok) setSchedule(await res.json()); }
     catch (e) { console.error('Failed to load schedule', e); }
   };
 
   const createBackup = async () => {
     setCreatingBackup(true);
     try {
-      const res = await fetch(getApiUrl('/settings/backup/manual'), { method: 'POST' });
+      const res = await authFetch(getApiUrl('/settings/backup/manual'), { method: 'POST' });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       toast({ title: 'Backup Created', description: 'Database backup created successfully.' });
       fetchBackups();
@@ -92,7 +92,7 @@ export function useDataManagement() {
   const saveSchedule = async () => {
     setSavingSchedule(true);
     try {
-      const res = await fetch(getApiUrl('/settings/backup/schedule'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(schedule) });
+      const res = await authFetch(getApiUrl('/settings/backup/schedule'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(schedule) });
       if (res.ok) toast({ title: 'Schedule Saved', description: 'Backup schedule updated successfully.' });
       else toast({ title: 'Error', description: 'Failed to save schedule', variant: 'destructive' });
     } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
@@ -106,7 +106,7 @@ export function useDataManagement() {
     if (!backupToRestore) return;
     setRestoringBackup(true);
     try {
-      const res = await fetch(getApiUrl('/settings/backup/restore'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: backupToRestore }) });
+      const res = await authFetch(getApiUrl('/settings/backup/restore'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: backupToRestore }) });
       const data = await res.json();
       if (res.ok) toast({ title: 'Restore Successful', description: data.message });
       else throw new Error(data.error);
@@ -122,7 +122,7 @@ export function useDataManagement() {
   const downloadCsv = async (exportPath: string, filename: string, setExp: (v: boolean) => void, label: string) => {
     setExp(true);
     try {
-      const res = await fetch(getApiUrl(exportPath));
+      const res = await authFetch(getApiUrl(exportPath));
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to export'); }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -138,7 +138,7 @@ export function useDataManagement() {
     setImp(true);
     const formData = new FormData(); formData.append('file', file);
     try {
-      const res = await fetch(getApiUrl(importPath), { method: 'POST', body: formData });
+      const res = await authFetch(getApiUrl(importPath), { method: 'POST', body: formData });
       const data = await res.json();
       if (res.ok) { toast({ title: 'Import Successful', description: data.message }); clearFile(); }
       else toast({ title: 'Import Failed', description: data.error || 'Unknown error occurred', variant: 'destructive' });
@@ -176,13 +176,13 @@ export function useDataManagement() {
     try {
       if (resetWithBackup) {
         try {
-          const res = await fetch(getApiUrl('/settings/backup/manual'), { method: 'POST' });
+          const res = await authFetch(getApiUrl('/settings/backup/manual'), { method: 'POST' });
           if (!res.ok) throw new Error('Automatic backup failed');
           toast({ title: 'Safety Backup Created', description: 'A backup was created before the reset action.' });
           fetchBackups();
         } catch (e) { console.error('Backup failed before reset:', e); }
       }
-      const res = await fetch(getApiUrl('/data-management/reset'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: resetAction }) });
+      const res = await authFetch(getApiUrl('/data-management/reset'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: resetAction }) });
       const data = await res.json();
       if (res.ok) { toast({ title: 'Reset Successful', description: data.message }); setTimeout(() => window.location.reload(), 1500); }
       else throw new Error(data.error || 'Reset failed');
@@ -194,7 +194,7 @@ export function useDataManagement() {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const res = await fetch(getApiUrl('/settings/database'));
+        const res = await authFetch(getApiUrl('/settings/database'));
         if (res.ok) {
           const data = await res.json();
           setDbConfig(prev => ({ ...prev, host: data.host, port: data.port, user: data.user, database: data.database }));

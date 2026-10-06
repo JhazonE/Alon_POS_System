@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useMemo } from 'react';
 import { format } from 'date-fns';
@@ -78,7 +79,7 @@ export function useByDateUtils({ salesData, interval, dateRange, terminal, payme
     if (paymentType && paymentType !== 'all') params.append('paymentType', paymentType);
     params.append('limit', '1000000');
     try {
-      const res = await fetch(`/api/sales/by-date?${params.toString()}`);
+      const res = await authFetch(`/api/sales/by-date?${params.toString()}`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) return result.data as SalesData[];

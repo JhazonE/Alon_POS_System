@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Product, PaymentMethod, SalesPerson, Customer, Sale } from '@/lib/types';
 import { salesOrderSchema, type SalesOrderFormValues } from './add-order-types';
 
@@ -119,7 +119,7 @@ export function useAddOrderForm({ paymentMethods, salesPersons, customers, initi
     try {
       setIsSubmitting(true);
       const url = initialData ? getApiUrl(`/sales/orders/${initialData.id}`) : getApiUrl('/sales/orders');
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method: initialData ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import Image from 'next/image';
 import {
@@ -389,7 +390,7 @@ function ProductsContent() {
   const { data: posSettings } = useQuery({
     queryKey: ['posSettings'],
     queryFn: async () => {
-      const response = await fetch('/api/pos-settings');
+      const response = await authFetch('/api/pos-settings');
       if (!response.ok) throw new Error('Failed to fetch POS settings');
       return response.json();
     }

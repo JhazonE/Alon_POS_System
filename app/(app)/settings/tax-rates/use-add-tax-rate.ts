@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { type TaxRateFormData, FORM_DEFAULTS } from './tax-rates-types';
 
 export function useAddTaxRate(onTaxRateAdded: () => void) {
@@ -17,7 +17,7 @@ export function useAddTaxRate(onTaxRateAdded: () => void) {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/settings/tax-rates'), {
+      const res = await authFetch(getApiUrl('/settings/tax-rates'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, rate: parseFloat(formData.rate) }),

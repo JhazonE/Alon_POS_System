@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getApiUrl } from "@/lib/api-config"
+import { getApiUrl, authFetch } from "@/lib/api-config"
 import { TrendingUp, Loader2 } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis, LabelList, CartesianGrid } from "recharts"
 
@@ -50,7 +50,7 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
 
     async function fetchData() {
         try {
-            const res = await fetch(getApiUrl('/sales/top-products'))
+            const res = await authFetch(getApiUrl('/sales/top-products'))
             if (!res.ok) throw new Error(`API error ${res.status}`)
             const result = await res.json()
             if (result.success) {

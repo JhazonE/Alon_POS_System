@@ -5,7 +5,7 @@ import type { Sale, SystemSettings } from '@/lib/types';
 import { usePrinter } from '@/lib/use-printer';
 import { useToast } from '@/hooks/use-toast';
 import { ReceiptGenerator } from '@/lib/receipt-generator';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { mapSaleToReceiptDetails } from './recent-sales-utils';
 import { buildRecentSalesQuery } from '../transaction-search/build-recent-sales-query';
 
@@ -83,7 +83,7 @@ export function useRecentSales({
         return;
       }
 
-      fetch(getApiUrl(`/pos-settings?_t=${Date.now()}`), { cache: 'no-store' })
+      authFetch(getApiUrl(`/pos-settings?_t=${Date.now()}`), { cache: 'no-store' })
         .then(res => res.json())
         .then(result => {
           if (result.success) {
@@ -111,7 +111,7 @@ export function useRecentSales({
       const fetchRecentSales = async () => {
         try {
           const qs = buildRecentSalesQuery(searchParamsRef.current);
-          const response = await fetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' });
+          const response = await authFetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' });
           if (!response.ok) throw new Error(`API error ${response.status}`);
           const result = await response.json();
 
@@ -138,7 +138,7 @@ export function useRecentSales({
     if (!(isOpen && step === 'list')) return;
     const t = setTimeout(() => {
       const qs = buildRecentSalesQuery(searchParamsRef.current);
-      fetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' })
+      authFetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' })
         .then(res => res.json())
         .then(result => { if (result.success) setRecentSales(result.data); })
         .catch(() => {});

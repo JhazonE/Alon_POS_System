@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { usePrinter } from '@/lib/use-printer';
 import { OverallReadingGenerator } from '@/lib/overall-reading-generator';
 import { OverallReadingPreview, OverallReadingData } from '../../sales/overall-reading/overall-reading-preview';
@@ -33,7 +33,7 @@ export function useOverallReading({ isOpen, terminalId, terminalName, printMode 
     if (!terminalId) return;
     setLoading(true);
     try {
-      const res = await fetch(getApiUrl(`/sales/overall-reading?terminalId=${terminalId}`));
+      const res = await authFetch(getApiUrl(`/sales/overall-reading?terminalId=${terminalId}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) {

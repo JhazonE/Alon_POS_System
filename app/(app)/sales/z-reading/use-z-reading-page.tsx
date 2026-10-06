@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { ZReadingData, BusinessSettings } from './z-reading-preview';
 
 export type PrinterFormat = '58mm' | '80mm';
@@ -42,7 +42,7 @@ export function useZReadingPage() {
   const { data: businessSettings } = useQuery<BusinessSettings | null>({
     queryKey: ['posSettings'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success ? result.data : null;
@@ -57,7 +57,7 @@ export function useZReadingPage() {
       params.append('startDate', queryParams.from);
       params.append('endDate', queryParams.to);
       if (queryParams.terminalId) params.append('terminalId', queryParams.terminalId);
-      const res = await fetch(getApiUrl(`/sales/z-reading?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/z-reading?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (!result.success) return [];

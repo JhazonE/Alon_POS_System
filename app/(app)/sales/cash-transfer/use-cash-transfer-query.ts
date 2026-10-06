@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useQuery } from '@tanstack/react-query';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { CashTransfer, Cashier } from './cash-transfer-types';
 
 type QueryParams = {
@@ -19,7 +19,7 @@ export function useCashTransferQuery({ dateRange, terminalId, cashierId, type, c
   const { data: cashiersData } = useQuery({
     queryKey: ['cashiers'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/users'));
+      const res = await authFetch(getApiUrl('/users'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -53,7 +53,7 @@ export function useCashTransferQuery({ dateRange, terminalId, cashierId, type, c
       if (type && type !== 'all') params.append('type', type);
       params.append('page', currentPage.toString());
       params.append('limit', pageSize.toString());
-      const res = await fetch(getApiUrl(`/pos/cash-transfer?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/pos/cash-transfer?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error('Failed to fetch cash transfers');

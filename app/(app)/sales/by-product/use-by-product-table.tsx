@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { ProductSalesData, TransactionData } from './by-product-types';
 
 type TableParams = {
@@ -58,7 +58,7 @@ export function useByProductTable({ productSales, totalPages, dateRange, termina
       if (dateRange?.from) params.append('startDate', format(dateRange.from, 'yyyy-MM-dd'));
       if (dateRange?.to) params.append('endDate', format(dateRange.to, 'yyyy-MM-dd'));
       if (terminal && terminal !== 'all') params.append('terminalId', terminal);
-      const res = await fetch(getApiUrl(`/sales/transactions?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/transactions?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) {

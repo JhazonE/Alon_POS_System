@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useMemo } from 'react';
 import { format } from 'date-fns';
@@ -56,7 +57,7 @@ export function useDetailsUtils({ sales, searchTerm, dateRange, terminalId, paym
     if (paymentTypeFilter && paymentTypeFilter !== 'all') params.append('paymentMethod', paymentTypeFilter);
     params.append('limit', '1000000');
     try {
-      const res = await fetch(`/api/sales/transactions?${params.toString()}`);
+      const res = await authFetch(`/api/sales/transactions?${params.toString()}`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success && Array.isArray(result.data) ? result.data : [];

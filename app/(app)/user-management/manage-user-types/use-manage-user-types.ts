@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 export function useManageUserTypes() {
   const { toast } = useToast();
@@ -16,7 +16,7 @@ export function useManageUserTypes() {
   const fetchUserTypes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/user-types'));
+      const res = await authFetch(getApiUrl('/user-types'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       setUserTypes(data);
@@ -42,7 +42,7 @@ export function useManageUserTypes() {
   const handleDeleteConfirm = async () => {
     if (!deletingType) return;
     try {
-      const res = await fetch(getApiUrl(`/user-types/${deletingType.id}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/user-types/${deletingType.id}`), { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete user type');
       toast({ title: 'User Type Deleted', description: 'The user type has been removed.' });

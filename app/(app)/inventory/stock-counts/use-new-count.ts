@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -37,11 +38,11 @@ export function useNewCount({ onCreated }: { onCreated: () => void }) {
 
   useEffect(() => {
     if (open) {
-      fetch('/api/warehouses?activeOnly=true')
+      authFetch('/api/warehouses?activeOnly=true')
         .then((r) => r.json())
         .then((d) => { if (d.success) setWarehouses(d.data); })
         .catch(console.error);
-      fetch('/api/shelf-locations')
+      authFetch('/api/shelf-locations')
         .then((r) => r.json())
         .then((d) => { if (d.success) setShelves(d.data); })
         .catch(console.error);
@@ -64,7 +65,7 @@ export function useNewCount({ onCreated }: { onCreated: () => void }) {
     }
     try {
       setIsSubmitting(true);
-      const res = await fetch('/api/inventory/stock-counts', {
+      const res = await authFetch('/api/inventory/stock-counts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -21,7 +21,7 @@ import {
 import { Loader2, Eye, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatCurrency } from '@/lib/utils';
 
 interface ViewInvoiceDialogProps {
@@ -67,7 +67,7 @@ export default function ViewInvoiceDialog({ invoiceId, children }: ViewInvoiceDi
   const fetchInvoiceDetails = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl(`/customers/invoices/${encodeURIComponent(invoiceId)}`));
+      const response = await authFetch(getApiUrl(`/customers/invoices/${encodeURIComponent(invoiceId)}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

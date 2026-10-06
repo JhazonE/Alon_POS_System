@@ -1,3 +1,4 @@
+import { authFetch } from '@/lib/api-config';
 export type ActivityModule =
   | 'INVENTORY'
   | 'SALES'
@@ -53,7 +54,7 @@ export async function logActivity(options: LogActivityOptions): Promise<void> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-    const res = await fetch(`${base}/user-activity-logs`, {
+    const res = await authFetch(`${base}/user-activity-logs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

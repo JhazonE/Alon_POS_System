@@ -9,7 +9,7 @@ import { applyPriceLevelAdjustment } from '@/lib/price-level-calc';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { generateSku } from '@/lib/sku';
 import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings } from '@/lib/types';
 import type { ProductType } from '@/lib/product-type';
@@ -123,7 +123,7 @@ export function useAddProductForm({
   });
 
   useEffect(() => {
-    fetch(getApiUrl('/pos-settings'))
+    authFetch(getApiUrl('/pos-settings'))
       .then(res => res.json())
       .then(data => {
         if (data.success) {

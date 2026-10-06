@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { InlineEditableSelect } from '../../products/components/inline-editable-select';
 import type { PaymentMethod } from '@/lib/types';
 
@@ -33,7 +33,7 @@ export function InlinePaymentMethodSelect({
     try {
       const duplicate = paymentMethods.find((m) => m.name.toLowerCase() === name.toLowerCase());
       if (duplicate) throw new Error(`A payment method named "${name}" already exists.`);
-      const res = await fetch(getApiUrl('/payment-methods'), {
+      const res = await authFetch(getApiUrl('/payment-methods'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, isReferenceRequired: false }),
@@ -51,11 +51,11 @@ export function InlinePaymentMethodSelect({
   const handleRename = async (id: string, name: string) => {
     try {
       // PUT is a full-row update — fetch the record so reference/points settings survive the rename
-      const getRes = await fetch(getApiUrl(`/payment-methods/${id}`));
+      const getRes = await authFetch(getApiUrl(`/payment-methods/${id}`));
       if (!getRes.ok) throw new Error('Failed to load payment method');
       const existing = await getRes.json();
       if (!existing.success) throw new Error(existing.error || 'Failed to load payment method');
-      const res = await fetch(getApiUrl(`/payment-methods/${id}`), {
+      const res = await authFetch(getApiUrl(`/payment-methods/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

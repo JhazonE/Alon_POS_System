@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePrinter } from '@/lib/use-printer';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { XReadingGenerator } from '@/lib/x-reading-generator';
 import type { XReadingData } from '@/lib/types';
 import type { BusinessSettings } from '../../sales/z-reading/z-reading-preview';
@@ -48,7 +48,7 @@ export function useXReadingReport({ isOpen, shiftId, autoShow = false, terminalN
       } else {
         url = '/sales/x-reading?shiftStatus=active&limit=1';
       }
-      const response = await fetch(getApiUrl(url));
+      const response = await authFetch(getApiUrl(url));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success && result.data.length > 0) {
@@ -129,7 +129,7 @@ export function useXReadingReport({ isOpen, shiftId, autoShow = false, terminalN
 
   useEffect(() => {
     if (isOpen) {
-      fetch(getApiUrl('/pos-settings'))
+      authFetch(getApiUrl('/pos-settings'))
         .then(res => res.json())
         .then(data => { if (data.success) setBusinessSettings(data.data); })
         .catch(err => console.error('Failed to load settings', err));

@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { Separator } from '@/components/ui/separator';
 
 const terminalSchema = z.object({
@@ -88,7 +88,7 @@ export function TerminalSettingsDialog({ onTerminalChanged, currentTerminalId }:
 
   const fetchWarehouses = async () => {
     try {
-      const response = await fetch(getApiUrl('/warehouses?activeOnly=true'));
+      const response = await authFetch(getApiUrl('/warehouses?activeOnly=true'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -102,7 +102,7 @@ export function TerminalSettingsDialog({ onTerminalChanged, currentTerminalId }:
   const fetchTerminals = async () => {
     try {
       setIsLoadingTerminals(true);
-      const response = await fetch(getApiUrl('/pos-terminals?activeOnly=true'));
+      const response = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -143,7 +143,7 @@ export function TerminalSettingsDialog({ onTerminalChanged, currentTerminalId }:
   async function onSubmit(values: TerminalFormValues) {
     setIsSaving(true);
     try {
-      const response = await fetch(getApiUrl('/pos-terminals'), {
+      const response = await authFetch(getApiUrl('/pos-terminals'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

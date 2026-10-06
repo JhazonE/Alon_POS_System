@@ -6,7 +6,7 @@ import { useReactToPrint } from 'react-to-print';
 import { format, subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import type { OverallReadingData, PrinterFormat } from './overall-reading-types';
@@ -56,7 +56,7 @@ export function useOverallReadingPage() {
       if (shiftsQueryParams.terminalId !== 'all') {
         params.append('terminalId', shiftsQueryParams.terminalId);
       }
-      const res = await fetch(getApiUrl(`/pos/shifts?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/pos/shifts?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch shifts');
@@ -74,7 +74,7 @@ export function useOverallReadingPage() {
       const params = new URLSearchParams();
       params.append('terminalId', selectedShift.terminal_id);
       params.append('shiftId', selectedShift.id);
-      const res = await fetch(getApiUrl(`/sales/overall-reading?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/overall-reading?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch reading for shift');

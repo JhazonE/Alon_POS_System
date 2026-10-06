@@ -15,7 +15,7 @@ import { Calendar, FileDown, FileSpreadsheet, ShoppingCart, TrendingUp, Percent 
 import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 
@@ -49,7 +49,7 @@ export default function FiscalYearReportPage() {
     setIsLoading(true);
     try {
       const q = year ? `?fiscalYear=${year}` : '';
-      const res = await fetch(getApiUrl(`/reports/fiscal-year${q}`));
+      const res = await authFetch(getApiUrl(`/reports/fiscal-year${q}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) {

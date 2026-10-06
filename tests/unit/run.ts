@@ -66,6 +66,7 @@ const TEST_FILES = [
   'proxy-allowlist.test',
   'require-permission.test',
   'destructive-route-guards.test',
+  'auth-fetch-migration.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];

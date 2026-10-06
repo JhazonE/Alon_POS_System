@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { InlineEditableSelect } from '../../products/components/inline-editable-select';
 import type { SalesPerson } from '@/lib/types';
 
@@ -31,7 +31,7 @@ export function InlineSalesPersonSelect({
 
   const handleAdd = async (name: string) => {
     try {
-      const res = await fetch(getApiUrl('/sales-persons'), {
+      const res = await authFetch(getApiUrl('/sales-persons'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
@@ -50,7 +50,7 @@ export function InlineSalesPersonSelect({
     try {
       // PUT is a full-row update — merge contact/active from the loaded list so they survive the rename
       const existing = salesPersons.find((p) => String(p.id) === id);
-      const res = await fetch(getApiUrl(`/sales-persons/${id}`), {
+      const res = await authFetch(getApiUrl(`/sales-persons/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -14,7 +14,7 @@ import {
   RotateCcw, Settings2, ChevronDown, ChevronUp, Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { QueuedOrder } from './pos-types';
 
 type QueueConfig = {
@@ -42,7 +42,7 @@ export function PosQueuePanel({ open, onOpenChange, queuedOrders, onClaimOrder, 
 
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch(getApiUrl('/pos/queue/config'));
+      const res = await authFetch(getApiUrl('/pos/queue/config'));
       const result = await res.json();
       if (result.success) {
         setConfig(result.data);
@@ -59,7 +59,7 @@ export function PosQueuePanel({ open, onOpenChange, queuedOrders, onClaimOrder, 
     if (!confirm('Reset queue number back to 001?')) return;
     setIsResetting(true);
     try {
-      const res = await fetch(getApiUrl('/pos/queue/config'), {
+      const res = await authFetch(getApiUrl('/pos/queue/config'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reset' }),
@@ -76,7 +76,7 @@ export function PosQueuePanel({ open, onOpenChange, queuedOrders, onClaimOrder, 
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch(getApiUrl('/pos/queue/config'), {
+      const res = await authFetch(getApiUrl('/pos/queue/config'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

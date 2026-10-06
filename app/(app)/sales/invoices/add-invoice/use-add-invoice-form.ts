@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { addDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Product, PaymentMethod } from '@/lib/types';
 import { salesInvoiceSchema, type SalesInvoiceFormValues } from './add-invoice-types';
 
@@ -105,7 +105,7 @@ export function useAddInvoiceForm({ paymentMethods, onClose, onSuccess }: Props)
   const onSubmit = async (values: SalesInvoiceFormValues) => {
     try {
       setIsSubmitting(true);
-      const res = await fetch(getApiUrl('/sales'), {
+      const res = await authFetch(getApiUrl('/sales'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),

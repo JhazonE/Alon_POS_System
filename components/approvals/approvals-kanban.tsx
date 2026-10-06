@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -695,7 +696,7 @@ export function ApprovalsKanban({ open }: ApprovalsKanbanProps) {
   const fetchQueue = async () => {
     try {
       setIsLoading(true);
-      const qRes = await fetch('/api/approvals/queue?status=ALL');
+      const qRes = await authFetch('/api/approvals/queue?status=ALL');
       if (!qRes.ok) {
         const errData = await qRes.json().catch(() => ({}));
         throw new Error(errData.error || `Server error ${qRes.status}`);
@@ -774,7 +775,7 @@ export function ApprovalsKanban({ open }: ApprovalsKanbanProps) {
     if (!user) return;
     setIsProcessing(true);
     try {
-      const res = await fetch('/api/approvals/process', {
+      const res = await authFetch('/api/approvals/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ queueId: id, action, userId: user.uid, notes }),

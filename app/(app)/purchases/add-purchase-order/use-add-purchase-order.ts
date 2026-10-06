@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useProducts, usePaymentMethods } from '@/hooks/use-api';
 import { useUser } from '@/hooks/use-user';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { toSafeNumber } from '@/lib/utils';
 
 import {
@@ -86,11 +86,11 @@ export function useAddPurchaseOrder({
   // ---- initial data fetches ------------------------------------------------
 
   useEffect(() => {
-    fetch(getApiUrl('/pos-settings'))
+    authFetch(getApiUrl('/pos-settings'))
       .then((res) => res.json())
       .then((data) => { if (data.success) setSystemSettings(data.data); });
 
-    fetch(getApiUrl('/price-levels'))
+    authFetch(getApiUrl('/price-levels'))
       .then((res) => res.json())
       .then((data) => {
         if (data || data.success) {
@@ -123,7 +123,7 @@ export function useAddPurchaseOrder({
   }, [fetchSuppliers]);
 
   useEffect(() => {
-    fetch(getApiUrl('/settings/tax-rates'))
+    authFetch(getApiUrl('/settings/tax-rates'))
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -452,14 +452,14 @@ export function useAddPurchaseOrder({
 
       let result;
       if (editOrder) {
-        const response = await fetch(getApiUrl(`/purchase-orders/${editOrder.id}`), {
+        const response = await authFetch(getApiUrl(`/purchase-orders/${editOrder.id}`), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData),
         });
         result = await response.json();
       } else {
-        const response = await fetch(getApiUrl('/purchase-orders'), {
+        const response = await authFetch(getApiUrl('/purchase-orders'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData),

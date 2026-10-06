@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 export interface CustomerWithBalance {
   id: string;
@@ -22,7 +22,7 @@ export function useCustomerBalances() {
   const fetchCustomerBalances = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/customers/balances'));
+      const response = await authFetch(getApiUrl('/customers/balances'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
 

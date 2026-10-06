@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useState, useEffect } from 'react';
 import {
@@ -32,7 +33,7 @@ export function TerminalSelector({
     const fetchTerminals = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/pos/terminals');
+        const response = await authFetch('/api/pos/terminals');
         const result = await response.json();
         if (result.success) {
           setTerminals(result.data);

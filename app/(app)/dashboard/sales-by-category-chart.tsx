@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getApiUrl } from "@/lib/api-config"
+import { getApiUrl, authFetch } from "@/lib/api-config"
 import { TrendingUp, Loader2 } from "lucide-react"
 import { Pie, PieChart, Label, Cell, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
 
@@ -53,7 +53,7 @@ export function SalesByCategoryChart({ data: initialData }: { data?: any[] }) {
     // Fallback fetch if needed (though dashboard usually passes data)
     async function fetchData() {
         try {
-            const res = await fetch(getApiUrl('/reports/stats')) // Use the same endpoint or specific one if available?
+            const res = await authFetch(getApiUrl('/reports/stats')) // Use the same endpoint or specific one if available?
             // The dashboard uses /api/reports/stats which returns everything.
             // For now, assume data is passed via props or handle empty.
             // If data is null, we just show loading or empty.

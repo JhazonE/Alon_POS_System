@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { CustomerDisplayEvent } from '@/hooks/use-customer-display';
 
 const CHANNEL_NAME = 'pos-customer-display';
@@ -704,7 +704,7 @@ export default function CustomerDisplayPage() {
   }, []);
 
   useEffect(() => {
-    fetch(getApiUrl('/pos-settings'))
+    authFetch(getApiUrl('/pos-settings'))
       .then((r) => r.json())
       .then((result) => {
         if (result.success) {

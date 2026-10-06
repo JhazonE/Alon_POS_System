@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 const salesGroupSchema = z.object({
   name: z.string().min(1, 'Group name is required'),
@@ -36,7 +36,7 @@ export function useAddSalesGroup({ onGroupAdded, onSalesGroupsUpdated }: Options
   const fetchSalesGroups = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/sales-groups'));
+      const response = await authFetch(getApiUrl('/sales-groups'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -58,7 +58,7 @@ export function useAddSalesGroup({ onGroupAdded, onSalesGroupsUpdated }: Options
   const handleSubmit = async (values: SalesGroupFormValues) => {
     setIsSaving(true);
     try {
-      const response = await fetch(getApiUrl('/sales-groups'), {
+      const response = await authFetch(getApiUrl('/sales-groups'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
@@ -97,7 +97,7 @@ export function useAddSalesGroup({ onGroupAdded, onSalesGroupsUpdated }: Options
     if (!groupToDelete) return;
 
     try {
-      const response = await fetch(getApiUrl(`/sales-groups?id=${groupToDelete.id}`), {
+      const response = await authFetch(getApiUrl(`/sales-groups?id=${groupToDelete.id}`), {
         method: 'DELETE',
       });
       const result = await response.json();

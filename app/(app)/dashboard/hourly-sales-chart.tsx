@@ -10,7 +10,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Loader2 } from 'lucide-react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 const chartConfig = {
   sales: {
@@ -33,7 +33,7 @@ export function HourlySalesChart() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(getApiUrl('/sales/hourly'));
+        const res = await authFetch(getApiUrl('/sales/hourly'));
         if (!res.ok) {
           throw new Error('Failed to fetch hourly sales');
         }

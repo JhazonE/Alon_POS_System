@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 export interface ViewBadOrderDialogProps {
   badOrder: any;
@@ -27,7 +27,7 @@ export function useViewBadOrder({ badOrder, open, onOpenChange, onUpdate }: View
   const handleUpdate = async () => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(getApiUrl(`/bad-orders/${badOrder.id}`), {
+      const response = await authFetch(getApiUrl(`/bad-orders/${badOrder.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, resolutionNotes }),

@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 
 interface CustomerSale {
@@ -77,7 +77,7 @@ export default function SalesByCustomerPage() {
         params.append('endDate', format(toDate, 'yyyy-MM-dd'));
       }
 
-      const response = await fetch(getApiUrl(`/sales/transactions?${params.toString()}`));
+      const response = await authFetch(getApiUrl(`/sales/transactions?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       

@@ -1,3 +1,4 @@
+import { authFetch } from '@/lib/api-config';
 /**
  * External Accounting API Service
  * Handles communication with external accounting server
@@ -115,6 +116,8 @@ async function sendToExternalApi(
           headers['Authorization'] = `Bearer ${config.bearerToken}`;
         }
 
+        // Plain fetch on purpose: endpoint is the third-party accounting API;
+        // our session token must not be sent there.
         const response = await fetch(endpoint, {
           method: 'POST',
           headers,
@@ -185,7 +188,7 @@ export async function syncAccountsPayable(
 
   try {
     // Fetch supplier data with balance
-    const response = await fetch(`/api/suppliers/${supplierId}/balance`);
+    const response = await authFetch(`/api/suppliers/${supplierId}/balance`);
     if (!response.ok) {
       throw new Error('Failed to fetch supplier balance');
     }

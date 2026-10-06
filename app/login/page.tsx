@@ -14,7 +14,7 @@ import { Logo } from '@/components/logo';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, setStoredToken } from '@/lib/api-config';
 
 
 const loginSchema = z.object({
@@ -74,6 +74,13 @@ export default function LoginPage() {
 
       if (!response.ok) {
         throw new Error(result.error || 'Login failed');
+      }
+
+      // The token is what the server trusts; the session object below is kept
+      // for the existing client reads. Use the helper rather than the raw key
+      // so the storage key lives in exactly one place.
+      if (result.token) {
+        setStoredToken(result.token);
       }
 
       // Store user session (matching previous mock structure for compatibility)

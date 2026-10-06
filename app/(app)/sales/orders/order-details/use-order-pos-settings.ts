@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { POSSettings } from './order-details-types';
 
 export function useOrderPosSettings() {
@@ -10,7 +10,7 @@ export function useOrderPosSettings() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(getApiUrl('/pos-settings'));
+        const res = await authFetch(getApiUrl('/pos-settings'));
         if (!res.ok) throw new Error(`API error ${res.status}`);
         const data = await res.json();
         if (data.success && data.data) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { ApiSyncLog } from '@/lib/services/api-sync-logger';
 import { EMPTY_FORM, type ExternalApi, type ApiRole, type AllowedMethods } from './external-api-types';
 
@@ -31,7 +31,7 @@ export function useExternalApi() {
   const fetchApis = async () => {
     setIsLoadingApis(true);
     try {
-      const res = await fetch(getApiUrl('/settings/external-api'));
+      const res = await authFetch(getApiUrl('/settings/external-api'));
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (data.success) setApis(data.apis);
@@ -44,7 +44,7 @@ export function useExternalApi() {
     try {
       const status = statusFilter ?? logStatusFilter;
       const qs = status !== 'all' ? `?limit=50&status=${status}` : '?limit=50';
-      const res = await fetch(getApiUrl(`/external-api/logs${qs}`));
+      const res = await authFetch(getApiUrl(`/external-api/logs${qs}`));
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (data.success) setLogs(data.logs);
@@ -58,7 +58,7 @@ export function useExternalApi() {
     if (!log.id) return;
     setRetryingLogId(log.id);
     try {
-      const res = await fetch(getApiUrl(`/external-api/logs/${log.id}/retry`), { method: 'POST' });
+      const res = await authFetch(getApiUrl(`/external-api/logs/${log.id}/retry`), { method: 'POST' });
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (data.success) { toast({ title: 'Retry Successful', description: 'The sync operation completed successfully.' }); fetchLogs(); }
@@ -70,7 +70,7 @@ export function useExternalApi() {
   const clearLogs = async () => {
     setIsClearingLogs(true);
     try {
-      const res = await fetch(getApiUrl('/external-api/logs?confirm=CLEAR'), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl('/external-api/logs?confirm=CLEAR'), { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to clear logs.');
       toast({ title: 'Logs Cleared', description: `Cleared ${data.data.deleted} log entries.` });
@@ -111,7 +111,7 @@ export function useExternalApi() {
     try {
       const url = editingApi ? getApiUrl(`/settings/external-api/${editingApi.id}`) : getApiUrl('/settings/external-api');
       const method = editingApi ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       const data = await res.json();
       if (data.success) {
         toast({ title: editingApi ? 'API Updated' : 'API Added', description: `"${form.name}" has been saved.` });
@@ -123,7 +123,7 @@ export function useExternalApi() {
 
   const handleToggleEnabled = async (api: ExternalApi) => {
     try {
-      const res = await fetch(getApiUrl(`/settings/external-api/${api.id}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...api, enabled: !api.enabled }) });
+      const res = await authFetch(getApiUrl(`/settings/external-api/${api.id}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...api, enabled: !api.enabled }) });
       const data = await res.json();
       if (data.success) setApis(prev => prev.map(a => a.id === api.id ? { ...a, enabled: !a.enabled } : a));
     } catch {}
@@ -133,7 +133,7 @@ export function useExternalApi() {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(getApiUrl(`/settings/external-api/${deleteTarget.id}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/settings/external-api/${deleteTarget.id}`), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (data.success) {
@@ -149,7 +149,7 @@ export function useExternalApi() {
     setTestingId(api.id);
     try {
       if (api.provider === 'sta_lucia') {
-        const res = await fetch(getApiUrl('/integrations/sta-lucia/test'), {
+        const res = await authFetch(getApiUrl('/integrations/sta-lucia/test'), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ apiId: api.id }),
         });
@@ -172,7 +172,7 @@ export function useExternalApi() {
         return;
       }
 
-      const res = await fetch(getApiUrl(`/settings/external-api/${api.id}`), {
+      const res = await authFetch(getApiUrl(`/settings/external-api/${api.id}`), {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'test', apiEndpoint: api.apiEndpoint, authType: api.authType, apiKey: api.apiKey, bearerToken: api.bearerToken, timeout: api.timeout, role: api.role }),
       });

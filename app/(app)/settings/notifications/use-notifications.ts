@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { NotificationSettings } from './notification-types';
 
 const DEFAULT: NotificationSettings = {
@@ -24,7 +24,7 @@ export function useNotifications() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(getApiUrl('/pos-settings'));
+        const res = await authFetch(getApiUrl('/pos-settings'));
         if (!res.ok) throw new Error();
         const result = await res.json();
         if (result.success) {
@@ -47,7 +47,7 @@ export function useNotifications() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+      const res = await authFetch(getApiUrl('/pos-settings'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
       const result = await res.json();
       if (result.success) toast({ title: 'Settings Saved', description: 'Notification preferences have been updated successfully' });
       else throw new Error(result.error);

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { InlineEditableSelect } from '../../products/components/inline-editable-select';
 import type { Warehouse } from '@/lib/types';
 
@@ -33,7 +33,7 @@ export function InlineWarehouseSelect({
   const handleAdd = async (name: string) => {
     try {
       const id = `wh_${uuidv4().substring(0, 8)}`;
-      const res = await fetch(getApiUrl('/warehouses'), {
+      const res = await authFetch(getApiUrl('/warehouses'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, name }),
@@ -51,11 +51,11 @@ export function InlineWarehouseSelect({
   const handleRename = async (id: string, name: string) => {
     try {
       // PUT is a full-row update — fetch the record so location/contact/isMain survive the rename
-      const getRes = await fetch(getApiUrl(`/warehouses/${id}`));
+      const getRes = await authFetch(getApiUrl(`/warehouses/${id}`));
       if (!getRes.ok) throw new Error('Failed to load warehouse');
       const existing = await getRes.json();
       if (!existing.success) throw new Error(existing.error || 'Failed to load warehouse');
-      const res = await fetch(getApiUrl(`/warehouses/${id}`), {
+      const res = await authFetch(getApiUrl(`/warehouses/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

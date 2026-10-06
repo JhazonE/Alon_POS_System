@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -56,8 +57,8 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
     const fetchData = async () => {
       try {
         const [wfRes, rolesRes] = await Promise.all([
-          fetch('/api/approvals/workflows'),
-          fetch('/api/user-types')
+          authFetch('/api/approvals/workflows'),
+          authFetch('/api/user-types')
         ]);
         
         const wfData = await wfRes.json();
@@ -98,7 +99,7 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
   const saveWorkflow = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/approvals/workflows', {
+      const response = await authFetch('/api/approvals/workflows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

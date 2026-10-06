@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -24,7 +25,7 @@ export function useDetailsQuery({ dateRange, terminalId, paymentTypeFilter, curr
       if (paymentTypeFilter && paymentTypeFilter !== 'all') params.append('paymentMethod', paymentTypeFilter);
       params.append('page', currentPage.toString());
       params.append('limit', limit.toString());
-      const res = await fetch(`/api/sales/transactions?${params.toString()}`);
+      const res = await authFetch(`/api/sales/transactions?${params.toString()}`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch sales');

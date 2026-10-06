@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -38,7 +39,7 @@ export function useByDateQuery({ dateRange, terminal, interval, paymentType, cur
       if (paymentType && paymentType !== 'all') params.append('paymentType', paymentType);
       params.append('page', currentPage.toString());
       params.append('limit', limit.toString());
-      const res = await fetch(`/api/sales/by-date?${params.toString()}`);
+      const res = await authFetch(`/api/sales/by-date?${params.toString()}`);
       return res.json();
     },
     placeholderData: (prev) => prev,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { PaymentMethod } from '@/lib/types';
 
 const PAGE_SIZE = 10;
@@ -17,7 +17,7 @@ export function useManagePaymentMethods(isOpen: boolean, onChange?: () => void) 
   const fetchPaymentMethods = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/payment-methods?activeOnly=false'));
+      const response = await authFetch(getApiUrl('/payment-methods?activeOnly=false'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -47,7 +47,7 @@ export function useManagePaymentMethods(isOpen: boolean, onChange?: () => void) 
       toast({ variant: 'destructive', title: 'Duplicate Payment Method', description: `A payment method with the name "${name}" already exists.` });
       throw new Error('Payment method already exists');
     }
-    const response = await fetch(getApiUrl('/payment-methods'), {
+    const response = await authFetch(getApiUrl('/payment-methods'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, isReferenceRequired, pointsAmount, currencyEquivalent }),

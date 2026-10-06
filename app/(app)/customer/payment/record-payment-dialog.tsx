@@ -44,7 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Sale, PaymentMethod } from '@/lib/types';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatCurrency } from '@/lib/utils';
 
 const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
@@ -185,7 +185,7 @@ export default function RecordPaymentDialog({ sale, children, onSuccess }: Recor
     }
 
     try {
-        const response = await fetch(getApiUrl(`/customers/invoices/${sale.id}/payment`), {
+        const response = await authFetch(getApiUrl(`/customers/invoices/${sale.id}/payment`), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

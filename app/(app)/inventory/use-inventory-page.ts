@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -26,7 +27,7 @@ export function useInventoryPage() {
   const { data: posSettings } = useQuery({
     queryKey: ['posSettings'],
     queryFn: async () => {
-      const response = await fetch('/api/pos-settings');
+      const response = await authFetch('/api/pos-settings');
       if (!response.ok) throw new Error('Failed to fetch POS settings');
       return response.json();
     }

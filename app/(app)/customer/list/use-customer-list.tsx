@@ -9,7 +9,7 @@ import { Customer } from '@/lib/types';
 import { Pencil, Trash2, MoreHorizontal, CreditCard, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,7 +86,7 @@ export function useCustomerList({
   const checkTransactions = async (customer: Customer) => {
     try {
       setIsCheckingTransactions(true);
-      const response = await fetch(getApiUrl(`/customers/${customer.id}/check-transactions`));
+      const response = await authFetch(getApiUrl(`/customers/${customer.id}/check-transactions`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

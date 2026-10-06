@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useEffect, useState } from 'react';
 
@@ -40,7 +41,7 @@ export function useManageShelfLocations({ open, onOpenChange, onLocationAdded }:
   const fetchLocations = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/shelf-locations');
+      const response = await authFetch('/api/shelf-locations');
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const data = await response.json();
       if (data.success) {
@@ -112,7 +113,7 @@ export function useManageShelfLocations({ open, onOpenChange, onLocationAdded }:
     if (!confirm('Are you sure you want to delete this shelf location?')) return;
 
     try {
-      const response = await fetch(`/api/shelf-locations/${id}`, { method: 'DELETE' });
+      const response = await authFetch(`/api/shelf-locations/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const data = await response.json();
 

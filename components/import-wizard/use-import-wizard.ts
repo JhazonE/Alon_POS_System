@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { ENTITY_SCHEMAS, type EntityKey } from '@/lib/import/entity-schemas';
 import { parseFile, type ParsedFile } from '@/lib/import/parse-file';
 import { autoMapColumns } from '@/lib/import/auto-map';
@@ -48,7 +48,7 @@ export function useImportWizard(entity: EntityKey) {
       if (pf.rows.length === 0) { setError('No rows found in the file.'); return; }
       setParsed(pf);
       setMapping(autoMapColumns(pf.headers, schema.fields));
-      const res = await fetch(getApiUrl(`/data-management/import/${entity}/keys`));
+      const res = await authFetch(getApiUrl(`/data-management/import/${entity}/keys`));
       const data = res.ok ? await res.json() : { keys: [] };
       setExistingKeys(new Set<string>(data.keys ?? []));
       setStep('map');
@@ -69,7 +69,7 @@ export function useImportWizard(entity: EntityKey) {
     try {
       for (let i = 0; i < valid.length; i += BATCH) {
         const chunk = valid.slice(i, i + BATCH);
-        const res = await fetch(getApiUrl(`/data-management/import/${entity}`), {
+        const res = await authFetch(getApiUrl(`/data-management/import/${entity}`), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rows: chunk }),
         });

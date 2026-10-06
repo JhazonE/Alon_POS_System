@@ -7,7 +7,7 @@ import { DateRange } from 'react-day-picker';
 import { ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { useQuery } from '@tanstack/react-query';
 import type { Sale, SalesTotals } from './sales-types';
 
@@ -81,7 +81,7 @@ export function useSalesPage() {
       const params = buildSalesParams();
       params.append('page', currentPage.toString());
       params.append('limit', limit.toString());
-      const res = await fetch(getApiUrl(`/sales/transactions?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/transactions?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch sales');
@@ -93,7 +93,7 @@ export function useSalesPage() {
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ['users'],
     queryFn: async () => {
-      const res = await fetch('/api/users');
+      const res = await authFetch('/api/users');
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       return Array.isArray(data) ? data : [];
@@ -180,7 +180,7 @@ export function useSalesPage() {
     const params = buildSalesParams();
     params.append('limit', '1000000');
     try {
-      const res = await fetch(getApiUrl(`/sales/transactions?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/transactions?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success && Array.isArray(result.data) ? result.data : [];
@@ -192,7 +192,7 @@ export function useSalesPage() {
     let printedBy = 'admin';
     try { const u = localStorage.getItem('mock-user-session'); if (u) { const user = JSON.parse(u); printedBy = user.display_name || user.email || 'admin'; } } catch {}
     let businessName = 'BUSINESS NAME';
-    try { const r = await (await fetch(getApiUrl('/pos-settings'))).json(); if (r.success && r.data?.businessName) businessName = r.data.businessName; } catch {}
+    try { const r = await (await authFetch(getApiUrl('/pos-settings'))).json(); if (r.success && r.data?.businessName) businessName = r.data.businessName; } catch {}
     const period = dateRange?.from ? `${format(dateRange.from, 'yyyy-MM-dd')} to ${dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : format(dateRange.from, 'yyyy-MM-dd')}` : 'All Time';
     const summary = data.reduce((acc: any, s: any) => ({ salesAmount: acc.salesAmount + Number(s.total || 0), discount: acc.discount + Number(s.discount || 0), amountPaid: acc.amountPaid + Number(s.amountPaid || s.total || 0), balance: acc.balance + Number(s.balance || 0), cost: acc.cost + Number(s.cost || 0), profit: acc.profit + Number(s.profit || 0) }), { salesAmount: 0, discount: 0, amountPaid: 0, balance: 0, cost: 0, profit: 0 });
     const fmt = (n: any) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -218,7 +218,7 @@ export function useSalesPage() {
     try { const u = localStorage.getItem('mock-user-session'); if (u) { const user = JSON.parse(u); printedBy = user.display_name || user.email || 'admin'; } } catch {}
     let data: any[] = []; let businessName = 'BUSINESS NAME';
     try {
-      const [salesData, settingsRes] = await Promise.all([fetchAllSalesForExport(), fetch(getApiUrl('/pos-settings')).then(r => r.json()).catch(() => ({ success: false }))]);
+      const [salesData, settingsRes] = await Promise.all([fetchAllSalesForExport(), authFetch(getApiUrl('/pos-settings')).then(r => r.json()).catch(() => ({ success: false }))]);
       data = salesData;
       if (settingsRes.success && settingsRes.data?.businessName) businessName = settingsRes.data.businessName;
     } catch {}

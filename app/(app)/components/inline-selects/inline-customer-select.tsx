@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { InlineEditableSelect } from '../../products/components/inline-editable-select';
 import type { Customer } from '@/lib/types';
 
@@ -49,7 +49,7 @@ export function InlineCustomerSelect({
   const handleAdd = async (name: string) => {
     try {
       const id = `cust_${uuidv4().substring(0, 8)}`;
-      const res = await fetch(getApiUrl('/customers'), {
+      const res = await authFetch(getApiUrl('/customers'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // Ang route mo-basa ug `customerId` gikan sa body ug mao ni ang mahimong id.
@@ -71,7 +71,7 @@ export function InlineCustomerSelect({
     try {
       // Ang customer PUT partial (key-presence), mao nga ang { name } ra dili
       // mo-hilabot sa payment_terms / credit_limit / loyalty_points.
-      const res = await fetch(getApiUrl(`/customers/${id}`), {
+      const res = await authFetch(getApiUrl(`/customers/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),

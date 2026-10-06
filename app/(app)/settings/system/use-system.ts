@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { type SystemSettings, SYSTEM_DEFAULTS, CURRENCIES } from './system-types';
 
 export function useSystem() {
@@ -14,7 +14,7 @@ export function useSystem() {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) {
@@ -51,7 +51,7 @@ export function useSystem() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'), {
+      const res = await authFetch(getApiUrl('/pos-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),

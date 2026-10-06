@@ -21,7 +21,7 @@ import {
 import { Loader2, ArrowUpRight, ArrowDownLeft, Minus, RefreshCcw, Printer, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportHeader } from '@/components/reports/ReportHeader';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatQuantity } from '@/lib/utils';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
@@ -127,7 +127,7 @@ export default function StockMovementPage() {
       if (endDate) params.append('endDate', endDate);
       if (movementType && movementType !== 'all') params.append('type', movementType);
 
-      const res = await fetch(getApiUrl(`/reports/movements?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/reports/movements?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       

@@ -13,7 +13,7 @@ import { MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 
 import { useToast } from '@/hooks/use-toast';
 import { useBusinessProfile } from '@/hooks/use-api';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { getSuppliersWithBalance, SupplierWithBalance, SupplierFilters } from '../actions';
 import { addSupplier, updateSupplier, deleteSupplier } from '../../products/actions';
 import { exportToCSV, exportToPDF } from '../supplier-export-utils';
@@ -100,7 +100,7 @@ export function useSuppliersList() {
       if (filters.company) params.append('company', filters.company);
       if (filters.hasBalance) params.append('hasBalance', 'true');
 
-      const res = await fetch(getApiUrl(`/suppliers/export?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/suppliers/export?${params.toString()}`));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Export failed');

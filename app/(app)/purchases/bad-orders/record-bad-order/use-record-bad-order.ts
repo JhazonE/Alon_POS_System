@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSuppliers } from '@/hooks/use-api';
 import { useUser } from '@/hooks/use-user';
 import { Product } from '@/lib/types';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 import { badOrderSchema, type BadOrderFormValues } from './bad-order-schema';
 
@@ -62,8 +62,8 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
   const loadLocations = async () => {
     try {
       const [whRes, slRes] = await Promise.all([
-        fetch(getApiUrl('/warehouses')).then((r) => r.json()),
-        fetch(getApiUrl('/shelf-locations')).then((r) => r.json()),
+        authFetch(getApiUrl('/warehouses')).then((r) => r.json()),
+        authFetch(getApiUrl('/shelf-locations')).then((r) => r.json()),
       ]);
       if (whRes.success) setWarehouses(whRes.data || []);
       if (slRes.success) setShelfLocations(slRes.data || []);
@@ -74,7 +74,7 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
 
   const loadPosSettings = async () => {
     try {
-      const response = await fetch(getApiUrl('/pos-settings'));
+      const response = await authFetch(getApiUrl('/pos-settings'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) setPosSettings(result.data);
@@ -137,7 +137,7 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
   async function fetchSupplierProductIds(supplierId: string): Promise<Set<string>> {
     try {
       const params = new URLSearchParams({ supplierId, limit: '10000' });
-      const res = await fetch(getApiUrl(`/products?${params.toString()}`), { cache: 'no-store' });
+      const res = await authFetch(getApiUrl(`/products?${params.toString()}`), { cache: 'no-store' });
       const result = await res.json();
       if (!result.success) return new Set();
       return new Set((result.data || []).map((p: any) => String(p.id)));
@@ -232,7 +232,7 @@ export function useRecordBadOrder({ onSuccess }: UseRecordBadOrderProps) {
         description: item.description,
       }));
 
-      const response = await fetch(getApiUrl('/bad-orders'), {
+      const response = await authFetch(getApiUrl('/bad-orders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

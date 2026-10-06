@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Pencil, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { SalesPerson } from '@/lib/types';
 
 interface SalesPersonDialogProps {
@@ -96,7 +96,7 @@ export function SalesPersonRow({ salesPerson, onUpdate, onDelete }: SalesPersonR
   const { toast } = useToast();
 
   const handleUpdate = async (name: string, contactNumber?: string) => {
-    const response = await fetch(getApiUrl(`/sales-persons/${salesPerson.id}`), {
+    const response = await authFetch(getApiUrl(`/sales-persons/${salesPerson.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, contactNumber }),
@@ -110,7 +110,7 @@ export function SalesPersonRow({ salesPerson, onUpdate, onDelete }: SalesPersonR
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete the sales person "${salesPerson.name}"? This cannot be undone.`)) return;
     try {
-      const response = await fetch(getApiUrl(`/sales-persons/${salesPerson.id}`), { method: 'DELETE' });
+      const response = await authFetch(getApiUrl(`/sales-persons/${salesPerson.id}`), { method: 'DELETE' });
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to delete sales person');
       toast({ title: 'Sales Person Deleted', description: `Sales person "${salesPerson.name}" has been deleted.` });

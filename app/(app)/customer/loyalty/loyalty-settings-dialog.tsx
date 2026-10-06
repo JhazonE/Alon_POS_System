@@ -56,7 +56,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 const loyaltySettingSchema = z.object({
   description: z.string().min(1, 'Description is required'),
@@ -78,7 +78,7 @@ interface LoyaltySetting {
 // Function to save loyalty setting to database
 async function saveLoyaltySettingToDatabase(setting: Omit<LoyaltySetting, 'id'>): Promise<LoyaltySetting> {
   const id = Date.now().toString();
-  const response = await fetch(getApiUrl('/loyalty-settings'), {
+  const response = await authFetch(getApiUrl('/loyalty-settings'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -371,7 +371,7 @@ export function LoyaltySettingsDialog() {
   const fetchSettings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/loyalty-settings'));
+      const response = await authFetch(getApiUrl('/loyalty-settings'));
       if (response.ok) {
         const result = await response.json();
         setSettings(result.data || []);
@@ -399,7 +399,7 @@ export function LoyaltySettingsDialog() {
 
   const handleUpdateSetting = async (updatedSetting: LoyaltySetting) => {
     try {
-      const response = await fetch(getApiUrl(`/loyalty-settings/${updatedSetting.id}`), {
+      const response = await authFetch(getApiUrl(`/loyalty-settings/${updatedSetting.id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -429,7 +429,7 @@ export function LoyaltySettingsDialog() {
 
   const handleDeleteSetting = async (id: string) => {
     try {
-      const response = await fetch(getApiUrl(`/loyalty-settings/${id}`), {
+      const response = await authFetch(getApiUrl(`/loyalty-settings/${id}`), {
         method: 'DELETE',
       });
 

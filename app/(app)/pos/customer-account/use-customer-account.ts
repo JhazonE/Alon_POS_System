@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { usePrinter } from '@/lib/use-printer';
 import { formatQuantity } from '@/lib/utils';
 import type { Customer, SystemSettings } from '@/lib/types';
@@ -66,7 +66,7 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
   const fetchCustomers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(getApiUrl('/customers?limit=100'));
+      const response = await authFetch(getApiUrl('/customers?limit=100'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) setCustomers(result.data);
@@ -81,7 +81,7 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
     if (!selectedCustomerId || selectedCustomerId === 'walk-in') { setMembershipCard(null); return; }
     setIsMembershipCardLoading(true);
     try {
-      const res = await fetch(getApiUrl(`/customer-loyalty?customerId=${encodeURIComponent(selectedCustomerId)}&limit=1`));
+      const res = await authFetch(getApiUrl(`/customer-loyalty?customerId=${encodeURIComponent(selectedCustomerId)}&limit=1`));
       const result = await res.json();
       if (result.success && result.data.length > 0) {
         const c = result.data[0];
@@ -121,9 +121,9 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
         setIsDetailsLoading(true);
         try {
           const [detailRes, transRes, payRes] = await Promise.all([
-            fetch(getApiUrl(`/customers/${selectedCustomerId}`)),
-            fetch(getApiUrl(`/pos/recent-sales?customerId=${selectedCustomerId}`)),
-            fetch(getApiUrl(`/customers/payments?customerId=${selectedCustomerId}`)),
+            authFetch(getApiUrl(`/customers/${selectedCustomerId}`)),
+            authFetch(getApiUrl(`/pos/recent-sales?customerId=${selectedCustomerId}`)),
+            authFetch(getApiUrl(`/customers/payments?customerId=${selectedCustomerId}`)),
           ]);
           const [detailData, transData, payData] = await Promise.all([
             detailRes.json(), transRes.json(), payRes.json(),
@@ -157,9 +157,9 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
       setIsDetailsLoading(true);
       try {
         const [detailRes, transRes, payRes] = await Promise.all([
-          fetch(getApiUrl(`/customers/${selectedCustomerId}`)),
-          fetch(getApiUrl(`/pos/recent-sales?customerId=${selectedCustomerId}`)),
-          fetch(getApiUrl(`/customers/payments?customerId=${selectedCustomerId}`)),
+          authFetch(getApiUrl(`/customers/${selectedCustomerId}`)),
+          authFetch(getApiUrl(`/pos/recent-sales?customerId=${selectedCustomerId}`)),
+          authFetch(getApiUrl(`/customers/payments?customerId=${selectedCustomerId}`)),
         ]);
         const [detailData, transData, payData] = await Promise.all([
           detailRes.json(), transRes.json(), payRes.json(),
@@ -233,7 +233,7 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
     const creditAdded = overpayment > 0 && overpaymentMode === 'credit' ? overpayment : 0;
 
     try {
-      const response = await fetch(getApiUrl('/customers/payments'), {
+      const response = await authFetch(getApiUrl('/customers/payments'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -294,7 +294,7 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
     setIsRfidSearching(true);
     setRfidError('');
     try {
-      const res = await fetch(getApiUrl(`/customer-loyalty/lookup?rfid=${encodeURIComponent(code)}`));
+      const res = await authFetch(getApiUrl(`/customer-loyalty/lookup?rfid=${encodeURIComponent(code)}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success && result.data) {

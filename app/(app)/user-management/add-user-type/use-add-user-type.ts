@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -41,7 +41,7 @@ export function useAddUserType({ open, onOpenChange, onUserTypeUpdated, editingT
   const onSubmit = async (values: UserTypeFormValues) => {
     try {
       const url = editingType ? getApiUrl(`/user-types/${editingType.id}`) : getApiUrl('/user-types');
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: editingType ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),

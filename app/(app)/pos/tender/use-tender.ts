@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { TERMINAL_LOCKED_MESSAGE } from '@/app/api/pos/checkout/terminal-lock-check';
 import type { SaleItem } from '../pos-content/pos-types';
 import { mapVatStatusToTaxType as mapTax } from '../pos-content/pos-types';
@@ -233,7 +233,7 @@ export function useTender({
     setIsProcessing(true);
 
     try {
-      const response = await fetch(getApiUrl('/pos/checkout'), {
+      const response = await authFetch(getApiUrl('/pos/checkout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

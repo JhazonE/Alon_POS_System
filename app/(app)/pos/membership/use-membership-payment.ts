@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Customer } from '@/lib/types';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { useToast } from '@/hooks/use-toast';
 import type { MembershipResult } from './membership-types';
 
@@ -46,7 +46,7 @@ export function useMembershipPayment({ isOpen, initialCustomer, userId, shiftId,
 
   const fetchSettings = useCallback(async () => {
     try {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) return;
       const result = await res.json();
       if (result.success) {
@@ -60,7 +60,7 @@ export function useMembershipPayment({ isOpen, initialCustomer, userId, shiftId,
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const res = await fetch(getApiUrl('/customers?limit=100'));
+      const res = await authFetch(getApiUrl('/customers?limit=100'));
       if (!res.ok) return;
       const result = await res.json();
       if (result.success) setCustomers(result.data);
@@ -91,7 +91,7 @@ export function useMembershipPayment({ isOpen, initialCustomer, userId, shiftId,
     setIsCardLoading(true);
     (async () => {
       try {
-        const res = await fetch(getApiUrl(`/customer-loyalty?customerId=${encodeURIComponent(selectedCustomerId)}&limit=1`));
+        const res = await authFetch(getApiUrl(`/customer-loyalty?customerId=${encodeURIComponent(selectedCustomerId)}&limit=1`));
         const result = await res.json();
         if (cancelled) return;
         if (result.success && result.data.length > 0) {
@@ -116,7 +116,7 @@ export function useMembershipPayment({ isOpen, initialCustomer, userId, shiftId,
     }
     setIsSubmitting(true);
     try {
-      const res = await fetch(getApiUrl('/pos/membership-payment'), {
+      const res = await authFetch(getApiUrl('/pos/membership-payment'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

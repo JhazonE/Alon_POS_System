@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { TaxRate } from '@/lib/types';
 
 export function useTaxRates() {
@@ -22,7 +22,7 @@ export function useTaxRates() {
   const fetchTaxRates = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/settings/tax-rates'));
+      const res = await authFetch(getApiUrl('/settings/tax-rates'));
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (Array.isArray(data)) setTaxRates(data);
@@ -36,7 +36,7 @@ export function useTaxRates() {
   const checkAuthAndFetch = async () => {
     setIsAuthLoading(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) {
@@ -71,7 +71,7 @@ export function useTaxRates() {
   const handleDelete = async () => {
     if (!taxRateToDelete) return;
     try {
-      const res = await fetch(getApiUrl(`/settings/tax-rates/${taxRateToDelete.id}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/settings/tax-rates/${taxRateToDelete.id}`), { method: 'DELETE' });
       const result = await res.json();
       if (result.success) {
         toast({ title: 'Deleted', description: 'Tax rate has been successfully deleted.' });
@@ -91,7 +91,7 @@ export function useTaxRates() {
     setVatRegistration(value);
     setIsSavingVat(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'), {
+      const res = await authFetch(getApiUrl('/pos-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vatRegistration: value }),

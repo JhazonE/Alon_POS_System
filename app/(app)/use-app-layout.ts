@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, setStoredToken, authFetch } from '@/lib/api-config';
 import {
   navItems, sellNavItems, adminNavItems, insightsNavItems,
   inventoryNavItems, salesNavItems, customerNavItems,
@@ -31,20 +31,35 @@ export function useAppLayout() {
     if (session) {
       setUser(JSON.parse(session));
     } else if (process.env.NODE_ENV === 'development') {
-      // Dev-only: skip the login redirect so the back office UI can be
-      // reviewed without real credentials. Never runs in a production build.
-      const devSession = {
-        uid: 'dev-preview',
-        email: 'dev-preview',
-        username: 'dev-preview',
-        displayName: 'Dev Preview (no login)',
-        userType: 'Admin',
-        roleId: null,
-        permissions: ['super_admin'],
-        photoURL: null,
-      };
-      localStorage.setItem('mock-user-session', JSON.stringify(devSession));
-      setUser(devSession);
+      // Dev-only: get a REAL signed token for the preview identity instead of
+      // fabricating a client-side session, which the server no longer trusts.
+      // Plain fetch on purpose: /api/auth/login is public and runs before any
+      // token exists (authFetch would redirect on a 401).
+      fetch(getApiUrl('/auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devPreview: true }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((result) => {
+          if (!result?.token) { router.push('/login'); return; }
+          setStoredToken(result.token);
+          const devSession = {
+            uid: result.uid,
+            email: result.email,
+            username: result.username,
+            displayName: result.displayName,
+            userType: result.userType,
+            roleId: result.roleId,
+            permissions: result.permissions,
+            photoURL: result.photoURL,
+          };
+          localStorage.setItem('mock-user-session', JSON.stringify(devSession));
+          setUser(devSession);
+        })
+        .catch(() => router.push('/login'))
+        .finally(() => setIsUserLoading(false));
+      return;
     } else {
       router.push('/login');
     }
@@ -53,7 +68,7 @@ export function useAppLayout() {
 
   // Business name
   useEffect(() => {
-    fetch(getApiUrl('/pos-settings'))
+    authFetch(getApiUrl('/pos-settings'))
       .then(res => { if (!res.ok) throw new Error(); return res.json(); })
       .then(result => {
         if (result.success && result.data?.businessName) setBusinessName(result.data.businessName);
@@ -65,7 +80,7 @@ export function useAppLayout() {
   // which render before the sidebar and never consume the disabled set.
   useEffect(() => {
     if (isPOSPage) { setDisabledLoaded(true); return; }
-    fetch(getApiUrl('/developer/disabled-pages'))
+    authFetch(getApiUrl('/developer/disabled-pages'))
       .then(res => { if (!res.ok) throw new Error(); return res.json(); })
       .then(result => {
         if (result.success && Array.isArray(result.disabled)) {

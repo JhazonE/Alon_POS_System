@@ -11,7 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 
@@ -55,7 +55,7 @@ export default function MembershipReportPage() {
       const params = new URLSearchParams();
       if (fromDate) params.append('startDate', format(fromDate, 'yyyy-MM-dd'));
       if (toDate) params.append('endDate', format(toDate, 'yyyy-MM-dd'));
-      const res = await fetch(getApiUrl(`/reports/membership?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/reports/membership?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) {

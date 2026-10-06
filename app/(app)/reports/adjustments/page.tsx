@@ -14,7 +14,7 @@ import {
 import { Loader2, Printer, ClipboardX, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportHeader } from '@/components/reports/ReportHeader';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatQuantity } from '@/lib/utils';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
@@ -61,7 +61,7 @@ export default function AdjustmentReportPage() {
 
       let rows: Adjustment[] = adjustments;
       try {
-        const res = await fetch(getApiUrl(`/reports/adjustments?${params.toString()}`));
+        const res = await authFetch(getApiUrl(`/reports/adjustments?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) rows = data.data;
       } catch {
@@ -111,7 +111,7 @@ export default function AdjustmentReportPage() {
 
       let rows: Adjustment[] = adjustments;
       try {
-        const res = await fetch(getApiUrl(`/reports/adjustments?${params.toString()}`));
+        const res = await authFetch(getApiUrl(`/reports/adjustments?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) rows = data.data;
       } catch {
@@ -169,7 +169,7 @@ export default function AdjustmentReportPage() {
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
 
-      const res = await fetch(getApiUrl(`/reports/adjustments?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/reports/adjustments?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       

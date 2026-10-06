@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { DEFAULT_POS_SETTINGS, type PosSettings } from './pos-setup-types';
 
 export function usePosSetup() {
@@ -21,14 +21,14 @@ export function usePosSetup() {
     isRefreshingRef.current = true;
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) {
         const termId = localStorage.getItem('pos_terminal_id');
         let termName = null;
         if (termId) {
-          const termRes = await fetch(getApiUrl('/pos-terminals?activeOnly=true'));
+          const termRes = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
           if (termRes.ok) {
             const termData = await termRes.json();
             if (termData.success) {
@@ -51,7 +51,7 @@ export function usePosSetup() {
   const handleSave = useCallback(async (settingsToSave?: PosSettings) => {
     setIsSaving(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'), {
+      const res = await authFetch(getApiUrl('/pos-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settingsToSave ?? settings),
@@ -88,7 +88,7 @@ export function usePosSetup() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch(getApiUrl('/pos-settings/upload-logo'), { method: 'POST', body: formData });
+      const res = await authFetch(getApiUrl('/pos-settings/upload-logo'), { method: 'POST', body: formData });
       const result = await res.json();
       if (result.success) {
         set('logoPath', result.data.logoPath);

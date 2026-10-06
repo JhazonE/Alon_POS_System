@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,7 +32,7 @@ export function NotificationsBell({ user }: { user: AppUser | null }) {
 
   const checkNotifications = useCallback(async () => {
     try {
-      const settingsRes = await fetch('/api/pos-settings');
+      const settingsRes = await authFetch('/api/pos-settings');
       if (!settingsRes.ok) return;
       const settingsResult = await settingsRes.json();
       if (!settingsResult.success || !settingsResult.data.enablePushNotifications) {
@@ -50,7 +51,7 @@ export function NotificationsBell({ user }: { user: AppUser | null }) {
 
       let approvalNotifications: Notification[] = [];
       if (user) {
-        const approvalsRes = await fetch('/api/approvals/queue?status=ALL');
+        const approvalsRes = await authFetch('/api/approvals/queue?status=ALL');
         if (!approvalsRes.ok) return;
         const approvalsData = await approvalsRes.json();
 

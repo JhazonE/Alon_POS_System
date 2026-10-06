@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 
 interface ProductSale {
@@ -90,7 +90,7 @@ export default function TopItemsVolumePage() {
         params.append('search', searchTerm);
       }
 
-      const response = await fetch(getApiUrl(`/sales/by-product?${params.toString()}`));
+      const response = await authFetch(getApiUrl(`/sales/by-product?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

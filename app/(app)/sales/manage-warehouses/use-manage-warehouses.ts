@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { v4 as uuidv4 } from 'uuid';
 import type { Warehouse } from '@/lib/types';
 
@@ -14,7 +14,7 @@ export function useManageWarehouses(isOpen: boolean, onChange?: () => void) {
   const fetchWarehouses = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/warehouses?activeOnly=false'));
+      const response = await authFetch(getApiUrl('/warehouses?activeOnly=false'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -35,7 +35,7 @@ export function useManageWarehouses(isOpen: boolean, onChange?: () => void) {
   }, [isOpen]);
 
   const handleAddWarehouse = async (name: string, location?: string) => {
-    const response = await fetch(getApiUrl('/warehouses'), {
+    const response = await authFetch(getApiUrl('/warehouses'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: `wh_${uuidv4().substring(0, 8)}`, name, location }),

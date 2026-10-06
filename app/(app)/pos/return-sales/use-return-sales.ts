@@ -6,7 +6,7 @@ import type { Sale, SaleItem } from '@/lib/types';
 import { usePrinter } from '@/lib/use-printer';
 import { useToast } from '@/hooks/use-toast';
 import { CreditSlipGenerator, CreditSlipData } from '@/lib/credit-slip-generator';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { useReactToPrint } from 'react-to-print';
 import { buildRecentSalesQuery } from '../transaction-search/build-recent-sales-query';
 
@@ -79,7 +79,7 @@ export function useReturnSales({
       setReturnedItems([]);
       setMcNumber('');
 
-      fetch(getApiUrl(`/pos-settings?_t=${Date.now()}`), { cache: 'no-store' })
+      authFetch(getApiUrl(`/pos-settings?_t=${Date.now()}`), { cache: 'no-store' })
         .then(res => res.json())
         .then(result => {
           if (result.success) {
@@ -107,7 +107,7 @@ export function useReturnSales({
     const t = setTimeout(() => {
       setIsRecentLoading(true);
       const qs = buildRecentSalesQuery({ query: searchText, dateFrom, dateTo });
-      fetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' })
+      authFetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' })
         .then(res => res.json())
         .then(result => { if (result.success) setRecentSales(result.data || []); })
         .catch(() => {})
@@ -146,7 +146,7 @@ export function useReturnSales({
       try {
         const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        const response = await fetch(getApiUrl('/sales/returns'), {
+        const response = await authFetch(getApiUrl('/sales/returns'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

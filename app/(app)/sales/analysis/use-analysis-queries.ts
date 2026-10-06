@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useQuery } from '@tanstack/react-query';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { SalesData, HourlyData, CategoryData } from './analysis-types';
 
 type QueryParams = {
@@ -23,7 +23,7 @@ export function useAnalysisQueries({ dateRange, terminal, interval, paymentType 
       if (terminal && terminal !== 'all') params.append('terminalId', terminal);
       if (interval) params.append('interval', interval);
       if (paymentType && paymentType !== 'all') params.append('paymentType', paymentType);
-      const res = await fetch(getApiUrl(`/sales/by-date?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/by-date?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success ? result.data : [];
@@ -35,7 +35,7 @@ export function useAnalysisQueries({ dateRange, terminal, interval, paymentType 
     queryFn: async () => {
       const params = new URLSearchParams();
       if (dateRange?.from) params.append('date', format(dateRange.from, 'yyyy-MM-dd'));
-      const res = await fetch(getApiUrl(`/sales/hourly?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/hourly?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success ? result.data : [];
@@ -45,7 +45,7 @@ export function useAnalysisQueries({ dateRange, terminal, interval, paymentType 
   const { data: categoryData = [], isLoading: isLoadingCategory } = useQuery<CategoryData[]>({
     queryKey: ['analysisCategoryData'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/sales/monthly-category'));
+      const res = await authFetch(getApiUrl('/sales/monthly-category'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success ? result.data : [];

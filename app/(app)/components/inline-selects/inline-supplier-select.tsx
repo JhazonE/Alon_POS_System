@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { InlineEditableSelect } from '../../products/components/inline-editable-select';
 import type { Supplier } from '@/lib/types';
 
@@ -33,7 +33,7 @@ export function InlineSupplierSelect({
   const handleAdd = async (name: string) => {
     try {
       const id = `sup_${uuidv4().substring(0, 8)}`;
-      const res = await fetch(getApiUrl('/suppliers'), {
+      const res = await authFetch(getApiUrl('/suppliers'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, name }),
@@ -51,7 +51,7 @@ export function InlineSupplierSelect({
   const handleRename = async (id: string, name: string) => {
     try {
       // Ang supplier PUT partial (COALESCE), mao nga ang { name } ra dili mo-wipe sa ubang columns.
-      const res = await fetch(getApiUrl(`/suppliers/${id}`), {
+      const res = await authFetch(getApiUrl(`/suppliers/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),

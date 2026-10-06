@@ -126,8 +126,8 @@ export async function getExternalApiConfig(): Promise<ExternalApiConfig> {
 
   // Client-side fallback: Try to fetch from API settings endpoint using absolute URL if possible
   try {
-    const { getApiUrl } = await import('./api-config');
-    const response = await fetch(getApiUrl('/settings/external-api'));
+    const { getApiUrl, authFetch } = await import('./api-config');
+    const response = await authFetch(getApiUrl('/settings/external-api'));
     if (response.ok) {
       const data = await response.json();
       return data.config || DEFAULT_EXTERNAL_API_CONFIG;

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useQuery } from '@tanstack/react-query';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { ProductSalesData } from './by-product-types';
 
 type QueryParams = {
@@ -33,7 +33,7 @@ export function useByProductQuery({
   const { data: attributesData } = useQuery({
     queryKey: ['salesByProductAttributes'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/sales/by-product/attributes'));
+      const res = await authFetch(getApiUrl('/sales/by-product/attributes'));
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -42,7 +42,7 @@ export function useByProductQuery({
   const { data: usersData } = useQuery({
     queryKey: ['cashiersForByProduct'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/users'));
+      const res = await authFetch(getApiUrl('/users'));
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -74,7 +74,7 @@ export function useByProductQuery({
       params.append('page', currentPage.toString());
       params.append('limit', limit.toString());
       if (searchTerm) params.append('search', searchTerm);
-      const res = await fetch(getApiUrl(`/sales/by-product?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/by-product?${params.toString()}`));
       return res.json();
     },
     placeholderData: (prev) => prev,

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 type Options = {
   onCustomerAdded: (customer: any) => void;
@@ -37,7 +37,7 @@ export function useAddCustomer({ onCustomerAdded, onOpenChange }: Options) {
         paymentTerms: 'Due on receipt',
       };
 
-      const response = await fetch(getApiUrl('/customers'), {
+      const response = await authFetch(getApiUrl('/customers'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCustomer),

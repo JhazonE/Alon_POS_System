@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatQuantity } from '@/lib/utils';
 import type { Product, Warehouse } from '@/lib/types';
 
@@ -50,7 +50,7 @@ export function useStockTransfer({
   const fetchWarehouses = async () => {
     setIsLoadingWarehouses(true);
     try {
-      const response = await fetch(getApiUrl('/warehouses?activeOnly=true'));
+      const response = await authFetch(getApiUrl('/warehouses?activeOnly=true'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -88,7 +88,7 @@ export function useStockTransfer({
       const userSession = localStorage.getItem('mock-user-session');
       const userId = userSession ? JSON.parse(userSession).uid : 'system';
 
-      const response = await fetch(getApiUrl('/inventory/transfer'), {
+      const response = await authFetch(getApiUrl('/inventory/transfer'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

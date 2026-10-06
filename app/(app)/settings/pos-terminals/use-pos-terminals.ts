@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { type PosTerminal } from './pos-terminals-types';
 
 export function usePosTerminals() {
@@ -18,7 +18,7 @@ export function usePosTerminals() {
   const fetchTerminals = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/pos-terminals'));
+      const res = await authFetch(getApiUrl('/pos-terminals'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) setTerminals(result.data);
@@ -31,7 +31,7 @@ export function usePosTerminals() {
 
   const fetchWarehouses = async () => {
     try {
-      const res = await fetch(getApiUrl('/warehouses?activeOnly=true'));
+      const res = await authFetch(getApiUrl('/warehouses?activeOnly=true'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) setWarehouses(result.data);
@@ -46,7 +46,7 @@ export function usePosTerminals() {
     setCurrentTerminalId(termId);
 
     if (termId) {
-      fetch(getApiUrl('/pos-terminals'), {
+      authFetch(getApiUrl('/pos-terminals'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: termId }),
@@ -74,7 +74,7 @@ export function usePosTerminals() {
       title: 'Connected',
       description: `This computer is now linked to ${terminal.terminalDescription || terminal.ipAddress}`,
     });
-    fetch(getApiUrl('/pos-terminals'), {
+    authFetch(getApiUrl('/pos-terminals'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: terminal.id }),
@@ -91,7 +91,7 @@ export function usePosTerminals() {
   const handleDelete = async () => {
     if (!terminalToDelete) return;
     try {
-      const res = await fetch(getApiUrl(`/pos-terminals?id=${terminalToDelete.id}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/pos-terminals?id=${terminalToDelete.id}`), { method: 'DELETE' });
       const result = await res.json();
       if (result.success) {
         toast({ title: 'Terminal Deleted', description: 'Terminal has been successfully deleted.' });

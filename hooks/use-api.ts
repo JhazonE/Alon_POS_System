@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Product, Sale, Customer, PaymentMethod, PurchaseOrder, Supplier } from '@/lib/types';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { useLiveRefresh } from '@/hooks/use-live-refresh';
 import { useQuery } from '@tanstack/react-query';
 
@@ -36,7 +36,7 @@ export function useProducts(search?: string, availability?: string, supplierId?:
       if (warehouseId) params.append('warehouseId', warehouseId);
       params.append('limit', '100');
 
-      const response = await fetch(getApiUrl(`/products?${params.toString()}`), {
+      const response = await authFetch(getApiUrl(`/products?${params.toString()}`), {
         cache: 'no-store'
       });
       if (!response.ok) throw new Error(`API error ${response.status}`);
@@ -100,7 +100,7 @@ export function useSalesInvoices(): UseSalesInvoicesResult {
     staleTime: 15 * 1000, // Consider data stale after 15 seconds
     refetchInterval: 30 * 1000, // Auto-refetch every 30 seconds
     queryFn: async () => {
-      const response = await fetch(getApiUrl('/sales'), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl('/sales'), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch sales invoices');
@@ -123,7 +123,7 @@ export function useCustomers(search?: string): UseCustomersResult {
       if (search) params.append('search', search);
       params.append('limit', '100');
 
-      const response = await fetch(getApiUrl(`/customers?${params.toString()}`), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl(`/customers?${params.toString()}`), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch customers');
@@ -170,7 +170,7 @@ export function usePaymentMethods(search?: string): UsePaymentMethodsResult {
       params.append('activeOnly', 'true');
       params.append('limit', '100');
 
-      const response = await fetch(getApiUrl(`/payment-methods?${params.toString()}`), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl(`/payment-methods?${params.toString()}`), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch payment methods');
@@ -217,7 +217,7 @@ export function usePurchaseOrders(search?: string, status?: string, page: number
       params.append('limit', limit.toString());
       params.append('offset', offset.toString());
 
-      const response = await fetch(getApiUrl(`/purchase-orders?${params.toString()}`), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl(`/purchase-orders?${params.toString()}`), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch purchase orders');
@@ -259,7 +259,7 @@ export function useBusinessProfile(): UseBusinessProfileResult {
     staleTime: 60 * 1000, // Consider data stale after 60 seconds (settings change less frequently)
     refetchInterval: 120 * 1000, // Auto-refetch every 2 minutes
     queryFn: async () => {
-      const response = await fetch(getApiUrl('/pos-settings'), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl('/pos-settings'), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch business profile');
@@ -298,7 +298,7 @@ export function useBadOrders(search?: string, status?: string, page: number = 1,
       params.append('limit', limit.toString());
       params.append('offset', offset.toString());
 
-      const response = await fetch(getApiUrl(`/bad-orders?${params.toString()}`), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl(`/bad-orders?${params.toString()}`), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch bad orders');
@@ -336,7 +336,7 @@ export function useBadOrderStats() {
     staleTime: 20 * 1000, // Consider data stale after 20 seconds
     refetchInterval: 60 * 1000, // Auto-refetch every 60 seconds
     queryFn: async () => {
-      const response = await fetch(getApiUrl('/bad-orders/stats'), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl('/bad-orders/stats'), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error('Failed to fetch stats');
@@ -383,7 +383,7 @@ export function useSuppliers(search?: string, page: number = 1, limit: number = 
       params.append('limit', limit.toString());
       params.append('offset', offset.toString());
 
-      const response = await fetch(getApiUrl(`/suppliers?${params.toString()}`), { cache: 'no-store' });
+      const response = await authFetch(getApiUrl(`/suppliers?${params.toString()}`), { cache: 'no-store' });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch suppliers');

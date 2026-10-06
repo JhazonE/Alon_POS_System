@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { SalesPerson } from '@/lib/types';
 
 export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
@@ -16,7 +16,7 @@ export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
   const fetchSalesPersons = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/sales-persons?activeOnly=false'));
+      const response = await authFetch(getApiUrl('/sales-persons?activeOnly=false'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -43,7 +43,7 @@ export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
     }
     setIsAdding(true);
     try {
-      const response = await fetch(getApiUrl('/sales-persons'), {
+      const response = await authFetch(getApiUrl('/sales-persons'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName, contactNumber: newContact }),

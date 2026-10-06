@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 
 interface DiscountRecord {
@@ -89,7 +89,7 @@ export default function DiscountReportPage() {
       if (toDate) params.append('endDate', format(toDate, 'yyyy-MM-dd'));
       if (typeFilter !== 'all') params.append('type', typeFilter);
 
-      const response = await fetch(getApiUrl(`/sales/discounts?${params.toString()}`));
+      const response = await authFetch(getApiUrl(`/sales/discounts?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

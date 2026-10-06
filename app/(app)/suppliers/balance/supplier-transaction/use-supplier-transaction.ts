@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { getSupplierTransactions, SupplierTransaction } from '../../actions';
 import { printSupplierSOA, SOASupplierInfo } from '@/lib/print-supplier-soa';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 export const PAGE_SIZE = 5;
 
@@ -160,7 +160,7 @@ export function useSupplierTransaction(
   const handlePrintSOA = async () => {
     if (!filteredTransactions.length) return;
     try {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       const json = res.ok ? await res.json() : null;
       const biz = json?.data ?? {};
 

@@ -403,6 +403,8 @@ export async function processPullSync(): Promise<void> {
     const lastSync = lastSyncSetting[0]?.setting_value || '';
 
     const url = `${apiConfig.apiEndpoint}/sync/pull?last_sync=${encodeURIComponent(lastSync)}`;
+    // Plain fetch on purpose: apiEndpoint is the third-party accounting API;
+    // our session token must not be sent there.
     const response = await fetch(url);
     
     if (!response.ok) {

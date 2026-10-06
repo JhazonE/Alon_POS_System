@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { terminalSchema, type TerminalFormValues, type PosTerminal } from './edit-pos-terminal-types';
 
 function toFormValues(t: PosTerminal): TerminalFormValues {
@@ -36,7 +36,7 @@ export function useEditPosTerminal(terminal: PosTerminal, isOpen: boolean, onTer
 
   const fetchWarehouses = async () => {
     try {
-      const res = await fetch(getApiUrl('/warehouses?activeOnly=true'));
+      const res = await authFetch(getApiUrl('/warehouses?activeOnly=true'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) setWarehouses(result.data);
@@ -48,7 +48,7 @@ export function useEditPosTerminal(terminal: PosTerminal, isOpen: boolean, onTer
   const onSubmit = async (values: TerminalFormValues) => {
     setIsSaving(true);
     try {
-      const res = await fetch(getApiUrl('/pos-terminals'), {
+      const res = await authFetch(getApiUrl('/pos-terminals'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: terminal.id, ...values }),

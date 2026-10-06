@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { usePrinter } from '@/lib/use-printer';
 import { VoidSlipGenerator } from '@/lib/void-slip-generator';
 import type { Sale } from '@/lib/types';
@@ -44,7 +44,7 @@ export function useVoidSales({ isOpen, onOpenChange }: Options) {
       setSelectedSale(null);
       setVoidReason('');
 
-      fetch(getApiUrl(`/pos-settings?_t=${Date.now()}`), { cache: 'no-store' })
+      authFetch(getApiUrl(`/pos-settings?_t=${Date.now()}`), { cache: 'no-store' })
         .then(res => res.json())
         .then(result => {
           if (result.success) {
@@ -79,7 +79,7 @@ export function useVoidSales({ isOpen, onOpenChange }: Options) {
     const t = setTimeout(() => {
       setIsRecentLoading(true);
       const qs = buildRecentSalesQuery({ query: searchText, dateFrom, dateTo });
-      fetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' })
+      authFetch(getApiUrl(`/pos/recent-sales${qs}`), { cache: 'no-store' })
         .then(res => res.json())
         .then(result => { if (result.success) setRecentSales(result.data || []); })
         .catch(() => {})
@@ -149,7 +149,7 @@ export function useVoidSales({ isOpen, onOpenChange }: Options) {
         voidedByName = storedUser?.displayName;
       } catch {}
 
-      const response = await fetch(getApiUrl('/pos/void-transaction'), {
+      const response = await authFetch(getApiUrl('/pos/void-transaction'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ saleId: selectedSale.id, voidReason: trimmedReason, voidedByUserId, voidedByName }),

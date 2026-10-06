@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,7 +29,7 @@ export function useCountDetail({ countId }: { countId: string }) {
   const fetchDetails = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/inventory/stock-counts/${countId}`);
+      const res = await authFetch(`/api/inventory/stock-counts/${countId}`);
       if (!res.ok) {
         const errText = await res.text();
         console.error('Error response body:', errText);
@@ -65,7 +66,7 @@ export function useCountDetail({ countId }: { countId: string }) {
         .filter((item) => item.counted_quantity !== null)
         .map((item) => ({ id: item.id, counted_quantity: item.counted_quantity }));
 
-      const res = await fetch(`/api/inventory/stock-counts/${countId}/items`, {
+      const res = await authFetch(`/api/inventory/stock-counts/${countId}/items`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: payload }),
@@ -91,14 +92,14 @@ export function useCountDetail({ countId }: { countId: string }) {
         .map((item) => ({ id: item.id, counted_quantity: item.counted_quantity }));
 
       if (payload.length > 0) {
-        await fetch(`/api/inventory/stock-counts/${countId}/items`, {
+        await authFetch(`/api/inventory/stock-counts/${countId}/items`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: payload }),
         });
       }
 
-      const res = await fetch(`/api/inventory/stock-counts/${countId}/complete`, {
+      const res = await authFetch(`/api/inventory/stock-counts/${countId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedBy: 'Admin' }),

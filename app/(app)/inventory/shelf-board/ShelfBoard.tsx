@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { cn, formatStockQuantity } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ManageShelfLocationsDialog } from '../../products/shelf-locations/ManageShelfLocationsDialog';
@@ -80,8 +80,8 @@ export default function ShelfBoard() {
     setIsLoading(true);
     try {
       const [shelfRes, prodRes] = await Promise.all([
-        fetch(getApiUrl('/shelf-locations')),
-        fetch(getApiUrl('/products?limit=1000')),
+        authFetch(getApiUrl('/shelf-locations')),
+        authFetch(getApiUrl('/products?limit=1000')),
       ]);
       const shelfData = await shelfRes.json();
       const prodData = await prodRes.json();

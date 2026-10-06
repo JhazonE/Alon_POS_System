@@ -14,7 +14,7 @@ import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { XReadingData } from './x-reading-preview';
 import { BusinessSettings } from '../z-reading/z-reading-preview';
 
@@ -36,7 +36,7 @@ export function useXReadingPage() {
   const { data: businessSettings } = useQuery<BusinessSettings | null>({
     queryKey: ['posSettings'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success ? result.data : null;
@@ -50,7 +50,7 @@ export function useXReadingPage() {
       const params = new URLSearchParams();
       params.append('startDate', queryParams.from);
       params.append('endDate', queryParams.to);
-      const res = await fetch(getApiUrl(`/sales/x-reading?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/sales/x-reading?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       return result.success ? result.data : [];

@@ -11,7 +11,7 @@ import { resolvePriceLevel } from '@/lib/pricing';
 import { priceLevelLabel } from '@/lib/price-level-badge';
 import { repriceCartLines } from '@/lib/cart-reprice';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
 import { WALK_IN_CUSTOMER } from '../customer-account/customer-account-types';
 import { type SaleItem, type SuspendedTransaction, type QueuedOrder, mapVatStatusToTaxType } from './pos-types';
@@ -191,7 +191,7 @@ export function usePOS() {
 
     const storedShiftId = localStorage.getItem('pos_current_shift_id');
     if (storedShiftId) {
-      fetch(getApiUrl(`/pos/shifts?shiftId=${storedShiftId}`))
+      authFetch(getApiUrl(`/pos/shifts?shiftId=${storedShiftId}`))
         .then(res => res.json())
         .then(result => {
           if (result.success && result.data.status === 'active') {
@@ -276,7 +276,7 @@ export function usePOS() {
 
   const fetchSettings = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch(getApiUrl('/pos-settings'), { signal });
+      const response = await authFetch(getApiUrl('/pos-settings'), { signal });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -332,7 +332,7 @@ export function usePOS() {
   useEffect(() => {
     if (!isPosLoggedIn || !shiftActive || isFrontliner) return;
     const fetchQueue = () => {
-      fetch(getApiUrl('/pos/queue'))
+      authFetch(getApiUrl('/pos/queue'))
         .then(r => r.json())
         .then(result => { if (result.success) setQueuedOrders(result.data); })
         .catch(() => {});
@@ -376,7 +376,7 @@ export function usePOS() {
 
     const fetchTerminals = async () => {
       try {
-        const response = await fetch(getApiUrl('/pos-terminals?activeOnly=true'));
+        const response = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
         if (result.success) {
@@ -408,7 +408,7 @@ export function usePOS() {
 
     const fetchPaymentMethods = async () => {
       try {
-        const response = await fetch(getApiUrl('/payment-methods?activeOnly=true'));
+        const response = await authFetch(getApiUrl('/payment-methods?activeOnly=true'));
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
         if (result.success && result.data) setPaymentMethods(result.data);
@@ -421,7 +421,7 @@ export function usePOS() {
   useEffect(() => {
     if (!selectedTerminalId) return;
     const sendHeartbeat = () => {
-      fetch(getApiUrl('/pos-terminals'), {
+      authFetch(getApiUrl('/pos-terminals'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedTerminalId }),
@@ -743,7 +743,7 @@ export function usePOS() {
     const userId = currentUser?.uid || currentUser?.id;
     const userName = currentUser?.displayName || currentUser?.username || 'Frontliner';
     try {
-      const response = await fetch(getApiUrl('/pos/queue'), {
+      const response = await authFetch(getApiUrl('/pos/queue'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -777,7 +777,7 @@ export function usePOS() {
       return;
     }
     try {
-      const response = await fetch(getApiUrl(`/pos/queue?id=${orderId}`), { method: 'DELETE' });
+      const response = await authFetch(getApiUrl(`/pos/queue?id=${orderId}`), { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
         setItems(result.data.items);
@@ -887,7 +887,7 @@ export function usePOS() {
     if (!userId) { toast({ title: 'Error', description: 'User not identified for shift start', variant: 'destructive' }); return; }
     try {
       if (!selectedTerminalId) { toast({ title: 'Error', description: 'No POS Terminal selected. Please configure a terminal.', variant: 'destructive' }); return; }
-      const response = await fetch(getApiUrl('/pos/shifts'), {
+      const response = await authFetch(getApiUrl('/pos/shifts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, terminalId: selectedTerminalId, startingCash: cash }),
@@ -918,7 +918,7 @@ export function usePOS() {
   const fetchShiftData = async () => {
     if (!currentShiftId) return;
     try {
-      const response = await fetch(getApiUrl(`/pos/shifts?shiftId=${currentShiftId}`));
+      const response = await authFetch(getApiUrl(`/pos/shifts?shiftId=${currentShiftId}`));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
       if (result.success && result.data) {
@@ -936,7 +936,7 @@ export function usePOS() {
     if (!currentShiftId || isEndingShift) return;
     setIsEndingShift(true);
     try {
-      const response = await fetch(getApiUrl('/pos/shifts'), {
+      const response = await authFetch(getApiUrl('/pos/shifts'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shiftId: currentShiftId, actualCash: data.actualCash, cashDifference: data.cashDifference, cashDenominations: data.cashDenominations, notes: data.notes }),
@@ -958,14 +958,14 @@ export function usePOS() {
         setShowEndShiftReport(true);
 
         try {
-          const xReadingRes = await fetch(getApiUrl(`/sales/x-reading?shiftId=${currentShiftId}&limit=1`));
+          const xReadingRes = await authFetch(getApiUrl(`/sales/x-reading?shiftId=${currentShiftId}&limit=1`));
           if (!xReadingRes.ok) throw new Error(`HTTP ${xReadingRes.status}`);
           const xReadingResult = await xReadingRes.json();
           if (xReadingResult.success && xReadingResult.data.length > 0) {
             const xData = xReadingResult.data[0];
             const timestampSuffix = new Date().toISOString().replace(/\D/g, '').slice(-6);
             const readingNo = `X-${(xData.id || currentShiftId).substring(0, 10).toUpperCase()}-${timestampSuffix}`;
-            await fetch(getApiUrl('/sales/x-reading'), {
+            await authFetch(getApiUrl('/sales/x-reading'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ readingNumber: readingNo, reportDate: xData.reportDate, shiftStart: xData.shiftStart, shiftEnd: xData.shiftEnd, terminalId: xData.terminalId, cashierName: xData.cashierName, cashierId: xData.cashierId, grossSales: xData.grossSales, returns: xData.returns, discounts: xData.discounts, netSales: xData.netSales, vatAmount: xData.vatAmount, paymentMethods: xData.paymentMethods, transactionCount: xData.transactionCount, startingCash: xData.startingCash, cashSales: xData.cashSales, cashInDrawer: xData.cashInDrawer, shiftStatus: 'completed' }),
@@ -1022,7 +1022,7 @@ export function usePOS() {
     const terminalId = selectedTerminalId;
     if (terminalId) {
       try {
-        const activeRes = await fetch(getApiUrl(`/pos/shifts?terminalId=${terminalId}&status=active`));
+        const activeRes = await authFetch(getApiUrl(`/pos/shifts?terminalId=${terminalId}&status=active`));
         if (!activeRes.ok) throw new Error(`HTTP ${activeRes.status}`);
         const activeResult = await activeRes.json();
         if (activeResult.success && activeResult.data) {
@@ -1051,7 +1051,7 @@ export function usePOS() {
     if (!collisionShift || !currentUser) return;
     const userId = currentUser.id || currentUser.uid;
     try {
-      const response = await fetch(getApiUrl('/pos/shifts'), {
+      const response = await authFetch(getApiUrl('/pos/shifts'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shiftId: collisionShift.id, takeoverUserId: userId }),

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { User } from './user-row/user-row-types';
 
 export function useUserManagement() {
@@ -18,7 +18,7 @@ export function useUserManagement() {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(getApiUrl('/users'));
+      const response = await authFetch(getApiUrl('/users'));
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       setUsers(data);

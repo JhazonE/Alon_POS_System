@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { transferSchema, type TransferFormValues } from './cash-transfer-types';
 
 type Options = {
@@ -33,7 +33,7 @@ export function useCashTransfer({ isOpen, shiftId, terminalId, userId, onOpenCha
 
   async function onSubmit(values: TransferFormValues) {
     try {
-      const response = await fetch(getApiUrl('/pos/cash-transfer'), {
+      const response = await authFetch(getApiUrl('/pos/cash-transfer'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shiftId, terminalId, userId, amount: values.amount, type: transferType, reason: values.reason }),

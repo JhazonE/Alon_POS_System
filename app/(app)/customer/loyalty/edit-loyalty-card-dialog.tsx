@@ -34,7 +34,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 interface CustomerWithLoyalty {
   id: string;
@@ -110,7 +110,7 @@ export function EditLoyaltyCardDialog({
       // Fetch loyalty settings
       const fetchSettings = async () => {
         try {
-          const response = await fetch(getApiUrl('/loyalty-settings'));
+          const response = await authFetch(getApiUrl('/loyalty-settings'));
           if (response.ok) {
             const result = await response.json();
             setLoyaltySettings(result.data || []);
@@ -139,7 +139,7 @@ export function EditLoyaltyCardDialog({
 
   async function onSubmit(values: EditLoyaltyCardFormValues) {
     try {
-      const response = await fetch(getApiUrl(`/customer-loyalty/${customer.id}`), {
+      const response = await authFetch(getApiUrl(`/customer-loyalty/${customer.id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

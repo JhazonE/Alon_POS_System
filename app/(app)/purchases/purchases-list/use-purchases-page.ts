@@ -19,7 +19,7 @@ import {
 } from '@/hooks/use-purchase-order-mutations';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 import { exportToCSV, exportToPDF } from '../purchase-order-export-utils';
 import { printPurchaseOrder } from '../purchase-order-print-utils';
@@ -179,7 +179,7 @@ export function usePurchasesPage() {
       if (dateRange?.from) params.append('startDate', formatFns(dateRange.from, 'yyyy-MM-dd'));
       if (dateRange?.to) params.append('endDate', formatFns(dateRange.to, 'yyyy-MM-dd'));
 
-      const response = await fetch(getApiUrl(`/purchase-orders/export?${params.toString()}`));
+      const response = await authFetch(getApiUrl(`/purchase-orders/export?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Export failed');

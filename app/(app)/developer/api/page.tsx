@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { API_BASE_URL, getApiUrl } from '@/lib/api-config';
+import { API_BASE_URL, getApiUrl, authFetch } from '@/lib/api-config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export default function ApiDashboardPage() {
 
     try {
       const startTime = performance.now();
-      const res = await fetch(fullUrl);
+      const res = await authFetch(fullUrl);
       const endTime = performance.now();
       const duration = (endTime - startTime).toFixed(0);
 

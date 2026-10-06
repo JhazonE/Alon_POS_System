@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 const salesAreaSchema = z.object({
   name: z.string().min(1, 'Area name is required'),
@@ -36,7 +36,7 @@ export function useAddSalesArea({ onAreaAdded, onSalesAreasUpdated }: Options) {
   const fetchSalesAreas = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(getApiUrl('/sales-areas'));
+      const response = await authFetch(getApiUrl('/sales-areas'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -58,7 +58,7 @@ export function useAddSalesArea({ onAreaAdded, onSalesAreasUpdated }: Options) {
   const handleSubmit = async (values: SalesAreaFormValues) => {
     setIsSaving(true);
     try {
-      const response = await fetch(getApiUrl('/sales-areas'), {
+      const response = await authFetch(getApiUrl('/sales-areas'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
@@ -97,7 +97,7 @@ export function useAddSalesArea({ onAreaAdded, onSalesAreasUpdated }: Options) {
     if (!areaToDelete) return;
 
     try {
-      const response = await fetch(getApiUrl(`/sales-areas?id=${areaToDelete.id}`), {
+      const response = await authFetch(getApiUrl(`/sales-areas?id=${areaToDelete.id}`), {
         method: 'DELETE',
       });
       const result = await response.json();

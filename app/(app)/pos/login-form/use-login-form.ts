@@ -24,7 +24,7 @@ export function useLoginForm({ onLoginSuccess }: Options) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const { getApiUrl } = await import('@/lib/api-config');
+      const { getApiUrl, setStoredToken } = await import('@/lib/api-config');
       const response = await fetch(getApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,6 +32,9 @@ export function useLoginForm({ onLoginSuccess }: Options) {
       });
       const result = await response.json();
       if (response.ok) {
+        // The POS has its own login (it never passes through /login), so this
+        // is a token storage site too — without it every POS call 401s.
+        if (result.token) setStoredToken(result.token);
         onLoginSuccess(result);
       } else {
         setError(result.error || 'Invalid credentials');

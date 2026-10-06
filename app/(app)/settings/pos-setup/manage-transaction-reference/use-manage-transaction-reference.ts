@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import {
   transactionReferenceSchema,
   type TransactionReferenceFormValues,
@@ -40,8 +40,8 @@ export function useManageTransactionReference(isOpen: boolean, onUpdated?: () =>
     setIsLoading(true);
     try {
       const [nextRes, lastRes] = await Promise.all([
-        fetch(getApiUrl('/transaction-references')),
-        fetch(getApiUrl('/transactions/last-references')),
+        authFetch(getApiUrl('/transaction-references')),
+        authFetch(getApiUrl('/transactions/last-references')),
       ]);
       const nextResult = await nextRes.json();
       const lastResult = await lastRes.json();
@@ -79,7 +79,7 @@ export function useManageTransactionReference(isOpen: boolean, onUpdated?: () =>
   const onSubmit = async (values: TransactionReferenceFormValues) => {
     setIsSaving(true);
     try {
-      const res = await fetch(getApiUrl('/transaction-references'), {
+      const res = await authFetch(getApiUrl('/transaction-references'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),

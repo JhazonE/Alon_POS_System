@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePrinter } from '@/lib/use-printer';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { ZReadingPreview, ZReadingData } from '../../sales/z-reading/z-reading-preview';
 import type { BusinessSettings } from './z-reading-types';
 
@@ -24,12 +24,12 @@ export function ZReadingReportView({ onPrint }: ZReadingReportViewProps) {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const settingsRes = await fetch(getApiUrl('/pos-settings'));
+        const settingsRes = await authFetch(getApiUrl('/pos-settings'));
         if (!settingsRes.ok) throw new Error(`API error ${settingsRes.status}`);
         const settingsResult = await settingsRes.json();
         if (settingsResult.success) setBusinessSettings(settingsResult.data);
 
-        const zRes = await fetch(getApiUrl('/sales/z-reading?mode=current'));
+        const zRes = await authFetch(getApiUrl('/sales/z-reading?mode=current'));
         if (!zRes.ok) throw new Error(`API error ${zRes.status}`);
         const zResult = await zRes.json();
         if (zResult.success && zResult.data?.length > 0) {

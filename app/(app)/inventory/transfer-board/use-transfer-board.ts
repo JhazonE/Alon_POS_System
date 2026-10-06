@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Warehouse } from '@/lib/types';
 
 import type { StagedTransferItem, WarehouseStockItem } from './transfer-board-types';
@@ -37,8 +37,8 @@ export function useTransferBoard() {
     setIsLoading(true);
     try {
       const [whRes, prodRes] = await Promise.all([
-        fetch(getApiUrl('/warehouses?activeOnly=true')),
-        fetch(getApiUrl('/products?limit=1000')),
+        authFetch(getApiUrl('/warehouses?activeOnly=true')),
+        authFetch(getApiUrl('/products?limit=1000')),
       ]);
       const whData = await whRes.json();
       const prodData = await prodRes.json();
@@ -157,7 +157,7 @@ export function useTransferBoard() {
         notes: 'Warehouse Board Transfer',
       }));
 
-      const response = await fetch(getApiUrl('/inventory/transfer/bulk'), {
+      const response = await authFetch(getApiUrl('/inventory/transfer/bulk'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transfers, userId: user?.uid || 'system' }),

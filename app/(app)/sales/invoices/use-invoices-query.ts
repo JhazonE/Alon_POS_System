@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSalesInvoices } from '@/hooks/use-api';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
 
@@ -25,7 +25,7 @@ export function useInvoicesQuery({ setVoidDialogOpen }: QueryParams) {
   const { data: posSettingsData } = useQuery({
     queryKey: ['posSettings'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -34,7 +34,7 @@ export function useInvoicesQuery({ setVoidDialogOpen }: QueryParams) {
 
   const voidMutation = useMutation({
     mutationFn: async (saleId: string) => {
-      const res = await fetch(getApiUrl(`/sales/invoices/${saleId}/void`), { method: 'POST' });
+      const res = await authFetch(getApiUrl(`/sales/invoices/${saleId}/void`), { method: 'POST' });
       return res.json();
     },
     onSuccess: async (result, saleId) => {

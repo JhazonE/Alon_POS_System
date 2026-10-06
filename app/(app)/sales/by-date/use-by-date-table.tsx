@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useState, useMemo } from 'react';
 import {
@@ -54,7 +55,7 @@ export function useByDateTable({ filteredSalesData, totalPages, formatDate, form
     try {
       const { format } = await import('date-fns');
       const formattedDate = format(new Date(dateStr), 'yyyy-MM-dd');
-      const res = await fetch(`/api/sales/transactions?startDate=${formattedDate}&endDate=${formattedDate}`);
+      const res = await authFetch(`/api/sales/transactions?startDate=${formattedDate}&endDate=${formattedDate}`);
       const result = await res.json();
       if (result.success) {
         setTransactionsByDate((prev) => ({ ...prev, [dateStr]: result.data }));

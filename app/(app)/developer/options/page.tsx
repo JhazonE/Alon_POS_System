@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { TOGGLEABLE_PAGES } from '@/lib/page-registry';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -36,7 +36,7 @@ export default function DeveloperOptionsPage() {
 
   useEffect(() => {
     if (!authorized) return;
-    fetch(getApiUrl('/developer/disabled-pages'))
+    authFetch(getApiUrl('/developer/disabled-pages'))
       .then(res => res.json())
       .then(result => {
         if (result.success) setDisabled(new Set(result.disabled));
@@ -67,7 +67,7 @@ export default function DeveloperOptionsPage() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('/developer/disabled-pages'), {
+      const res = await authFetch(getApiUrl('/developer/disabled-pages'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ disabled: [...disabled] }),

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { SalesPerson } from '@/lib/types';
 
 export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
@@ -16,7 +16,7 @@ export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
   const fetchSalesPersons = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/sales-persons?activeOnly=false'));
+      const res = await authFetch(getApiUrl('/sales-persons?activeOnly=false'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) setSalesPersons(result.data);
@@ -39,7 +39,7 @@ export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
     }
     setIsAdding(true);
     try {
-      const res = await fetch(getApiUrl('/sales-persons'), {
+      const res = await authFetch(getApiUrl('/sales-persons'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName, contactNumber: newContact }),
@@ -58,7 +58,7 @@ export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
   };
 
   const handleUpdate = async (id: string, name: string, contactNumber?: string) => {
-    const res = await fetch(getApiUrl(`/sales-persons/${id}`), {
+    const res = await authFetch(getApiUrl(`/sales-persons/${id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, contactNumber }),
@@ -71,7 +71,7 @@ export function useManageSalesPersons(isOpen: boolean, onChange?: () => void) {
   const handleDelete = async (sp: SalesPerson) => {
     if (!confirm(`Are you sure you want to delete "${sp.name}"? This cannot be undone.`)) return;
     try {
-      const res = await fetch(getApiUrl(`/sales-persons/${sp.id}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/sales-persons/${sp.id}`), { method: 'DELETE' });
       const result = await res.json();
       if (!result.success) throw new Error(result.error);
       toast({ title: 'Sales Person Deleted', description: `"${sp.name}" has been deleted.` });

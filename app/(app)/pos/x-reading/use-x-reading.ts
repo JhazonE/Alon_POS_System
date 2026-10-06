@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { XReadingData } from '../../sales/x-reading/x-reading-preview';
 import type { BusinessSettings } from '../../sales/z-reading/z-reading-preview';
 
@@ -21,7 +21,7 @@ export function useXReading() {
   const loadXReadingData = async () => {
     setLoading(true);
     try {
-      const settingsResponse = await fetch(getApiUrl('/pos-settings'));
+      const settingsResponse = await authFetch(getApiUrl('/pos-settings'));
       if (!settingsResponse.ok) throw new Error(`API error ${settingsResponse.status}`);
       const settingsResult = await settingsResponse.json();
       if (settingsResult.success) setBusinessSettings(settingsResult.data);
@@ -35,7 +35,7 @@ export function useXReading() {
       const url = storedShiftId
         ? `/sales/x-reading?shiftId=${storedShiftId}&limit=1`
         : '/sales/x-reading?shiftStatus=active&limit=1';
-      const response = await fetch(getApiUrl(url));
+      const response = await authFetch(getApiUrl(url));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
 
@@ -61,7 +61,7 @@ export function useXReading() {
   const handlePrint = async () => {
     if (!xReadingData) return;
     try {
-      const settingsResponse = await fetch(getApiUrl('/pos-settings'));
+      const settingsResponse = await authFetch(getApiUrl('/pos-settings'));
       if (!settingsResponse.ok) throw new Error(`API error ${settingsResponse.status}`);
       const settingsResult = await settingsResponse.json();
       const settings = settingsResult.success ? settingsResult.data : {};

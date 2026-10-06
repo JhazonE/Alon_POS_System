@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { paymentTermSchema, type PaymentTermFormValues } from './manage-payment-terms-types';
 
 const EMPTY_FORM: PaymentTermFormValues = { description: '', type: '', numberOfDaysMonth: '' };
@@ -27,7 +27,7 @@ export function useManagePaymentTerms(isOpen: boolean, onPaymentTermsUpdated?: (
   const fetchPaymentTerms = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl('/payment-terms'));
+      const res = await authFetch(getApiUrl('/payment-terms'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) setPaymentTerms(result.data);
@@ -38,7 +38,7 @@ export function useManagePaymentTerms(isOpen: boolean, onPaymentTermsUpdated?: (
   const fetchPaymentTermTypes = async () => {
     setIsLoadingTypes(true);
     try {
-      const res = await fetch(getApiUrl('/payment-term-types'));
+      const res = await authFetch(getApiUrl('/payment-term-types'));
       if (!res.ok) throw new Error();
       const result = await res.json();
       if (result.success) setCustomTypes(result.data);
@@ -55,7 +55,7 @@ export function useManagePaymentTerms(isOpen: boolean, onPaymentTermsUpdated?: (
     try {
       const method = editingTerm ? 'PUT' : 'POST';
       const body = editingTerm ? { id: editingTerm.id, ...values } : values;
-      const res = await fetch(getApiUrl('/payment-terms'), { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await authFetch(getApiUrl('/payment-terms'), { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const result = await res.json();
       if (result.success) {
         toast({ title: editingTerm ? 'Payment Term Updated' : 'Payment Term Added', description: `Payment term has been successfully ${editingTerm ? 'updated' : 'added'}.` });
@@ -71,7 +71,7 @@ export function useManagePaymentTerms(isOpen: boolean, onPaymentTermsUpdated?: (
   const confirmDelete = async () => {
     if (!termToDelete) return;
     try {
-      const res = await fetch(getApiUrl(`/payment-terms?id=${termToDelete.id}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/payment-terms?id=${termToDelete.id}`), { method: 'DELETE' });
       const result = await res.json();
       if (result.success) {
         toast({ title: 'Payment Term Deleted', description: 'Payment term has been successfully deleted.' });
@@ -91,7 +91,7 @@ export function useManagePaymentTerms(isOpen: boolean, onPaymentTermsUpdated?: (
   const handleAddType = async () => {
     if (!newTypeName.trim()) return;
     try {
-      const res = await fetch(getApiUrl('/payment-term-types'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTypeName.trim() }) });
+      const res = await authFetch(getApiUrl('/payment-term-types'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTypeName.trim() }) });
       const result = await res.json();
       if (result.success) {
         toast({ title: 'Type Added', description: `"${newTypeName.trim()}" has been added to the type list.` });
@@ -103,7 +103,7 @@ export function useManagePaymentTerms(isOpen: boolean, onPaymentTermsUpdated?: (
 
   const handleDeleteType = async (typeId: string, typeName: string) => {
     try {
-      const res = await fetch(getApiUrl(`/payment-term-types?id=${typeId}`), { method: 'DELETE' });
+      const res = await authFetch(getApiUrl(`/payment-term-types?id=${typeId}`), { method: 'DELETE' });
       const result = await res.json();
       if (result.success) {
         toast({ title: 'Type Removed', description: `"${typeName}" has been removed from the type list.` });

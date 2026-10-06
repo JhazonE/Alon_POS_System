@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import jsPDF from 'jspdf';
 import type { ReturnRecord } from './returns-types';
 
@@ -24,7 +24,7 @@ export function useReturnsData() {
       if (queryDates.from) params.append('startDate', format(queryDates.from, 'yyyy-MM-dd'));
       if (queryDates.to) params.append('endDate', format(queryDates.to, 'yyyy-MM-dd'));
       params.append('status', 'Returned');
-      const response = await fetch(getApiUrl(`/sales/transactions?${params.toString()}`));
+      const response = await authFetch(getApiUrl(`/sales/transactions?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {

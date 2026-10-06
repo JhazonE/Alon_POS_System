@@ -8,7 +8,7 @@ import { calculateMarkupPercentage, calculateSuggestedPrice } from '@/lib/purcha
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { Category, Product, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings } from '@/lib/types';
 
 import {
@@ -249,7 +249,7 @@ export function useEditProductForm({
   const isInitialLoad = useState(true);
 
   useEffect(() => {
-    fetch(getApiUrl('/pos-settings'))
+    authFetch(getApiUrl('/pos-settings'))
       .then(res => res.json())
       .then(data => {
         if (data.success) {

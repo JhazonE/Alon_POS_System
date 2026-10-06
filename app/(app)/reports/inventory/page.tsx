@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Printer, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ReportHeader } from '@/components/reports/ReportHeader';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
 
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -98,7 +98,7 @@ export default function InventoryReportPage() {
       let rows: Product[] = products;
       let printSummary: Summary = summary;
       try {
-        const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
+        const res = await authFetch(getApiUrl(`/reports/inventory?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
           rows = data.data;
@@ -147,7 +147,7 @@ export default function InventoryReportPage() {
 
       let rows: Product[] = products;
       try {
-        const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
+        const res = await authFetch(getApiUrl(`/reports/inventory?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
           rows = data.data;
@@ -215,7 +215,7 @@ export default function InventoryReportPage() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch(getApiUrl('/pos-settings'));
+            const res = await authFetch(getApiUrl('/pos-settings'));
             if (!res.ok) throw new Error(`API error ${res.status}`);
             const data = await res.json();
             if (data.success) {
@@ -238,7 +238,7 @@ export default function InventoryReportPage() {
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
       
-      const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
+      const res = await authFetch(getApiUrl(`/reports/inventory?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       

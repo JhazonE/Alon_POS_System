@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { FileText } from 'lucide-react';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { PosSettings } from './pos-setup-types';
 
 type SetFn = <K extends keyof PosSettings>(key: K, value: PosSettings[K]) => void;
@@ -17,7 +17,7 @@ export function BirComplianceCard({ settings, set }: Props) {
     const date = (document.getElementById('ejournal-date') as HTMLInputElement)?.value;
     if (!date) return;
     try {
-      const res = await fetch(getApiUrl('/sales/ejournal/save'), {
+      const res = await authFetch(getApiUrl('/sales/ejournal/save'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date, terminalId: 'all' }),

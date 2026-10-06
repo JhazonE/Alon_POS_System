@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { FlaskConical, Store, Hash, RotateCcw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 type PosMode = 'default' | 'pharmacy';
 
@@ -29,7 +29,7 @@ export function PosModeCard() {
 
   // Load the current POS mode.
   useEffect(() => {
-    fetch(getApiUrl('/pos-settings'))
+    authFetch(getApiUrl('/pos-settings'))
       .then(r => r.json())
       .then(result => {
         if (result.success && result.data?.posMode) setPosMode(result.data.posMode);
@@ -39,7 +39,7 @@ export function PosModeCard() {
 
   // Load the queue config.
   useEffect(() => {
-    fetch(getApiUrl('/pos/queue/config'))
+    authFetch(getApiUrl('/pos/queue/config'))
       .then(r => r.json())
       .then(result => {
         if (result.success) {
@@ -56,7 +56,7 @@ export function PosModeCard() {
     setPosMode(mode); // optimistic
     setSavingMode(true);
     try {
-      const res = await fetch(getApiUrl('/pos-settings'), {
+      const res = await authFetch(getApiUrl('/pos-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ posMode: mode }),
@@ -75,7 +75,7 @@ export function PosModeCard() {
   const handleSaveQueue = async () => {
     setIsSavingQueue(true);
     try {
-      const res = await fetch(getApiUrl('/pos/queue/config'), {
+      const res = await authFetch(getApiUrl('/pos/queue/config'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ maxNumber: parseInt(maxInput) || 999, autoResetDaily: queueConfig.autoResetDaily }),
@@ -90,7 +90,7 @@ export function PosModeCard() {
     if (!confirm('Reset queue number back to 001?')) return;
     setIsResetting(true);
     try {
-      const res = await fetch(getApiUrl('/pos/queue/config'), {
+      const res = await authFetch(getApiUrl('/pos/queue/config'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reset' }),

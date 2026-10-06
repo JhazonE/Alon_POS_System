@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCustomers } from '@/hooks/use-api';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { PaymentMethod, Warehouse, SalesPerson } from '@/lib/types';
 
 export function useAddOrderData({ isOpen }: { isOpen: boolean }) {
@@ -20,7 +20,7 @@ export function useAddOrderData({ isOpen }: { isOpen: boolean }) {
   const fetchPaymentMethods = async () => {
     try {
       setIsLoadingPaymentMethods(true);
-      const res = await fetch(getApiUrl('/payment-methods?activeOnly=true'));
+      const res = await authFetch(getApiUrl('/payment-methods?activeOnly=true'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) {
@@ -40,7 +40,7 @@ export function useAddOrderData({ isOpen }: { isOpen: boolean }) {
   const fetchWarehouses = async () => {
     try {
       setIsLoadingWarehouses(true);
-      const res = await fetch(getApiUrl('/warehouses?activeOnly=true'));
+      const res = await authFetch(getApiUrl('/warehouses?activeOnly=true'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) setWarehouses(result.data);
@@ -54,7 +54,7 @@ export function useAddOrderData({ isOpen }: { isOpen: boolean }) {
   const fetchSalesPersons = async () => {
     try {
       setIsLoadingSalesPersons(true);
-      const res = await fetch(getApiUrl('/sales-persons?activeOnly=true'));
+      const res = await authFetch(getApiUrl('/sales-persons?activeOnly=true'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (result.success) setSalesPersons(result.data);

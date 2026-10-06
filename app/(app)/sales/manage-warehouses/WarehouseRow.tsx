@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pencil, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Warehouse } from '@/lib/types';
 
 interface WarehouseDialogProps {
@@ -103,7 +103,7 @@ export function WarehouseRow({ warehouse, onUpdate, onDelete }: WarehouseRowProp
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
 
   const handleUpdate = async (name: string, location?: string) => {
-    const response = await fetch(getApiUrl(`/warehouses/${warehouse.id}`), {
+    const response = await authFetch(getApiUrl(`/warehouses/${warehouse.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, location }),
@@ -118,9 +118,9 @@ export function WarehouseRow({ warehouse, onUpdate, onDelete }: WarehouseRowProp
     setIsLoadingDependencies(true);
     try {
       const [productsRes, ordersRes, transactionsRes] = await Promise.all([
-        fetch(getApiUrl(`/products?warehouseId=${warehouse.id}&countOnly=true`)),
-        fetch(getApiUrl(`/sales/orders?warehouseId=${warehouse.id}&countOnly=true`)),
-        fetch(getApiUrl(`/sales?warehouse=${encodeURIComponent(warehouse.name)}&countOnly=true`)),
+        authFetch(getApiUrl(`/products?warehouseId=${warehouse.id}&countOnly=true`)),
+        authFetch(getApiUrl(`/sales/orders?warehouseId=${warehouse.id}&countOnly=true`)),
+        authFetch(getApiUrl(`/sales?warehouse=${encodeURIComponent(warehouse.name)}&countOnly=true`)),
       ]);
       const [productsData, ordersData, transactionsData] = await Promise.all([
         productsRes.json(),
@@ -148,7 +148,7 @@ export function WarehouseRow({ warehouse, onUpdate, onDelete }: WarehouseRowProp
   const handleConfirmDelete = async () => {
     setIsDeleteDialogOpen(false);
     try {
-      const response = await fetch(getApiUrl(`/warehouses/${warehouse.id}`), { method: 'DELETE' });
+      const response = await authFetch(getApiUrl(`/warehouses/${warehouse.id}`), { method: 'DELETE' });
       const result = await response.json();
       if (!result.success) throw new Error(result.error || 'Failed to delete warehouse');
       toast({ title: 'Warehouse Deleted', description: `Warehouse "${warehouse.name}" has been deleted.` });

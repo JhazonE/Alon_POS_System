@@ -44,7 +44,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Customer, Sale } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -115,7 +115,7 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
       const fetchCustomers = async () => {
         try {
           setIsLoadingCustomers(true);
-          const response = await fetch(getApiUrl('/customers'));
+          const response = await authFetch(getApiUrl('/customers'));
           if (response.ok) {
             const result = await response.json();
             setCustomers(result.data || []);
@@ -138,7 +138,7 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
       const fetchInvoices = async () => {
         try {
           setIsLoadingInvoices(true);
-          const response = await fetch(getApiUrl(`/customers/invoices/outstanding?customerId=${selectedCustomerId}`));
+          const response = await authFetch(getApiUrl(`/customers/invoices/outstanding?customerId=${selectedCustomerId}`));
           if (response.ok) {
             const result = await response.json();
             // Sort by earliest date first
@@ -200,7 +200,7 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
 
   async function onSubmit(values: PaymentFormValues) {
     try {
-      const response = await fetch(getApiUrl('/customer-payments'), {
+      const response = await authFetch(getApiUrl('/customer-payments'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

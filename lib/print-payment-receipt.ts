@@ -1,11 +1,11 @@
 import { format } from 'date-fns';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 
 // Fetch the configured business name from POS settings so the receipt
 // header reflects the actual business instead of a hardcoded value.
 const fetchBusinessName = async (): Promise<string> => {
   try {
-    const res = await fetch(getApiUrl('/pos-settings'));
+    const res = await authFetch(getApiUrl('/pos-settings'));
     if (!res.ok) return 'BUSINESS NAME';
     const settings = await res.json();
     const name = settings?.data?.businessName?.trim();

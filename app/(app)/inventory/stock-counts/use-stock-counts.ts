@@ -1,4 +1,5 @@
 'use client';
+import { authFetch } from '@/lib/api-config';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -20,7 +21,7 @@ export function useStockCounts() {
   const fetchCounts = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/inventory/stock-counts');
+      const res = await authFetch('/api/inventory/stock-counts');
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) setCounts(data.data);

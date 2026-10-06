@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getApiUrl, formatApiUrl } from '@/lib/api-config';
+import { getApiUrl, formatApiUrl, authFetch } from '@/lib/api-config';
 import type { PrinterMode } from './connection-settings-types';
 
 type Options = {
@@ -51,7 +51,7 @@ export function useConnectionSettings({ open, onOpenChange }: Options) {
   const fetchTerminals = async () => {
     setIsLoadingTerminals(true);
     try {
-      const response = await fetch(getApiUrl('/pos-terminals?activeOnly=true'));
+      const response = await authFetch(getApiUrl('/pos-terminals?activeOnly=true'));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();
       if (result.success) {
@@ -89,11 +89,17 @@ export function useConnectionSettings({ open, onOpenChange }: Options) {
     setIsTesting(true);
     setTestResult(null);
     try {
+      // Plain fetch on purpose: this probes a user-typed server address, and
+      // our session token must never be sent to a host we have not verified.
       const response = await fetch(formatApiUrl(serverIp.trim(), '/pos-settings'), {
         method: 'GET',
         signal: AbortSignal.timeout(5000),
       });
-      setTestResult(response.ok ? 'success' : 'error');
+      // With no token, a reachable server answers 401 (/pos-settings is no
+      // longer public). Any HTTP answer means the server is reachable.
+      setTestResult(
+        response.ok || response.status === 401 || response.status === 403 ? 'success' : 'error'
+      );
     } catch {
       setTestResult('error');
     } finally {

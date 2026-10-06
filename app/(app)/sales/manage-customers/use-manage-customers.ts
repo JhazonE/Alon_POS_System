@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useCustomers } from '@/hooks/use-api';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import type { Customer } from '@/lib/types';
 
 export function useManageCustomers() {
@@ -17,7 +17,7 @@ export function useManageCustomers() {
     address: string, billingAddress: string, discount: number,
     creditLimit: number, priceLevelId?: string
   ) => {
-    const response = await fetch(getApiUrl('/customers'), {
+    const response = await authFetch(getApiUrl('/customers'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ customerId, name, contactNumber, active, loyaltyPoints, paymentTerms, address, billingAddress, discount, creditLimit, priceLevelId }),
@@ -32,7 +32,7 @@ export function useManageCustomers() {
     address: string, billingAddress: string, discount: number,
     creditLimit: number, priceLevelId?: string
   ) => {
-    const response = await fetch(getApiUrl(`/customers/${editingCustomer?.id}`), {
+    const response = await authFetch(getApiUrl(`/customers/${editingCustomer?.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ customerId, name, contactNumber, active, loyaltyPoints, paymentTerms, address, billingAddress, discount, creditLimit, priceLevelId }),
@@ -43,13 +43,13 @@ export function useManageCustomers() {
   };
 
   const handleDeleteCustomer = async (customer: Customer) => {
-    const response = await fetch(getApiUrl(`/customers/${customer.id}`), { method: 'DELETE' });
+    const response = await authFetch(getApiUrl(`/customers/${customer.id}`), { method: 'DELETE' });
     if (!response.ok) throw new Error('Failed to delete customer');
     refetch();
   };
 
   const handleToggleActive = async (customer: Customer) => {
-    const response = await fetch(getApiUrl(`/customers/${customer.id}`), {
+    const response = await authFetch(getApiUrl(`/customers/${customer.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...customer, active: !customer.active }),

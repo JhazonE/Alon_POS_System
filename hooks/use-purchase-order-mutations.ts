@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getApiUrl } from '@/lib/api-config';
+import { getApiUrl, authFetch } from '@/lib/api-config';
 import { PurchaseOrder, SystemSettings } from '@/lib/types';
 import { toSafeNumber } from '@/lib/utils';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
@@ -8,7 +8,7 @@ export function useSystemSettings() {
   const { data, isLoading } = useQuery<SystemSettings>({
     queryKey: ['systemSettings'],
     queryFn: async () => {
-      const res = await fetch(getApiUrl('/pos-settings'));
+      const res = await authFetch(getApiUrl('/pos-settings'));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Failed to fetch settings');
@@ -23,7 +23,7 @@ export function useUpdatePurchaseOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<PurchaseOrder> }) => {
-      const response = await fetch(getApiUrl(`/purchase-orders/${id}`), {
+      const response = await authFetch(getApiUrl(`/purchase-orders/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -76,7 +76,7 @@ export function useReceivePurchaseOrder() {
         ? JSON.parse(localStorage.getItem('mock-user-session')!).uid
         : 'system';
 
-      const response = await fetch(getApiUrl(`/purchase-orders/${order.id}`), {
+      const response = await authFetch(getApiUrl(`/purchase-orders/${order.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +100,7 @@ export function useReceivePurchaseOrder() {
       if (!result.success) throw new Error(result.error || 'Failed to update order');
 
       if (badItems && badItems.length > 0) {
-        const badOrderResponse = await fetch(getApiUrl('/bad-orders'), {
+        const badOrderResponse = await authFetch(getApiUrl('/bad-orders'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
