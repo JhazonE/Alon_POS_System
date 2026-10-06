@@ -106,8 +106,15 @@ which attaches the token and handles 401 centrally. It includes supervisor
 elevation support: a 2-minute, separately-keyed token (`alon-elevation-token`)
 stored by `setElevatedToken()` and preferred over the cashier's own session.
 The POS collects manager credentials to authorize a single destructive action
-(Z-reading, void, price edit) without replacing the cashier's session; the
-elevated token expires after use. `clearStoredSession()` drops both keys.
+(Z-reading, void, price edit) without replacing the cashier's session.
+`clearStoredSession()` drops both keys.
+
+The elevation is **time-boxed, not cleared after use** — there are 10+
+`AdminAuthDialog` call sites and one missed clear would leave a terminal
+elevated indefinitely, so expiry is the containment. The cost: for up to 2
+minutes *every* request from that browser carries the manager's token, not just
+the privileged one. Narrowing that to a single call needs a per-call opt-in
+threaded through each override continuation (Phase 2).
 
 `authFetch()` suppresses its 401-redirect on `/pos` and `/pos/*`, because the
 POS renders its own login overlay and fires settings/terminal fetches on mount
