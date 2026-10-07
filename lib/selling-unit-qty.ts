@@ -34,15 +34,15 @@ export function toBaseQty(qty: number, qtyBase: unknown): number {
  * How many whole selling units `baseStock` amounts to — what the cashier needs
  * to know ("how many Cases can I still sell"), not the base count.
  *
- * Floored, because a partial Case is not sellable as a Case. A NEGATIVE base
- * stock is floored away from zero (-48/24 -> -2, not -2 rounded up), so an
- * oversold product still reads as oversold rather than as empty.
+ * Floored, because a partial Case is not sellable as a Case. A negative base
+ * stock floors away from zero (-50/24 -> -3), so an oversold product always
+ * reads as negative rather than as empty (never -0).
  */
 export function toUnitStock(baseStock: unknown, qtyBase: unknown): number {
   const stock = typeof baseStock === 'number' ? baseStock : parseFloat(String(baseStock ?? ''));
   if (!Number.isFinite(stock)) return 0;
   const units = stock / safeQtyBase(qtyBase);
-  return units < 0 ? -Math.floor(-units) : Math.floor(units);
+  return Math.floor(units);
 }
 
 /**

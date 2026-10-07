@@ -28,9 +28,16 @@ assert.equal(toUnitStock(23, 24), 0, 'a partial Case is not sellable as a Case')
 assert.equal(toUnitStock(0, 24), 0, 'zero stays zero');
 assert.equal(toUnitStock(60, 0), 60, 'a zero ratio does not divide');
 assert.equal(toUnitStock('60.0000', 24), 2, 'a DECIMAL string from mysql2 is parsed');
-// A negative base stock must stay negative: flooring toward 0 would hide an
-// oversold product from the cashier.
+// A negative base stock must stay negative: flooring away from zero prevents
+// an oversold product from reading as empty.
 assert.equal(toUnitStock(-48, 24), -2, 'negative stock stays negative');
+// A sub-unit oversell must never read as empty: -10/24 floors to -1, not -0.
+assert.equal(toUnitStock(-10, 24), -1, 'an oversell of less than one unit still reads negative');
+assert.equal(toUnitStock(-50, 24), -3, 'a partial negative floors away from zero');
+assert.equal(Object.is(toUnitStock(-10, 24), -0), false, 'never returns negative zero');
+// Garbage baseStock reads as zero rather than NaN reaching a display.
+assert.equal(toUnitStock('abc', 24), 0, 'unparseable stock reads as zero');
+assert.equal(toUnitStock(undefined, 24), 0, 'undefined stock reads as zero');
 assert.equal(toUnitStock(null, 24), 0, 'null stock reads as zero');
 
 // --- buildLineId ---
