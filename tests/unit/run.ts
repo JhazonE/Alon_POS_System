@@ -62,6 +62,7 @@ const TEST_FILES = [
   'price-level-price-calc.test',
   'inline-editable-select-optional-value.test',
   'selling-unit-qty.test',
+  'selling-unit-expansion.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];

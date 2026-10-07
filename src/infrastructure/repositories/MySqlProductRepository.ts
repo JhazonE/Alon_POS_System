@@ -2,6 +2,7 @@ import { query } from '../../../lib/mysql';
 import { baseOverrideRow } from '../../../lib/base-price-resolution';
 import { ProductRepository, GetProductsFilters } from '../../core/products/domain/IProductRepository';
 import { ProductEntity } from '../../core/products/domain/Product';
+import { expandProductSellingUnits } from './product-selling-unit-expansion';
 
 export class MySqlProductRepository implements ProductRepository {
   async findAll(limit: number, offset: number, filters: GetProductsFilters): Promise<ProductEntity[]> {
@@ -48,8 +49,18 @@ export class MySqlProductRepository implements ProductRepository {
     }
 
     if (filters.search) {
-      sql += ' AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?)';
-      params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      // EXISTS, not a JOIN: `LIMIT ? OFFSET ?` below applies to PRODUCT rows and
+      // the hook hard-codes limit=100, so joining would make that limit count
+      // unit rows and silently drop whole products off the end of the page.
+      if (filters.expandSellingUnits) {
+        sql += ` AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?
+                 OR EXISTS (SELECT 1 FROM product_selling_units psu
+                             WHERE psu.product_id = products.id AND psu.barcode LIKE ?))`;
+        params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      } else {
+        sql += ' AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?)';
+        params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      }
     }
 
     if (filters.warehouseId) {
@@ -128,6 +139,29 @@ export class MySqlProductRepository implements ProductRepository {
       });
     }
 
+    // Expansion runs LAST, after the `baseOverrideRow` block above has settled
+    // `product.price`: a unit's own price must not then be overwritten by the
+    // product-level default-price-level row. It also runs after LIMIT/OFFSET,
+    // so pagination still counts products.
+    if (filters.expandSellingUnits && products.length > 0) {
+      try {
+        const ids = products.map((p: any) => p.id);
+        const unitRows = await query(
+          `SELECT id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order
+             FROM product_selling_units
+            WHERE product_id IN (?)
+            ORDER BY product_id, sort_order, unit_name`,
+          [ids],
+        );
+        return expandProductSellingUnits(products, unitRows);
+      } catch (err: any) {
+        // Degrade to base rows rather than failing the request, matching how the
+        // priceLevels hydration above tolerates a missing table. The POS then
+        // shows what it shows today instead of an error screen.
+        console.warn('[SellingUnits] Could not expand selling units:', err?.message);
+      }
+    }
+
     return products;
   }
 
@@ -146,8 +180,17 @@ export class MySqlProductRepository implements ProductRepository {
     }
 
     if (filters.search) {
-      countSql += ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)';
-      countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      // Mirrors findAll: when expanding, a unit-barcode-only match counts too, so
+      // `total` agrees with the rows findAll can return.
+      if (filters.expandSellingUnits) {
+        countSql += ` AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?
+                 OR EXISTS (SELECT 1 FROM product_selling_units psu
+                             WHERE psu.product_id = products.id AND psu.barcode LIKE ?))`;
+        countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      } else {
+        countSql += ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)';
+        countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      }
     }
 
     if (filters.warehouseId) {
