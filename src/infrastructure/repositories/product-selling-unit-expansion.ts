@@ -44,7 +44,10 @@ export function expandProductSellingUnits(products: any[], unitRows: any[]): any
         qtyBase,
         // The base-unit figure, kept so an oversell check can compare against
         // real stock rather than the unit-converted display value.
-        baseStock: product.stock,
+        // mysql2 returns DECIMAL as a string. This field's only purpose is
+        // numeric comparison (oversell checks), and `"0.0000" <= 0` is false in
+        // JS, so it must be a number before any consumer sees it.
+        baseStock: Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0,
         name: isBase ? product.name : `${product.name} ${unit.unit_name}`,
         price: parseFloat(unit.price),
         barcode: unit.barcode,

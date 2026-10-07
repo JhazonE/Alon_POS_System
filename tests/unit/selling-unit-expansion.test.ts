@@ -39,6 +39,11 @@ const units = [
   assert.equal(kase.baseStock, 60);
   assert.equal(kase.qtyBase, 24);
   assert.equal(kase.unitOfMeasure, 'Case');
+
+  // baseStock must be a NUMBER: it exists for oversell comparisons, and
+  // "0.0000" <= 0 is false in JS.
+  assert.equal(typeof base.baseStock, 'number', 'baseStock is coerced to a number');
+  assert.equal(typeof kase.baseStock, 'number', 'baseStock is a number on non-base rows too');
 }
 
 // (b) REVIEW FOCUS 4: a product with no units is passed through untouched
@@ -96,6 +101,17 @@ const units = [
 {
   const out = expandProductSellingUnits([sardines], units);
   assert.deepEqual(out[0].priceLevels, [{ levelId: 'retail', price: 25 }], 'base keeps its tiers');
+}
+
+// (i) a DECIMAL string from mysql2 is coerced, not passed through
+{
+  const stringStock = { ...sardines, stock: '60.0000' as any };
+  const out = expandProductSellingUnits([stringStock], units);
+  assert.equal(typeof out[0].baseStock, 'number', 'a DECIMAL string baseStock becomes a number');
+  assert.equal(out[0].baseStock, 60, 'and keeps its value');
+  assert.equal(out[1].stock, 2, 'converted stock still computes from a string base');
+  const junk = { ...sardines, stock: 'abc' as any };
+  assert.equal(expandProductSellingUnits([junk], units)[0].baseStock, 0, 'unparseable stock becomes 0, not NaN');
 }
 
 console.log('✓ selling-unit-expansion.test');
