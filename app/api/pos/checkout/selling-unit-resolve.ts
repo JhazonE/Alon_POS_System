@@ -13,3 +13,15 @@ import { safeQtyBase } from '@/lib/selling-unit-qty';
 export function resolveLineQtyBase(soldProd: any): number {
   return safeQtyBase(soldProd?.psu_qty_base);
 }
+
+/**
+ * The selling-unit id that may be STORED on a sale line: the client's id, but
+ * only when the scoped join (`psu.id = ? AND psu.product_id = p.id`) actually
+ * matched. A unit id belonging to another product yields NULL here, so the
+ * snapshot columns go NULL together rather than recording a unit whose real
+ * ratio was not the one used. These columns are what the void path and BIR
+ * reports read back.
+ */
+export function resolveLineSellingUnitId(soldProd: any, clientUnitId: string | null | undefined): string | null {
+  return soldProd?.psu_qty_base != null ? (clientUnitId || null) : null;
+}

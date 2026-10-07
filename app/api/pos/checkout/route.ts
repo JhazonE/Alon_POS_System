@@ -5,7 +5,7 @@ import { deductFromBatches, getBatchCostingSettings } from '@/lib/batch-deductio
 import { ensureCustomerCreditColumn } from '@/lib/ensure-customer-credit';
 import { query } from '@/lib/mysql';
 import { isService } from '@/lib/product-type';
-import { resolveLineQtyBase } from './selling-unit-resolve';
+import { resolveLineQtyBase, resolveLineSellingUnitId } from './selling-unit-resolve';
 import { toBaseQty } from '@/lib/selling-unit-qty';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { validateSingleDocumentType } from './mixed-cart-validation';
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       //    insert — no separate UPDATE per item).
       // The invoice-items insert below runs in its own loop, where the
       // per-item qty_base is out of scope. Carry it across by index.
-      const baseQtyByIndex = new Map<number, { baseQty: number; qtyBase: number; unitName: string | null }>();
+      const baseQtyByIndex = new Map<number, { baseQty: number; qtyBase: number; unitName: string | null; sellingUnitId: string | null }>();
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemId = `${saleId}-ITEM-${i + 1}`;
@@ -224,8 +224,13 @@ export async function POST(request: NextRequest) {
         // any of them. Resolved from the DB row, never from the request body.
         const lineQtyBase = resolveLineQtyBase(soldProd);
         const lineBaseQty = toBaseQty(item.quantity, lineQtyBase);
-        const lineUnitName = item.sellingUnitId ? (soldProd?.psu_unit_name ?? null) : null;
-        baseQtyByIndex.set(i, { baseQty: lineBaseQty, qtyBase: lineQtyBase, unitName: lineUnitName });
+        // The scoped join (psu.id = ? AND psu.product_id = p.id) yields NULL for a
+        // unit id that does not belong to this product. Store the unit columns only
+        // when it genuinely matched, so a row can never claim a unit whose ratio it
+        // did not use — these columns are what the void path and BIR reports read.
+        const lineSellingUnitId = resolveLineSellingUnitId(soldProd, item.sellingUnitId);
+        const lineUnitName = lineSellingUnitId ? (soldProd?.psu_unit_name ?? null) : null;
+        baseQtyByIndex.set(i, { baseQty: lineBaseQty, qtyBase: lineQtyBase, unitName: lineUnitName, sellingUnitId: lineSellingUnitId });
 
         // --- BATCH COSTING: FIFO deduction & cost recording ---
         let costAtSale: number | null = null;
@@ -275,9 +280,9 @@ export async function POST(request: NextRequest) {
           item.price * (1 - (item.discount || 0) / 100),
           costAtSale,
           batchSource,
-          item.sellingUnitId || null,
+          lineSellingUnitId,
           lineUnitName,
-          item.sellingUnitId ? lineQtyBase : null,
+          lineSellingUnitId ? lineQtyBase : null,
         ]);
 
         // --- Stock Deduction with Full Hierarchy Sync & Loyalty Calculation ---
@@ -468,9 +473,9 @@ export async function POST(request: NextRequest) {
         invoiceItemRows.push([
           invoiceItemId, invoiceId, item.id, item.name, item.quantity,
           item.price * (1 - (item.discount || 0) / 100),
-          item.sellingUnitId || null,
+          lineUnit?.sellingUnitId ?? null,
           lineUnit?.unitName ?? null,
-          item.sellingUnitId ? (lineUnit?.qtyBase ?? null) : null,
+          lineUnit?.sellingUnitId ? lineUnit.qtyBase : null,
         ]);
 
         const originalPrice = item.price;

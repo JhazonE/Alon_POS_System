@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { resolveLineQtyBase } from '../../app/api/pos/checkout/selling-unit-resolve';
+import { resolveLineQtyBase, resolveLineSellingUnitId } from '../../app/api/pos/checkout/selling-unit-resolve';
 import { toBaseQty } from '../../lib/selling-unit-qty';
 
 // (a) a matched unit row yields its ratio
@@ -28,5 +28,21 @@ assert.equal(toBaseQty(5, resolveLineQtyBase({ psu_qty_base: null })), 5, 'an un
 // The regression this whole task exists to prevent:
 assert.notEqual(toBaseQty(3, resolveLineQtyBase({ psu_qty_base: '24.000000' })), 3,
   '3 Cases must NOT deduct only 3 base units');
+
+// (e) A forged/foreign unit id must not be STORED either: the scoped join yields NULL,
+// so all three snapshot columns go NULL together rather than recording a unit whose
+// real ratio is not 1.
+{
+  const matched = { psu_qty_base: '24.000000' };
+  const unmatched = { psu_qty_base: null };
+
+  assert.equal(resolveLineSellingUnitId(matched, 'psu-case'), 'psu-case', 'a matched unit id is stored');
+  assert.equal(resolveLineSellingUnitId(unmatched, 'psu-foreign'), null, 'a foreign unit id is NOT stored');
+  assert.equal(resolveLineSellingUnitId(unmatched, null), null, 'no unit id stays null');
+  assert.equal(resolveLineSellingUnitId(matched, null), null, 'a matched row without a client id stays null');
+  assert.equal(resolveLineSellingUnitId(undefined, 'psu-case'), null, 'no product row stores nothing');
+  // and the ratio travels with it
+  assert.equal(resolveLineQtyBase(unmatched), 1, 'an unmatched line still deducts x1');
+}
 
 console.log('✓ checkout-selling-unit-qty.test');
