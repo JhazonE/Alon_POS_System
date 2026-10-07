@@ -22,7 +22,7 @@ export function useAdjustQuantity({ isOpen, item, onUpdate, onOpenChange }: Opti
 
   const handleConfirm = () => {
     if (item) {
-      onUpdate(item.id, resultingQty);
+      onUpdate(item.lineId, resultingQty);
       onOpenChange(false);
     }
   };

@@ -47,7 +47,7 @@ export function useEditItem({ isOpen, item, onUpdate, onOpenChange, activeLevelI
     const validPrice = Math.max(0, Number(price) || 0);
     const validDiscount = Math.max(0, Number(discount) || 0);
     try {
-      onUpdate(item.id, name, validQuantity, validPrice, validDiscount);
+      onUpdate(item.lineId, name, validQuantity, validPrice, validDiscount);
       onOpenChange(false);
     } catch {
       toast({ title: 'Error', description: 'Failed to update item details.', variant: 'destructive' });

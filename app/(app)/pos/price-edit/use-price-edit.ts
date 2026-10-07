@@ -22,7 +22,7 @@ export function usePriceEdit({ isOpen, item, onOpenChange, onUpdate }: Options) 
   const save = useCallback(() => {
     if (item) {
       const validPrice = Math.max(0, Number(price) || 0);
-      onUpdate(item.id, item.name, item.quantity, validPrice, item.discount);
+      onUpdate(item.lineId, item.name, item.quantity, validPrice, item.discount);
       onOpenChange(false);
     }
   }, [item, price, onUpdate, onOpenChange]);

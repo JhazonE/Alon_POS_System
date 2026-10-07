@@ -59,7 +59,11 @@ export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Opt
     if (scope === 'all') {
       onApplyDiscount('ALL', percentage, discountType, details);
     } else if (item) {
-      onApplyDiscount(item.id, percentage, discountType, details);
+      // Cart identity is lineId, not the product id: two selling units of one
+      // product are two lines, and an expanded product's base line is
+      // "<productId>::<baseUnitId>". Passing item.id would match no line and
+      // silently drop the discount, including a statutory PWD/senior one.
+      onApplyDiscount(item.lineId, percentage, discountType, details);
     }
     onOpenChange(false);
   };

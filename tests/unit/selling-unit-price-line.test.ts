@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { priceLineForProduct } from '../../lib/selling-unit-pricing';
+import { buildLineId } from '../../lib/selling-unit-qty';
 
 // A stand-in for resolvePriceLevel: always claims a wholesale tier of 23.
 let resolverCalls = 0;
@@ -47,6 +48,17 @@ const resolver = (_p: any, _q: number) => {
   const kase = { id: 'p1', price: 540, sellingUnitId: 'psu-case', isBaseUnit: false, qtyBase: 24 };
   assert.equal(priceLineForProduct(kase, 1, resolver).price, 540, 'the line price is respected');
   assert.equal(resolverCalls, 0);
+}
+
+// A discount must target the CART LINE, not the product. An expanded product's
+// BASE row already carries a sellingUnitId, so its lineId is composite - passing
+// the product id would match no line and silently drop the discount.
+{
+  const baseRow = { id: 'p1', sellingUnitId: 'psu-base', isBaseUnit: true };
+  const caseRow = { id: 'p1', sellingUnitId: 'psu-case', isBaseUnit: false };
+  assert.equal(buildLineId(baseRow.id, baseRow.sellingUnitId), 'p1::psu-base', 'a base row of an expanded product still has a composite lineId');
+  assert.notEqual(buildLineId(baseRow.id, baseRow.sellingUnitId), baseRow.id, 'the base row lineId is NOT the bare product id');
+  assert.notEqual(buildLineId(baseRow.id, baseRow.sellingUnitId), buildLineId(caseRow.id, caseRow.sellingUnitId), 'two units of one product never share a lineId');
 }
 
 console.log('✓ selling-unit-price-line.test');
