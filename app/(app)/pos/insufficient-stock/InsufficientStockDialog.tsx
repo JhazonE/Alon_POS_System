@@ -43,7 +43,7 @@ export function InsufficientStockDialog({ open, onOpenChange, items }: Insuffici
             </TableHeader>
             <TableBody>
               {items.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.lineId}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-right text-destructive font-bold">{formatQuantity(item.stock)}</TableCell>
                   <TableCell className="text-right">{formatQuantity(item.quantity)}</TableCell>
