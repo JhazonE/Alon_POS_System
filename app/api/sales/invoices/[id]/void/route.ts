@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction } from '@/lib/mysql';
 import { addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
+import { restoreBaseQty } from '@/lib/selling-unit-restore';
 
 export async function POST(
     request: NextRequest,
@@ -22,13 +23,17 @@ export async function POST(
             }
 
             // 2. Fetch items to reverse stock
-            const [items]: any = await connection.query('SELECT product_id, quantity FROM sales_invoice_items WHERE sales_invoice_id = ?', [invoiceId]);
+            const [items]: any = await connection.query('SELECT product_id, quantity, selling_unit_qty_base FROM sales_invoice_items WHERE sales_invoice_id = ?', [invoiceId]);
 
             if (items && items.length > 0) {
                 for (const item of items) {
                     // --- Inventory Addition (Reversal) using recursive family sync ---
+                    // sales_invoice_items.quantity is UNITS SOLD; stock is in base
+                    // units. Restoring the raw quantity would give back 1 base unit
+                    // for a voided Case of 24.
+                    const restoreQty = restoreBaseQty(item);
                     const { rootId, factorToRoot } = await findUltimateRoot(item.product_id, connection as any);
-                    const quantityToAddInRootUnits = item.quantity / factorToRoot;
+                    const quantityToAddInRootUnits = restoreQty / factorToRoot;
                     
                     await addFamilyStock(
                         rootId, 
