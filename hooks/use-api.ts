@@ -23,9 +23,9 @@ export interface UseSalesInvoicesResult {
   refetch: () => void;
 }
 
-export function useProducts(search?: string, availability?: string, supplierId?: string, warehouseId?: string): UseProductsResult {
+export function useProducts(search?: string, availability?: string, supplierId?: string, warehouseId?: string, expandSellingUnits?: boolean): UseProductsResult {
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['products', search, availability, supplierId, warehouseId],
+    queryKey: ['products', search, availability, supplierId, warehouseId, expandSellingUnits],
     staleTime: 15 * 1000, // Consider data stale after 15 seconds
     refetchInterval: 30 * 1000, // Auto-refetch every 30 seconds
     queryFn: async () => {
@@ -34,6 +34,7 @@ export function useProducts(search?: string, availability?: string, supplierId?:
       if (availability) params.append('availability', availability);
       if (supplierId) params.append('supplierId', supplierId);
       if (warehouseId) params.append('warehouseId', warehouseId);
+      if (expandSellingUnits) params.append('expandSellingUnits', 'true');
       params.append('limit', '100');
 
       const response = await fetch(getApiUrl(`/products?${params.toString()}`), {
@@ -71,6 +72,10 @@ export function useProducts(search?: string, availability?: string, supplierId?:
         incomeAccount: '',
         expenseAccount: '',
         priceLevels: item.priceLevels || [],
+        sellingUnitId: item.sellingUnitId,
+        isBaseUnit: item.isBaseUnit,
+        qtyBase: item.qtyBase,
+        baseStock: item.baseStock,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
       }));

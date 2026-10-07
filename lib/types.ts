@@ -64,6 +64,15 @@ export interface Product {
     prices: Record<string, { price: number; minQuantity?: number }>;
   }[];
 
+  // Set only on rows from `GET /api/products?expandSellingUnits=true` (the POS
+  // search/scan path). On such a row `id` is still the PRODUCT id, and these
+  // describe which selling unit the row represents.
+  sellingUnitId?: string;
+  isBaseUnit?: boolean;
+  qtyBase?: number;
+  /** Stock in BASE units; `stock` on an expanded row is converted to the unit. */
+  baseStock?: number;
+
   // Timestamps
   createdAt?: string;
   updatedAt?: string;

@@ -34,6 +34,12 @@ export type SaleItem = Product & {
   taxType?: 'VAT' | 'NON_VAT' | 'ZERO_RATED' | 'VAT_EXEMPT';
   /** Short badge showing which price level and tier set this line's price. */
   priceLevelLabel?: string;
+  /**
+   * Cart identity. Two selling units of one product are two independent lines,
+   * so `id` (the product id, and the FK for sale_items.product_id) cannot
+   * identify a line. Equals `id` when the line has no selling unit.
+   */
+  lineId: string;
 };
 
 export function mapVatStatusToTaxType(vatStatus?: string): 'VAT' | 'NON_VAT' | 'ZERO_RATED' | 'VAT_EXEMPT' {
