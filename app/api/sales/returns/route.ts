@@ -79,22 +79,31 @@ export async function POST(request: NextRequest) {
         //                   pos_transaction_items rows and drives the money total.
         //   returnBaseQty   BASE units (units * qty_base), POSITIVE. This is what
         //                   addFamilyStock adds back to stock (it ignores qty <= 0).
-        // Resolved from the DB, scoped to this product, exactly as checkout does —
-        // a client-supplied multiplier would scale a stock write. A unit id that
-        // belongs to another product matches no row, so the line falls back to a
-        // multiplier of 1 and the snapshot columns stay NULL together.
-        let unitRow: any = null;
-        if (item.sellingUnitId) {
-          const [unitRows]: any = await connection.query(
-            `SELECT psu.qty_base, psu.unit_name
-               FROM product_selling_units psu
-              WHERE psu.id = ? AND psu.product_id = ?`,
-            [item.sellingUnitId, item.productId],
-          );
-          unitRow = unitRows?.[0] ?? null;
-        }
-        const returnQtyBase = safeQtyBase(unitRow?.qty_base);
+        //
+        // The original sale's snapshot is the authoritative ratio for a return:
+        // it records what was actually sold, and stays correct even if the unit
+        // was re-ratioed afterwards. `saleId` is already required above, so no
+        // client change is needed.
+        //
+        // Only SOLD lines (quantity > 0) are considered: earlier returns on this
+        // sale are stored as negative sale_items rows for the same product and
+        // must not make a second return look ambiguous.
+        //
+        // Matched only when the original sale has exactly ONE line for this
+        // product: if the same product was sold under two different units in one
+        // sale, the product id alone cannot say which is being returned, so we
+        // fall back to 1 and leave the snapshot NULL (today's behaviour) rather
+        // than guessing and restoring the wrong quantity.
+        const [originalLines]: any = await connection.query(
+          `SELECT selling_unit_id, selling_unit_name, selling_unit_qty_base
+             FROM sale_items
+            WHERE sale_id = ? AND product_id = ? AND quantity > 0`,
+          [saleId, item.productId],
+        );
+        const originalLine = originalLines?.length === 1 ? originalLines[0] : null;
+        const returnQtyBase = safeQtyBase(originalLine?.selling_unit_qty_base);
         const returnBaseQty = Number(item.quantity) * returnQtyBase;
+        const snapshotUnitId = originalLine?.selling_unit_id ?? null;
 
         // Create sale_item entry
         await connection.query(insertSaleItemSql, [
@@ -104,9 +113,9 @@ export async function POST(request: NextRequest) {
           item.productName,
           -item.quantity, // Negative for returns (units sold, NOT base units)
           item.price,
-          unitRow ? item.sellingUnitId : null,
-          unitRow ? (unitRow.unit_name ?? null) : null,
-          unitRow ? returnQtyBase : null,
+          snapshotUnitId,
+          snapshotUnitId ? (originalLine?.selling_unit_name ?? null) : null,
+          snapshotUnitId ? returnQtyBase : null,
         ]);
 
         // Create pos_transaction_item entry referencing the sale_item
