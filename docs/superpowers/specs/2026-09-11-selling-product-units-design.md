@@ -99,7 +99,7 @@ This entirely replaces `lib/family-sync.ts`'s `deductFamilyStock`/`addFamilyStoc
 ## POS checkout
 
 - Barcode scans already resolve the exact selling unit directly (`product_selling_units.barcode` is unique), so no picker is needed on that path — this is strictly simpler than today's "which of these N separate product rows did you scan" resolution.
-- Manual product search (`ProductSearchDialog.tsx`) shows one row per product; if it has more than one selling unit, a small unit picker (chip/dropdown) appears before add-to-cart.
+- Manual product search (`ProductSearchDialog.tsx`) shows one row per product; if it has more than one selling unit, a small unit picker (chip/dropdown) appears before add-to-cart. **Superseded 2026-10-07:** the picker was dropped in favour of one row per selling unit, each with its own price, barcode and unit-converted stock — chosen so the cashier spends no extra click per sale. See [`2026-10-07-pos-selling-units-checkout-design.md`](2026-10-07-pos-selling-units-checkout-design.md).
 - `lib/pricing.ts`'s `calculateEffectivePrice` is re-pointed from `product_price_levels` to `product_selling_unit_prices`, keyed by the chosen selling unit + the active price level (customer's pinned level, or the POS-selected level, or the default).
 - `app/api/pos/checkout/route.ts` receives `{ productId, sellingUnitId, quantity, ... }` per line; resolves `qty_base` for that unit, computes `baseQty`, and calls the (unchanged) batch-deduction + stock decrement. Writes `selling_unit_id` + the unit snapshot onto the `sales_items` row.
 
