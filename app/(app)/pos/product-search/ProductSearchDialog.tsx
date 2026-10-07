@@ -10,6 +10,7 @@ import {
 import { Loader2, Package2, X, Eye, EyeOff, Tag, FlaskConical } from 'lucide-react';
 import { calculateEffectivePrice } from '@/lib/pricing';
 import { formatStockQuantity } from '@/lib/utils';
+import { buildLineId } from '@/lib/selling-unit-qty';
 import { useProductSearch } from './use-product-search';
 import type { ProductSearchDialogProps } from './product-search-types';
 
@@ -243,11 +244,12 @@ export function ProductSearchDialog({
                 <CommandGroup className={loading ? 'opacity-50 transition-opacity duration-200' : 'transition-opacity duration-200'}>
                   {displayedProducts.map((product) => {
                     const outOfStock = product.stock <= 0;
+                    const lineId = buildLineId(product.id, product.sellingUnitId);
                     return (
                       <CommandItem
-                        key={product.id}
-                        value={`${product.name} ${product.barcode || ''} ${product.sku}`}
-                        onSelect={() => handleSelect(product.id)}
+                        key={lineId}
+                        value={lineId}
+                        onSelect={() => handleSelect(lineId)}
                         className="group mx-2 my-0.5 flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer transition-colors data-[selected=true]:bg-accent"
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">

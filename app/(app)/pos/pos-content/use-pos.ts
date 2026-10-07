@@ -9,6 +9,8 @@ import { useCustomerDisplay } from '@/hooks/use-customer-display';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { resolvePriceLevel } from '@/lib/pricing';
 import { priceLevelLabel } from '@/lib/price-level-badge';
+import { buildLineId } from '@/lib/selling-unit-qty';
+import { priceLineForProduct } from '@/lib/selling-unit-pricing';
 import { repriceCartLines } from '@/lib/cart-reprice';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
@@ -16,6 +18,16 @@ import { formatStockQuantity } from '@/lib/utils';
 import { WALK_IN_CUSTOMER } from '../customer-account/customer-account-types';
 import { type SaleItem, type SuspendedTransaction, type QueuedOrder, mapVatStatusToTaxType } from './pos-types';
 import type { Customer, SystemSettings } from '@/lib/types';
+
+/**
+ * Carts that were saved before cart lines had a `lineId` (localStorage, held
+ * transactions, queued orders) restore without one. Without a lineId every such
+ * line would compare equal (undefined === undefined), so backfill it from the
+ * product/unit the same way a freshly added line gets it.
+ */
+function withLineIds<T extends { id: string; lineId?: string; sellingUnitId?: string | null }>(items: T[] | undefined | null): (T & { lineId: string })[] {
+  return (items || []).map(item => (item.lineId ? item : { ...item, lineId: buildLineId(item.id, item.sellingUnitId) }) as T & { lineId: string });
+}
 
 export function usePOS() {
   const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
@@ -53,7 +65,7 @@ export function usePOS() {
   );
   const inventoryLocation = currentTerminal?.inventoryLocation || '';
 
-  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, inventoryLocation);
+  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, inventoryLocation, true);
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -71,7 +83,8 @@ export function usePOS() {
     debouncedSearchQuery.trim(),
     'Available',
     undefined,
-    inventoryLocation
+    inventoryLocation,
+    true
   );
 
   const [isTenderDialogOpen, setIsTenderDialogOpen] = useState(false);
@@ -208,7 +221,7 @@ export function usePOS() {
     }
   }, []);
 
-  const selectedItem = useMemo(() => items.find(item => item.id === selectedItemId) || null, [items, selectedItemId]);
+  const selectedItem = useMemo(() => items.find(item => item.lineId === selectedItemId) || null, [items, selectedItemId]);
 
   // Scroll to selected item
   useEffect(() => {
@@ -251,7 +264,7 @@ export function usePOS() {
   };
 
   const commitInlineName = (itemId: string, rawValue: string) => {
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (item) {
       const newName = rawValue.trim();
       if (newName && newName !== item.name) handleUpdateItem(itemId, newName, item.quantity, item.price, item.discount);
@@ -261,7 +274,7 @@ export function usePOS() {
 
   const commitQty = (itemId: string) => {
     setEditingQtyItemId(null);
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (!item) return;
     const q = parseFloat(qtyDraft);
     if (isNaN(q) || q <= 0) { setQtyDraft(String(item.quantity)); return; }
@@ -495,7 +508,7 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (selectedItemId && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const item = items.find(i => i.id === selectedItemId);
+            const item = items.find(i => i.lineId === selectedItemId);
             if (item) updateQuantity(selectedItemId, item.quantity + 1);
           }
           break;
@@ -505,7 +518,7 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (selectedItemId && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const item = items.find(i => i.id === selectedItemId);
+            const item = items.find(i => i.lineId === selectedItemId);
             if (item && item.quantity > 1) updateQuantity(selectedItemId, item.quantity - 1);
           }
           break;
@@ -515,8 +528,8 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (items.length > 0 && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const idx = items.findIndex(i => i.id === selectedItemId);
-            setSelectedItemId(items[idx <= 0 ? items.length - 1 : idx - 1].id);
+            const idx = items.findIndex(i => i.lineId === selectedItemId);
+            setSelectedItemId(items[idx <= 0 ? items.length - 1 : idx - 1].lineId);
           }
           break;
         }
@@ -525,8 +538,8 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (items.length > 0 && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const idx = items.findIndex(i => i.id === selectedItemId);
-            setSelectedItemId(items[idx >= items.length - 1 ? 0 : idx + 1].id);
+            const idx = items.findIndex(i => i.lineId === selectedItemId);
+            setSelectedItemId(items[idx >= items.length - 1 ? 0 : idx + 1].lineId);
           }
           break;
         }
@@ -567,8 +580,10 @@ export function usePOS() {
   // Price + badge for one line, so the cashier can see which level and tier
   // produced the price.
   const priceLine = useCallback((product: any, qty: number) => {
-    const resolved = resolvePriceLevel(product, qty, activeLevelId, defaultLevelId);
-    return { price: resolved.price, priceLevelLabel: priceLevelLabel(resolved, priceLevels) };
+    return priceLineForProduct(product, qty, (p, q) => {
+      const resolved = resolvePriceLevel(p, q, activeLevelId, defaultLevelId);
+      return { price: resolved.price, priceLevelLabel: priceLevelLabel(resolved, priceLevels) };
+    });
   }, [activeLevelId, defaultLevelId, priceLevels]);
 
   // Re-price items when price level changes
@@ -592,7 +607,8 @@ export function usePOS() {
   // Handlers
   const handleAddItem = (product: any | undefined) => {
     if (product) {
-      const existing = items.find(item => item.id === product.id);
+      const lineId = buildLineId(product.id, product.sellingUnitId);
+      const existing = items.find(item => item.lineId === lineId);
       // Adding an existing line (quantity bump) never changes the cart's
       // document type, so only check on a genuinely new line.
       if (!existing && items.length > 0) {
@@ -610,17 +626,17 @@ export function usePOS() {
         }
       }
       setItems(prevItems => {
-        const existing = prevItems.find(item => item.id === product.id);
+        const existing = prevItems.find(item => item.lineId === lineId);
         if (existing) {
           const newQty = existing.quantity + 1;
-          return prevItems.map(item => item.id === product.id ? { ...item, quantity: newQty, ...priceLine(product, newQty) } : item);
+          return prevItems.map(item => item.lineId === lineId ? { ...item, quantity: newQty, ...priceLine(product, newQty) } : item);
         } else {
           const newItem: SaleItem = {
-            ...product, quantity: 1, discount: 0, name: product.name,
+            ...product, lineId, quantity: 1, discount: 0, name: product.name,
             ...priceLine(product, 1),
             taxType: mapVatStatusToTaxType(product.vatStatus),
           };
-          setSelectedItemId(newItem.id);
+          setSelectedItemId(newItem.lineId);
           return [...prevItems, newItem];
         }
       });
@@ -637,8 +653,10 @@ export function usePOS() {
     const partial: any[] = [];
     const seen = new Set<string>();
     for (const p of list) {
-      if (seen.has(p.id)) continue;
-      seen.add(p.id);
+      // Dedupe by line identity: two selling units of one product share p.id.
+      const lineKey = buildLineId(p.id, p.sellingUnitId);
+      if (seen.has(lineKey)) continue;
+      seen.add(lineKey);
       const sku = (p.sku || '').toLowerCase();
       const barcode = (p.barcode || '').toLowerCase();
       const name = (p.name || '').toLowerCase();
@@ -682,14 +700,16 @@ export function usePOS() {
     handleAddItem(product);
   };
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
+  const updateQuantity = (lineId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeItem(productId);
+      removeItem(lineId);
     } else {
       setItems(prevItems => prevItems.map(item => {
-        if (item.id === productId) {
-          const original = products?.find(p => p.id === productId);
-          return { ...item, quantity: newQuantity, ...priceLine(original || item, newQuantity) };
+        if (item.lineId === lineId) {
+          // The cart line already carries the selling-unit fields, so re-price
+          // from the LINE, not from a products[] lookup by product id: that
+          // lookup cannot tell two units of one product apart.
+          return { ...item, quantity: newQuantity, ...priceLine(item, newQuantity) };
         }
         return item;
       }));
@@ -698,7 +718,7 @@ export function usePOS() {
 
   const handleUpdateItem = (itemId: string, newName: string, newQty: number, newPrice: number, newDiscount: number) => {
     // A hand-edited price is no longer the level's price, so drop the badge rather than let it say otherwise.
-    setItems(prev => prev.map(item => item.id === itemId
+    setItems(prev => prev.map(item => item.lineId === itemId
       ? { ...item, name: newName, quantity: newQty, price: newPrice, discount: newDiscount, priceLevelLabel: newPrice !== item.price ? undefined : item.priceLevelLabel }
       : item));
   };
@@ -710,7 +730,7 @@ export function usePOS() {
   };
 
   const performVoidLine = (itemId: string) => {
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (!item) return;
     removeItem(itemId);
     if (selectedItemId === itemId) setSelectedItemId(null);
@@ -727,8 +747,8 @@ export function usePOS() {
     focusInlineField('pos-qty', itemId);
   };
 
-  const removeItem = (productId: string) => {
-    setItems(items.filter(item => item.id !== productId));
+  const removeItem = (lineId: string) => {
+    setItems(items.filter(item => item.lineId !== lineId));
   };
 
   const handleSendToQueue = () => {
@@ -780,7 +800,7 @@ export function usePOS() {
       const response = await fetch(getApiUrl(`/pos/queue?id=${orderId}`), { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
-        setItems(result.data.items);
+        setItems(withLineIds(result.data.items));
         setQueuedOrders(prev => prev.filter(o => o.id !== orderId));
         setIsQueuePanelOpen(false);
         toast({ title: `Order #${result.data.queueNumber} Loaded`, description: `From ${result.data.frontlinerName || 'frontliner'}.` });
@@ -818,7 +838,7 @@ export function usePOS() {
   };
 
   const handleOpenEditDialog = () => {
-    if (selectedItem) startEditName(selectedItem.id);
+    if (selectedItem) startEditName(selectedItem.lineId);
     else toast({ title: 'No Item Selected', description: 'Please select an item to edit.', variant: 'destructive' });
   };
 
@@ -834,7 +854,7 @@ export function usePOS() {
       setItems(items.map(item => ({ ...item, discount: percentage, discountType, discountIdNumber, discountHolderName })));
       toast({ title: 'Global Discount Applied', description: `Applied ${percentage.toFixed(2)}% discount to all items.` });
     } else {
-      setItems(items.map(item => item.id === itemId ? { ...item, discount: percentage, discountType, discountIdNumber, discountHolderName } : item));
+      setItems(items.map(item => item.lineId === itemId ? { ...item, discount: percentage, discountType, discountIdNumber, discountHolderName } : item));
       toast({ title: 'Discount Applied', description: `Discount updated to ${percentage.toFixed(2)}%` });
     }
   };
@@ -873,7 +893,7 @@ export function usePOS() {
 
   const handleRestore = (index: number) => {
     if (items.length > 0) { toast({ title: 'Cart Not Empty', description: 'Please clear the current cart before restoring a transaction.', variant: 'destructive' }); return; }
-    setItems(heldTransactions[index].items);
+    setItems(withLineIds(heldTransactions[index].items));
     setHeldTransactions(prev => prev.filter((_, i) => i !== index));
     setIsHeldTransOpen(false);
   };
@@ -1012,7 +1032,7 @@ export function usePOS() {
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart);
-        setItems(parsed.items || []);
+        setItems(withLineIds(parsed.items));
         setSelectedCustomer(parsed.selectedCustomer || WALK_IN_CUSTOMER);
         setHeldTransactions(parsed.heldTransactions || []);
       } catch {}
@@ -1099,7 +1119,7 @@ export function usePOS() {
   const handleRequestPriceEdit = () => {
     if (selectedItem) {
       if (businessSettings?.enablePriceEditAuth) setIsPriceEditAuthOpen(true);
-      else unlockInlinePrice(selectedItem.id);
+      else unlockInlinePrice(selectedItem.lineId);
     } else {
       toast({ title: 'No Item Selected', description: 'Please select an item to authorize price change.', variant: 'destructive' });
     }
@@ -1114,7 +1134,7 @@ export function usePOS() {
   };
 
   const commitInlinePrice = (itemId: string, rawValue: string) => {
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (item) {
       const newPrice = parseFloat(rawValue);
       if (!isNaN(newPrice) && newPrice >= 0 && newPrice !== item.price) handleUpdateItem(itemId, item.name, item.quantity, newPrice, item.discount);

@@ -5,6 +5,7 @@ import type { Product } from '@/lib/types';
 import { useProducts } from '@/hooks/use-api';
 import { useLiveRefresh } from '@/hooks/use-live-refresh';
 import { useDebounce } from '@/hooks/use-debounce';
+import { buildLineId } from '@/lib/selling-unit-qty';
 
 type Options = {
   isOpen: boolean;
@@ -32,7 +33,8 @@ export function useProductSearch({
     debouncedSearchTerm,
     'Available',
     undefined,
-    warehouseId
+    warehouseId,
+    true
   );
 
   const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]);
@@ -71,8 +73,8 @@ export function useProductSearch({
     }
   }, [isOpen, onOpenChange]);
 
-  const handleSelect = useCallback((productId: string) => {
-    const product = displayedProducts.find(p => p.id === productId);
+  const handleSelect = useCallback((lineId: string) => {
+    const product = displayedProducts.find(p => buildLineId(p.id, p.sellingUnitId) === lineId);
     if (product) {
       onSelectProduct(product);
       onOpenChange(false);

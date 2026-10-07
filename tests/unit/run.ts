@@ -63,6 +63,7 @@ const TEST_FILES = [
   'inline-editable-select-optional-value.test',
   'selling-unit-qty.test',
   'selling-unit-expansion.test',
+  'selling-unit-price-line.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
