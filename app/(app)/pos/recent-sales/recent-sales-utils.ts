@@ -1,4 +1,5 @@
 import type { Sale } from '@/lib/types';
+import { buildLineId } from '@/lib/selling-unit-qty';
 
 export const formatCurrency = (amount: number) =>
   amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -9,6 +10,10 @@ export function mapSaleToReceiptDetails(sale: Sale) {
     const discountPercent = gross > 0 ? ((item.discount || 0) / gross) * 100 : 0;
     return {
       ...item.product,
+      // A reprinted historical line has no cart line of its own, so its
+      // identity is just its product. The per-unit truth for a past sale
+      // lives in sale_items, not here.
+      lineId: buildLineId(item.product.id),
       price: item.price,
       quantity: item.quantity,
       discount: discountPercent,
