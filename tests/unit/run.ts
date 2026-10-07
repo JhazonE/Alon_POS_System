@@ -61,6 +61,7 @@ const TEST_FILES = [
   'reading-number-local-date.test',
   'price-level-price-calc.test',
   'inline-editable-select-optional-value.test',
+  'selling-unit-qty.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
