@@ -59,6 +59,12 @@ function POSContent() {
           currentTime={pos.currentTime}
           enableCustomerDisplay={pos.enableCustomerDisplay}
           openOnSecondScreen={pos.openOnSecondScreen}
+          enablePriceLevelSwitch={pos.enablePriceLevelSwitch}
+          priceLevels={pos.priceLevels}
+          activeLevelId={pos.activeLevelId}
+          selectedPriceLevelId={pos.selectedPriceLevelId}
+          setSelectedPriceLevelId={pos.setSelectedPriceLevelId}
+          customerHasOwnLevel={!!pos.selectedCustomer?.priceLevelId}
         />
 
         {/* Middle: action rails flanking the cart */}

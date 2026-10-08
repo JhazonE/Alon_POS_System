@@ -27,6 +27,13 @@ export function GeneralSettingsCard({ settings, set }: Props) {
         </div>
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="space-y-0.5">
+            <Label htmlFor="enablePriceLevelSwitch">Allow Price Level Switching</Label>
+            <p className="text-sm text-muted-foreground">Let the cashier change the price level from the POS, so a walk-in can earn a quantity tier without being assigned a customer</p>
+          </div>
+          <Switch id="enablePriceLevelSwitch" checked={!!settings.enablePriceLevelSwitch} onCheckedChange={v => set('enablePriceLevelSwitch', v)} />
+        </div>
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="space-y-0.5">
             <Label htmlFor="enableNegativeInventory">Allow Negative Inventory</Label>
             <p className="text-sm text-muted-foreground">Allow sales even when stock is insufficient</p>
           </div>

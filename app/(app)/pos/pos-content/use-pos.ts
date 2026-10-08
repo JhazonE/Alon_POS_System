@@ -12,6 +12,7 @@ import { priceLevelLabel } from '@/lib/price-level-badge';
 import { buildLineId } from '@/lib/selling-unit-qty';
 import { priceLineForProduct } from '@/lib/selling-unit-pricing';
 import { repriceCartLines } from '@/lib/cart-reprice';
+import { resolveActivePriceLevelId, manualPickAfterCustomerChange } from '@/lib/pos-active-price-level';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
@@ -170,6 +171,7 @@ export function usePOS() {
   const [isCheckingShift, setIsCheckingShift] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<{ id: string; name: string; isActive: boolean; isReferenceRequired?: boolean; pointsAmount?: number; currencyEquivalent?: number }[]>([]);
   const [showQuantityInSearch, setShowQuantityInSearch] = useState(true);
+  const [enablePriceLevelSwitch, setEnablePriceLevelSwitch] = useState(false);
 
   // Sticky focus on main input when all dialogs close
   useEffect(() => {
@@ -305,6 +307,7 @@ export function usePOS() {
         setOverallReadingAuthCredentials({ username: result.data.overallReadingAuthUsername, password: result.data.overallReadingAuthPassword });
         setIsTrainingMode(result.data.isTrainingMode || false);
         setShowQuantityInSearch(result.data.showQuantityInSearch ?? true);
+        setEnablePriceLevelSwitch(result.data.enablePriceLevelSwitch || false);
         setEnableCustomerDisplay(result.data.enableCustomerDisplay || false);
 
         const localPrintMode = localStorage.getItem('pos_printer_mode');
@@ -381,8 +384,10 @@ export function usePOS() {
       try {
         const levels = await import('../../products/actions').then(m => m.getPriceLevels());
         setPriceLevels(levels);
-        const defaultLevel = levels.find((l: any) => l.isDefault);
-        if (defaultLevel) setSelectedPriceLevelId(defaultLevel.id);
+        // selectedPriceLevelId is left EMPTY on load: '' means "follow the
+        // customer, else the default level" (see resolveActivePriceLevelId).
+        // Seeding it with the default level's id made a cashier's deliberate
+        // pick indistinguishable from the startup value.
       } catch {}
     };
     fetchPriceLevels();
@@ -574,7 +579,19 @@ export function usePOS() {
   }, [items, selectedItemId, heldTransactions, enableLineVoidAuth, isFrontliner, businessSettings?.posMode]);
 
   const defaultLevelId = useMemo(() => priceLevels.find((l: any) => l.isDefault)?.id || 'retail-level', [priceLevels]);
-  const activeLevelId = useMemo(() => selectedCustomer?.priceLevelId || selectedPriceLevelId || defaultLevelId, [selectedCustomer, selectedPriceLevelId, defaultLevelId]);
+  const activeLevelId = useMemo(
+    () => resolveActivePriceLevelId(selectedCustomer?.priceLevelId, selectedPriceLevelId, defaultLevelId),
+    [selectedCustomer, selectedPriceLevelId, defaultLevelId],
+  );
+
+  // A customer who carries their own level outranks the cashier's pick, so the
+  // pick is dropped rather than left as hidden state that would resurface the
+  // moment the cart went back to walk-in. Derived from selectedCustomer instead
+  // of done in handleSelectCustomer because setSelectedCustomer is also called
+  // directly by the dialogs and by the restored-cart path.
+  useEffect(() => {
+    setSelectedPriceLevelId(prev => manualPickAfterCustomerChange(selectedCustomer?.priceLevelId, prev));
+  }, [selectedCustomer]);
   const activeLevelName = useMemo(() => priceLevels.find((l: any) => l.id === activeLevelId)?.name || 'Retail', [activeLevelId, priceLevels]);
 
   // Price + badge for one line, so the cashier can see which level and tier
@@ -1358,6 +1375,7 @@ export function usePOS() {
     isOverallReadingAuthOpen, setIsOverallReadingAuthOpen, overallReadingAuthCredentials,
     // price levels
     priceLevels, selectedPriceLevelId, setSelectedPriceLevelId,
+    enablePriceLevelSwitch,
     activeLevelId, defaultLevelId, activeLevelName,
     // products (for search filters)
     products,
