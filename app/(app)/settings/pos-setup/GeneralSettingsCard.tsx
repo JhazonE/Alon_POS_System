@@ -27,8 +27,8 @@ export function GeneralSettingsCard({ settings, set }: Props) {
         </div>
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="space-y-0.5">
-            <Label htmlFor="enablePriceLevelSwitch">Allow Price Level Switching</Label>
-            <p className="text-sm text-muted-foreground">Let the cashier change the price level from the POS, so a walk-in can earn a quantity tier without being assigned a customer</p>
+            <Label htmlFor="enablePriceLevelSwitch">Automatic Quantity Pricing &amp; Price Level Switching</Label>
+            <p className="text-sm text-muted-foreground">Apply the best quantity discount automatically once a line reaches a declared minimum, and let the cashier change the price level from the POS. Customers with their own price level always keep it.</p>
           </div>
           <Switch id="enablePriceLevelSwitch" checked={!!settings.enablePriceLevelSwitch} onCheckedChange={v => set('enablePriceLevelSwitch', v)} />
         </div>
