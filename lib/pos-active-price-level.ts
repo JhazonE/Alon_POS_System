@@ -48,3 +48,19 @@ export function manualPickAfterCustomerChange(
   if (isSet(customerLevelId)) return '';
   return isSet(manualLevelId) ? manualLevelId : '';
 }
+
+/**
+ * Whether this sale may take a tier declared on another price level.
+ *
+ * Only for a sale with no declared level: a customer's own level is contract
+ * pricing and a cashier's manual pick is deliberate, so both suppress it (spec
+ * A2). `enabled` is the POS setting `enable_price_level_switch`.
+ */
+export function shouldAutoApplyTiers(
+  enabled: boolean,
+  customerLevelId: string | null | undefined,
+  manualLevelId: string | null | undefined,
+): boolean {
+  if (!enabled) return false;
+  return !isSet(customerLevelId) && !isSet(manualLevelId);
+}

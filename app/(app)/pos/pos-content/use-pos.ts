@@ -12,7 +12,7 @@ import { priceLevelLabel } from '@/lib/price-level-badge';
 import { buildLineId } from '@/lib/selling-unit-qty';
 import { priceLineForProduct } from '@/lib/selling-unit-pricing';
 import { repriceCartLines } from '@/lib/cart-reprice';
-import { resolveActivePriceLevelId, manualPickAfterCustomerChange } from '@/lib/pos-active-price-level';
+import { resolveActivePriceLevelId, manualPickAfterCustomerChange, shouldAutoApplyTiers } from '@/lib/pos-active-price-level';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
@@ -596,19 +596,24 @@ export function usePOS() {
 
   // Price + badge for one line, so the cashier can see which level and tier
   // produced the price.
+  const autoQuantityTiers = useMemo(
+    () => shouldAutoApplyTiers(enablePriceLevelSwitch, selectedCustomer?.priceLevelId, selectedPriceLevelId),
+    [enablePriceLevelSwitch, selectedCustomer, selectedPriceLevelId],
+  );
+
   const priceLine = useCallback((product: any, qty: number) => {
     return priceLineForProduct(product, qty, (p, q) => {
-      const resolved = resolvePriceLevel(p, q, activeLevelId, defaultLevelId);
+      const resolved = resolvePriceLevel(p, q, activeLevelId, defaultLevelId, { autoQuantityTiers });
       return { price: resolved.price, priceLevelLabel: priceLevelLabel(resolved, priceLevels) };
     });
-  }, [activeLevelId, defaultLevelId, priceLevels]);
+  }, [activeLevelId, defaultLevelId, priceLevels, autoQuantityTiers]);
 
-  // Re-price items when price level changes
+  // Re-price items when the price level, or the automatic-tier gate, changes
   useEffect(() => {
     if (!activeLevelId) return;
     setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLevelId]);
+  }, [activeLevelId, autoQuantityTiers]);
 
   // When the price level list arrives (it loads asynchronously, after a saved cart may
   // already have been restored), fill in the badges only. Prices are deliberately NOT

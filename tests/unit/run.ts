@@ -58,6 +58,7 @@ const TEST_FILES = [
   'cart-reprice.test',
   'pos-active-price-level.test',
   'auto-quantity-tier.test',
+  'pos-auto-tier-gate.test',
   'base-price-resolution.test',
   'business-date-lock-lifecycle.test',
   'reading-number-local-date.test',
