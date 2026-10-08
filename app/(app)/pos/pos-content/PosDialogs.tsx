@@ -110,8 +110,8 @@ export function PosDialogs(pos: Props) {
       <AdminAuthDialog
         isOpen={pos.isSuspendAuthOpen}
         onOpenChange={pos.setIsSuspendAuthOpen}
-        title="Suspend Authorization"
-        description="Please provide credentials to suspend a transaction"
+        title="Hold Authorization"
+        description="Please provide credentials to hold a transaction"
         requiredCredentials={pos.suspendAuthCredentials}
         onSuccess={pos.handleSuspendAuthSuccess}
         preventCloseAutoFocus
@@ -120,8 +120,8 @@ export function PosDialogs(pos: Props) {
       <AdminAuthDialog
         isOpen={pos.isSuspendedAuthOpen}
         onOpenChange={pos.setIsSuspendedAuthOpen}
-        title="Suspended Authorization"
-        description="Please provide credentials to view suspended transactions"
+        title="Recall Authorization"
+        description="Please provide credentials to view held transactions"
         requiredCredentials={pos.suspendedAuthCredentials}
         onSuccess={pos.handleSuspendedAuthSuccess}
         preventCloseAutoFocus
