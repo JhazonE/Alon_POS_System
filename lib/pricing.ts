@@ -16,6 +16,16 @@ export interface ResolvedPrice {
   minQuantity: number;
 }
 
+/** Opt-in behaviour for one price resolution. */
+export interface ResolveOptions {
+  /**
+   * Let a tier declared on ANOTHER level apply to this sale. Gated by the
+   * POS setting `enable_price_level_switch` and only ever passed when the
+   * sale carries no declared level of its own (see the 2026-10-08 spec).
+   */
+  autoQuantityTiers?: boolean;
+}
+
 /**
  * The best row for one level at one quantity: among the rows whose minimum the
  * quantity reaches, the one with the HIGHEST minimum (the most specific tier
@@ -52,6 +62,36 @@ function bestRowForLevel(
 }
 
 /**
+ * The cheapest tier the quantity earns, from ANY level.
+ *
+ * Only rows with a real minimum (2 or more) are eligible: a flat row on
+ * another level is not a tier, and treating it as one is exactly the "P70
+ * leak" the 2026-10-02 spec removed. Returns null when nothing qualifies.
+ */
+function cheapestAutoTier(
+  product: Product,
+  quantity: number,
+): ResolvedPrice | null {
+  let best: ResolvedPrice | null = null;
+
+  for (const pl of product.priceLevels || []) {
+    if ((pl.price as unknown) == null || (pl.price as any) === '') continue;
+    const price = Number(pl.price);
+    if (!Number.isFinite(price)) continue;
+
+    // A real minimum only. normaliseMinQty flattens 0, null and 1 to 0.
+    const minQty = normaliseMinQty(pl.minQuantity);
+    if (minQty < 2 || quantity < minQty) continue;
+
+    if (best === null || price < best.price) {
+      best = { price, levelId: pl.levelId, minQuantity: minQty };
+    }
+  }
+
+  return best;
+}
+
+/**
  * Resolves the price for a cart line, and reports which level and tier produced
  * it so the POS can show the cashier why.
  *
@@ -70,20 +110,33 @@ export function resolvePriceLevel(
   quantity: number,
   activeLevelId?: string,
   defaultLevelId: string = 'retail-level',
+  options: ResolveOptions = {},
 ): ResolvedPrice {
   const qty = Number(quantity) || 0;
 
+  let settled: ResolvedPrice | null = null;
+
   if (activeLevelId) {
-    const active = bestRowForLevel(product, qty, activeLevelId);
-    if (active) return active;
+    settled = bestRowForLevel(product, qty, activeLevelId);
   }
 
-  if (defaultLevelId && defaultLevelId !== activeLevelId) {
-    const fallback = bestRowForLevel(product, qty, defaultLevelId);
-    if (fallback) return fallback;
+  if (!settled && defaultLevelId && defaultLevelId !== activeLevelId) {
+    settled = bestRowForLevel(product, qty, defaultLevelId);
   }
 
-  return { price: Number(product.price) || 0, levelId: null, minQuantity: 0 };
+  const base: ResolvedPrice = settled
+    ?? { price: Number(product.price) || 0, levelId: null, minQuantity: 0 };
+
+  // Automatic cross-level tier. Runs LAST and only ever lowers the price, so
+  // it cannot regress a price the rules above already settled. Suppressed
+  // unless the sale is on the default level: a declared customer level or a
+  // cashier's manual pick must win (spec A2, preserving D4).
+  if (options.autoQuantityTiers && (!activeLevelId || activeLevelId === defaultLevelId)) {
+    const auto = cheapestAutoTier(product, qty);
+    if (auto && auto.price < base.price) return auto;
+  }
+
+  return base;
 }
 
 /**
@@ -96,6 +149,7 @@ export function calculateEffectivePrice(
   quantity: number,
   activeLevelId?: string,
   defaultLevelId: string = 'retail-level',
+  options: ResolveOptions = {},
 ): number {
-  return resolvePriceLevel(product, quantity, activeLevelId, defaultLevelId).price;
+  return resolvePriceLevel(product, quantity, activeLevelId, defaultLevelId, options).price;
 }

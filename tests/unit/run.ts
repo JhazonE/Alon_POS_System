@@ -56,6 +56,8 @@ const TEST_FILES = [
   'base-unit-price-level-rows.test',
   'price-level-badge.test',
   'cart-reprice.test',
+  'pos-active-price-level.test',
+  'auto-quantity-tier.test',
   'base-price-resolution.test',
   'business-date-lock-lifecycle.test',
   'reading-number-local-date.test',
