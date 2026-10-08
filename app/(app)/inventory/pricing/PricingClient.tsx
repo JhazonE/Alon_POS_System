@@ -6,12 +6,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Loader2, PackageSearch, Search, SlidersHorizontal, Tag, Upload } from 'lucide-react';
+import { Download, PackageSearch, Search, SlidersHorizontal, Tag, Upload } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getProductOptions } from '@/app/(app)/products/actions';
 import { useBulkPriceUpdate, type TargetField } from './use-bulk-price-update';
 import { downloadPriceListTemplate } from './price-list-template';
 import { UploadPriceListDialog } from './UploadPriceListDialog';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   onUpdated?: () => void;
@@ -67,7 +68,7 @@ export function PricingClient({ onUpdated }: Props) {
   if (isLoadingOptions || !productOptions) {
     return (
       <div className="p-10 text-center">
-        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+        <Spinner className="h-6 w-6 mx-auto text-muted-foreground" />
       </div>
     );
   }

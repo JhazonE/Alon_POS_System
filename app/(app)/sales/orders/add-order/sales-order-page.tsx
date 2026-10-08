@@ -1,10 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import { useLeavePage } from '@/components/form-page/use-leave-page';
 import { SalesOrderForm } from './sales-order-form';
 import { useSalesOrderById } from './use-sales-order-by-id';
+import { Spinner } from '@/components/ui/spinner';
 
 /** Page body for /sales/orders/new and /sales/orders/[id]/edit. */
 export function SalesOrderPage({ editOrderId }: { editOrderId?: string }) {
@@ -31,7 +31,7 @@ export function SalesOrderPage({ editOrderId }: { editOrderId?: string }) {
   if (editOrderId && (loading || !order)) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Spinner className="h-4 w-4" />
         Loading sales order...
       </div>
     );

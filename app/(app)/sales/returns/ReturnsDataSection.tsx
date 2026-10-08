@@ -20,6 +20,7 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { formatCurrency, type ReturnRecord } from './returns-types';
+import { Spinner } from '@/components/ui/spinner';
 
 const VIEW_TOGGLE_CLASSES =
   'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 px-[13px] text-xs rounded-lg gap-1.5 h-8 px-3';
@@ -172,7 +173,7 @@ export function ReturnsDataSection({ table, columns, isLoading, viewMode, setVie
             <div className="flex items-center justify-center h-24 text-muted-foreground p-4">
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <Spinner className="h-4 w-4" />
                   Loading...
                 </div>
               ) : 'No returned sales found for the selected date range.'}
@@ -211,7 +212,7 @@ export function ReturnsDataSection({ table, columns, isLoading, viewMode, setVie
                   <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
                     {isLoading ? (
                       <div className="flex items-center justify-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        <Spinner className="h-4 w-4" />
                         Loading...
                       </div>
                     ) : (

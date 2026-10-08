@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronDown, Loader2, Pencil, PlusCircle, X } from 'lucide-react';
+import { Check, ChevronDown, Pencil, PlusCircle, X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Category } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { FormControl } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Spinner } from '@/components/ui/spinner';
 
 interface PickerSectionProps {
   title: string;
@@ -125,7 +126,7 @@ function PickerSection({
         disabled={isSaving || !draft.trim()}
         onClick={commit}
       >
-        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+        {isSaving ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
       </button>
       <button type="button" className={cn(iconButton, 'text-muted-foreground')} onClick={cancel}>
         <X className="h-4 w-4" />

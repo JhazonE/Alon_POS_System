@@ -6,7 +6,7 @@ interface SpinnerProps extends SVGAttributes<SVGSVGElement> {
 }
 
 /**
- * Brand loading indicator — a teal-to-amber gradient arc ring.
+ * Brand loading indicator — a primary-to-amber gradient arc ring.
  * Drop-in replacement for `<Loader2 className="... animate-spin" />`.
  */
 export function Spinner({ className, ...props }: SpinnerProps) {

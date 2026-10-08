@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Trash2, Search, Wand2 } from 'lucide-react';
+import { Trash2, Search, Wand2 } from 'lucide-react';
 
 import { FormPageShell } from '@/components/form-page/form-page-shell';
 import { DetailsToggleButton, useDetailsCollapse } from '@/components/form-page/details-toggle';
@@ -52,6 +52,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAddPurchaseOrder, type UseAddPurchaseOrderProps } from './use-add-purchase-order';
 import { ProductSelector } from './product-selector';
 import { CurrencyInput } from './currency-input';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * The New / Edit Purchase Order form, rendered as a page body. The page that
@@ -163,7 +164,7 @@ export function PurchaseOrderForm(hookProps: UseAddPurchaseOrderProps) {
               onClick={() => confirmValues && processSubmit(confirmValues)}
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isSubmitting ? <Spinner className="h-4 w-4 mr-2" /> : null}
               Confirm & Save
             </AlertDialogAction>
           </AlertDialogFooter>

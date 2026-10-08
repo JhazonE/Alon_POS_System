@@ -3,7 +3,8 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   open: boolean;
@@ -53,7 +54,7 @@ export function AddTypeDialog({ open, onOpenChange, newTypeName, onNewTypeNameCh
               </TableHeader>
               <TableBody>
                 {isLoadingTypes ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-4"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} className="text-center py-4"><Spinner className="h-6 w-6 mx-auto text-muted-foreground" /></TableCell></TableRow>
                 ) : customTypes.length === 0 ? (
                   <TableRow><TableCell colSpan={2} className="text-center py-4 text-muted-foreground">No types available</TableCell></TableRow>
                 ) : customTypes.map(type => (

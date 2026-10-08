@@ -4,9 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, Package2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Package2 } from "lucide-react";
 
 import { useManageShelfLocations } from "./use-manage-shelf-locations";
+import { Spinner } from '@/components/ui/spinner';
 
 interface ManageShelfLocationsDialogProps {
   open?: boolean;
@@ -64,7 +65,7 @@ export function ManageShelfLocationsDialog({ open, onOpenChange, onLocationAdded
           </div>
           <div className="flex gap-2 w-full sm:w-auto pt-2 sm:pt-0">
             <button type="submit" disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] flex-1 sm:flex-none">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {isSaving ? <Spinner className="h-4 w-4" /> : editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               {editingId ? "Update" : "Add"}
             </button>
             {editingId && (

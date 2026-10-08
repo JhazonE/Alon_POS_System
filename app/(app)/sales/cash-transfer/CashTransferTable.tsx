@@ -1,7 +1,7 @@
-import { Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { flexRender, type Table as TanTable } from '@tanstack/react-table';
 import type { CashTransfer } from './cash-transfer-types';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   table: TanTable<CashTransfer>;
@@ -29,7 +29,7 @@ export function CashTransferTable({ table, isLoading }: Props) {
           <TableRow>
             <TableCell colSpan={table.getVisibleLeafColumns().length} className="text-center h-24">
               <div className="flex justify-center items-center gap-2">
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <Spinner className="h-6 w-6" />
                 <span>Loading data...</span>
               </div>
             </TableCell>

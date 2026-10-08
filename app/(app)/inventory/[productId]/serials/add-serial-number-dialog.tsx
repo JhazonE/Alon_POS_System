@@ -11,11 +11,12 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 
 import { useAddSerialForm } from './use-add-serial-form';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * Mode-toggle button classes: the shared `sm` button recipe plus this row's
@@ -144,7 +145,7 @@ export function AddSerialNumberDialog({ product }: { product: Product }) {
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...
+                <Spinner className="mr-2 h-4 w-4" /> Adding...
               </>
             ) : mode === 'single' ? (
               'Add Serial'

@@ -11,6 +11,7 @@ import { queryClient } from './layout-nav-config';
 import { useAppLayout } from './use-app-layout';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
+import { Spinner } from '@/components/ui/spinner';
 // Licensing is disabled — see components/license-gate.tsx. Re-add this call
 // to resume background revocation checks.
 // import { useLicenseHeartbeat } from './use-license-heartbeat';
@@ -53,7 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary" />
+        <Spinner className="h-32 w-32" />
       </div>
     );
   }

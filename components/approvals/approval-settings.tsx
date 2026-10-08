@@ -3,15 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Settings2, 
-  Plus, 
-  Trash2, 
-  Save,
-  Info,
-  Loader2,
-  ChevronLeft
-} from 'lucide-react';
+import { Settings2, Plus, Trash2, Save, Info, ChevronLeft } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -21,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 
 interface WorkflowStep {
   id?: string;
@@ -122,7 +115,7 @@ export function ApprovalSettings({ onBack }: ApprovalSettingsProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     );
   }

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Printer, FileSpreadsheet } from 'lucide-react';
+import { Printer, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { getApiUrl } from '@/lib/api-config';
@@ -30,6 +30,7 @@ import { Category } from '@/lib/types';
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Product {
   id: string;
@@ -274,7 +275,7 @@ export default function InventoryReportPage() {
             placeholder="Search product, barcode, category..."
           />
           <button onClick={() => handlePrint()} className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2" disabled={isPrinting}>
-              {isPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              {isPrinting ? <Spinner className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
               Print Report
           </button>
           <button
@@ -282,7 +283,7 @@ export default function InventoryReportPage() {
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2 border-emerald-700 text-emerald-700 hover:bg-emerald-50"
             disabled={isExporting || filteredProducts.length === 0}
           >
-            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            {isExporting ? <Spinner className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}
             Export to Excel
           </button>
         </div>
@@ -346,7 +347,7 @@ export default function InventoryReportPage() {
                   {loading ? (
                     <TableRow>
                       <TableCell colSpan={7} className="h-24 text-center">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                        <Spinner className="h-6 w-6 mx-auto" />
                       </TableCell>
                     </TableRow>
                   ) : filteredProducts.length === 0 ? (

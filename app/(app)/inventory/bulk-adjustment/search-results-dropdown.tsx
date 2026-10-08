@@ -1,8 +1,9 @@
-import { Loader2, Package, Plus } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { formatQuantity } from '@/lib/utils';
 import type { Product } from '@/lib/types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function SearchResultsDropdown({
   isLoadingProducts,
@@ -17,7 +18,7 @@ export function SearchResultsDropdown({
     <div className="absolute top-full left-0 right-0 mt-1 bg-popover rounded-xl border border-border shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
       {isLoadingProducts ? (
         <div className="flex items-center justify-center py-8 gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Spinner className="h-5 w-5 text-primary" />
           <span className="text-sm text-muted-foreground">Loading catalog...</span>
         </div>
       ) : filteredProducts.length === 0 ? (

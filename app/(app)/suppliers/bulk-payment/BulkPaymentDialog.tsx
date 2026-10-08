@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, XCircle, RefreshCw, Eraser } from 'lucide-react';
+import { CheckCircle2, XCircle, RefreshCw, Eraser } from 'lucide-react';
 import { usePaymentMethods } from '@/hooks/use-api';
 import { SupplierWithBalance } from '../actions';
 import { useBulkPayment } from './use-bulk-payment';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   suppliers: SupplierWithBalance[];
@@ -109,7 +110,7 @@ export function BulkPaymentDialog({ suppliers, open, onOpenChange, onComplete }:
                 {row.status === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
                 {row.status === 'error'   && <XCircle className="h-4 w-4 text-red-600" />}
                 {row.status === 'pending' && isSubmitting && row.amount > 0 && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <Spinner className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
 
@@ -176,7 +177,7 @@ export function BulkPaymentDialog({ suppliers, open, onOpenChange, onComplete }:
             className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isSubmitting
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing…</>
+              ? <><Spinner className="mr-2 h-4 w-4" />Processing…</>
               : `Pay ${activeRows.length} Supplier${activeRows.length !== 1 ? 's' : ''}`
             }
           </button>

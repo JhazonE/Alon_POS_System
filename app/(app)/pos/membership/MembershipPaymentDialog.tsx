@@ -18,13 +18,14 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CreditCard, Loader2, Coins, Wallet } from 'lucide-react';
+import { CreditCard, Coins, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { usePrinter } from '@/lib/use-printer';
 import { useMembershipPayment } from './use-membership-payment';
 import { cn } from '@/lib/utils';
 import type { MembershipPaymentDialogProps, MembershipResult } from './membership-types';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * Payment-method button classes: the shared default-size button recipe plus
@@ -143,7 +144,7 @@ export function MembershipPaymentDialog({
           </div>
 
           {isCardLoading && selectedCustomerId && (
-            <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />Checking loyalty card…</p>
+            <p className="text-sm text-muted-foreground flex items-center gap-2"><Spinner className="h-3.5 w-3.5" />Checking loyalty card…</p>
           )}
 
           {/* Renewal vs Activation */}
@@ -215,7 +216,7 @@ export function MembershipPaymentDialog({
         <DialogFooter>
           <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
           <button onClick={handleConfirm} disabled={confirmDisabled} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-emerald-600 hover:bg-emerald-700">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
             Confirm Payment
           </button>
         </DialogFooter>

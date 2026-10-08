@@ -7,11 +7,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useManagePaymentTerms } from './use-manage-payment-terms';
 import { PaymentTermRow } from './PaymentTermRow';
 import { AddTypeDialog } from './AddTypeDialog';
 import type { ManagePaymentTermsDialogProps } from './manage-payment-terms-types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function ManagePaymentTermsDialog({ open: controlledOpen, onOpenChange: setControlledOpen, onPaymentTermsUpdated, trigger }: ManagePaymentTermsDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -88,7 +89,7 @@ export function ManagePaymentTermsDialog({ open: controlledOpen, onOpenChange: s
                       <button type="button" onClick={m.cancelEdit} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[18px] h-10">Cancel</button>
                     )}
                     <button type="submit" disabled={m.isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] h-10 min-w-[80px]">
-                      {m.isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" /><span className="ml-2">{m.editingTerm ? 'Update' : 'Add'}</span></>}
+                      {m.isSaving ? <Spinner className="h-4 w-4" /> : <><Plus className="h-4 w-4" /><span className="ml-2">{m.editingTerm ? 'Update' : 'Add'}</span></>}
                     </button>
                   </div>
                 </div>
@@ -109,7 +110,7 @@ export function ManagePaymentTermsDialog({ open: controlledOpen, onOpenChange: s
               </TableHeader>
               <TableBody>
                 {m.isLoading ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-4"><Spinner className="h-6 w-6 mx-auto text-muted-foreground" /></TableCell></TableRow>
                 ) : m.paymentTerms.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No payment terms found.</TableCell></TableRow>
                 ) : m.paymentTerms.map(term => (

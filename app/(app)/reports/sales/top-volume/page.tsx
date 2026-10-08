@@ -34,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { getApiUrl } from '@/lib/api-config';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
+import { Spinner } from '@/components/ui/spinner';
 
 interface ProductSale {
   product: {
@@ -423,7 +424,7 @@ export default function TopItemsVolumePage() {
                   <TableCell colSpan={11} className="h-24 text-center">
                     {isLoading ? (
                       <div className="flex items-center justify-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                        <Spinner className="h-4 w-4" />
                         Loading...
                       </div>
                     ) : (

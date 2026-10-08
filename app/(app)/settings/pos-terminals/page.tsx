@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Monitor, Loader2 } from 'lucide-react';
+import { Monitor } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -10,6 +10,7 @@ import { AddPosTerminalDialog } from './add-pos-terminal/AddPosTerminalDialog';
 import { EditPosTerminalDialog } from './edit-pos-terminal/EditPosTerminalDialog';
 import { TerminalCard } from './TerminalCard';
 import { usePosTerminals } from './use-pos-terminals';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function PosTerminalsPage() {
   const {
@@ -54,7 +55,7 @@ export default function PosTerminalsPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Spinner className="h-8 w-8 text-primary" />
             </div>
           ) : terminals.length === 0 ? (
             <div className="text-center py-12 border rounded-lg border-dashed">

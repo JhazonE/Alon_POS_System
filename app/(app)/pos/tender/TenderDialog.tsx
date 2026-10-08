@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Printer, User, Star, Info, AlertCircle, CheckCircle2, Wallet, CreditCard, Banknote } from 'lucide-react';
+import { Printer, User, Star, Info, AlertCircle, CheckCircle2, Wallet, CreditCard, Banknote } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { SaleItem } from '../pos-content/pos-types';
 import type { SystemSettings } from '@/lib/types';
@@ -29,6 +29,7 @@ import { usePrinter } from '@/lib/use-printer';
 import { ReceiptGenerator, saleOpensDrawer } from '@/lib/receipt-generator';
 import { useTender } from './use-tender';
 import type { TenderDialogProps } from './tender-types';
+import { Spinner } from '@/components/ui/spinner';
 
 
 // Print-only receipt component is imported
@@ -687,7 +688,7 @@ export function TenderDialog(props: TenderDialogProps) {
                                 >
                                     {isProcessing ? (
                                         <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            <Spinner className="mr-2 h-5 w-5" />
                                             Processing...
                                         </>
                                     ) : (

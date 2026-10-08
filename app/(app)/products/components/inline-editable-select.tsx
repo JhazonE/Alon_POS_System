@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Pencil, Check, X, Loader2 } from 'lucide-react';
+import { PlusCircle, Pencil, Check, X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 
 export interface InlineEditableSelectProps<T> {
   items: T[];
@@ -164,7 +165,7 @@ export function InlineEditableSelect<T>({
                     disabled={isSaving || !renameDraft.trim()}
                     onClick={(e) => { e.preventDefault(); commitRename(); }}
                   >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    {isSaving ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                   </button>
                   <button
                     type="button"
@@ -227,7 +228,7 @@ export function InlineEditableSelect<T>({
                 disabled={isSaving || !addDraft.trim()}
                 onClick={(e) => { e.preventDefault(); commitAdd(); }}
               >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {isSaving ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
               </button>
               <button
                 type="button"

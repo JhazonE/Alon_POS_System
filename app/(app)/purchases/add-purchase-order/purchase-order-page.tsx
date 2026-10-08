@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 
 import { useProducts } from '@/hooks/use-api';
 import { useInvalidatePurchaseOrders } from '@/hooks/use-purchase-order-mutations';
@@ -10,6 +9,7 @@ import { useLeavePage } from '@/components/form-page/use-leave-page';
 
 import { PurchaseOrderForm } from './purchase-order-form';
 import { usePurchaseOrderById } from './use-purchase-order-by-id';
+import { Spinner } from '@/components/ui/spinner';
 
 interface PurchaseOrderPageProps {
   /** Edit this existing order. */
@@ -61,7 +61,7 @@ export function PurchaseOrderPage({
   if (waiting) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Spinner className="h-4 w-4" />
         Loading purchase order...
       </div>
     );

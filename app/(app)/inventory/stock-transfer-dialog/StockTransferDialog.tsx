@@ -22,11 +22,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowRight, Loader2, Send, Warehouse as WarehouseIcon } from 'lucide-react';
+import { ArrowRight, Send, Warehouse as WarehouseIcon } from 'lucide-react';
 import { formatQuantity } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 
 import { useStockTransfer } from './use-stock-transfer';
+import { Spinner } from '@/components/ui/spinner';
 
 interface StockTransferDialogProps {
   product: Product;
@@ -152,7 +153,7 @@ export function StockTransferDialog({ product, children, onSuccess, requireConfi
               disabled={isSubmitting || !targetWarehouseId || quantity <= 0}
               className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] gap-2"
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {isSubmitting ? <Spinner className="h-4 w-4" /> : <Send className="h-4 w-4" />}
               Confirm Transfer
             </button>
           </DialogFooter>
@@ -171,7 +172,7 @@ export function StockTransferDialog({ product, children, onSuccess, requireConfi
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={processTransfer} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isSubmitting ? <Spinner className="h-4 w-4 mr-2" /> : null}
               Confirm Transfer
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -3,19 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import {
-  Search,
-  Box,
-  Rows3,
-  Loader2,
-  RefreshCw,
-  PackageOpen,
-  ArrowRight,
-  Trash2,
-  AlertCircle,
-  ArrowRightLeft,
-  CheckCircle2
-} from 'lucide-react';
+import { Search, Box, Rows3, RefreshCw, PackageOpen, ArrowRight, Trash2, AlertCircle, ArrowRightLeft, CheckCircle2 } from 'lucide-react';
 import { Product, ShelfLocation } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -34,6 +22,7 @@ import { ManageShelfLocationsDialog } from '../../products/shelf-locations/Manag
 import { updateProductShelfLocations } from '../../products/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { v4 as uuidv4 } from 'uuid';
+import { Spinner } from '@/components/ui/spinner';
 
 
 interface StockItem {
@@ -155,7 +144,7 @@ export default function ShelfBoard() {
     }
   };
 
-  if (isLoading) return <div className="p-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>;
+  if (isLoading) return <div className="p-10 text-center"><Spinner className="h-6 w-6 mx-auto" /></div>;
 
   const SourcePane = (
       <div className="flex flex-col h-full w-full bg-background min-h-0">
@@ -227,7 +216,7 @@ export default function ShelfBoard() {
                 disabled={!targetShelfId || stagedItems.length === 0 || isTransferring} 
                 onClick={executeTransfer}
                >
-                 {isTransferring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                 {isTransferring ? <Spinner className="h-4 w-4 mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                  Confirm Transfer
                </button>
           </div>

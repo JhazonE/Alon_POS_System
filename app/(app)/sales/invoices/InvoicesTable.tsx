@@ -5,11 +5,11 @@ import { Table as TableInstance, flexRender } from '@tanstack/react-table';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatQuantity } from '@/lib/utils';
 import { formatAmount } from './use-invoices-utils';
 import type { Sale } from '@/lib/types';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   table: TableInstance<Sale>;
@@ -44,7 +44,7 @@ export function InvoicesTable({ table, loading, expandedRows, onToggleRow }: Pro
           <TableRow>
             <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
               <div className="flex justify-center items-center">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <Spinner className="h-6 w-6 mr-2" />
                 <span className="text-sm text-muted-foreground">Loading sales invoices...</span>
               </div>
             </TableCell>

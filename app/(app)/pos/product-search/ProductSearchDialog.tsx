@@ -7,12 +7,13 @@ import {
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
-import { Loader2, Package2, X, Eye, EyeOff, Tag, FlaskConical } from 'lucide-react';
+import { Package2, X, Eye, EyeOff, Tag, FlaskConical } from 'lucide-react';
 import { calculateEffectivePrice } from '@/lib/pricing';
 import { formatStockQuantity } from '@/lib/utils';
 import { buildLineId } from '@/lib/selling-unit-qty';
 import { useProductSearch } from './use-product-search';
 import type { ProductSearchDialogProps } from './product-search-types';
+import { Spinner } from '@/components/ui/spinner';
 
 const LS_KEY = 'pos_search_filter_visibility';
 
@@ -202,7 +203,7 @@ export function ProductSearchDialog({
                 />
                 {loading && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <Spinner className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
               </div>

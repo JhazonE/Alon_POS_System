@@ -2,11 +2,12 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { AlertCircle, Loader2, PlusCircle } from 'lucide-react';
+import { AlertCircle, PlusCircle } from 'lucide-react';
 import { useExternalApi } from './use-external-api';
 import { ApiConnectionsTab } from './ApiConnectionsTab';
 import { SyncLogsTab } from './SyncLogsTab';
 import { ApiFormDialog } from './ApiFormDialog';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function ExternalApiSettingsPage() {
   const m = useExternalApi();
@@ -80,7 +81,7 @@ export default function ExternalApiSettingsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={m.handleDelete} disabled={m.isDeleting}>
-              {m.isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {m.isDeleting && <Spinner className="mr-2 h-4 w-4" />}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -19,11 +19,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { PlusCircle, Trash2, Star, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 import { AddSupplierMappingDialog } from '../supplier-mapping/AddSupplierMappingDialog';
 import { useProductSuppliers } from './use-product-suppliers';
+import { Spinner } from '@/components/ui/spinner';
 
 export function ProductSuppliers({ productId, onUpdate }: { productId: string, onUpdate?: () => void }) {
   const {
@@ -74,7 +75,7 @@ export function ProductSuppliers({ productId, onUpdate }: { productId: string, o
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <Spinner className="h-6 w-6 mx-auto" />
                 </TableCell>
               </TableRow>
             ) : mappings.length === 0 ? (

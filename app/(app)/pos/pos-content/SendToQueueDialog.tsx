@@ -7,8 +7,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { SendToBack, CheckCircle2, User, FileText, Loader2 } from 'lucide-react';
+import { SendToBack, CheckCircle2, User, FileText } from 'lucide-react';
 import type { SaleItem } from './pos-types';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   open: boolean;
@@ -121,7 +122,7 @@ export function SendToQueueDialog({
                 disabled={isSubmitting || items.length === 0}
               >
                 {isSubmitting
-                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                  ? <><Spinner className="h-4 w-4 mr-2" />Sending...</>
                   : <><SendToBack className="h-4 w-4 mr-2" />Send to Queue</>
                 }
               </button>

@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, ShieldAlert, ShieldCheck, Copy, Check, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 type LicenseStatus = 'unlicensed' | 'expired' | 'invalid' | 'wrong-machine' | 'active' | 'loading';
 
@@ -146,7 +147,7 @@ export default function ActivatePage() {
   if (statusInfo.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Spinner className="h-8 w-8 text-muted-foreground" />
       </div>
     );
   }
@@ -164,7 +165,7 @@ export default function ActivatePage() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
               Redirecting to login…
             </p>
           </CardContent>
@@ -246,7 +247,7 @@ export default function ActivatePage() {
                   disabled={onlineLoading || !productKey.trim()}
                 >
                   {onlineLoading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Activating…</>
+                    <><Spinner className="mr-2 h-4 w-4" />Activating…</>
                   ) : (
                     'Activate Online'
                   )}
@@ -279,7 +280,7 @@ export default function ActivatePage() {
                   disabled={offlineLoading || !signedKey.trim()}
                 >
                   {offlineLoading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Activating…</>
+                    <><Spinner className="mr-2 h-4 w-4" />Activating…</>
                   ) : (
                     'Activate'
                   )}

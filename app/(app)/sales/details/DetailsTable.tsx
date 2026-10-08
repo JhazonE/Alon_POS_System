@@ -5,9 +5,9 @@ import { Table as TableInstance, flexRender } from '@tanstack/react-table';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatAmount } from './use-details-utils';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   table: TableInstance<any>;
@@ -93,7 +93,7 @@ export function DetailsTable({ table, isLoading, expandedRows, onToggleRow }: Pr
             <TableRow>
               <TableCell colSpan={table.getAllColumns().length} className="h-32 text-center">
                 <div className="flex justify-center items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <Spinner className="h-5 w-5 text-primary" />
                   <span className="text-muted-foreground">Loading...</span>
                 </div>
               </TableCell>

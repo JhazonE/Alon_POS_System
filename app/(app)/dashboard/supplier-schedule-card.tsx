@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
-import { Calendar, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
+import { Calendar, ShoppingCart, CheckCircle2 } from 'lucide-react';
 import { getSuppliers } from '../products/actions';
 import { Supplier } from '@/lib/types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function SupplierScheduleCard() {
   const [scheduledSuppliers, setScheduledSuppliers] = useState<Supplier[]>([]);
@@ -61,7 +62,7 @@ export function SupplierScheduleCard() {
   if (loading) {
     return (
       <MatteCard className="flex min-h-[150px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+        <Spinner className="h-8 w-8 text-[rgb(var(--matte-accent))]" />
       </MatteCard>
     );
   }

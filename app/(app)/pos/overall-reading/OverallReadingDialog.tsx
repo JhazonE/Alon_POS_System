@@ -1,10 +1,11 @@
 ﻿'use client';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Printer, Loader2, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import { OverallReadingPreview } from '../../sales/overall-reading/overall-reading-preview';
 import { useOverallReading } from './use-overall-reading';
 import type { OverallReadingDialogProps } from './overall-reading-types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function OverallReadingDialog({ isOpen, onOpenChange, terminalId, terminalName, printMode }: OverallReadingDialogProps) {
   const { reportData, loading, isPrinting, handlePrint, loadReportData } = useOverallReading({
@@ -22,7 +23,7 @@ export function OverallReadingDialog({ isOpen, onOpenChange, terminalId, termina
             <SheetTitle>OVERALL TERMINAL READING</SheetTitle>
           </div>
           <button onClick={handlePrint} disabled={loading || isPrinting || !reportData} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
-            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+            {isPrinting ? <Spinner className="mr-2 h-4 w-4" /> : <Printer className="mr-2 h-4 w-4" />}
             Print
           </button>
         </SheetHeader>
@@ -30,7 +31,7 @@ export function OverallReadingDialog({ isOpen, onOpenChange, terminalId, termina
         <div className="flex-1 overflow-auto bg-muted/20 p-4 flex justify-center">
           {loading ? (
             <div className="p-8 text-center flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Spinner className="h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Generating overall reading...</p>
             </div>
           ) : reportData ? (

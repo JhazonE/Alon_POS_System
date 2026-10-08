@@ -2,11 +2,12 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { Command as CommandPrimitive } from 'cmdk';
-import { Loader2, PlusCircle, Search } from 'lucide-react';
+import { PlusCircle, Search } from 'lucide-react';
 import { CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Command } from '@/components/ui/command';
 import type { Product } from '@/lib/types';
 import { formatQuantity } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 
 export const ADD_NEW_PRODUCT_BUTTON_CLASS =
   'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]';
@@ -111,7 +112,7 @@ export function ProductAutocomplete({
           <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover shadow-lg">
             {loading && !products.length ? (
               <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner className="h-4 w-4" />
                 Loading products...
               </div>
             ) : error ? (

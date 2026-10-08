@@ -13,6 +13,7 @@ import { useCountDetail } from './use-count-detail';
 import { MobileItemCard } from './mobile-item-card';
 import { ReviewDialog } from './review-dialog';
 import { PrintLayout } from './print-layout';
+import { Spinner } from '@/components/ui/spinner';
 
 export function CountDetailClient({ countId }: { countId: string }) {
   const {
@@ -44,7 +45,7 @@ export function CountDetailClient({ countId }: { countId: string }) {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <Spinner className="h-8 w-8" />
         <p className="text-muted-foreground text-sm">Loading count details…</p>
       </div>
     );

@@ -30,10 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Plus, Check } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 
 const terminalSchema = z.object({
   ipAddress: z.string().optional(),
@@ -291,7 +292,7 @@ export function TerminalSettingsDialog({ onTerminalChanged, currentTerminalId }:
                     </div>
 
                     <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full" disabled={isSaving}>
-                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create & Select'}
+                        {isSaving ? <Spinner className="h-4 w-4" /> : 'Create & Select'}
                     </button>
                   </form>
                  </Form>
@@ -299,7 +300,7 @@ export function TerminalSettingsDialog({ onTerminalChanged, currentTerminalId }:
           ) : (
             <div className="py-4 space-y-4">
                 {isLoadingTerminals ? (
-                    <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                    <div className="flex justify-center py-8"><Spinner className="h-6 w-6 text-muted-foreground" /></div>
                 ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {terminals.length === 0 ? (

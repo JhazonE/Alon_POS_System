@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Loader2, Search, CreditCard, Printer, Hash, StickyNote, Phone, MapPin, Tag, Wallet, TrendingUp, Landmark, Coins } from 'lucide-react';
+import { User, Search, CreditCard, Printer, Hash, StickyNote, Phone, MapPin, Tag, Wallet, TrendingUp, Landmark, Coins } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { format, differenceInDays } from 'date-fns';
@@ -47,6 +47,7 @@ import { useCustomerAccount } from './use-customer-account';
 import { cn } from '@/lib/utils';
 import type { CustomerAccountDialogProps } from './customer-account-types';
 import { MembershipPaymentDialog } from '../membership/MembershipPaymentDialog';
+import { Spinner } from '@/components/ui/spinner';
 
 export { WALK_IN_CUSTOMER } from './customer-account-types';
 
@@ -125,7 +126,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                         disabled={isRfidSearching || !rfidInput.trim()}
                         title="Search by RFID"
                       >
-                        {isRfidSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                        {isRfidSearching ? <Spinner className="h-4 w-4" /> : <Search className="h-4 w-4" />}
                       </button>
                     </div>
                     {rfidError && <p className="text-xs text-destructive mt-1">{rfidError}</p>}
@@ -211,7 +212,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Membership</p>
                         </div>
                         {isMembershipCardLoading ? (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Checking…</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1"><Spinner className="h-3 w-3" />Checking…</p>
                         ) : membershipCard ? (
                           <>
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${membershipCard.isExpired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
@@ -264,7 +265,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mr-2 inline-block" />Loading transaction data...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading transaction data...</TableCell></TableRow>
                       ) : allItems.length > 0 ? (
                         allItems.map((item: any, idx: number) => (
                           <TableRow key={idx}>
@@ -293,7 +294,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mr-2 inline-block" />Loading payment history...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading payment history...</TableCell></TableRow>
                       ) : payments.length > 0 ? (
                         payments.map((payment: any, idx: number) => (
                           <TableRow key={idx}>
@@ -321,7 +322,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mr-2 inline-block" />Loading charges...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading charges...</TableCell></TableRow>
                       ) : transactions.length > 0 ? (
                         transactions.map((sale: any, idx: number) => {
                           // A 'Paid' sale is settled even if amount_paid was never recorded (e.g. older POS sales).
@@ -364,7 +365,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mr-2 inline-block" />Checking overdue status...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Checking overdue status...</TableCell></TableRow>
                       ) : overdueCharges.length > 0 ? (
                         overdueCharges.map((sale: any, idx: number) => (
                           <TableRow key={idx}>
@@ -400,7 +401,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mr-2 inline-block" />Loading pending records...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading pending records...</TableCell></TableRow>
                       ) : pendingCharges.length > 0 ? (
                         pendingCharges.map((sale: any, idx: number) => (
                           <TableRow key={idx}>
@@ -538,7 +539,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
           <DialogFooter>
             <button onClick={() => setIsPaymentDialogOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
             <button onClick={handleSubmitPayment} disabled={isSubmittingPayment} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] bg-emerald-600 hover:bg-emerald-700">
-              {isSubmittingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmittingPayment && <Spinner className="mr-2 h-4 w-4" />}
               Confirm Payment
             </button>
           </DialogFooter>

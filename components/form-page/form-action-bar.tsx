@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 const CANCEL_CLASS =
   'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-9 px-[18px]';
@@ -83,7 +84,7 @@ export function FormActionBar({
           <button type="submit" disabled={isSubmitting || submitDisabled} className={SUBMIT_CLASS}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 h-4 w-4" />
                 Processing...
               </>
             ) : (

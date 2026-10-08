@@ -3,8 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Pencil, Trash2, Check } from 'lucide-react';
+import { Pencil, Trash2, Check } from 'lucide-react';
 import { TaxRate } from '@/lib/types';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   taxRates: TaxRate[];
@@ -23,7 +24,7 @@ export function TaxRatesTable({ taxRates, isLoading, onEdit, onDeleteRequest }: 
       <CardContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Spinner className="h-8 w-8 text-muted-foreground" />
           </div>
         ) : (
           <div className="rounded-md border">

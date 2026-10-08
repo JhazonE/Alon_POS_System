@@ -9,10 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  Search, Package, TrendingDown, TrendingUp, Loader2,
-  CheckCircle2, Repeat, SlidersHorizontal, X,
-} from 'lucide-react';
+import { Search, Package, TrendingDown, TrendingUp, CheckCircle2, Repeat, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import { useBulkAdjustment } from './use-bulk-adjustment';
@@ -21,6 +18,7 @@ import { ConfigFields } from './config-fields';
 import { EmptyState } from './empty-state';
 import { AdjustmentTableRow } from './adjustment-table-row';
 import { AdjustmentMobileCard } from './adjustment-mobile-card';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function BulkAdjustmentClient() {
   const {
@@ -291,7 +289,7 @@ export default function BulkAdjustmentClient() {
             disabled={adjustments.length === 0 || isProcessing || hasNegativeStock}
           >
             {isProcessing ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
+              <><Spinner className="h-4 w-4" /> Processing...</>
             ) : (
               <><CheckCircle2 className="h-4 w-4" /> Apply {adjustments.length > 0 ? adjustments.length : ''} Adjustment{adjustments.length !== 1 ? 's' : ''}</>
             )}
