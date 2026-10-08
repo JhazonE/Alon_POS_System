@@ -75,7 +75,7 @@ export function ProductSuppliers({ productId, onUpdate }: { productId: string, o
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
-                  <Spinner className="h-6 w-6 mx-auto" />
+                  <Spinner className="h-6 w-6 mx-auto text-primary" />
                 </TableCell>
               </TableRow>
             ) : mappings.length === 0 ? (

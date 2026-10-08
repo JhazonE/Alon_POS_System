@@ -247,7 +247,7 @@ export default function StockMovementPage() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
-                    <Spinner className="h-6 w-6 mx-auto" />
+                    <Spinner className="h-6 w-6 mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : filteredMovements.length === 0 ? (

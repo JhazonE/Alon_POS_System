@@ -324,7 +324,7 @@ export default function CostVsRetailReportPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={9} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto text-primary" /></TableCell></TableRow>
               ) : filteredRows.length === 0 ? (
                 <TableRow><TableCell colSpan={9} className="h-24 text-center">No products found.</TableCell></TableRow>
               ) : (

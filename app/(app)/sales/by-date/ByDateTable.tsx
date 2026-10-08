@@ -69,7 +69,7 @@ export function ByDateTable({
           <TableRow>
             <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
               <div className="flex justify-center items-center">
-                <Spinner className="h-6 w-6 mr-2" />
+                <Spinner className="h-6 w-6 mr-2 text-primary" />
                 Loading data...
               </div>
             </TableCell>
@@ -96,7 +96,7 @@ export function ByDateTable({
                   <TableCell colSpan={table.getVisibleLeafColumns().length} className="p-4">
                     {loadingTransactions[row.original.date] ? (
                       <div className="flex justify-center items-center h-20">
-                        <Spinner className="h-6 w-6 mr-2" />
+                        <Spinner className="h-6 w-6 mr-2 text-primary" />
                         Loading transactions...
                       </div>
                     ) : transactionsByDate[row.original.date]?.length > 0 ? (

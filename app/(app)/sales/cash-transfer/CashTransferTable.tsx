@@ -29,7 +29,7 @@ export function CashTransferTable({ table, isLoading }: Props) {
           <TableRow>
             <TableCell colSpan={table.getVisibleLeafColumns().length} className="text-center h-24">
               <div className="flex justify-center items-center gap-2">
-                <Spinner className="h-6 w-6" />
+                <Spinner className="h-6 w-6 text-primary" />
                 <span>Loading data...</span>
               </div>
             </TableCell>

@@ -23,7 +23,7 @@ type Props = {
 function ChartLoader() {
   return (
     <div className="h-[300px] flex items-center justify-center">
-      <Spinner className="h-6 w-6 mr-2" />Loading...
+      <Spinner className="h-6 w-6 mr-2 text-primary" />Loading...
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useId, type SVGAttributes } from 'react';
+import { type SVGAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 interface SpinnerProps extends SVGAttributes<SVGSVGElement> {
@@ -6,12 +6,14 @@ interface SpinnerProps extends SVGAttributes<SVGSVGElement> {
 }
 
 /**
- * Brand loading indicator — a primary-to-amber gradient arc ring.
+ * Brand loading indicator — a quarter arc rotating over a faint track.
  * Drop-in replacement for `<Loader2 className="... animate-spin" />`.
+ *
+ * The arc paints with `currentColor`, so it inherits the text colour it sits
+ * in — white on a solid primary button, the surrounding text colour inline.
+ * Pass a text colour in `className` (e.g. `text-primary`) to set it.
  */
 export function Spinner({ className, ...props }: SpinnerProps) {
-  const gradientId = useId();
-
   return (
     <svg
       className={cn('h-4 w-4 animate-spin', className)}
@@ -21,21 +23,12 @@ export function Spinner({ className, ...props }: SpinnerProps) {
       aria-label="Loading"
       {...props}
     >
-      <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="hsl(var(--primary))" />
-          <stop offset="100%" stopColor="hsl(var(--brand-amber))" />
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-15" />
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke={`url(#${gradientId})`}
-        strokeWidth="3"
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" className="opacity-20" />
+      <path
+        d="M12 3a9 9 0 0 1 9 9"
+        stroke="currentColor"
+        strokeWidth="2.5"
         strokeLinecap="round"
-        strokeDasharray="34 100"
       />
     </svg>
   );

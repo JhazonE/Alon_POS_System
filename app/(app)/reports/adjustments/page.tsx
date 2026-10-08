@@ -267,7 +267,7 @@ export default function AdjustmentReportPage() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    <Spinner className="h-6 w-6 mx-auto" />
+                    <Spinner className="h-6 w-6 mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : filteredAdjustments.length === 0 ? (

@@ -77,7 +77,7 @@ export function SalesTable({ table, isLoading, expandedRows, toggleRowExpansion,
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={table.getAllColumns().length} className="h-24 text-center">
-                  <div className="flex justify-center items-center"><Spinner className="h-6 w-6 mr-2" />Loading transactions...</div>
+                  <div className="flex justify-center items-center"><Spinner className="h-6 w-6 mr-2 text-primary" />Loading transactions...</div>
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows.length > 0 ? (

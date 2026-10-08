@@ -45,7 +45,7 @@ export function CountDetailClient({ countId }: { countId: string }) {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <Spinner className="h-8 w-8" />
+        <Spinner className="h-8 w-8 text-primary" />
         <p className="text-muted-foreground text-sm">Loading count details…</p>
       </div>
     );

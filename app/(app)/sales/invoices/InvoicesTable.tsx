@@ -44,7 +44,7 @@ export function InvoicesTable({ table, loading, expandedRows, onToggleRow }: Pro
           <TableRow>
             <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
               <div className="flex justify-center items-center">
-                <Spinner className="h-6 w-6 mr-2" />
+                <Spinner className="h-6 w-6 mr-2 text-primary" />
                 <span className="text-sm text-muted-foreground">Loading sales invoices...</span>
               </div>
             </TableCell>

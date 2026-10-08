@@ -54,7 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
-        <Spinner className="h-32 w-32" />
+        <Spinner className="h-32 w-32 text-primary" />
       </div>
     );
   }

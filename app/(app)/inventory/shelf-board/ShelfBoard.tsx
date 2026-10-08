@@ -144,7 +144,7 @@ export default function ShelfBoard() {
     }
   };
 
-  if (isLoading) return <div className="p-10 text-center"><Spinner className="h-6 w-6 mx-auto" /></div>;
+  if (isLoading) return <div className="p-10 text-center"><Spinner className="h-6 w-6 mx-auto text-primary" /></div>;
 
   const SourcePane = (
       <div className="flex flex-col h-full w-full bg-background min-h-0">

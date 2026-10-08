@@ -265,7 +265,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading transaction data...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block text-primary" />Loading transaction data...</TableCell></TableRow>
                       ) : allItems.length > 0 ? (
                         allItems.map((item: any, idx: number) => (
                           <TableRow key={idx}>
@@ -294,7 +294,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading payment history...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block text-primary" />Loading payment history...</TableCell></TableRow>
                       ) : payments.length > 0 ? (
                         payments.map((payment: any, idx: number) => (
                           <TableRow key={idx}>
@@ -322,7 +322,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading charges...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block text-primary" />Loading charges...</TableCell></TableRow>
                       ) : transactions.length > 0 ? (
                         transactions.map((sale: any, idx: number) => {
                           // A 'Paid' sale is settled even if amount_paid was never recorded (e.g. older POS sales).
@@ -365,7 +365,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Checking overdue status...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block text-primary" />Checking overdue status...</TableCell></TableRow>
                       ) : overdueCharges.length > 0 ? (
                         overdueCharges.map((sale: any, idx: number) => (
                           <TableRow key={idx}>
@@ -401,7 +401,7 @@ export function CustomerAccountDialog({ isOpen, onOpenChange, onSelectCustomer, 
                     </TableHeader>
                     <TableBody>
                       {isDetailsLoading ? (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block" />Loading pending records...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center"><Spinner className="h-6 w-6 mx-auto mr-2 inline-block text-primary" />Loading pending records...</TableCell></TableRow>
                       ) : pendingCharges.length > 0 ? (
                         pendingCharges.map((sale: any, idx: number) => (
                           <TableRow key={idx}>
