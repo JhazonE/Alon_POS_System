@@ -64,3 +64,22 @@ export function shouldAutoApplyTiers(
   if (!enabled) return false;
   return !isSet(customerLevelId) && !isSet(manualLevelId);
 }
+
+/**
+ * How the cart is repriced when the active level or the automatic-tier gate
+ * changes.
+ *
+ * The gate can flip for two different reasons. A cashier action (switching level,
+ * picking the default level) must reprice fully. But the POS settings arriving
+ * for the first time at startup also flips the gate (false -> true) when the
+ * store has the switch enabled; that is async data arriving, not a decision, so
+ * it may only refresh badges — a restored line may carry a price the cashier
+ * typed by hand, and overwriting it would write a wrong unit price onto the
+ * invoice.
+ *
+ * `settingsJustResolved` is true only for the change caused by the first load of
+ * the POS settings.
+ */
+export function repriceModeForGateChange(settingsJustResolved: boolean): 'full' | 'labelsOnly' {
+  return settingsJustResolved ? 'labelsOnly' : 'full';
+}

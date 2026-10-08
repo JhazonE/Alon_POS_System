@@ -12,7 +12,7 @@ import { priceLevelLabel } from '@/lib/price-level-badge';
 import { buildLineId } from '@/lib/selling-unit-qty';
 import { priceLineForProduct } from '@/lib/selling-unit-pricing';
 import { repriceCartLines } from '@/lib/cart-reprice';
-import { resolveActivePriceLevelId, manualPickAfterCustomerChange, shouldAutoApplyTiers } from '@/lib/pos-active-price-level';
+import { resolveActivePriceLevelId, manualPickAfterCustomerChange, shouldAutoApplyTiers, repriceModeForGateChange } from '@/lib/pos-active-price-level';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
@@ -172,6 +172,7 @@ export function usePOS() {
   const [paymentMethods, setPaymentMethods] = useState<{ id: string; name: string; isActive: boolean; isReferenceRequired?: boolean; pointsAmount?: number; currencyEquivalent?: number }[]>([]);
   const [showQuantityInSearch, setShowQuantityInSearch] = useState(true);
   const [enablePriceLevelSwitch, setEnablePriceLevelSwitch] = useState(false);
+  const [posSettingsLoaded, setPosSettingsLoaded] = useState(false);
 
   // Sticky focus on main input when all dialogs close
   useEffect(() => {
@@ -308,6 +309,7 @@ export function usePOS() {
         setIsTrainingMode(result.data.isTrainingMode || false);
         setShowQuantityInSearch(result.data.showQuantityInSearch ?? true);
         setEnablePriceLevelSwitch(result.data.enablePriceLevelSwitch || false);
+        setPosSettingsLoaded(true);
         setEnableCustomerDisplay(result.data.enableCustomerDisplay || false);
 
         const localPrintMode = localStorage.getItem('pos_printer_mode');
@@ -608,18 +610,26 @@ export function usePOS() {
     });
   }, [activeLevelId, defaultLevelId, priceLevels, autoQuantityTiers]);
 
-  // Re-price items when the price level, or the automatic-tier gate, changes
+  // Re-price items when the price level, or the automatic-tier gate, changes. A cashier
+  // action (switching level, picking the default level) reprices fully. The gate also
+  // flips when the POS settings first arrive at startup: that is async data, not a
+  // decision, so it refreshes badges only and never overwrites a hand-typed price on a
+  // restored cart (see repriceModeForGateChange).
+  const settingsSeenRef = useRef(false);
   useEffect(() => {
+    const settingsJustResolved = posSettingsLoaded && !settingsSeenRef.current;
+    settingsSeenRef.current = posSettingsLoaded;
     if (!activeLevelId) return;
-    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine)));
+    const labelsOnly = repriceModeForGateChange(settingsJustResolved) === 'labelsOnly';
+    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine, labelsOnly ? { labelsOnly: true } : undefined)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLevelId, autoQuantityTiers]);
+  }, [activeLevelId, autoQuantityTiers, posSettingsLoaded]);
 
   // When the price level list arrives (it loads asynchronously, after a saved cart may
   // already have been restored), fill in the badges only. Prices are deliberately NOT
   // touched here: a restored line may carry a price the cashier typed by hand, and the
   // list loading is not a reason to overwrite it. Only an actual level switch (above)
-  // reprices.
+  // reprices; the settings' first load is likewise labels-only.
   useEffect(() => {
     if (priceLevels.length === 0) return;
     setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine, { labelsOnly: true })));

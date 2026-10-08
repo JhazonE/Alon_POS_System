@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 
 type Props = {
-  priceLevels: { id: string; name: string }[];
+  priceLevels: { id: string; name: string; isDefault?: boolean }[];
   /** The level actually pricing the cart (may come from the customer). */
   activeLevelId: string;
   /** The cashier's pick. '' means "follow the customer / default". */
@@ -43,7 +43,7 @@ export function PosPriceLevelSelect({
   // Nothing to switch between until a second level exists.
   if (priceLevels.length < 2) return null;
 
-  const defaultLevel = priceLevels.find((l: any) => l.isDefault) || priceLevels[0];
+  const defaultLevel = priceLevels.find((l) => l.isDefault) || priceLevels[0];
 
   return (
     <div className="flex items-center gap-1.5">
