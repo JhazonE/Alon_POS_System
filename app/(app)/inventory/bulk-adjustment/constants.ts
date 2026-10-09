@@ -4,6 +4,13 @@ import type { Product } from '@/lib/types';
 
 export type AdjustmentType = 'add' | 'remove' | 'transfer';
 
+/**
+ * Asa paingon ang transfer. Ang warehouse mo-usab sa `products.stock` sa duha
+ * ka row; ang shelf mo-usab ra sa `product_shelves` (wala mausab ang total
+ * stock). Bulag gyud sila nga write path — tan-awa ang spec.
+ */
+export type TransferTarget = 'warehouse' | 'shelf';
+
 export interface AdjustmentItem {
   product: Product;
   quantity: number;

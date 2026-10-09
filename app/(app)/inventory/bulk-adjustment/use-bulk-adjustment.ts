@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { logActivity } from '@/lib/client-activity-logger';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Supplier, Warehouse } from '@/lib/types';
+import type { Product, ShelfLocation, Supplier, Warehouse } from '@/lib/types';
 
 import { getProducts } from '../../products/actions';
-import type { AdjustmentItem, AdjustmentType } from './constants';
+import type { AdjustmentItem, AdjustmentType, TransferTarget } from './constants';
 
 /**
  * Controller for the bulk stock adjustment screen: owns product/metadata
@@ -32,6 +32,10 @@ export function useBulkAdjustment() {
   const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('add');
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [targetWarehouseId, setTargetWarehouseId] = useState<string>('');
+  const [transferTarget, setTransferTarget] = useState<TransferTarget>('warehouse');
+  const [sourceShelfId, setSourceShelfId] = useState<string>('');
+  const [targetShelfId, setTargetShelfId] = useState<string>('');
+  const [shelfLocations, setShelfLocations] = useState<ShelfLocation[]>([]);
   const [supplierId, setSupplierId] = useState<string>('');
   const [referenceNo, setReferenceNo] = useState('');
   const [note, setNote] = useState('');
@@ -90,12 +94,14 @@ export function useBulkAdjustment() {
 
   const loadMetadata = async () => {
     try {
-      const [whRes, supRes] = await Promise.all([
+      const [whRes, supRes, shelfRes] = await Promise.all([
         fetch('/api/warehouses?activeOnly=true').then(r => r.json()),
-        fetch('/api/suppliers').then(r => r.json())
+        fetch('/api/suppliers').then(r => r.json()),
+        fetch('/api/shelf-locations?activeOnly=true').then(r => r.json())
       ]);
       if (whRes.success) setWarehouses(whRes.data);
       if (supRes.success) setSuppliers(supRes.data);
+      if (shelfRes.success) setShelfLocations(shelfRes.data);
     } catch (error) {
       console.error('Failed to load metadata:', error);
     }
@@ -209,6 +215,13 @@ export function useBulkAdjustment() {
     setWarehouseId,
     targetWarehouseId,
     setTargetWarehouseId,
+    transferTarget,
+    setTransferTarget,
+    sourceShelfId,
+    setSourceShelfId,
+    targetShelfId,
+    setTargetShelfId,
+    shelfLocations,
     supplierId,
     setSupplierId,
     referenceNo,
