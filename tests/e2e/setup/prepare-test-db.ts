@@ -54,6 +54,10 @@ import {
   SO_CUSTOMER,
   SO_PRODUCT,
   SO_SERVICE,
+  TRANSFER_TARGET_WAREHOUSE,
+  TRANSFER_NULL_SKU_SOURCE,
+  TRANSFER_NULL_SKU_TARGET,
+  TRANSFER_ORPHAN_PRODUCT,
 } from '../fixtures/test-data';
 
 dotenv.config();
@@ -363,6 +367,25 @@ async function seedFixtures(): Promise<void> {
       BULK_PRICE_PRODUCT.stock, BULK_PRICE_PRODUCT.sku, BULK_PRICE_PRODUCT.barcode, BULK_PRICE_PRODUCT.warehouseId,
     ],
   );
+
+  // --- bulk-transfer fixtures: ikaduhang warehouse + NULL-SKU nga pares + orphan ---
+  await conn.query('INSERT INTO warehouses (id, name) VALUES (?, ?)', [
+    TRANSFER_TARGET_WAREHOUSE.id, TRANSFER_TARGET_WAREHOUSE.name,
+  ]);
+
+  // Ang sku gituyo nga WALA sa column list — NULL gyud siya, dili '' (ang
+  // (sku, warehouse_id) unique index mo-treat sa '' nga usa ka tinuod nga value).
+  for (const p of [TRANSFER_NULL_SKU_SOURCE, TRANSFER_NULL_SKU_TARGET, TRANSFER_ORPHAN_PRODUCT]) {
+    await conn.query(
+      `INSERT INTO products (id, name, price, cost, stock, barcode, warehouse_id, availability)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')`,
+      [p.id, p.name, p.price, p.cost, p.stock, p.barcode, p.warehouseId],
+    );
+  }
+  // Ang orphan ra ang naay SKU — aron ma-exercise ang SKU-miss → auto-create nga path.
+  await conn.query('UPDATE products SET sku = ? WHERE id = ?', [
+    TRANSFER_ORPHAN_PRODUCT.sku, TRANSFER_ORPHAN_PRODUCT.id,
+  ]);
 
   // Product nga naka-link sa supplier (ang PO product selector mo-filter by supplier).
   await conn.query(

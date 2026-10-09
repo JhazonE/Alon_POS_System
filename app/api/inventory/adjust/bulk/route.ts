@@ -4,6 +4,79 @@ import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { deductFamilyStock, addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
 
 /**
+ * Mga column nga DILI kopyahon kung mo-clone ug product row paingon sa laing
+ * warehouse: ang identity/location sa row mismo, ug ang stock (ang bag-ong row
+ * mosugod sa 0 — ang transfer mismo ang mo-increment).
+ */
+const CLONE_EXCLUDED_COLUMNS = new Set([
+  'id',
+  'warehouse_id',
+  'stock',
+  'created_at',
+  'updated_at',
+]);
+
+/**
+ * Pangitaa (o himoa) ang katugbang sa `product` sulod sa `targetWarehouseId`.
+ *
+ * Gi-mirror ang kinaiya sa canonical nga TransferStockService: resolve pinaagi
+ * sa SKU → barcode → name, ug kung wala gyud, i-clone ang source row paingon sa
+ * target warehouse nga 0 ang stock imbes mo-throw.
+ *
+ * Ang SKU ug barcode lookups gi-guard batok sa NULL: pareho sila optional sa
+ * product form, ug sa SQL ang `col = NULL` dili gyud mo-match — mao nga kung
+ * i-pass ang NULL, mo-fall through siya sa name (dili mo-match ug sayop nga row).
+ */
+async function resolveTransferTarget(
+  product: any,
+  targetWarehouseId: string,
+  connection: any
+): Promise<string> {
+  const lookups: Array<[string, any]> = [
+    ['sku', product.sku],
+    ['barcode', product.barcode],
+    ['name', product.name],
+  ];
+
+  for (const [column, value] of lookups) {
+    if (value === null || value === undefined || value === '') continue;
+    const [rows]: any = await connection.query(
+      `SELECT id FROM products WHERE ${column} = ? AND warehouse_id = ? LIMIT 1`,
+      [value, targetWarehouseId]
+    );
+    if (rows && rows.length > 0) return rows[0].id;
+  }
+
+  // Wala gyud — i-clone ang source row paingon sa target warehouse.
+  // Gi-derive ang column list gikan sa source row mismo (SELECT *) aron dili
+  // siya ma-stale kada dugang ug bag-ong column ang migrations.
+  const newId = `prod_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  const columns = Object.keys(product).filter((c) => !CLONE_EXCLUDED_COLUMNS.has(c));
+  const assignments = ['id', 'warehouse_id', 'stock', ...columns];
+  const values = [newId, targetWarehouseId, 0, ...columns.map((c) => product[c])];
+
+  await connection.query(
+    `INSERT INTO products (${assignments.map((c) => `\`${c}\``).join(', ')})
+     VALUES (${assignments.map(() => '?').join(', ')})`,
+    values
+  );
+
+  // I-kopya ang price levels aron parehas ang pricing sa bag-ong warehouse.
+  const [priceLevels]: any = await connection.query(
+    'SELECT price_level_id, price, min_quantity FROM product_price_levels WHERE product_id = ?',
+    [product.id]
+  );
+  for (const pl of priceLevels || []) {
+    await connection.query(
+      'INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, ?)',
+      [newId, pl.price_level_id, pl.price, pl.min_quantity]
+    );
+  }
+
+  return newId;
+}
+
+/**
  * Bulk Stock Adjustment API
  * Handles adjusting stock for multiple products in a single operation.
  * Supports multi-level approval and family stock synchronization.
@@ -40,9 +113,11 @@ export async function POST(request: NextRequest) {
 
         if (quantity === 0) continue;
 
-        // Fetch product info
+        // Fetch product info. SELECT * kay ang transfer nga auto-create path
+        // nagkinahanglan sa tanan identity/pricing columns sa source row aron
+        // makopya sila sa bag-ong row sa target warehouse.
         const [productResult]: any = await connection.query(
-          'SELECT stock, name, sku, barcode, unit_of_measure FROM products WHERE id = ?',
+          'SELECT * FROM products WHERE id = ?',
           [productId]
         );
 
@@ -127,18 +202,17 @@ export async function POST(request: NextRequest) {
           throw new Error(`Adjustment would result in negative stock for ${product.name} at source`);
         }
 
-        // For transfers, we need to find the target product
+        // For transfers, we need to find the target product.
+        //
+        // Ang resolution order parehas sa canonical nga TransferStockService:
+        // SKU → barcode → name, dayon auto-create. Ang SKU guard importante kay
+        // ang SKU optional sa product form (`sku: formData.sku || null`) ug ang
+        // SQL `sku = NULL` dili gyud mo-match — kung wala ang guard, ang matag
+        // transfer sa produkto nga walay SKU mo-fail bisan tuod naa na siya sa
+        // target warehouse.
         let destId = itemTargetProductId;
         if (isTransfer && !destId && targetWarehouseId) {
-          const [targetProduct]: any = await connection.query(
-            'SELECT id, name FROM products WHERE sku = ? AND warehouse_id = ?',
-            [product.sku, targetWarehouseId]
-          );
-          if (targetProduct && targetProduct.length > 0) {
-            destId = targetProduct[0].id;
-          } else {
-            throw new Error(`Product ${product.name} (SKU: ${product.sku}) not found in target warehouse.`);
-          }
+          destId = await resolveTransferTarget(product, targetWarehouseId, connection);
         }
 
         const adjustmentId = `adj_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
