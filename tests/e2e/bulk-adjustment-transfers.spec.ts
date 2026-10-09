@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery } from './helpers/db';
-import { SHELF_A, SHELF_B, SHELF_XFER_PRODUCT } from './fixtures/test-data';
+import {
+  SHELF_A, SHELF_B, SHELF_XFER_PRODUCT,
+  TEST_WAREHOUSE, TRANSFER_TARGET_WAREHOUSE,
+  TRANSFER_NULL_SKU_SOURCE, TRANSFER_NULL_SKU_TARGET,
+} from './fixtures/test-data';
 
 /**
  * Transfers pinaagi sa Bulk Adjustment page — mao na ang usa ra nga lugar para
@@ -87,6 +91,37 @@ test.describe('Bulk Adjustment transfers', () => {
     await qtyInput.fill('99');
     await qtyInput.blur();
     await expect(qtyInput).toHaveValue(String(shelfAQty));
+  });
+
+  test('warehouse transfer: mo-move ang stock tali sa duha ka warehouse', async ({ page }) => {
+    await seedSession(page, DEFAULT_ADMIN);
+
+    // Gibasa gikan sa DB sa sinugdan — dili gi-hardcode, aron dili depende sa order sa mga test.
+    const srcBefore = await totalStock(TRANSFER_NULL_SKU_SOURCE.id);
+    const destBefore = await totalStock(TRANSFER_NULL_SKU_TARGET.id);
+
+    await page.goto('/inventory/bulk-adjustment');
+
+    await page.getByRole('button', { name: /^transfer$/i }).click();
+    // Ang warehouse mao ang default nga destination type — gi-click gihapon
+    // aron ma-pruweba nga mo-trabaho ang toggle sa duha ka direksyon.
+    await page.getByRole('button', { name: /^warehouse$/i }).click();
+
+    await page.getByRole('combobox').filter({ hasText: /all warehouses/i }).click();
+    await page.getByRole('option', { name: TEST_WAREHOUSE.name }).click();
+    await page.getByRole('combobox').filter({ hasText: /select destination/i }).click();
+    await page.getByRole('option', { name: TRANSFER_TARGET_WAREHOUSE.name }).click();
+
+    // Walay SKU kini nga produkto (NULL), mao nga pangitaon pinaagi sa name.
+    await page.getByPlaceholder(/search products by name or sku/i).fill(TRANSFER_NULL_SKU_SOURCE.name);
+    await page.getByText(TRANSFER_NULL_SKU_SOURCE.name).first().click();
+
+    await page.getByRole('button', { name: /process|confirm|apply/i }).first().click();
+
+    await expect(async () => {
+      expect(await totalStock(TRANSFER_NULL_SKU_SOURCE.id)).toBe(srcBefore - 1);
+      expect(await totalStock(TRANSFER_NULL_SKU_TARGET.id)).toBe(destBefore + 1);
+    }).toPass({ timeout: 15_000 });
   });
 
   test('ang tangal na nga board UI dili na makita', async ({ page }) => {
