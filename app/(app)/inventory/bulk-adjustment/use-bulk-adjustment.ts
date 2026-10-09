@@ -10,7 +10,7 @@ import type { Product, ShelfLocation, Supplier, Warehouse } from '@/lib/types';
 
 import { getProducts } from '../../products/actions';
 import type { AdjustmentItem, AdjustmentType, TransferTarget } from './constants';
-import { UNASSIGNED_SHELF_ID, shelfQuantityOf, productsOnShelf } from './shelf-quantities';
+import { shelfQuantityOf, productsOnShelf } from './shelf-quantities';
 
 /**
  * Controller for the bulk stock adjustment screen: owns product/metadata
@@ -195,6 +195,22 @@ export function useBulkAdjustment() {
         }
         if (sourceShelfId === targetShelfId) {
           toast({ variant: 'destructive', title: 'Invalid Transfer', description: 'Source and destination shelf must be different.' });
+          return;
+        }
+        // Final nga check sa submit: ang quantity sa na-stage mahimong daan na
+        // kay ang source shelf o ang mode nausab human ma-stage. Kinahanglan
+        // naay sulod ang source shelf ug dili molapas ang quantity niini.
+        const overLimit = adjustments.find(a => {
+          const available = shelfQuantityOf(a.product, sourceShelfId);
+          return available < 1 || a.quantity > available;
+        });
+        if (overLimit) {
+          const available = shelfQuantityOf(overLimit.product, sourceShelfId);
+          toast({
+            variant: 'destructive',
+            title: 'Insufficient Shelf Quantity',
+            description: `${overLimit.product.name}: only ${available} available on the source shelf.`,
+          });
           return;
         }
       }
