@@ -89,10 +89,24 @@ test.describe('Bulk Adjustment transfers', () => {
     await expect(qtyInput).toHaveValue(String(shelfAQty));
   });
 
-  test('ang tangal na nga boards mo-404', async ({ page }) => {
-    for (const path of ['/inventory/transfer-board', '/inventory/shelf-board']) {
-      const res = await page.goto(path);
-      expect(res?.status(), `${path} kinahanglan 404`).toBe(404);
+  test('ang tangal na nga board UI dili na makita', async ({ page }) => {
+    // Ang test dili mo-assert 404 status (ang [productId] catch-all route mo-match
+    // sa paths ug mo-render "Product Not Found" 200). Instead, mo-assert na ang
+    // board's distinctive heading (UI) ay wala na sa rendered page.
+
+    const headings = [
+      { path: '/inventory/transfer-board', heading: 'Warehouse Transfer Board' },
+      { path: '/inventory/shelf-board', heading: 'Shelf Transfer Board' },
+    ];
+
+    for (const { path, heading } of headings) {
+      await page.goto(path);
+
+      // Board UI is gone
+      await expect(page.locator(`h1:has-text("${heading}")`)).toHaveCount(0);
+
+      // Catch-all [productId] route renders "Product Not Found" instead
+      await expect(page.locator('text=Product Not Found')).toHaveCount(1);
     }
   });
 });
