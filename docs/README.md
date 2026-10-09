@@ -64,8 +64,7 @@ Alon POS System
 │   ├── Stock Levels
 │   ├── Stock Counts (Snapshots)
 │   ├── Repackaging / Break Pack
-│   ├── Shelf Board (drag-and-drop)
-│   ├── Transfer Board
+│   ├── Bulk Adjustment (Add / Remove / Transfer)
 │   ├── Adjustment History
 │   └── Stock Movement Log
 ├── 💰  Sales                        → /sales

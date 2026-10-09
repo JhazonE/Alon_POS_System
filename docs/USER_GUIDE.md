@@ -134,10 +134,14 @@ The dashboard shows at a glance:
 
 #### Move Stock Between Shelves
 
-1. Go to **Inventory → Shelf Board**.
-2. Each column is a shelf location.
-3. Drag a product card from one shelf to another.
-4. Confirm the transfer (or submit for approval).
+1. Go to **Inventory → Bulk Adjustment**.
+2. Under **Adjustment Mode**, click **Transfer**.
+3. Under **Transfer To**, click **Shelf**.
+4. Pick the **Source Shelf** and the **Destination Shelf** (use *Unassigned* for stock that is not on any shelf yet).
+5. Search for each product and add it. The quantity cannot exceed what is on the source shelf.
+6. Click **Process** to confirm (or submit for approval).
+
+A shelf transfer only changes where the stock sits. The product's total stock does not change. To move stock between warehouses instead, choose **Warehouse** under **Transfer To** and pick the destination warehouse.
 
 ---
 

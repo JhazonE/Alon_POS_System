@@ -500,26 +500,27 @@ Both operations can be queued for approval if `requireRepackagingConfirmation` i
 
 ---
 
-### 4.5 Shelf Board (Drag-and-Drop Shelf Management)
+### 4.5 Stock Transfers (Bulk Adjustment)
 
-The Shelf Board is a **Kanban-style visual board** where each column represents a physical shelf location in the warehouse. It provides an intuitive drag-and-drop interface for organizing and reassigning products to shelves.
+Moving stock, between shelves or between warehouses, is done on the single **Bulk Adjustment** page (**Inventory → Bulk Adjustment**). The former Shelf Board and Transfer Board screens no longer exist; their functions are covered here.
 
-**Features:**
+The page has three modes under **Adjustment Mode**: **Add**, **Remove** and **Transfer**. Inside **Transfer**, the **Transfer To** toggle chooses the kind of destination. Each batch has one source and one destination, and every product in the batch moves from that source to that destination.
 
-- **Drag and drop** products between any two shelf columns to reassign them visually.
-- **Multi-select:** Hold `Ctrl` and click multiple product cards to select them. Dragging the selection moves all selected products simultaneously.
-- **Unassigned Column:** Products not yet assigned to a shelf appear in this column, making it easy to organize new arrivals.
-- **Shelf Transfer Approval Gate:** If `requireShelfTransferApproval` is enabled, all drag-and-drop moves are queued for approval before the shelf assignment changes in the database.
+| Transfer To | Source / Destination | What changes |
+|-------------|---------------------|--------------|
+| **Warehouse** | Source Warehouse, Destination Warehouse | Stock leaves the product in the source warehouse and is added to the matching product in the destination warehouse. Approval type: `STOCK_TRANSFER` (setting `requireStockTransferConfirmation`). |
+| **Shelf** | Source Shelf, Destination Shelf (either may be *Unassigned*) | The `product_shelves` assignments are moved by the chosen quantity. A product's **total stock never changes** in a shelf transfer. Approval type: `SHELF_TRANSFER` (setting `requireShelfTransferApproval`). |
+
+**Notes:**
+
+- In shelf mode the quantity limit is the amount sitting on the **source shelf**, not the product's total stock. Only products that have stock on the source shelf can be added. For *Unassigned*, the limit is total stock minus the quantity assigned to shelves.
+- Quantity is explicit per product, so partial moves are possible (for example, 3 of 10 units from one shelf to another).
+- The two approval types are separate: when the relevant setting is enabled, the transfer is queued on the Approvals Board instead of being applied immediately.
+- The old drag-and-drop Kanban interface was removed; shelf moves are now made with the source/destination pickers above.
 
 ---
 
-### 4.6 Transfer Board
-
-A dedicated view for **inter-shelf stock transfers** with explicit per-product quantity control. Unlike the Shelf Board (which reassigns all stock), the Transfer Board lets you move a specific quantity of a product from one shelf to another, creating a granular sub-stock transfer record.
-
----
-
-### 4.7 Adjustment History
+### 4.6 Adjustment History
 
 A **paginated log** of all historical stock adjustment entries. Each entry records:
 
@@ -534,7 +535,7 @@ Useful for auditing unexplained stock discrepancies.
 
 ---
 
-### 4.8 Stock Movement Log
+### 4.7 Stock Movement Log
 
 The most detailed audit trail in the system. Every single change to a product's stock level — from any source — is recorded here:
 
@@ -931,8 +932,8 @@ The Approvals Board is a **multi-level authorization workflow** system that prev
 | **Receive PO** | Recording goods receipt | `requireReceivePOConfirmation` |
 | **Bad Order** | Bad order recording | `requireBadOrderConfirmation` |
 | **Repackaging** | Break Pack and Consolidation operations | `requireRepackagingConfirmation` |
-| **Shelf Transfer** | Shelf board drag-and-drop reassignments | `requireShelfTransferApproval` |
-| **Stock Transfer** | Inter-shelf quantity transfers | `requireStockTransferConfirmation` |
+| **Shelf Transfer** | Shelf-to-shelf transfers made from Bulk Adjustment (Transfer → Shelf) | `requireShelfTransferApproval` |
+| **Stock Transfer** | Warehouse-to-warehouse transfers made from Bulk Adjustment (Transfer → Warehouse) | `requireStockTransferConfirmation` |
 
 ---
 
@@ -1028,7 +1029,7 @@ User Types define the **permission set** for a group of users. Built-in roles:
 | `access_pos` | Access Point of Sale | Allow login to the POS terminal |
 | `view_dashboard` | View Dashboard | Access the `/dashboard` route |
 | `manage_products` | Manage Products | Create, edit, delete products |
-| `manage_inventory` | Manage Inventory | Stock adjustments, counts, repackaging, shelf board |
+| `manage_inventory` | Manage Inventory | Stock adjustments, transfers, counts, repackaging |
 | `view_sales` | View Sales | View POS transactions and sales reports |
 | `manage_purchases` | Manage Purchases | Create and manage purchase orders |
 | `manage_customers` | Manage Customers | Add, edit, delete customer records |
@@ -1097,13 +1098,13 @@ Each toggle routes the corresponding transaction type through the Approvals Boar
 | Toggle | Affected Transactions |
 |--------|-----------------------|
 | **Stock Adjustment Confirmation** | Manual stock add/remove |
-| **Stock Transfer Confirmation** | Inter-shelf quantity transfers |
+| **Stock Transfer Confirmation** | Warehouse-to-warehouse transfers (Bulk Adjustment → Transfer → Warehouse) |
 | **Purchase Order Confirmation** | New PO creation |
 | **Receive PO Confirmation** | Recording goods receipt from a PO |
 | **Bad Order Confirmation** | Recording a bad order |
 | **Stock Count Approval** | Applying a physical stock count |
 | **Repackaging Approval** | Break Pack and Consolidation operations |
-| **Shelf Transfer Approval** | Shelf Board drag-and-drop product reassignment |
+| **Shelf Transfer Approval** | Shelf-to-shelf transfers (Bulk Adjustment → Transfer → Shelf) |
 
 ---
 
