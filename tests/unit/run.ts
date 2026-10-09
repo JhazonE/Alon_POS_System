@@ -70,6 +70,7 @@ const TEST_FILES = [
   'selling-unit-price-line.test',
   'checkout-selling-unit-qty.test',
   'void-selling-unit-restore.test',
+  'shelf-quantities.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
