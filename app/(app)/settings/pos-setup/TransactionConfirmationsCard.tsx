@@ -14,7 +14,7 @@ const CONFIRMATIONS: { key: keyof PosSettings; label: string; desc: string }[] =
   { key: 'requirePurchaseOrderConfirmation',  label: 'Purchase Order Confirmation',     desc: 'Confirm before creating a new purchase order' },
   { key: 'requireReceiveConfirmation',        label: 'Receive PO Confirmation',         desc: 'Confirm before receiving stock from a purchase order' },
   { key: 'requireBadOrderConfirmation',       label: 'Bad Order Confirmation',          desc: 'Confirm before recording items as bad orders (damages/returns)' },
-  { key: 'requireStockCountApproval',         label: 'Stock Count Approval',            desc: 'Require multi-level approval before applying stock count variances' },
+  { key: 'requireStockCountApproval',         label: 'Inventory Count Approval',        desc: 'Require multi-level approval before applying inventory count variances' },
   { key: 'requireRepackagingConfirmation',    label: 'Repackaging Approval',            desc: 'Require multi-level approval before executing stock repackaging conversions' },
   { key: 'requireShelfTransferApproval',      label: 'Shelf Transfer Approval',         desc: 'Require multi-level approval before moving stock between shelves' },
   { key: 'requireProductConfirmation',        label: 'Add Product Approval',            desc: 'Require multi-level approval before a new product is created' },

@@ -98,7 +98,7 @@ function cardTitle(item: ApprovalItem): string {
         return `Bad Order: ${first}${d.items.length > 1 ? ` (+${d.items.length - 1} more)` : ''}`;
       }
       return 'Bad Order: Batch';
-    case 'STOCK_COUNT':      return `Stock Count: ${d.warehouseName || '—'}`;
+    case 'STOCK_COUNT':      return `Inventory Count: ${d.warehouseName || '—'}`;
     case 'REPACKAGING':      return `Repackaging: ${d.sourceProductName || d.productName || '—'}`;
     case 'PRODUCT_CREATE':   return `Add Product: ${d.name || d.productName || '—'}`;
     case 'PRICE_UPDATE':

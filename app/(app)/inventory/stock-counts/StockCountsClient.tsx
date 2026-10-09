@@ -49,7 +49,7 @@ export function StockCountsClient() {
           ? (
             <div className="text-center py-16 text-muted-foreground text-sm">
               <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              {search ? `No counts matching "${search}"` : 'No stock counts yet.'}
+              {search ? `No counts matching "${search}"` : 'No inventory counts yet.'}
             </div>
           )
           : paginated.map((count) => (
@@ -88,7 +88,7 @@ export function StockCountsClient() {
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  {search ? `No counts matching "${search}"` : 'No stock counts found.'}
+                  {search ? `No counts matching "${search}"` : 'No inventory counts found.'}
                 </TableCell>
               </TableRow>
             ) : (

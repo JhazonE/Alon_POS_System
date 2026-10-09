@@ -27,7 +27,7 @@ const TRANSACTION_TYPES = [
   { value: 'PURCHASE_ORDER', label: 'Purchase Order' },
   { value: 'RECEIVE_PO', label: 'Receive Purchase Order' },
   { value: 'BAD_ORDER', label: 'Bad Order (Damages/Returns)' },
-  { value: 'STOCK_COUNT', label: 'Stock Count' },
+  { value: 'STOCK_COUNT', label: 'Inventory Count' },
   { value: 'REPACKAGING', label: 'Repackaging' },
   { value: 'SHELF_TRANSFER', label: 'Shelf Transfer' },
   { value: 'PRODUCT_CREATE', label: 'Add Product' },

@@ -17,7 +17,7 @@ export function PrintLayout({
     <div className="hidden print:block printable-area p-8 bg-white text-black font-sans">
       <div className="mb-8 border-b-2 border-black pb-4 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">STOCK COUNT REPORT</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">INVENTORY COUNT REPORT</h1>
           <h2 className="text-xl font-semibold text-gray-700">{count.name}</h2>
           {count.notes && <p className="text-gray-500 mt-2 italic">{count.notes}</p>}
         </div>
