@@ -70,7 +70,10 @@ export function SellingUnitsTab() {
                 key={field.id}
                 className="relative p-4 pr-14 bg-card border rounded-md shadow-sm"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-4">
+                {/* Identity block — what this unit is, what it holds, and what it costs.
+                    Two per row rather than four: at four across the inputs were too
+                    narrow to show their placeholders and the hints wrapped to three lines. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                   <FormField
                     control={form.control}
                     name={`sellingUnits.${index}.unitName` as any}
@@ -105,7 +108,7 @@ export function SellingUnitsTab() {
                         />
                         {isBaseRow && (
                           <FormDescription className="text-xs">
-                            Base unit — this is the product&apos;s unit of measure.
+                            The product&apos;s unit of measure.
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -120,7 +123,7 @@ export function SellingUnitsTab() {
                         1
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Locked — the base row always equals 1.
+                        Always 1.
                       </p>
                     </div>
                   ) : (
@@ -224,70 +227,102 @@ export function SellingUnitsTab() {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                {/* Price Levels block — its own section so a level's Price and Min Qty
+                    always sit together on one line instead of wrapping apart inside
+                    the identity grid. */}
+                <div className="mt-4 border-t pt-4">
+                  <h5 className="text-xs font-semibold leading-none text-muted-foreground uppercase tracking-wide">
+                    Price Levels
+                  </h5>
 
                   {isLoadingPriceLevels ? (
-                    <div className="text-xs text-muted-foreground self-end pb-2">Loading price levels…</div>
+                    <div className="text-xs text-muted-foreground mt-3">Loading price levels…</div>
+                  ) : priceLevels.length === 0 ? (
+                    <div className="text-xs text-muted-foreground mt-3">No price levels configured.</div>
                   ) : (
-                    priceLevels.map((level: any) => (
-                      <div key={level.id} className="contents">
-                        <FormField
-                          control={form.control}
-                          name={`sellingUnits.${index}.prices.${level.id}.price` as any}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs truncate" title={level.name}>
-                                {level.name} (₱)
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  value={field.value ?? ''}
-                                  onChange={(e) => {
-                                    const next = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                                    const prevBaseRetail = getRetail(form.getValues(`sellingUnits.${baseUnitIndex}` as any));
-                                    field.onChange(next);
-                                    if (level.id === defaultLevel?.id && next !== undefined) {
-                                      onRetailChange(index, next, prevBaseRetail);
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        {/* Min Qty is base-unit only: the POS prices the base unit, so a minimum
-                            on another row would be collected and never applied. */}
-                        {index === baseUnitIndex && (
-                          <FormField
-                            control={form.control}
-                            name={`sellingUnits.${index}.prices.${level.id}.minQuantity` as any}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs truncate" title={`${level.name} minimum quantity`}>
-                                  {level.name} Min Qty
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    min="0"
-                                    placeholder="0"
-                                    value={field.value ?? ''}
-                                    onChange={(e) =>
-                                      field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))
-                                    }
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
+                    <div className="mt-3 space-y-3 sm:space-y-2">
+                      {/* Column headers, printed once instead of on every field, so a long
+                          level name no longer has to truncate into a field label. */}
+                      <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_10rem_10rem] sm:gap-x-4 text-xs font-medium text-muted-foreground">
+                        <span>Level</span>
+                        <span>Price (₱)</span>
+                        {isBaseRow && <span>Min Qty</span>}
                       </div>
-                    ))
+
+                      {priceLevels.map((level: any) => (
+                        <div
+                          key={level.id}
+                          className="rounded-md border p-3 sm:border-0 sm:p-0 sm:grid sm:grid-cols-[minmax(0,1fr)_10rem_10rem] sm:items-start sm:gap-x-4"
+                        >
+                          <div
+                            className="text-xs font-medium sm:self-center sm:py-2 sm:truncate"
+                            title={level.name}
+                          >
+                            {level.name}
+                            {level.id === defaultLevel?.id && (
+                              <span className="ml-1.5 text-muted-foreground font-normal">(default)</span>
+                            )}
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-2 gap-x-3 sm:mt-0 sm:contents">
+                            <FormField
+                              control={form.control}
+                              name={`sellingUnits.${index}.prices.${level.id}.price` as any}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs sm:sr-only">Price (₱)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="0.00"
+                                      value={field.value ?? ''}
+                                      onChange={(e) => {
+                                        const next = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                        const prevBaseRetail = getRetail(form.getValues(`sellingUnits.${baseUnitIndex}` as any));
+                                        field.onChange(next);
+                                        if (level.id === defaultLevel?.id && next !== undefined) {
+                                          onRetailChange(index, next, prevBaseRetail);
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            {/* Min Qty is base-unit only: the POS prices the base unit, so a minimum
+                                on another row would be collected and never applied. */}
+                            {isBaseRow && (
+                              <FormField
+                                control={form.control}
+                                name={`sellingUnits.${index}.prices.${level.id}.minQuantity` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs sm:sr-only">Min Qty</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="1"
+                                        min="0"
+                                        placeholder="0"
+                                        value={field.value ?? ''}
+                                        onChange={(e) =>
+                                          field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
 
