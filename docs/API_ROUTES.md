@@ -218,7 +218,6 @@
 | `POST` | `/api/inventory/stock-counts/[id]/complete` | Mark a stock count as complete and apply variances |
 | `GET` | `/api/inventory/transfer` | List inventory transfer records |
 | `POST` | `/api/inventory/transfer` | Create an inventory transfer between warehouses |
-| `POST` | `/api/inventory/transfer/bulk` | Create multiple inventory transfers at once |
 | `POST` | `/api/inventory/adjust/bulk` | Apply bulk inventory adjustments |
 
 ---

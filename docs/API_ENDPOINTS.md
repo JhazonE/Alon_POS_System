@@ -100,7 +100,6 @@ All responses return `{ success: boolean, data?: any, error?: string }`.
 | POST | `/api/inventory/stock-counts/[id]/complete` | Apply stock count variances |
 | GET/POST | `/api/inventory/stock-counts/[id]/items` | Get or update count line items |
 | POST | `/api/inventory/transfer` | Transfer stock between shelf locations |
-| POST | `/api/inventory/transfer/bulk` | Bulk shelf transfer |
 
 ---
 
