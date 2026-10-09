@@ -235,7 +235,7 @@ export function useBulkAdjustment() {
           userId,
         );
 
-        if (!result.success) throw new Error('Shelf transfer failed');
+        if (!result.success) throw new Error(result.message || 'Shelf transfer failed');
 
         await logActivity({
           action: 'TRANSFER',

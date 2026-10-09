@@ -154,7 +154,7 @@ export default function BulkAdjustmentClient() {
                 </TableHeader>
                 <TableBody>
                   {adjustments.map(adj => (
-                    <AdjustmentTableRow key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} maxQuantity={ceilingFor(adj.product)} />
+                    <AdjustmentTableRow key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} maxQuantity={ceilingFor(adj.product)} isShelfTransfer={isShelfTransfer} />
                   ))}
                 </TableBody>
               </Table>
@@ -251,7 +251,7 @@ export default function BulkAdjustmentClient() {
               ) : (
                 <div className="p-4 space-y-3 pb-4">
                   {adjustments.map(adj => (
-                    <AdjustmentMobileCard key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} maxQuantity={ceilingFor(adj.product)} />
+                    <AdjustmentMobileCard key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} maxQuantity={ceilingFor(adj.product)} isShelfTransfer={isShelfTransfer} />
                   ))}
                 </div>
               )}
