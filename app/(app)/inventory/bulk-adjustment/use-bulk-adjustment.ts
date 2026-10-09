@@ -10,6 +10,7 @@ import type { Product, ShelfLocation, Supplier, Warehouse } from '@/lib/types';
 
 import { getProducts } from '../../products/actions';
 import type { AdjustmentItem, AdjustmentType, TransferTarget } from './constants';
+import { UNASSIGNED_SHELF_ID, shelfQuantityOf, productsOnShelf } from './shelf-quantities';
 
 /**
  * Controller for the bulk stock adjustment screen: owns product/metadata
@@ -107,17 +108,38 @@ export function useBulkAdjustment() {
     }
   };
 
+  /**
+   * Ang ceiling sa usa ka item. Sa shelf transfer, kung pila ang naa sa SOURCE
+   * SHELF — dili ang total stock (Review Focus 2). Kung dili shelf, ang stock.
+   */
+  const maxQuantityFor = (product: Product): number => {
+    if (adjustmentType === 'transfer' && transferTarget === 'shelf' && sourceShelfId) {
+      return shelfQuantityOf(product, sourceShelfId);
+    }
+    return product.stock;
+  };
+
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return [];
     let filtered = allProducts;
-    if (warehouseId && warehouseId !== 'none') {
+
+    const isShelfTransfer = adjustmentType === 'transfer' && transferTarget === 'shelf';
+
+    if (isShelfTransfer) {
+      // Sa shelf mode, ang naa ra gyuy stock sa source shelf ang mahimong
+      // ibalhin — kung dili ni i-filter, maka-stage ang user ug item nga dili
+      // diay ma-transfer. Ang warehouse filter gi-laktawan kay global ang
+      // shelves (walay warehouse_id ang shelf_locations).
+      filtered = sourceShelfId ? productsOnShelf(filtered, sourceShelfId) : [];
+    } else if (warehouseId && warehouseId !== 'none') {
       filtered = filtered.filter(p => p.warehouseId === warehouseId || p.warehouse === warehouseId);
     }
+
     return filtered.filter(p =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku ?? '').toLowerCase().includes(search.toLowerCase())
     ).slice(0, 40);
-  }, [allProducts, search, warehouseId]);
+  }, [allProducts, search, warehouseId, adjustmentType, transferTarget, sourceShelfId]);
 
   const addProduct = (product: Product) => {
     if (adjustments.some(a => a.product.id === product.id)) {
@@ -144,11 +166,38 @@ export function useBulkAdjustment() {
     setAdjustments(prev => prev.map(a => ({ ...a, type })));
   };
 
+  /**
+   * Kung mo-usab ang destination type, mo-usab sad ang ceiling sa matag item
+   * (total stock vs. shelf quantity), mao nga i-clamp ang na-stage na aron dili
+   * mabilin nga mo-tumong sa daan nga ceiling (Review Focus 4).
+   */
+  const changeTransferTarget = (target: TransferTarget) => {
+    setTransferTarget(target);
+    setAdjustments(prev => prev.map(a => {
+      const max = target === 'shelf' && sourceShelfId
+        ? shelfQuantityOf(a.product, sourceShelfId)
+        : a.product.stock;
+      return { ...a, quantity: Math.min(a.quantity, Math.max(1, max)) };
+    }));
+  };
+
   const handleProcessAdjustments = async () => {
     if (adjustments.length === 0) return;
-    if (adjustmentType === 'transfer' && !targetWarehouseId) {
-      toast({ variant: 'destructive', title: 'Target Warehouse Required', description: 'Please select a destination warehouse.' });
-      return;
+    if (adjustmentType === 'transfer') {
+      if (transferTarget === 'warehouse' && !targetWarehouseId) {
+        toast({ variant: 'destructive', title: 'Target Warehouse Required', description: 'Please select a destination warehouse.' });
+        return;
+      }
+      if (transferTarget === 'shelf') {
+        if (!sourceShelfId || !targetShelfId) {
+          toast({ variant: 'destructive', title: 'Shelves Required', description: 'Please select both a source and destination shelf.' });
+          return;
+        }
+        if (sourceShelfId === targetShelfId) {
+          toast({ variant: 'destructive', title: 'Invalid Transfer', description: 'Source and destination shelf must be different.' });
+          return;
+        }
+      }
     }
     setIsProcessing(true);
     try {
@@ -217,6 +266,8 @@ export function useBulkAdjustment() {
     setTargetWarehouseId,
     transferTarget,
     setTransferTarget,
+    changeTransferTarget,
+    maxQuantityFor,
     sourceShelfId,
     setSourceShelfId,
     targetShelfId,
