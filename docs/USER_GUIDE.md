@@ -139,7 +139,7 @@ The dashboard shows at a glance:
 3. Under **Transfer To**, click **Shelf**.
 4. Pick the **Source Shelf** and the **Destination Shelf** (use *Unassigned* for stock that is not on any shelf yet).
 5. Search for each product and add it. The quantity cannot exceed what is on the source shelf.
-6. Click **Process** to confirm (or submit for approval).
+6. Click the **Apply** button (it reads "Apply N Adjustments", for example "Apply 3 Adjustments") to confirm, or to submit for approval.
 
 A shelf transfer only changes where the stock sits. The product's total stock does not change. To move stock between warehouses instead, choose **Warehouse** under **Transfer To** and pick the destination warehouse.
 

@@ -508,7 +508,7 @@ The page has three modes under **Adjustment Mode**: **Add**, **Remove** and **Tr
 
 | Transfer To | Source / Destination | What changes |
 |-------------|---------------------|--------------|
-| **Warehouse** | Source Warehouse, Destination Warehouse | Stock leaves the product in the source warehouse and is added to the matching product in the destination warehouse. Approval type: `STOCK_TRANSFER` (setting `requireStockTransferConfirmation`). |
+| **Warehouse** | Source Warehouse, Destination Warehouse | Stock leaves the product in the source warehouse and is added to the matching product in the destination warehouse. Approval type: `STOCK_TRANSFER` (setting `requireTransferConfirmation`). |
 | **Shelf** | Source Shelf, Destination Shelf (either may be *Unassigned*) | The `product_shelves` assignments are moved by the chosen quantity. A product's **total stock never changes** in a shelf transfer. Approval type: `SHELF_TRANSFER` (setting `requireShelfTransferApproval`). |
 
 **Notes:**
@@ -933,7 +933,7 @@ The Approvals Board is a **multi-level authorization workflow** system that prev
 | **Bad Order** | Bad order recording | `requireBadOrderConfirmation` |
 | **Repackaging** | Break Pack and Consolidation operations | `requireRepackagingConfirmation` |
 | **Shelf Transfer** | Shelf-to-shelf transfers made from Bulk Adjustment (Transfer → Shelf) | `requireShelfTransferApproval` |
-| **Stock Transfer** | Warehouse-to-warehouse transfers made from Bulk Adjustment (Transfer → Warehouse) | `requireStockTransferConfirmation` |
+| **Stock Transfer** | Warehouse-to-warehouse transfers made from Bulk Adjustment (Transfer → Warehouse) | `requireTransferConfirmation` |
 
 ---
 

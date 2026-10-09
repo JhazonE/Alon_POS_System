@@ -388,7 +388,7 @@ export const CHAPTERS: Chapter[] = [
           { kind: 'figure', slug: 'inventory-levels' },
           {
             kind: 'para',
-            text: 'The toolbar above the list also links to related tools: "Transfer Board" (move stock between warehouses), "Shelf Board" (organize shelf locations), "Bulk Adjustment" (adjust many products at once), "Stock Batches" (view FIFO cost batches), and "History" (the full adjustment log, covered later in this chapter).',
+            text: 'The toolbar above the list also links to related tools: "Bulk Adjustment" (adjust many products at once, or transfer stock between warehouses or shelves), "Stock Batches" (view FIFO cost batches), and "History" (the full adjustment log, covered later in this chapter).',
           },
           {
             kind: 'note',
