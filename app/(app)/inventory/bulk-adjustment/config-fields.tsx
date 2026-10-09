@@ -5,9 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { Supplier, Warehouse } from '@/lib/types';
+import type { Supplier, Warehouse, ShelfLocation } from '@/lib/types';
 
-import { typeConfig, type AdjustmentType } from './constants';
+import { typeConfig, type AdjustmentType, type TransferTarget } from './constants';
+import { UNASSIGNED_SHELF_ID } from './shelf-quantities';
 
 export function ConfigFields({
   compact = false,
@@ -17,6 +18,13 @@ export function ConfigFields({
   setWarehouseId,
   targetWarehouseId,
   setTargetWarehouseId,
+  transferTarget,
+  onChangeTransferTarget,
+  sourceShelfId,
+  setSourceShelfId,
+  targetShelfId,
+  setTargetShelfId,
+  shelfLocations,
   warehouses,
   referenceNo,
   setReferenceNo,
@@ -35,6 +43,13 @@ export function ConfigFields({
   setWarehouseId: (value: string) => void;
   targetWarehouseId: string;
   setTargetWarehouseId: (value: string) => void;
+  transferTarget: TransferTarget;
+  onChangeTransferTarget: (target: TransferTarget) => void;
+  sourceShelfId: string;
+  setSourceShelfId: (value: string) => void;
+  targetShelfId: string;
+  setTargetShelfId: (value: string) => void;
+  shelfLocations: ShelfLocation[];
   warehouses: Warehouse[];
   referenceNo: string;
   setReferenceNo: (value: string) => void;
@@ -92,19 +107,75 @@ export function ConfigFields({
 
       {/* Transfer Destination */}
       {adjustmentType === 'transfer' && (
-        <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">Destination Warehouse</Label>
-          <Select value={targetWarehouseId} onValueChange={setTargetWarehouseId}>
-            <SelectTrigger className="h-10 border-blue-200 bg-blue-50/50 ring-1 ring-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:ring-blue-500/20">
-              <SelectValue placeholder="Select destination" />
-            </SelectTrigger>
-            <SelectContent>
-              {warehouses.filter(w => w.id !== warehouseId).map(w => (
-                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+        <>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transfer To</Label>
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted rounded-xl">
+              {(['warehouse', 'shelf'] as const).map(target => (
+                <button
+                  key={target}
+                  onClick={() => onChangeTransferTarget(target)}
+                  className={cn(
+                    "py-2 px-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all",
+                    transferTarget === target
+                      ? "bg-card shadow-sm text-blue-600 dark:text-blue-400"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {target === 'warehouse' ? 'Warehouse' : 'Shelf'}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
+            </div>
+          </div>
+
+          {transferTarget === 'warehouse' ? (
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">Destination Warehouse</Label>
+              <Select value={targetWarehouseId} onValueChange={setTargetWarehouseId}>
+                <SelectTrigger className="h-10 border-blue-200 bg-blue-50/50 ring-1 ring-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:ring-blue-500/20">
+                  <SelectValue placeholder="Select destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  {warehouses.filter(w => w.id !== warehouseId).map(w => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Source Shelf</Label>
+                <Select value={sourceShelfId} onValueChange={setSourceShelfId}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select source shelf" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED_SHELF_ID}>Unassigned</SelectItem>
+                    {shelfLocations.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">Destination Shelf</Label>
+                <Select value={targetShelfId} onValueChange={setTargetShelfId}>
+                  <SelectTrigger className="h-10 border-blue-200 bg-blue-50/50 ring-1 ring-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:ring-blue-500/20">
+                    <SelectValue placeholder="Select destination shelf" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceShelfId !== UNASSIGNED_SHELF_ID && (
+                      <SelectItem value={UNASSIGNED_SHELF_ID}>Unassigned</SelectItem>
+                    )}
+                    {shelfLocations.filter(s => s.id !== sourceShelfId).map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+        </>
       )}
 
       {/* Reference No */}

@@ -42,8 +42,6 @@ Alon_POS_System/
 │   │   │   ├── page.tsx        # Stock levels grid
 │   │   │   ├── repackaging/    # Break-pack & consolidation
 │   │   │   ├── stock-counts/   # Physical count snapshots
-│   │   │   ├── shelf-board/    # Drag-and-drop shelf management
-│   │   │   ├── transfer-board/ # Inter-shelf transfer board
 │   │   │   ├── history/        # Adjustment history
 │   │   │   └── movement/       # Stock movement log
 │   │   ├── sales/              # All sales reporting & order management

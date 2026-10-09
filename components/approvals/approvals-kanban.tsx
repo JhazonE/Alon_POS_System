@@ -58,7 +58,6 @@ const TYPE_FILTERS = [
   { val: 'RECEIVE_PO',       lab: 'Receive' },
   { val: 'BAD_ORDER',        lab: 'Bad Order' },
   { val: 'STOCK_COUNT',      lab: 'Counts' },
-  { val: 'REPACKAGING',      lab: 'Repack' },
   { val: 'SHELF_TRANSFER',   lab: 'Shelf' },
   { val: 'PRODUCT_CREATE',   lab: 'Add Product' },
   { val: 'PRICE_UPDATE',     lab: 'Price Update' },
@@ -74,7 +73,6 @@ function typeStyle(type: string, reason?: string) {
     case 'RECEIVE_PO':       return 'bg-emerald-100 text-emerald-800 border-emerald-200';
     case 'BAD_ORDER':        return 'bg-red-100 text-red-800 border-red-200';
     case 'STOCK_COUNT':      return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-    case 'REPACKAGING':      return 'bg-teal-100 text-teal-800 border-teal-200';
     case 'SHELF_TRANSFER':   return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'PRODUCT_CREATE':   return 'bg-green-100 text-green-800 border-green-200';
     case 'PRICE_UPDATE':     return 'bg-pink-100 text-pink-800 border-pink-200';
@@ -99,7 +97,6 @@ function cardTitle(item: ApprovalItem): string {
       }
       return 'Bad Order: Batch';
     case 'STOCK_COUNT':      return `Inventory Count: ${d.warehouseName || '—'}`;
-    case 'REPACKAGING':      return `Repackaging: ${d.sourceProductName || d.productName || '—'}`;
     case 'PRODUCT_CREATE':   return `Add Product: ${d.name || d.productName || '—'}`;
     case 'PRICE_UPDATE':
       if (d.items && d.items.length > 0) {
@@ -393,31 +390,6 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
         </>
       )}
 
-      {/* REPACKAGING */}
-      {type === 'REPACKAGING' && (
-        <>
-          <div className="bg-secondary/10 rounded-2xl p-4 space-y-0">
-            <Row label="Source Product" value={d.sourceProductName || d.productName} />
-            <Row label="Target Product" value={d.targetProductName} />
-            <Row label="Quantity" value={d.quantity || d.quantityToBreak || d.packQtyUsed || '—'} />
-            <Row label="Warehouse" value={d.warehouseName || '—'} />
-            <Row label="Reason" value={d.reason || (d.quantityToBreak ? 'Break Pack' : d.packQtyUsed ? 'Consolidate Pack' : 'Repackaging')} />
-          </div>
-          {d.items && d.items.length > 0 && (
-            <ItemsTable
-              items={d.items}
-              cols={[
-                { key: 'productName', label: 'Product' },
-                { key: 'barcode', label: 'Barcode' },
-                { key: 'sku', label: 'SKU' },
-                { key: 'quantity', label: 'Qty', right: true },
-                { key: 'unit', label: 'Unit' },
-              ]}
-            />
-          )}
-        </>
-      )}
-
       {/* SHELF_TRANSFER */}
       {type === 'SHELF_TRANSFER' && (
         <>
@@ -481,7 +453,7 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
         </>
       )}
       {/* Generic fallback for anything else that has .items */}
-      {!['PURCHASE_ORDER','RECEIVE_PO','STOCK_ADJUSTMENT','STOCK_TRANSFER','STOCK_COUNT','BAD_ORDER','REPACKAGING','SHELF_TRANSFER','PRICE_UPDATE'].includes(type) && d.items && (
+      {!['PURCHASE_ORDER','RECEIVE_PO','STOCK_ADJUSTMENT','STOCK_TRANSFER','STOCK_COUNT','BAD_ORDER','SHELF_TRANSFER','PRICE_UPDATE'].includes(type) && d.items && (
         <ItemsTable
           items={d.items}
           cols={[

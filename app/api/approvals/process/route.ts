@@ -149,31 +149,6 @@ export async function POST(request: NextRequest) {
         } else if (item.transaction_type === 'STOCK_COUNT') {
           const scResult = await processCompleteStockCount(txData.stockCountId);
           result = { success: scResult.success, error: scResult.error || '' };
-        } else if (item.transaction_type === 'REPACKAGING') {
-          const { breakPack, consolidatePack } = await import('@/app/(app)/products/actions');
-          if (txData.direction === 'consolidate') {
-            const cpResult = await consolidatePack(
-              txData.packId,
-              txData.bulkId || null,
-              txData.packQtyUsed,
-              txData.manualFactor,
-              txData.newProductData,
-              item.created_by,
-              true // isInternalFinalization
-            );
-            result = { success: cpResult.success, error: (cpResult as any).message || '' };
-          } else {
-            const rpResult = await breakPack(
-              txData.parentId,
-              txData.childId || null,
-              txData.quantityToBreak,
-              txData.manualFactor,
-              txData.newProductData,
-              item.created_by,
-              true // isInternalFinalization
-            );
-            result = { success: rpResult.success, error: (rpResult as any).message || '' };
-          }
         } else if (item.transaction_type === 'SHELF_TRANSFER') {
           const { updateProductShelfLocations } = await import('@/app/(app)/products/actions');
           const stResult = await updateProductShelfLocations(

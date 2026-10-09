@@ -496,3 +496,81 @@ export const SELLING_UNITS_PRODUCT: FullProduct & {
     },
   ],
 };
+
+/**
+ * Destination warehouse para sa bulk-transfer tests. Ang TEST_WAREHOUSE mao ang
+ * source, kini ang target — nagkinahanglan ta duha aron matinuod nga transfer
+ * (source != target) ang ma-exercise.
+ */
+export const TRANSFER_TARGET_WAREHOUSE = { id: 'wh-xfer-dest', name: 'Transfer Destination' };
+
+/**
+ * Produkto nga NAA sa duha ka warehouse apan WALAY SKU (sku = NULL).
+ *
+ * Ang SKU optional sa product form (`sku: formData.sku || null`), mao nga NULL
+ * usa ka normal nga estado — dili edge case. Gi-pares kini nga fixture aron
+ * ma-regress ang bug diin ang bulk-transfer nag-resolve sa target pinaagi ra sa
+ * `WHERE sku = ?`: sa SQL ang `sku = NULL` dili gyud mo-match, mao nga ang
+ * transfer mo-500 bisan tuod naa na ang produkto sa target warehouse.
+ */
+export const TRANSFER_NULL_SKU_SOURCE = {
+  id: 'test-xfer-nullsku-src',
+  name: 'Transfer No SKU Product',
+  barcode: '5300000000011',
+  price: 90,
+  cost: 55,
+  stock: 20,
+  warehouseId: TEST_WAREHOUSE.id,
+};
+
+/** Ang parehas nga produkto sa target warehouse — parehas og name ug barcode, NULL gihapon ang SKU. */
+export const TRANSFER_NULL_SKU_TARGET = {
+  id: 'test-xfer-nullsku-dest',
+  name: TRANSFER_NULL_SKU_SOURCE.name,
+  barcode: TRANSFER_NULL_SKU_SOURCE.barcode,
+  price: 90,
+  cost: 55,
+  stock: 3,
+  warehouseId: TRANSFER_TARGET_WAREHOUSE.id,
+};
+
+/**
+ * Produkto nga naa RA sa source warehouse — walay katugbang sa target.
+ *
+ * Gigamit sa auto-create path: ang canonical nga transfer service mo-INSERT ug
+ * bag-ong product row sa target warehouse imbes mo-throw, ug kinahanglan parehas
+ * ang buhaton sa bulk endpoint.
+ */
+export const TRANSFER_ORPHAN_PRODUCT = {
+  id: 'test-xfer-orphan-src',
+  name: 'Transfer Orphan Product',
+  sku: 'XFER-ORPH-001',
+  barcode: '5300000000028',
+  price: 140,
+  cost: 95,
+  stock: 12,
+  warehouseId: TEST_WAREHOUSE.id,
+};
+
+/** Duha ka shelf para sa shelf-transfer test. Global ang shelves — walay warehouse_id. */
+export const SHELF_A = { id: 'shelf-xfer-a', name: 'Aisle A1' };
+export const SHELF_B = { id: 'shelf-xfer-b', name: 'Aisle B2' };
+
+/**
+ * Produkto nga 30 ang total stock apan 4 ra ang naa sa SHELF_A (ug 6 sa
+ * SHELF_B), mao nga 20 ang unassigned.
+ *
+ * Ang kalainan tali sa total stock ug sa per-shelf nga quantity mao ang
+ * importante: ang ceiling sa shelf transfer kay ang shelf quantity (4), dili
+ * ang total (30). Usa ka test nga pareho ni sila dili makakita sa bug.
+ */
+export const SHELF_XFER_PRODUCT = {
+  id: 'test-shelf-xfer-1',
+  name: 'Shelf Transfer Product',
+  sku: 'SHLF-XFER-001',
+  price: 75,
+  cost: 40,
+  stock: 30,
+  onShelfA: 4,
+  onShelfB: 6,
+};

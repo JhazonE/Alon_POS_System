@@ -42,7 +42,6 @@ export const salesNavItems = [
 export const inventoryNavItems = [
   { href: '/inventory', label: 'Stock Levels' },
   { href: '/inventory/stock-counts', label: 'Inventory Count' },
-  { href: '/inventory/repackaging', label: 'Repackaging' },
 ];
 
 export const customerNavItems = [

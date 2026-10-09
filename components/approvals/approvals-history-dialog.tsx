@@ -107,7 +107,6 @@ export function ApprovalsHistoryDialog({
         case 'RECEIVE_PO': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
         case 'BAD_ORDER': return 'bg-red-50 text-red-700 border-red-100';
         case 'STOCK_COUNT': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-        case 'REPACKAGING': return 'bg-teal-50 text-teal-700 border-teal-100';
         case 'PRODUCT_CREATE': return 'bg-green-50 text-green-700 border-green-100';
         default: return 'bg-secondary/50 text-muted-foreground';
     }

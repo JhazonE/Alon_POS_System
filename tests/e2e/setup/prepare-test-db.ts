@@ -48,12 +48,19 @@ import {
   REASSIGN_AUTO_MATCH,
   REASSIGN_AUTO_NOMATCH,
   TEST_SUPPLIER,
+  SHELF_A,
+  SHELF_B,
+  SHELF_XFER_PRODUCT,
   TEST_WAREHOUSE,
   BULK_PRICE_PRODUCT,
   PO_PRODUCT,
   SO_CUSTOMER,
   SO_PRODUCT,
   SO_SERVICE,
+  TRANSFER_TARGET_WAREHOUSE,
+  TRANSFER_NULL_SKU_SOURCE,
+  TRANSFER_NULL_SKU_TARGET,
+  TRANSFER_ORPHAN_PRODUCT,
 } from '../fixtures/test-data';
 
 dotenv.config();
@@ -364,12 +371,47 @@ async function seedFixtures(): Promise<void> {
     ],
   );
 
+  // --- bulk-transfer fixtures: ikaduhang warehouse + NULL-SKU nga pares + orphan ---
+  await conn.query('INSERT INTO warehouses (id, name) VALUES (?, ?)', [
+    TRANSFER_TARGET_WAREHOUSE.id, TRANSFER_TARGET_WAREHOUSE.name,
+  ]);
+
+  // Ang sku gituyo nga WALA sa column list — NULL gyud siya, dili '' (ang
+  // (sku, warehouse_id) unique index mo-treat sa '' nga usa ka tinuod nga value).
+  for (const p of [TRANSFER_NULL_SKU_SOURCE, TRANSFER_NULL_SKU_TARGET, TRANSFER_ORPHAN_PRODUCT]) {
+    await conn.query(
+      `INSERT INTO products (id, name, price, cost, stock, barcode, warehouse_id, availability)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')`,
+      [p.id, p.name, p.price, p.cost, p.stock, p.barcode, p.warehouseId],
+    );
+  }
+  // Ang orphan ra ang naay SKU — aron ma-exercise ang SKU-miss → auto-create nga path.
+  await conn.query('UPDATE products SET sku = ? WHERE id = ?', [
+    TRANSFER_ORPHAN_PRODUCT.sku, TRANSFER_ORPHAN_PRODUCT.id,
+  ]);
+
   // Product nga naka-link sa supplier (ang PO product selector mo-filter by supplier).
   await conn.query(
     `INSERT INTO products (id, name, price, cost, stock, sku, supplier_id, availability)
      VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')`,
     [PO_PRODUCT.id, PO_PRODUCT.name, PO_PRODUCT.price, PO_PRODUCT.cost, PO_PRODUCT.stock, PO_PRODUCT.sku, PO_PRODUCT.supplierId],
   );
+
+  // --- shelf-transfer fixtures: duha ka shelf + produkto nga partial ang assignment ---
+  for (const s of [SHELF_A, SHELF_B]) {
+    await conn.query('INSERT INTO shelf_locations (id, name, is_active) VALUES (?, ?, 1)', [s.id, s.name]);
+  }
+  await conn.query(
+    `INSERT INTO products (id, name, price, cost, stock, sku, availability)
+     VALUES (?, ?, ?, ?, ?, ?, 'Available')`,
+    [SHELF_XFER_PRODUCT.id, SHELF_XFER_PRODUCT.name, SHELF_XFER_PRODUCT.price,
+     SHELF_XFER_PRODUCT.cost, SHELF_XFER_PRODUCT.stock, SHELF_XFER_PRODUCT.sku],
+  );
+  // Partial ra ang assignment: 4 sa A, 6 sa B, 20 ang nahabilin nga unassigned.
+  await conn.query('INSERT INTO product_shelves (product_id, shelf_id, quantity) VALUES (?, ?, ?)',
+    [SHELF_XFER_PRODUCT.id, SHELF_A.id, SHELF_XFER_PRODUCT.onShelfA]);
+  await conn.query('INSERT INTO product_shelves (product_id, shelf_id, quantity) VALUES (?, ?, ?)',
+    [SHELF_XFER_PRODUCT.id, SHELF_B.id, SHELF_XFER_PRODUCT.onShelfB]);
 
   // --- sales-order fixtures: customer + usa ka stocked nga produkto + usa ka serbisyo ---
   await conn.query('INSERT INTO customers (id, name) VALUES (?, ?)', [SO_CUSTOMER.id, SO_CUSTOMER.name]);

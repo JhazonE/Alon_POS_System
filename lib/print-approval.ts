@@ -149,46 +149,6 @@ export const printApproval = (data: ApprovalItem) => {
         </table>
       ` : ''}
 
-      ${data.transaction_type.toUpperCase() === 'REPACKAGING' ? `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th width="20%">FLOW</th>
-              <th width="30%">PRODUCT / DETAILS</th>
-              <th>SKU / BARCODE</th>
-              <th class="numeric">QTY</th>
-              <th class="numeric">UNIT RATE</th>
-              <th class="numeric">TOTAL</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="color: #666; font-size: 8pt; font-weight: 700;">[SOURCE] BULK</td>
-              <td>
-                <div class="font-bold">${data.transaction_data.sourceProductName}</div>
-                <div style="font-size: 8pt; color: #666;">Unit: ${data.transaction_data.sourceUnit}</div>
-              </td>
-              <td class="id-value">${data.transaction_data.items?.[0]?.sku || '-'}${data.transaction_data.items?.[0]?.barcode ? ' / ' + data.transaction_data.items?.[0]?.barcode : ''}</td>
-              <td class="numeric negative">-${data.transaction_data.quantityToBreak}</td>
-              <td class="numeric">₱${(Number(data.transaction_data.items?.[0]?.cost || data.transaction_data.items?.[0]?.price) || 0).toLocaleString()}</td>
-              <td class="numeric">₱${((Number(data.transaction_data.items?.[0]?.cost || data.transaction_data.items?.[0]?.price) || 0) * data.transaction_data.quantityToBreak).toLocaleString()}</td>
-            </tr>
-            <tr>
-              <td style="color: #666; font-size: 8pt; font-weight: 700;">[TARGET] PACK</td>
-              <td>
-                <div class="font-bold font-primary">${data.transaction_data.targetProductName}</div>
-                <div style="font-size: 8pt; color: #666;">Unit: ${data.transaction_data.items?.[1]?.unit || data.transaction_data.newProductData?.unitOfMeasure || '-'}</div>
-              </td>
-              <td class="id-value">${data.transaction_data.items?.[1]?.sku || '-'}${data.transaction_data.items?.[1]?.barcode ? ' / ' + data.transaction_data.items?.[1]?.barcode : ''}</td>
-              <td class="numeric positive">+${(data.transaction_data.quantityToBreak * (data.transaction_data.manualFactor || data.transaction_data.newProductData?.conversionFactor || 1)).toLocaleString()}</td>
-              <td class="numeric">₱${(Number(data.transaction_data.items?.[1]?.cost || data.transaction_data.items?.[1]?.price) || 0).toLocaleString()}</td>
-              <td class="numeric">₱${((Number(data.transaction_data.items?.[1]?.cost || data.transaction_data.items?.[1]?.price) || 0) * (data.transaction_data.quantityToBreak * (data.transaction_data.manualFactor || data.transaction_data.newProductData?.conversionFactor || 1))).toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="remarks"><strong>Repackaging Note:</strong> This transaction converts bulk inventory into smaller units.</div>
-      ` : ''}
-
       ${data.transaction_type.toUpperCase() === 'STOCK_COUNT' ? `
         <table class="data-table">
           <thead>
@@ -253,7 +213,7 @@ export const printApproval = (data: ApprovalItem) => {
         </div>
       ` : ''}
 
-      ${data.transaction_data.items && !['STOCK_COUNT', 'STOCK_TRANSFER', 'STOCK_ADJUSTMENT', 'RECEIVE_PO', 'REPACKAGING'].includes(data.transaction_type.toUpperCase()) ? `
+      ${data.transaction_data.items && !['STOCK_COUNT', 'STOCK_TRANSFER', 'STOCK_ADJUSTMENT', 'RECEIVE_PO'].includes(data.transaction_type.toUpperCase()) ? `
         <table class="data-table">
           <thead>
             <tr>

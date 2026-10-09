@@ -11,13 +11,22 @@ export function AdjustmentMobileCard({
   onUpdate,
   onRemove,
   showExpirationColumn,
+  maxQuantity = Number.POSITIVE_INFINITY,
+  isShelfTransfer = false,
 }: {
   adj: AdjustmentItem;
   onUpdate: (productId: string, updates: Partial<AdjustmentItem>) => void;
   onRemove: (productId: string) => void;
   showExpirationColumn?: boolean;
+  /** Ceiling sa quantity. Infinity kung walay limit (add/remove/warehouse transfer). */
+  maxQuantity?: number;
+  /** Shelf transfer: wala mausab ang total stock, busa dili mo-ubos ang New Stock. */
+  isShelfTransfer?: boolean;
 }) {
-  const newStock = adj.type === 'remove' ? adj.product.stock - adj.quantity : adj.product.stock + adj.quantity;
+  // Add: mo-taas. Shelf transfer: wala mausab ang total (shelf ra ang mibalhin). Remove ug warehouse transfer: mo-ubos ang source.
+  const newStock = adj.type === 'add'
+    ? adj.product.stock + adj.quantity
+    : isShelfTransfer ? adj.product.stock : adj.product.stock - adj.quantity;
   const isNegative = newStock < 0;
   const cfg = typeConfig[adj.type];
   const Icon = cfg.icon;
@@ -59,11 +68,11 @@ export function AdjustmentMobileCard({
                 min="1"
                 className="h-8 w-16 text-center font-bold text-sm px-1"
                 value={adj.quantity}
-                onChange={e => onUpdate(adj.product.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                onChange={e => onUpdate(adj.product.id, { quantity: Math.min(maxQuantity, Math.max(1, parseInt(e.target.value) || 1)) })}
               />
               <button
                 className="w-8 h-8 rounded-xl bg-muted hover:bg-muted/70 flex items-center justify-center text-foreground font-bold text-lg transition-colors"
-                onClick={() => onUpdate(adj.product.id, { quantity: adj.quantity + 1 })}
+                onClick={() => onUpdate(adj.product.id, { quantity: Math.min(maxQuantity, adj.quantity + 1) })}
               >+</button>
               <span className="text-[10px] text-muted-foreground uppercase font-bold">{adj.product.unitOfMeasure}</span>
             </div>

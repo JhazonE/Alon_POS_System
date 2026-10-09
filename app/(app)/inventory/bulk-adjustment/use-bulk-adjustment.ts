@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import { logActivity } from '@/lib/client-activity-logger';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Supplier, Warehouse } from '@/lib/types';
+import type { Product, ShelfLocation, Supplier, Warehouse } from '@/lib/types';
 
-import { getProducts } from '../../products/actions';
-import type { AdjustmentItem, AdjustmentType } from './constants';
+import { getProducts, updateProductShelfLocations } from '../../products/actions';
+import type { AdjustmentItem, AdjustmentType, TransferTarget } from './constants';
+import { shelfQuantityOf, productsOnShelf, UNASSIGNED_SHELF_ID } from './shelf-quantities';
 
 /**
  * Controller for the bulk stock adjustment screen: owns product/metadata
@@ -32,6 +33,10 @@ export function useBulkAdjustment() {
   const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('add');
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [targetWarehouseId, setTargetWarehouseId] = useState<string>('');
+  const [transferTarget, setTransferTarget] = useState<TransferTarget>('warehouse');
+  const [sourceShelfId, setSourceShelfId] = useState<string>('');
+  const [targetShelfId, setTargetShelfId] = useState<string>('');
+  const [shelfLocations, setShelfLocations] = useState<ShelfLocation[]>([]);
   const [supplierId, setSupplierId] = useState<string>('');
   const [referenceNo, setReferenceNo] = useState('');
   const [note, setNote] = useState('');
@@ -90,28 +95,51 @@ export function useBulkAdjustment() {
 
   const loadMetadata = async () => {
     try {
-      const [whRes, supRes] = await Promise.all([
+      const [whRes, supRes, shelfRes] = await Promise.all([
         fetch('/api/warehouses?activeOnly=true').then(r => r.json()),
-        fetch('/api/suppliers').then(r => r.json())
+        fetch('/api/suppliers').then(r => r.json()),
+        fetch('/api/shelf-locations?activeOnly=true').then(r => r.json())
       ]);
       if (whRes.success) setWarehouses(whRes.data);
       if (supRes.success) setSuppliers(supRes.data);
+      if (shelfRes.success) setShelfLocations(shelfRes.data);
     } catch (error) {
       console.error('Failed to load metadata:', error);
     }
   };
 
+  /**
+   * Ang ceiling sa usa ka item. Sa shelf transfer, kung pila ang naa sa SOURCE
+   * SHELF — dili ang total stock (Review Focus 2). Kung dili shelf, ang stock.
+   */
+  const maxQuantityFor = (product: Product): number => {
+    if (adjustmentType === 'transfer' && transferTarget === 'shelf' && sourceShelfId) {
+      return shelfQuantityOf(product, sourceShelfId);
+    }
+    return product.stock;
+  };
+
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return [];
     let filtered = allProducts;
-    if (warehouseId && warehouseId !== 'none') {
+
+    const isShelfTransfer = adjustmentType === 'transfer' && transferTarget === 'shelf';
+
+    if (isShelfTransfer) {
+      // Sa shelf mode, ang naa ra gyuy stock sa source shelf ang mahimong
+      // ibalhin — kung dili ni i-filter, maka-stage ang user ug item nga dili
+      // diay ma-transfer. Ang warehouse filter gi-laktawan kay global ang
+      // shelves (walay warehouse_id ang shelf_locations).
+      filtered = sourceShelfId ? productsOnShelf(filtered, sourceShelfId) : [];
+    } else if (warehouseId && warehouseId !== 'none') {
       filtered = filtered.filter(p => p.warehouseId === warehouseId || p.warehouse === warehouseId);
     }
+
     return filtered.filter(p =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku ?? '').toLowerCase().includes(search.toLowerCase())
     ).slice(0, 40);
-  }, [allProducts, search, warehouseId]);
+  }, [allProducts, search, warehouseId, adjustmentType, transferTarget, sourceShelfId]);
 
   const addProduct = (product: Product) => {
     if (adjustments.some(a => a.product.id === product.id)) {
@@ -138,14 +166,93 @@ export function useBulkAdjustment() {
     setAdjustments(prev => prev.map(a => ({ ...a, type })));
   };
 
+  /**
+   * Kung mo-usab ang destination type, mo-usab sad ang ceiling sa matag item
+   * (total stock vs. shelf quantity), mao nga i-clamp ang na-stage na aron dili
+   * mabilin nga mo-tumong sa daan nga ceiling (Review Focus 4).
+   */
+  const changeTransferTarget = (target: TransferTarget) => {
+    setTransferTarget(target);
+    setAdjustments(prev => prev.map(a => {
+      const max = target === 'shelf' && sourceShelfId
+        ? shelfQuantityOf(a.product, sourceShelfId)
+        : a.product.stock;
+      return { ...a, quantity: Math.min(a.quantity, Math.max(1, max)) };
+    }));
+  };
+
   const handleProcessAdjustments = async () => {
     if (adjustments.length === 0) return;
-    if (adjustmentType === 'transfer' && !targetWarehouseId) {
-      toast({ variant: 'destructive', title: 'Target Warehouse Required', description: 'Please select a destination warehouse.' });
-      return;
+    if (adjustmentType === 'transfer') {
+      if (transferTarget === 'warehouse' && !targetWarehouseId) {
+        toast({ variant: 'destructive', title: 'Target Warehouse Required', description: 'Please select a destination warehouse.' });
+        return;
+      }
+      if (transferTarget === 'shelf') {
+        if (!sourceShelfId || !targetShelfId) {
+          toast({ variant: 'destructive', title: 'Shelves Required', description: 'Please select both a source and destination shelf.' });
+          return;
+        }
+        if (sourceShelfId === targetShelfId) {
+          toast({ variant: 'destructive', title: 'Invalid Transfer', description: 'Source and destination shelf must be different.' });
+          return;
+        }
+        // Final nga check sa submit: ang quantity sa na-stage mahimong daan na
+        // kay ang source shelf o ang mode nausab human ma-stage. Kinahanglan
+        // naay sulod ang source shelf ug dili molapas ang quantity niini.
+        const overLimit = adjustments.find(a => {
+          const available = shelfQuantityOf(a.product, sourceShelfId);
+          return available < 1 || a.quantity > available;
+        });
+        if (overLimit) {
+          const available = shelfQuantityOf(overLimit.product, sourceShelfId);
+          toast({
+            variant: 'destructive',
+            title: 'Insufficient Shelf Quantity',
+            description: `${overLimit.product.name}: only ${available} available on the source shelf.`,
+          });
+          return;
+        }
+      }
     }
     setIsProcessing(true);
     try {
+      // Ang shelf transfer lahi nga write path: mo-usab ra siya sa
+      // `product_shelves`, wala sa `products.stock`, ug naa siyay kaugalingong
+      // SHELF_TRANSFER approval. Gi-reuse ang server action nga naa nay tanan
+      // niini — wala gyud nato gi-hilabtan ang stock arithmetic.
+      if (adjustmentType === 'transfer' && transferTarget === 'shelf') {
+        const userSession = localStorage.getItem('mock-user-session');
+        const userId = userSession ? JSON.parse(userSession).uid : 'system';
+
+        const result = await updateProductShelfLocations(
+          adjustments.map(a => ({
+            productId: a.product.id,
+            sourceShelfId: sourceShelfId === UNASSIGNED_SHELF_ID ? null : sourceShelfId,
+            targetShelfId: targetShelfId === UNASSIGNED_SHELF_ID ? null : targetShelfId,
+            quantity: a.quantity,
+          })),
+          userId,
+        );
+
+        if (!result.success) throw new Error(result.message || 'Shelf transfer failed');
+
+        await logActivity({
+          action: 'TRANSFER',
+          module: 'INVENTORY',
+          description: `Shelf transfer: ${adjustments.length} item(s)${result.pendingApproval ? ' (pending approval)' : ''}`,
+        });
+
+        toast(result.pendingApproval
+          ? { title: 'Approval Required', description: 'The shelf transfer was sent for approval.' }
+          : { title: 'Shelf Transfer Successful', description: `Moved ${adjustments.length} item(s).` });
+
+        setAdjustments([]);
+        dispatchStockUpdate();
+        router.push('/inventory');
+        return;
+      }
+
       const userSession = localStorage.getItem('mock-user-session');
       const userId = userSession ? JSON.parse(userSession).uid : 'system';
       const payload = {
@@ -209,6 +316,15 @@ export function useBulkAdjustment() {
     setWarehouseId,
     targetWarehouseId,
     setTargetWarehouseId,
+    transferTarget,
+    setTransferTarget,
+    changeTransferTarget,
+    maxQuantityFor,
+    sourceShelfId,
+    setSourceShelfId,
+    targetShelfId,
+    setTargetShelfId,
+    shelfLocations,
     supplierId,
     setSupplierId,
     referenceNo,

@@ -388,7 +388,7 @@ export const CHAPTERS: Chapter[] = [
           { kind: 'figure', slug: 'inventory-levels' },
           {
             kind: 'para',
-            text: 'The toolbar above the list also links to related tools: "Transfer Board" (move stock between warehouses), "Shelf Board" (organize shelf locations), "Bulk Adjustment" (adjust many products at once), "Stock Batches" (view FIFO cost batches), and "History" (the full adjustment log, covered later in this chapter).',
+            text: 'The toolbar above the list also links to related tools: "Bulk Adjustment" (adjust many products at once, or transfer stock between warehouses or shelves), "Stock Batches" (view FIFO cost batches), and "History" (the full adjustment log, covered later in this chapter).',
           },
           {
             kind: 'note',
@@ -419,24 +419,6 @@ export const CHAPTERS: Chapter[] = [
             text: 'You can count while the store is open. The system records the moment each line is entered and ignores any sale, delivery, or transfer that happens between starting the count and entering that quantity — those movements are already accounted for and are not treated as missing stock. Enter each quantity at the shelf as you count it, rather than writing quantities on paper and encoding them hours later: the system times the count from when you type it, so a long delay makes the figures less accurate.',
           },
           { kind: 'figure', slug: 'inventory-stock-counts' },
-        ],
-      },
-      {
-        heading: 'Repackaging (Break Pack and Pack → Bulk)',
-        blocks: [
-          {
-            kind: 'para',
-            text: 'The Repackaging page converts bulk inventory into individual packs, or merges packs back into bulk — the reverse operation. It has three tabs: "Break Pack" (bulk to packs), "Pack → Bulk" (consolidation, the reverse of Break Pack), and "History" (a log of every repackaging session, including its direction, quantities used and produced, and status).',
-          },
-          {
-            kind: 'steps',
-            items: [
-              'To break down bulk stock into packs, open the "Break Pack" tab, choose the source product and quantity to use, and submit.',
-              'To merge pack units back into bulk stock, open the "Pack → Bulk" tab instead and submit the consolidation.',
-              'Check the "History" tab afterward to confirm the session completed — completed sessions show a green "completed" badge.',
-            ],
-          },
-          { kind: 'figure', slug: 'inventory-repackaging' },
         ],
       },
       {
