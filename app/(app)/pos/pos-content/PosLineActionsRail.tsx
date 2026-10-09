@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, X, Percent, Tag, ListOrdered, Plus, FilePenLine, Power } from 'lucide-react';
+import { Pencil, Trash2, Percent, Tag, ListOrdered, Plus, FilePenLine, Power } from 'lucide-react';
 import { PosActionRail, type RailAction } from './PosActionRail';
 import type { SuspendedTransaction } from './pos-types';
 
@@ -26,7 +26,7 @@ export function PosLineActionsRail({
 }: Props) {
   const actions: RailAction[] = [
     { icon: Pencil, label: 'Edit Item', shortcut: 'F1', action: handleOpenEditDialog, tint: 'text-blue-600' },
-    { icon: X, label: 'Line Void', shortcut: 'F2', action: () => handleVoidLine(selectedItemId), tint: 'text-rose-600' },
+    { icon: Trash2, label: 'Cancel Items', shortcut: 'F2', action: () => handleVoidLine(selectedItemId), tint: 'text-rose-600' },
     { icon: Percent, label: 'Discount', shortcut: 'F3', action: handleOpenDiscountDialog, tint: 'text-emerald-600' },
     { icon: Tag, label: 'Hold', shortcut: 'F4', action: handleHold, tint: 'text-orange-600' },
     { icon: ListOrdered, label: 'Recall', shortcut: 'F5', action: handleOpenSuspended, tint: 'text-amber-600', badge: heldTransactions.length },

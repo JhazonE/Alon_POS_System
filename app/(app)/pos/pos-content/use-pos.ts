@@ -164,6 +164,9 @@ export function usePOS() {
   const [editingQtyItemId, setEditingQtyItemId] = useState<string | null>(null);
   const [editingPriceItemId, setEditingPriceItemId] = useState<string | null>(null);
   const [pendingVoidItemId, setPendingVoidItemId] = useState<string | null>(null);
+  const [isCancelItemsOpen, setIsCancelItemsOpen] = useState(false);
+  // Which scope the auth gate should run once credentials clear.
+  const [pendingCancelScope, setPendingCancelScope] = useState<'selected' | 'all' | null>(null);
   const [qtyDraft, setQtyDraft] = useState('');
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [isCollisionOpen, setIsCollisionOpen] = useState(false);
@@ -178,6 +181,7 @@ export function usePOS() {
   useEffect(() => {
     const isAnyDialogOpen =
       isTenderDialogOpen || isDiscountDialogOpen || isHeldTransOpen || isLineVoidAuthOpen ||
+      isCancelItemsOpen ||
       isEndShiftOpen || isCashTransferOpen || isCustomerSelectOpen || isLoyaltyOpen ||
       isRecentSalesOpen || isVoidSalesOpen || isReturnSalesOpen || isPriceInquiryOpen ||
       isZReadingOpen || isShutdownConfirmOpen || isInsufficientStockOpen || isProductSearchOpen ||
@@ -188,11 +192,11 @@ export function usePOS() {
       return () => clearTimeout(timer);
     }
   }, [
-    isTenderDialogOpen, isDiscountDialogOpen, isHeldTransOpen, isLineVoidAuthOpen,
+    isTenderDialogOpen, isDiscountDialogOpen, isHeldTransOpen, isLineVoidAuthOpen, isCancelItemsOpen,
     isEndShiftOpen, isCashTransferOpen, isCustomerSelectOpen, isLoyaltyOpen,
     isRecentSalesOpen, isVoidSalesOpen, isReturnSalesOpen, isPriceInquiryOpen,
     isZReadingOpen, isShutdownConfirmOpen, isInsufficientStockOpen, isProductSearchOpen,
-    showEndShiftReport, isPosLoggedIn, shiftActive,
+    showEndShiftReport, isEndingShift, isPosLoggedIn, shiftActive,
   ]);
 
   // Restore session on mount
@@ -755,10 +759,23 @@ export function usePOS() {
       : item));
   };
 
+  /** Opens the Cancel Items confirmation. Scope and auth are decided there. */
   const handleVoidLine = (itemId: string | null) => {
-    if (!itemId) { toast({ title: 'No Item Selected', description: 'Please select an item to void.', variant: 'destructive' }); return; }
-    if (enableLineVoidAuth) { setPendingVoidItemId(itemId); setIsLineVoidAuthOpen(true); }
-    else performVoidLine(itemId);
+    if (items.length === 0) { toast({ title: 'Empty Cart', description: 'There is nothing to cancel.', variant: 'destructive' }); return; }
+    setPendingVoidItemId(itemId);
+    setIsCancelItemsOpen(true);
+  };
+
+  /** Confirmed in the dialog: gate on credentials if enabled, else run now. */
+  const requestCancel = (scope: 'selected' | 'all') => {
+    if (enableLineVoidAuth) { setPendingCancelScope(scope); setIsLineVoidAuthOpen(true); return; }
+    performCancel(scope);
+  };
+
+  const performCancel = (scope: 'selected' | 'all') => {
+    if (scope === 'all') performCancelAll();
+    else if (pendingVoidItemId) performVoidLine(pendingVoidItemId);
+    setPendingCancelScope(null);
   };
 
   const performVoidLine = (itemId: string) => {
@@ -767,7 +784,16 @@ export function usePOS() {
     removeItem(itemId);
     if (selectedItemId === itemId) setSelectedItemId(null);
     setPendingVoidItemId(null);
-    toast({ title: 'Line Voided', description: `Removed ${item.name} from the cart.` });
+    toast({ title: 'Item Cancelled', description: `Removed ${item.name} from the cart.` });
+  };
+
+  const performCancelAll = () => {
+    const count = items.length;
+    if (count === 0) return;
+    setItems([]);
+    setSelectedItemId(null);
+    setPendingVoidItemId(null);
+    toast({ title: 'All Items Cancelled', description: `Removed ${count} line${count === 1 ? '' : 's'} from the cart.` });
   };
 
   const focusInlineQuantity = (itemId: string | null) => {
@@ -1382,6 +1408,7 @@ export function usePOS() {
     isShutdownConfirmOpen, setIsShutdownConfirmOpen,
     // auth dialogs
     isLineVoidAuthOpen, setIsLineVoidAuthOpen, lineVoidAuthCredentials, pendingVoidItemId,
+    isCancelItemsOpen, setIsCancelItemsOpen, pendingCancelScope,
     isPriceEditAuthOpen, setIsPriceEditAuthOpen, priceEditAuthCredentials,
     isEditItemAuthOpen, setIsEditItemAuthOpen, editItemAuthCredentials, handleEditItemAuthSuccess,
     isSuspendAuthOpen, setIsSuspendAuthOpen, suspendAuthCredentials, handleSuspendAuthSuccess,
@@ -1398,7 +1425,7 @@ export function usePOS() {
     totalDue, subTotal, vatSales, vatAmount, taxDetails, numberOfItems,
     // handlers
     handleAddItem, handleAddItemBySKU, getSearchSuggestions, findExactCodeMatch, updateQuantity, handleUpdateItem,
-    handleVoidLine, performVoidLine, focusInlineQuantity,
+    handleVoidLine, performVoidLine, requestCancel, performCancel, focusInlineQuantity,
     removeItem, handleSuccessfulSale,
     handleOpenTender, handleDefaultTender,
     handleOpenEditDialog, handleOpenDiscountDialog, handleApplyDiscount,

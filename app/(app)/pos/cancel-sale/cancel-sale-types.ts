@@ -1,7 +1,14 @@
-export interface CancelSaleDialogProps {
+import type { SaleItem } from '../pos-content/pos-types';
+
+export type CancelScope = 'selected' | 'all';
+
+export interface CancelItemsDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onCancelSelected: (quantity: number) => void;
+  /** Cancel the whole selected line. */
+  onCancelSelected: () => void;
+  /** Clear every line in the cart. */
   onCancelAll: () => void;
-  selectedItem: any | null;
+  selectedItem: SaleItem | null;
+  itemCount: number;
 }

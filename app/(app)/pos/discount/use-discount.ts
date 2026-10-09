@@ -14,7 +14,7 @@ type Options = {
 export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Options) {
   const [discountType, setDiscountType] = useState<DiscountType>('percent');
   const [scope, setScope] = useState<'selected' | 'all'>('selected');
-  const [value, setValue] = useState<string>('0');
+  const [value, setValue] = useState<string>('');
   const [idNumber, setIdNumber] = useState<string>('');
   const [holderName, setHolderName] = useState<string>('');
 
@@ -25,7 +25,9 @@ export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Opt
     if (isOpen) {
       setDiscountType('percent');
       setScope('selected');
-      setValue(item?.discount.toString() || '0');
+      // Empty, not '0': a literal zero makes the cashier clear the field
+      // before typing (or they get '010'). The placeholder shows the 0.
+      setValue(item?.discount ? item.discount.toString() : '');
       setIdNumber('');
       setHolderName('');
     }

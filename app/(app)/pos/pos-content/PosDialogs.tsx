@@ -12,6 +12,7 @@ import { CustomerAccountDialog } from '../customer-account/CustomerAccountDialog
 import { LoyaltyRewardsDialog } from '../loyalty-rewards/LoyaltyRewardsDialog';
 import { RecentSalesDialog } from '../recent-sales/RecentSalesDialog';
 import { VoidSalesDialog } from '../void-sales/VoidSalesDialog';
+import { CancelItemsDialog } from '../cancel-sale/CancelItemsDialog';
 import { ReturnSalesDialog } from '../return-sales/ReturnSalesDialog';
 import { PriceInquiryDialog } from '../price-inquiry/PriceInquiryDialog';
 import { ZReadingDialog } from '../z-reading-report/ZReadingDialog';
@@ -131,9 +132,18 @@ export function PosDialogs(pos: Props) {
         isOpen={pos.isLineVoidAuthOpen}
         onOpenChange={pos.setIsLineVoidAuthOpen}
         title="Authorization Required"
-        description="Please provide credentials to Void Line Items"
+        description="Please provide credentials to Cancel Items"
         requiredCredentials={pos.lineVoidAuthCredentials}
-        onSuccess={() => { pos.setIsLineVoidAuthOpen(false); if (pos.pendingVoidItemId) pos.performVoidLine(pos.pendingVoidItemId); }}
+        onSuccess={() => { pos.setIsLineVoidAuthOpen(false); if (pos.pendingCancelScope) pos.performCancel(pos.pendingCancelScope); }}
+      />
+
+      <CancelItemsDialog
+        isOpen={pos.isCancelItemsOpen}
+        onOpenChange={pos.setIsCancelItemsOpen}
+        selectedItem={pos.items.find((i) => i.lineId === pos.pendingVoidItemId) || null}
+        itemCount={pos.items.length}
+        onCancelSelected={() => pos.requestCancel('selected')}
+        onCancelAll={() => pos.requestCancel('all')}
       />
 
       <AdminAuthDialog
