@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -16,6 +17,10 @@ const TOAST_DURATION = 4000
 
 export function Toaster() {
   const { toasts, dismiss } = useToast()
+  // The POS is a fullscreen checkout screen the cashier watches head-on, so its
+  // toasts sit top-center where they are in view. Back-office keeps top-right.
+  const pathname = usePathname()
+  const isPos = pathname?.startsWith('/pos') ?? false
 
   const wasLoadingRef   = useRef(new Set<string>())
   const dismissTimerRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
@@ -38,7 +43,7 @@ export function Toaster() {
   }, [toasts, dismiss])
 
   return (
-    <ToastProvider duration={TOAST_DURATION}>
+    <ToastProvider duration={TOAST_DURATION} swipeDirection={isPos ? "up" : "right"}>
       {toasts.map(({ id, title, description, action, loading, icon, variant, ...props }) => {
         const isLoading = !!loading
 
@@ -67,6 +72,7 @@ export function Toaster() {
           <Toast
             key={id}
             variant={isLoading ? 'loading' : variant}
+            position={isPos ? 'top' : 'right'}
             duration={isLoading ? 999999999 : TOAST_DURATION}
             {...props}
           >
@@ -90,7 +96,7 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport className={isPos ? "top-4 left-1/2 right-auto -translate-x-1/2 items-center" : undefined} />
     </ToastProvider>
   )
 }

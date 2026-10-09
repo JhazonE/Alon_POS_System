@@ -25,7 +25,7 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full flex-col overflow-hidden rounded-xl border shadow-xl transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full",
+  "group pointer-events-auto relative flex w-full flex-col overflow-hidden rounded-xl border shadow-xl transition-all data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80",
   {
     variants: {
       variant: {
@@ -34,9 +34,15 @@ const toastVariants = cva(
         success:     "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-100",
         loading:     "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-100",
       },
+      /** Toasts slide in from the edge they are anchored to. */
+      position: {
+        right: "data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full",
+        top:   "data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
+      },
     },
     defaultVariants: {
       variant: "default",
+      position: "right",
     },
   }
 )
@@ -45,10 +51,10 @@ const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => (
+>(({ className, variant, position, ...props }, ref) => (
   <ToastPrimitives.Root
     ref={ref}
-    className={cn(toastVariants({ variant }), className)}
+    className={cn(toastVariants({ variant, position }), className)}
     {...props}
   />
 ))
