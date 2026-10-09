@@ -39,6 +39,7 @@ export default function BulkAdjustmentClient() {
     setTargetWarehouseId,
     transferTarget,
     changeTransferTarget,
+    maxQuantityFor,
     sourceShelfId,
     setSourceShelfId,
     targetShelfId,
@@ -66,6 +67,13 @@ export default function BulkAdjustmentClient() {
     removeCount,
     transferCount,
   } = useBulkAdjustment();
+
+  // Ang ceiling nag-apply ra sa shelf transfer. Sa add/remove/warehouse mode,
+  // maxQuantityFor() mo-balik sa total stock — kung i-clamp ang input niana,
+  // dili na maka-add ug stock ang user lapas sa karon nga stock. Infinity = walay limit.
+  const isShelfTransfer = adjustmentType === 'transfer' && transferTarget === 'shelf';
+  const ceilingFor = (product: Parameters<typeof maxQuantityFor>[0]) =>
+    isShelfTransfer ? maxQuantityFor(product) : Number.POSITIVE_INFINITY;
 
   const configFieldsProps = {
     adjustmentType,
@@ -146,7 +154,7 @@ export default function BulkAdjustmentClient() {
                 </TableHeader>
                 <TableBody>
                   {adjustments.map(adj => (
-                    <AdjustmentTableRow key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} />
+                    <AdjustmentTableRow key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} maxQuantity={ceilingFor(adj.product)} />
                   ))}
                 </TableBody>
               </Table>
@@ -243,7 +251,7 @@ export default function BulkAdjustmentClient() {
               ) : (
                 <div className="p-4 space-y-3 pb-4">
                   {adjustments.map(adj => (
-                    <AdjustmentMobileCard key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} />
+                    <AdjustmentMobileCard key={adj.product.id} adj={adj} onUpdate={updateAdjustment} onRemove={removeAdjustment} showExpirationColumn={showExpirationColumn} maxQuantity={ceilingFor(adj.product)} />
                   ))}
                 </div>
               )}

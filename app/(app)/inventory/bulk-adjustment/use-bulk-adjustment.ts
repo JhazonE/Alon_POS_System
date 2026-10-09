@@ -8,9 +8,9 @@ import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, ShelfLocation, Supplier, Warehouse } from '@/lib/types';
 
-import { getProducts } from '../../products/actions';
+import { getProducts, updateProductShelfLocations } from '../../products/actions';
 import type { AdjustmentItem, AdjustmentType, TransferTarget } from './constants';
-import { shelfQuantityOf, productsOnShelf } from './shelf-quantities';
+import { shelfQuantityOf, productsOnShelf, UNASSIGNED_SHELF_ID } from './shelf-quantities';
 
 /**
  * Controller for the bulk stock adjustment screen: owns product/metadata
@@ -217,6 +217,42 @@ export function useBulkAdjustment() {
     }
     setIsProcessing(true);
     try {
+      // Ang shelf transfer lahi nga write path: mo-usab ra siya sa
+      // `product_shelves`, wala sa `products.stock`, ug naa siyay kaugalingong
+      // SHELF_TRANSFER approval. Gi-reuse ang server action nga naa nay tanan
+      // niini — wala gyud nato gi-hilabtan ang stock arithmetic.
+      if (adjustmentType === 'transfer' && transferTarget === 'shelf') {
+        const userSession = localStorage.getItem('mock-user-session');
+        const userId = userSession ? JSON.parse(userSession).uid : 'system';
+
+        const result = await updateProductShelfLocations(
+          adjustments.map(a => ({
+            productId: a.product.id,
+            sourceShelfId: sourceShelfId === UNASSIGNED_SHELF_ID ? null : sourceShelfId,
+            targetShelfId: targetShelfId === UNASSIGNED_SHELF_ID ? null : targetShelfId,
+            quantity: a.quantity,
+          })),
+          userId,
+        );
+
+        if (!result.success) throw new Error('Shelf transfer failed');
+
+        await logActivity({
+          action: 'TRANSFER',
+          module: 'INVENTORY',
+          description: `Shelf transfer: ${adjustments.length} item(s)${result.pendingApproval ? ' (pending approval)' : ''}`,
+        });
+
+        toast(result.pendingApproval
+          ? { title: 'Approval Required', description: 'The shelf transfer was sent for approval.' }
+          : { title: 'Shelf Transfer Successful', description: `Moved ${adjustments.length} item(s).` });
+
+        setAdjustments([]);
+        dispatchStockUpdate();
+        router.push('/inventory');
+        return;
+      }
+
       const userSession = localStorage.getItem('mock-user-session');
       const userId = userSession ? JSON.parse(userSession).uid : 'system';
       const payload = {

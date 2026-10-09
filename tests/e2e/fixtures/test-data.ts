@@ -551,3 +551,26 @@ export const TRANSFER_ORPHAN_PRODUCT = {
   stock: 12,
   warehouseId: TEST_WAREHOUSE.id,
 };
+
+/** Duha ka shelf para sa shelf-transfer test. Global ang shelves — walay warehouse_id. */
+export const SHELF_A = { id: 'shelf-xfer-a', name: 'Aisle A1' };
+export const SHELF_B = { id: 'shelf-xfer-b', name: 'Aisle B2' };
+
+/**
+ * Produkto nga 30 ang total stock apan 4 ra ang naa sa SHELF_A (ug 6 sa
+ * SHELF_B), mao nga 20 ang unassigned.
+ *
+ * Ang kalainan tali sa total stock ug sa per-shelf nga quantity mao ang
+ * importante: ang ceiling sa shelf transfer kay ang shelf quantity (4), dili
+ * ang total (30). Usa ka test nga pareho ni sila dili makakita sa bug.
+ */
+export const SHELF_XFER_PRODUCT = {
+  id: 'test-shelf-xfer-1',
+  name: 'Shelf Transfer Product',
+  sku: 'SHLF-XFER-001',
+  price: 75,
+  cost: 40,
+  stock: 30,
+  onShelfA: 4,
+  onShelfB: 6,
+};

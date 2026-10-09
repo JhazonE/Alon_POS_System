@@ -12,11 +12,14 @@ export function AdjustmentTableRow({
   onUpdate,
   onRemove,
   showExpirationColumn,
+  maxQuantity = Number.POSITIVE_INFINITY,
 }: {
   adj: AdjustmentItem;
   onUpdate: (productId: string, updates: Partial<AdjustmentItem>) => void;
   onRemove: (productId: string) => void;
   showExpirationColumn?: boolean;
+  /** Ceiling sa quantity. Infinity kung walay limit (add/remove/warehouse transfer). */
+  maxQuantity?: number;
 }) {
   const newStock = adj.type === 'remove' ? adj.product.stock - adj.quantity : adj.product.stock + adj.quantity;
   const isNegative = newStock < 0;
@@ -57,11 +60,11 @@ export function AdjustmentTableRow({
             min="1"
             className="h-8 w-14 text-center font-bold text-sm px-1"
             value={adj.quantity}
-            onChange={e => onUpdate(adj.product.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+            onChange={e => onUpdate(adj.product.id, { quantity: Math.min(maxQuantity, Math.max(1, parseInt(e.target.value) || 1)) })}
           />
           <button
             className="w-7 h-7 rounded-md bg-muted hover:bg-muted/70 flex items-center justify-center text-foreground font-bold transition-colors"
-            onClick={() => onUpdate(adj.product.id, { quantity: adj.quantity + 1 })}
+            onClick={() => onUpdate(adj.product.id, { quantity: Math.min(maxQuantity, adj.quantity + 1) })}
           >+</button>
         </div>
         <p className="text-[10px] text-muted-foreground uppercase mt-1 pl-1">{adj.product.unitOfMeasure}</p>
