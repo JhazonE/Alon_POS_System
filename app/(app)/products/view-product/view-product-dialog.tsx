@@ -15,11 +15,9 @@ import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Package, Tags, CreditCard, Info, LayoutDashboard, History, Warehouse, BarChart3, Banknote, Pencil } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, formatQuantity } from '@/lib/utils';
 
 import { EditProductDialog } from '../edit-product/edit-product-dialog';
-import { BreakPackDialog } from '../break-pack/break-pack-dialog';
 import { DetailItem } from './detail-item';
 import { SectionHeader } from './section-header';
 
@@ -277,23 +275,6 @@ export function ViewProductDialog({
                      <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">ID: {product.id}</p>
                      <div className="flex items-center gap-3">
                         <button onClick={() => setIsOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 px-[18px] hover:bg-muted">Close</button>
-                        {!product.parentId && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <BreakPackDialog
-                                  parentProduct={product}
-                                  onPackBroken={() => {
-                                    onProductUpdated?.();
-                                  }}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Break this pack into smaller units</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
                         <EditProductDialog
                           product={product}
                           onProductUpdated={onProductUpdated}

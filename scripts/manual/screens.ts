@@ -48,7 +48,6 @@ export const SCREENS: Screen[] = [
   // Ch.4 Inventory
   { slug: 'inventory-levels', route: '/inventory', title: 'Stock levels', auth: 'admin' },
   { slug: 'inventory-stock-counts', route: '/inventory/stock-counts', title: 'Stock counts', auth: 'admin' },
-  { slug: 'inventory-repackaging', route: '/inventory/repackaging', title: 'Repackaging', auth: 'admin' },
   { slug: 'inventory-history', route: '/inventory/history', title: 'Adjustment history', auth: 'admin' },
   { slug: 'inventory-movement', route: '/inventory/movement', title: 'Stock movement', auth: 'admin' },
 

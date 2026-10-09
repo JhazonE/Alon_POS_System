@@ -422,24 +422,6 @@ export const CHAPTERS: Chapter[] = [
         ],
       },
       {
-        heading: 'Repackaging (Break Pack and Pack → Bulk)',
-        blocks: [
-          {
-            kind: 'para',
-            text: 'The Repackaging page converts bulk inventory into individual packs, or merges packs back into bulk — the reverse operation. It has three tabs: "Break Pack" (bulk to packs), "Pack → Bulk" (consolidation, the reverse of Break Pack), and "History" (a log of every repackaging session, including its direction, quantities used and produced, and status).',
-          },
-          {
-            kind: 'steps',
-            items: [
-              'To break down bulk stock into packs, open the "Break Pack" tab, choose the source product and quantity to use, and submit.',
-              'To merge pack units back into bulk stock, open the "Pack → Bulk" tab instead and submit the consolidation.',
-              'Check the "History" tab afterward to confirm the session completed — completed sessions show a green "completed" badge.',
-            ],
-          },
-          { kind: 'figure', slug: 'inventory-repackaging' },
-        ],
-      },
-      {
         heading: 'Stock movement and adjustment history',
         blocks: [
           {

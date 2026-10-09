@@ -532,37 +532,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
               </>
             )}
 
-            {item.transaction_type.toUpperCase() === 'REPACKAGING' && (
-              <>
-                <div className="grid grid-cols-2 gap-4 mb-5">
-                  <div className="p-3 bg-teal-50/30 border border-teal-200 rounded-lg">
-                    <div className="text-[8pt] font-bold text-teal-800 uppercase mb-1">Source Product</div>
-                    <div className="text-[10pt] font-bold">{item.transaction_data.sourceProductName || item.transaction_data.productName || '—'}</div>
-                  </div>
-                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg">
-                    <div className="text-[8pt] font-bold text-zinc-500 uppercase mb-1">Target Product</div>
-                    <div className="text-[10pt] font-bold">{item.transaction_data.targetProductName || '—'}</div>
-                  </div>
-                </div>
-                <table className="meta-table w-full border-collapse mb-4 p-3 bg-zinc-50 border border-zinc-200 rounded">
-                  <tbody>
-                    <tr>
-                      <td className="label font-semibold text-[9pt] text-zinc-500 uppercase w-[130px] py-1 pl-2">Warehouse</td>
-                      <td className="value font-bold py-1">{item.transaction_data.warehouseName || '—'}</td>
-                    </tr>
-                    <tr>
-                      <td className="label font-semibold text-[9pt] text-zinc-500 uppercase w-[130px] py-1 pl-2">Quantity</td>
-                      <td className="value font-bold py-1">{item.transaction_data.quantity || item.transaction_data.quantityToBreak || item.transaction_data.packQtyUsed || '—'}</td>
-                    </tr>
-                    <tr>
-                      <td className="label font-semibold text-[9pt] text-zinc-500 uppercase w-[130px] py-1 pl-2">Reason</td>
-                      <td className="value py-1">{item.transaction_data.reason || (item.transaction_data.quantityToBreak ? 'Break Pack' : item.transaction_data.packQtyUsed ? 'Consolidate Pack' : 'Repackaging')}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </>
-            )}
-
             {item.transaction_type.toUpperCase() === 'SHELF_TRANSFER' && (
               <>
                 {(item.transaction_data.items || item.transaction_data.updates) ? (
@@ -623,7 +592,7 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
               </>
             )}
 
-            {item.transaction_data.items && !['STOCK_COUNT', 'STOCK_TRANSFER', 'STOCK_ADJUSTMENT', 'RECEIVE_PO', 'PURCHASE_ORDER', 'BAD_ORDER', 'REPACKAGING', 'SHELF_TRANSFER'].includes(item.transaction_type.toUpperCase()) && (
+            {item.transaction_data.items && !['STOCK_COUNT', 'STOCK_TRANSFER', 'STOCK_ADJUSTMENT', 'RECEIVE_PO', 'PURCHASE_ORDER', 'BAD_ORDER', 'SHELF_TRANSFER'].includes(item.transaction_type.toUpperCase()) && (
               <>
                 <table className="data-table w-full border-collapse mb-2 text-left">
                   <thead>

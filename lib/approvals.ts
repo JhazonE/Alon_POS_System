@@ -11,7 +11,6 @@ export async function checkApprovalRequired(txType: string): Promise<boolean> {
       'RECEIVE_PO': 'require_receive_confirmation',
       'BAD_ORDER': 'require_bad_order_confirmation',
       'STOCK_COUNT': 'require_stock_count_approval',
-      'REPACKAGING': 'require_repackaging_confirmation',
       'SHELF_TRANSFER': 'require_shelf_transfer_confirmation',
       'PRODUCT_CREATE': 'require_product_confirmation',
       'PRICE_UPDATE': 'require_price_update_confirmation',
