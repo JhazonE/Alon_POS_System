@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Printer, MoreHorizontal, X, ArrowUp, ArrowDown, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Printer, MoreHorizontal, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import type { Sale } from '@/lib/types';
 import { formatAmount, getStatusInfo } from './use-invoices-utils';
 

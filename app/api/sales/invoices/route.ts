@@ -77,6 +77,13 @@ export async function POST(request: NextRequest) {
       // Create invoice items
       for (const item of items as any[]) {
         const itemId = `INV-ITEM-${uuidv4()}`;
+        // `quantity` here is in BASE units: back-office invoicing has no
+        // selling-unit UI, so the `selling_unit_*` snapshot columns are left
+        // NULL and the invoice void restores this quantity as-is (NULL means a
+        // multiplier of 1 — see lib/selling-unit-restore.ts). If this path ever
+        // learns to accept selling units, it MUST also write
+        // selling_unit_id/_name/_qty_base, or the void will under-restore stock
+        // exactly the way the POS void did before the 2026-10-07 fix.
         await conn.execute(
           `INSERT INTO sales_invoice_items (id, sales_invoice_id, product_id, product_name, quantity, price, created_at)
            VALUES (?, ?, ?, ?, ?, ?, NOW())`,

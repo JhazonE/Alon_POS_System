@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction, getNextMCNumber } from '@/lib/mysql';
 import { addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
+import { safeQtyBase } from '@/lib/selling-unit-qty';
 import { saveEJournalFiles } from '@/lib/ejournal/ejournal-writer';
 
 export async function POST(request: NextRequest) {
@@ -63,8 +64,9 @@ export async function POST(request: NextRequest) {
       // First, create sale_items for this return transaction
       const insertSaleItemSql = `
         INSERT INTO sale_items (
-          id, sale_id, product_id, product_name, quantity, price, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+          id, sale_id, product_id, product_name, quantity, price,
+          selling_unit_id, selling_unit_name, selling_unit_qty_base, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       `;
 
       for (let i = 0; i < items.length; i++) {
@@ -72,14 +74,48 @@ export async function POST(request: NextRequest) {
         const saleItemId = `${posTransId}-ITEM-${i + 1}`;
         const posItemId = `${posTransId}-DETAIL-${i + 1}`;
 
+        // Three distinct quantities live in this loop — keep them apart:
+        //   item.quantity   UNITS returned. Goes on the sale_items /
+        //                   pos_transaction_items rows and drives the money total.
+        //   returnBaseQty   BASE units (units * qty_base), POSITIVE. This is what
+        //                   addFamilyStock adds back to stock (it ignores qty <= 0).
+        //
+        // The original sale's snapshot is the authoritative ratio for a return:
+        // it records what was actually sold, and stays correct even if the unit
+        // was re-ratioed afterwards. `saleId` is already required above, so no
+        // client change is needed.
+        //
+        // Only SOLD lines (quantity > 0) are considered: earlier returns on this
+        // sale are stored as negative sale_items rows for the same product and
+        // must not make a second return look ambiguous.
+        //
+        // Matched only when the original sale has exactly ONE line for this
+        // product: if the same product was sold under two different units in one
+        // sale, the product id alone cannot say which is being returned, so we
+        // fall back to 1 and leave the snapshot NULL (today's behaviour) rather
+        // than guessing and restoring the wrong quantity.
+        const [originalLines]: any = await connection.query(
+          `SELECT selling_unit_id, selling_unit_name, selling_unit_qty_base
+             FROM sale_items
+            WHERE sale_id = ? AND product_id = ? AND quantity > 0`,
+          [saleId, item.productId],
+        );
+        const originalLine = originalLines?.length === 1 ? originalLines[0] : null;
+        const returnQtyBase = safeQtyBase(originalLine?.selling_unit_qty_base);
+        const returnBaseQty = Number(item.quantity) * returnQtyBase;
+        const snapshotUnitId = originalLine?.selling_unit_id ?? null;
+
         // Create sale_item entry
         await connection.query(insertSaleItemSql, [
           saleItemId,
           saleId,
           item.productId,
           item.productName,
-          -item.quantity, // Negative for returns
-          item.price
+          -item.quantity, // Negative for returns (units sold, NOT base units)
+          item.price,
+          snapshotUnitId,
+          snapshotUnitId ? (originalLine?.selling_unit_name ?? null) : null,
+          snapshotUnitId ? returnQtyBase : null,
         ]);
 
         // Create pos_transaction_item entry referencing the sale_item
@@ -108,7 +144,7 @@ export async function POST(request: NextRequest) {
 
           if (factorToRoot > 1 || rootId !== soldProd.id) {
             // Returned a child - convert to root units and add from root downward
-            const rootQty = Number(item.quantity) / factorToRoot;
+            const rootQty = returnBaseQty / factorToRoot;
             await addFamilyStock(
               rootId, rootQty, posTransId, 'return',
               `Return for Sale: ${saleId} (returned: ${soldProd.name})`, connection
@@ -116,7 +152,7 @@ export async function POST(request: NextRequest) {
           } else {
             // Returned a root - add and propagate
             await addFamilyStock(
-              soldProd.id, Number(item.quantity), posTransId, 'return',
+              soldProd.id, returnBaseQty, posTransId, 'return',
               `Return for Sale: ${saleId}`, connection
             );
           }

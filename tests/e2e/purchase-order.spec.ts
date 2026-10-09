@@ -8,7 +8,7 @@ import { TEST_SUPPLIER, TEST_WAREHOUSE, TEST_PAYMENT_METHOD, PO_PRODUCT } from '
  *
  * Coverage:
  *  1. PO creation pinaagi sa API (POST /api/purchase-orders) → na-persist sa DB.
- *  2. UI smoke sa Add Purchase Order dialog: mo-abli ug ma-fill ang header selects.
+ *  2. UI smoke sa Add Purchase Order page: mo-abli ug ma-fill ang header selects.
  *
  * Note: ang in-dialog ProductSelector (custom scan-input nga naka-filter by supplier)
  * dili lig-on i-drive sa e2e — mao nga ang line-item creation gi-test sa API level.
@@ -135,13 +135,15 @@ test.describe('Purchase order', () => {
     expect(afterLower.price).toBe(130);
   });
 
-  test('UI smoke: Add Purchase Order dialog mo-abli ug ma-fill ang header', async ({ page }) => {
+  test('UI smoke: Add Purchase Order page mo-abli ug ma-fill ang header', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/purchases');
 
     // Ang /purchases mo-load nga walay infinite-loop crash (useProducts stable-array fix).
-    await page.getByRole('button', { name: 'Add New Purchase Order' }).click();
-    const dialog = page.getByRole('dialog');
+    await page.getByRole('link', { name: 'Add New Purchase Order' }).click();
+    await expect(page).toHaveURL(/\/purchases\/new/);
+    // The form is a page now (/purchases/new), not a drawer.
+    const dialog = page.getByRole('main');
     await expect(dialog.getByRole('button', { name: 'Create Order' })).toBeVisible();
 
     // Header selects molihok (supplier/payment/warehouse).

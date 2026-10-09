@@ -1,6 +1,5 @@
 import { Fragment } from 'react';
 import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
 import { flexRender, type Table as TanTable } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import type { ProductSalesData, TransactionData } from './by-product-types';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   table: TanTable<ProductSalesData>;
@@ -31,7 +31,7 @@ export function ByProductTable({
     <>
       {isLoading ? (
         <div className="flex items-center justify-center h-24 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <Spinner className="h-5 w-5 mr-2" />
           Loading sales data...
         </div>
       ) : (
@@ -85,7 +85,7 @@ export function ByProductTable({
                           <h4 className="font-semibold mb-2">Transaction History</h4>
                           {loadingTransactions[row.original.product.id] ? (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                              <Loader2 className="h-4 w-4 animate-spin" /> Loading transactions...
+                              <Spinner className="h-4 w-4" /> Loading transactions...
                             </div>
                           ) : (
                             <div className="overflow-x-auto border rounded-md bg-background">

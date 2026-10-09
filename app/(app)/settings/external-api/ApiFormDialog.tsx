@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Globe, ShieldCheck, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Building2 } from 'lucide-react';
+import { Globe, ShieldCheck, ArrowUp, ArrowDown, ArrowUpDown, Building2 } from 'lucide-react';
 import type { ApiForm } from './use-external-api';
 import type { ExternalApi, AllowedMethods, ApiProvider } from './external-api-types';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   open: boolean;
@@ -207,7 +208,7 @@ export function ApiFormDialog({ open, onOpenChange, editingApi, form, setForm, i
         <DialogFooter>
           <button onClick={() => onOpenChange(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">Cancel</button>
           <button onClick={onSave} disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSaving && <Spinner className="mr-2 h-4 w-4" />}
             {editingApi ? 'Save Changes' : 'Add API'}
           </button>
         </DialogFooter>

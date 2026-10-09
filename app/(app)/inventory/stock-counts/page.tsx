@@ -7,9 +7,9 @@ export default function StockCountsPage() {
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Stock Counts</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Inventory Count</h2>
           <p className="text-muted-foreground">
-            Manage physical inventory snapshots, record counts, and reconcile variances.
+            Take an inventory snapshot, record your counts, and reconcile variances.
           </p>
         </div>
       </div>

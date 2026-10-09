@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ArrowUpRight, ArrowDownLeft, Minus, RefreshCcw, Printer, FileSpreadsheet } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Minus, RefreshCcw, Printer, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { getApiUrl } from '@/lib/api-config';
@@ -27,6 +27,7 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 import { useToast } from '@/hooks/use-toast';
+import { Spinner } from '@/components/ui/spinner';
 
 const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -246,7 +247,7 @@ export default function StockMovementPage() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <Spinner className="h-6 w-6 mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : filteredMovements.length === 0 ? (

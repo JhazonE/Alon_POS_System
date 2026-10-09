@@ -22,9 +22,9 @@ export function HeldTransactionsDialog({ isOpen, onOpenChange, heldTransactions,
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="sm:max-w-2xl" onInteractOutside={(e) => e.preventDefault()}>
         <SheetHeader>
-          <SheetTitle className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Suspended Transactions</SheetTitle>
+          <SheetTitle className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Held Transactions</SheetTitle>
           <SheetDescription className="text-slate-500 dark:text-slate-400 font-medium">
-            Select a transaction to restore it to the cart or delete it. Use Up/Down arrows to navigate and Enter to select.
+            Select a transaction to recall it to the cart or delete it. Use Up/Down arrows to navigate and Enter to select.
           </SheetDescription>
         </SheetHeader>
 
@@ -96,8 +96,8 @@ export function HeldTransactionsDialog({ isOpen, onOpenChange, heldTransactions,
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                 <FileText className="w-12 h-12 mb-3 opacity-20" />
-                <p className="text-lg font-bold">No Suspended Transactions</p>
-                <p className="text-sm font-medium opacity-70">Transactions you suspend will appear here.</p>
+                <p className="text-lg font-bold">No Held Transactions</p>
+                <p className="text-sm font-medium opacity-70">Transactions you put on hold will appear here.</p>
               </div>
             )}
           </div>

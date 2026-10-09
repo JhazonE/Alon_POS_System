@@ -1,11 +1,11 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useTransferBoard } from './use-transfer-board';
 import { SourcePane } from './source-pane';
 import { TargetPane } from './target-pane';
+import { Spinner } from '@/components/ui/spinner';
 
 export function TransferBoard() {
   const {
@@ -35,7 +35,7 @@ export function TransferBoard() {
   if (!mounted || isLoading) {
     return (
       <div className="p-10 text-center">
-        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+        <Spinner className="h-6 w-6 mx-auto text-muted-foreground" />
       </div>
     );
   }

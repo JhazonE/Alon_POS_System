@@ -1,4 +1,3 @@
-import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import {
@@ -8,6 +7,7 @@ import {
   Pie, PieChart, Cell, Legend,
 } from 'recharts';
 import { chartConfig, COLORS, type SalesData, type HourlyData, type CategoryData } from './use-sales-analysis';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   salesData: SalesData[];
@@ -23,7 +23,7 @@ type Props = {
 function ChartLoader() {
   return (
     <div className="h-[300px] flex items-center justify-center">
-      <Loader2 className="h-6 w-6 animate-spin mr-2" />Loading...
+      <Spinner className="h-6 w-6 mr-2 text-primary" />Loading...
     </div>
   );
 }

@@ -57,7 +57,7 @@ export function MobileNewCountSheet({
         {/* Header */}
         <div className="px-5 pt-2 pb-4 flex-shrink-0 border-b border-border/60">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-lg font-bold">Start Stock Count</h2>
+            <h2 className="text-lg font-bold">Start Inventory Count</h2>
             <button type="button" onClick={onClose}
               className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
               <X className="h-4 w-4" />

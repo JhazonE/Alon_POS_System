@@ -2,15 +2,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,7 +34,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Trash2, Search, ArrowRight, Wand2 } from 'lucide-react';
+import { Trash2, Search, Wand2 } from 'lucide-react';
+
+import { FormPageShell } from '@/components/form-page/form-page-shell';
+import { DetailsToggleButton, useDetailsCollapse } from '@/components/form-page/details-toggle';
+import { BarFigure, FormActionBar } from '@/components/form-page/form-action-bar';
 
 import { InlineWarehouseSelect } from '../../components/inline-selects/inline-warehouse-select';
 import { InlinePaymentMethodSelect } from '../../components/inline-selects/inline-payment-method-select';
@@ -57,9 +52,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useAddPurchaseOrder, type UseAddPurchaseOrderProps } from './use-add-purchase-order';
 import { ProductSelector } from './product-selector';
 import { CurrencyInput } from './currency-input';
+import { Spinner } from '@/components/ui/spinner';
 
-export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigger?: React.ReactNode }) {
-  const { trigger, ...hookProps } = props;
+/**
+ * The New / Edit Purchase Order form, rendered as a page body. The page that
+ * hosts it pins `open` to true and navigates away from `onOpenChange(false)`
+ * (fired after a successful save or a confirmed Cancel).
+ */
+/** Column widths (px) in table order; the trailing `0` column flexes to fill. */
+const PO_COLUMN_WIDTHS = [260, 80, 80, 100, 100, 130, 140, 56, 140, 110, 120, 0];
+/** Sticky `left` offsets of the frozen columns (Product .. Sell Price): the running sum of the widths before each. */
+const FROZEN_LEFT = { product: 0, remaining: 260, qty: 340, cost: 420, sell: 520 };
+
+export function PurchaseOrderForm(hookProps: UseAddPurchaseOrderProps) {
   const controller = useAddPurchaseOrder(hookProps);
   const {
     isOpen, setOpen,
@@ -89,6 +94,20 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
 
   const [newProductOpen, setNewProductOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
+
+  // The header fields can be folded away to give the items table the room.
+  // Remembered per browser; failed validation re-opens them so the error shows.
+  const { detailsOpen, setDetailsOpen, toggleDetails } = useDetailsCollapse('po-details-collapsed');
+
+  // `formState.isDirty` is not usable for a new order: the hook sets the
+  // generated Ref # with setValue() after init, which already differs from the
+  // defaults. A new order has unsaved work once it has items or a touched
+  // field; Edit / Reorder start from reset() values, so isDirty is accurate.
+  const isDirty =
+    hookProps.editOrder || hookProps.reorderData
+      ? form.formState.isDirty
+      : fields.length > 0 || Object.keys(form.formState.dirtyFields).length > 0;
+
   // Same query key as the Products page, so the options are shared when cached.
   const { data: productOptions, refetch: refetchProductOptions } = useQuery({
     queryKey: ['productOptions'],
@@ -100,24 +119,67 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
   });
 
   return (
-    <Sheet open={isOpen} onOpenChange={(val) => setOpen(val)}>
-      {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
+    <FormPageShell
+      title={`${hookProps.editOrder ? 'Edit' : 'New'} Purchase Order`}
+      subtitle={
+        <>
+          Reference: <span className="font-mono font-medium text-primary">{form.watch('reference')}</span>
+        </>
+      }
+      isDirty={isDirty}
+      onLeave={() => setOpen(false)}
+      backLabel="Back to purchase orders"
+      discardTitle="Discard this purchase order?"
+      after={
+        <>
+      {/* Rendered outside the order <form>: React bubbles the Add Product form's
+          submit event through the portal to the nearest ancestor <form>, which
+          would otherwise submit the purchase order too. */}
+      <AddProductDialog
+        hideTrigger
+        lockStandard
+        open={newProductOpen}
+        onOpenChange={setNewProductOpen}
+        defaultName={newProductName}
+        defaultSupplierId={form.watch('supplierId') || undefined}
+        productOptions={productOptions}
+        onOptionsRefresh={refetchProductOptions}
+        onProductAdded={handleNewProductAdded}
+      />
 
-      <SheetContent side="top" className="h-screen w-full flex flex-col p-0 gap-0 bg-background border-none rounded-none shadow-none">
-        <SheetHeader className="px-6 py-4 border-b bg-background space-y-1.5">
-          <SheetTitle>{hookProps.editOrder ? 'Edit' : 'New'} Purchase Order</SheetTitle>
-          <SheetDescription>
-            Create a purchase transaction. Reference:{' '}
-            <span className="font-mono font-medium text-primary">{form.watch('reference')}</span>
-          </SheetDescription>
-        </SheetHeader>
 
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Purchase Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {hookProps.editOrder ? 'update' : 'create'} this purchase order for{' '}
+              <strong>{suppliers.find((s) => s.id === form.watch('supplierId'))?.name || 'the selected supplier'}</strong>?
+              Total Amount: <strong>₱{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmValues && processSubmit(confirmValues)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <Spinner className="h-4 w-4 mr-2" /> : null}
+              Confirm & Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+        </>
+      }
+    >
+      {({ requestLeave }) => (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
+          <form onSubmit={form.handleSubmit(onSubmit, () => setDetailsOpen(true))} className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 flex flex-col overflow-hidden bg-muted/10">
 
               {/* HEADER FIELDS */}
-              <div className="bg-background border-b p-4 grid grid-cols-5 gap-x-4 gap-y-3 shrink-0">
+              <div className={cn('bg-background border-b px-4 py-2 grid grid-cols-5 gap-x-4 gap-y-1 shrink-0', !detailsOpen && 'hidden')}>
 
                 {/* ROW 1 */}
                 <FormField
@@ -125,7 +187,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="supplierId"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="flex items-center h-5">
+                      <div className="flex items-center h-4">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Supplier</FormLabel>
                       </div>
                       <InlineSupplierSelect
@@ -146,7 +208,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="issueDate"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Issue Date</FormLabel>
                       </div>
                       <FormControl>
@@ -162,7 +224,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="deliveryDate"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Due Date</FormLabel>
                       </div>
                       <FormControl>
@@ -177,7 +239,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="paymentMethod"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Payment Method</FormLabel>
                       </div>
                       <InlinePaymentMethodSelect
@@ -198,7 +260,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="deliveryAddress"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Address</FormLabel>
                       </div>
                       <FormControl>
@@ -214,7 +276,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="purchaseType"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Type</FormLabel>
                       </div>
                       <Select onValueChange={field.onChange} value={field.value}>
@@ -238,7 +300,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="reference"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Ref #</FormLabel>
                       </div>
                       <FormControl>
@@ -253,7 +315,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="receiveToWarehouse"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Receive To</FormLabel>
                       </div>
                       <InlineWarehouseSelect
@@ -274,7 +336,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="shipping"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Shipping Cost</FormLabel>
                       </div>
                       <FormControl>
@@ -296,7 +358,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                   name="note"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <div className="h-5 flex items-center">
+                      <div className="h-4 flex items-center">
                         <FormLabel className="text-xs font-semibold text-muted-foreground">Notes/Payment Reference</FormLabel>
                       </div>
                       <FormControl>
@@ -313,41 +375,58 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
               </div>
 
               {/* ITEMS TABLE */}
-              <div className="flex-1 flex flex-col overflow-hidden bg-muted/5 p-4 relative">
-                <div className="max-w-2xl mb-4 z-10">
-                  <ProductSelector
-                    onSelectProduct={handleAddProduct}
-                    onAddNewProduct={(name) => {
-                      setNewProductName(name ?? '');
-                      setNewProductOpen(true);
-                    }}
-                    supplierId={form.watch('supplierId')}
+              {/* `isolate` keeps every z-index below local to this section. Without it the
+                  z-[60] search row and the sticky table cells compete with the portalled
+                  drawers (Add New Product, z-50) and paint on top of them. */}
+              <div className="isolate flex-1 flex flex-col overflow-hidden bg-muted/5 px-4 pt-2 pb-0 relative">
+                {/* z-[60]: the suggestion dropdown must sit above the sticky table header (z-50). */}
+                <div className="mb-2 relative z-[60] flex items-start gap-3">
+                  <div className="max-w-3xl flex-1">
+                    <ProductSelector
+                      onSelectProduct={handleAddProduct}
+                      onAddNewProduct={(name) => {
+                        setNewProductName(name ?? '');
+                        setNewProductOpen(true);
+                      }}
+                      supplierId={form.watch('supplierId')}
+                    />
+                  </div>
+                  <DetailsToggleButton
+                    open={detailsOpen}
+                    onToggle={toggleDetails}
+                    summary={`${suppliers.find((sup) => sup.id === form.watch('supplierId'))?.name || 'No supplier'} · ${form.watch('issueDate')} · ${form.watch('reference')}`}
                   />
                 </div>
 
                 <div className="flex-1 rounded-lg border bg-background shadow-sm overflow-hidden flex flex-col relative">
-                  <div className="overflow-y-auto flex-1 h-full relative">
-                    <table className="w-full caption-bottom text-sm text-left border-collapse">
+                  <div className="overflow-auto flex-1 h-full relative">
+                    <table className="w-full min-w-[1400px] table-fixed caption-bottom text-sm text-left border-separate border-spacing-0">
+                      {/* Fixed widths: the frozen columns' sticky `left` offsets are the running sum of the widths before them. The last column is flexible and absorbs extra width. */}
+                      <colgroup>
+                        {PO_COLUMN_WIDTHS.map((w, i) => (
+                          <col key={i} style={w ? { width: w } : undefined} />
+                        ))}
+                      </colgroup>
                       <TableHeader className="sticky top-0 bg-background z-50 shadow-sm">
-                        <TableRow className="hover:bg-transparent border-b">
-                          <TableHead className="w-[15%] pl-4 h-10">Product</TableHead>
-                          <TableHead className="w-[10%] text-center h-10">Remaining QTY</TableHead>
-                          <TableHead className="w-[8%] text-center h-10">Qty</TableHead>
-                          <TableHead className="w-[10%] text-right h-10">Cost</TableHead>
-                          <TableHead className="w-[10%] text-right h-10">Sell Price</TableHead>
-                          <TableHead className="w-[8%] text-right h-10 italic text-blue-600">Suggested</TableHead>
-                          <TableHead className="w-[8%] text-center h-10">Discount</TableHead>
-                          <TableHead className="w-[3%] text-center h-10">VAT</TableHead>
-                          <TableHead className="w-[8%] text-left h-10">Expiry</TableHead>
-                          <TableHead className="w-[10%] text-right h-10 italic text-muted-foreground">Landed Cost</TableHead>
-                          <TableHead className="w-[10%] text-right pr-4 h-10">Line Total</TableHead>
-                          <TableHead className="w-[5%] h-10"></TableHead>
+                        <TableRow className="hover:bg-transparent [&>th]:border-b">
+                          <TableHead style={{ left: FROZEN_LEFT.product }} className="z-30 pl-4 pr-2 h-10 leading-tight">Product</TableHead>
+                          <TableHead style={{ left: FROZEN_LEFT.remaining }} className="z-30 px-2 text-center h-10 leading-tight">Remaining QTY</TableHead>
+                          <TableHead style={{ left: FROZEN_LEFT.qty }} className="z-30 px-2 text-center h-10">Qty</TableHead>
+                          <TableHead style={{ left: FROZEN_LEFT.cost }} className="z-30 px-2 text-right h-10">Cost</TableHead>
+                          <TableHead style={{ left: FROZEN_LEFT.sell }} className="z-30 px-2 text-right h-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.18)]">Sell Price</TableHead>
+                          <TableHead className="px-2 text-right h-10 italic text-blue-600">Suggested</TableHead>
+                          <TableHead className="px-2 text-center h-10">Discount</TableHead>
+                          <TableHead className="px-2 text-center h-10">VAT</TableHead>
+                          <TableHead className="px-2 text-left h-10">Expiry</TableHead>
+                          <TableHead className="px-2 text-right h-10 italic text-muted-foreground">Landed Cost</TableHead>
+                          <TableHead className="px-2 text-right pr-4 h-10">Line Total</TableHead>
+                          <TableHead className="h-10"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {fields.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={11} className="h-[300px] text-center text-muted-foreground flex flex-col items-center justify-center border-none">
+                            <TableCell colSpan={12} className="h-[40vh] min-h-[200px] text-center text-muted-foreground flex flex-col items-center justify-center border-none">
                               <div className="bg-muted p-4 rounded-full mb-4">
                                 <Search className="h-8 w-8 text-muted-foreground opacity-50" />
                               </div>
@@ -382,21 +461,19 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                             const suggestedPrice = calculateSuggestedPrice(baseCost, markup, shippingPerUnit, defaultLevel);
 
                             return (
-                              <TableRow key={field.id} className="group bg-background hover:bg-muted/5">
-                                <TableCell className="font-medium pl-4 py-2 border-r">
-                                  <span className="font-bold text-sm text-foreground">{field.productName}</span>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span className="font-mono font-bold">{field.barcode || '-'}</span>
-                                  </div>
+                              <TableRow key={field.id} className="group bg-background hover:bg-muted/5 [&>td]:border-b">
+                                <TableCell style={{ left: FROZEN_LEFT.product }} className="sticky z-10 bg-background font-medium pl-4 pr-2 py-1 border-r">
+                                  <div className="truncate font-bold text-sm leading-tight text-foreground" title={field.productName}>{field.productName}</div>
+                                  <div className="truncate font-mono text-[11px] font-bold leading-tight text-muted-foreground">{field.barcode || '-'}</div>
                                 </TableCell>
 
-                                <TableCell className="py-2 text-center border-r font-mono text-xs">
+                                <TableCell style={{ left: FROZEN_LEFT.remaining }} className="sticky z-10 bg-background px-2 py-1 text-center border-r font-mono text-sm">
                                   <span className={(field.currentStock || 0) <= 0 ? 'text-destructive font-black' : 'text-muted-foreground font-bold'}>
                                     {formatQuantity(field.currentStock || 0)}
                                   </span>
                                 </TableCell>
 
-                                <TableCell className="py-2 border-r">
+                                <TableCell style={{ left: FROZEN_LEFT.qty }} className="sticky z-10 bg-background px-2 py-1 border-r">
                                   <div className="flex justify-center flex-col items-center">
                                     <FormField
                                       control={form.control}
@@ -404,7 +481,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                       render={({ field }) => (
                                         <Input
                                           type="number"
-                                          className="h-8 w-20 text-center bg-background"
+                                          className="h-8 w-full max-w-[5rem] text-center bg-background text-sm"
                                           {...field}
                                           onFocus={(e) => e.target.select()}
                                         />
@@ -413,13 +490,13 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                   </div>
                                 </TableCell>
 
-                                <TableCell className="py-2 text-right border-r">
+                                <TableCell style={{ left: FROZEN_LEFT.cost }} className="sticky z-10 bg-background px-2 py-1 text-right border-r">
                                   <FormField
                                     control={form.control}
                                     name={`items.${index}.cost`}
                                     render={({ field }) => (
                                       <CurrencyInput
-                                        className="h-8 w-24 text-right ml-auto border-transparent hover:border-input focus:border-input bg-background p-1 font-mono text-xs"
+                                        className="h-8 w-full text-right ml-auto border-transparent hover:border-input focus:border-input bg-background px-2 font-mono text-sm"
                                         placeholder="0.00"
                                         {...field}
                                       />
@@ -427,13 +504,13 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                   />
                                 </TableCell>
 
-                                <TableCell className="py-2 text-right border-r">
+                                <TableCell style={{ left: FROZEN_LEFT.sell }} className="sticky z-10 bg-background px-2 py-1 text-right border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.18)]">
                                   <FormField
                                     control={form.control}
                                     name={`items.${index}.sellingPrice`}
                                     render={({ field }) => (
                                       <CurrencyInput
-                                        className="h-8 w-24 text-right ml-auto border-transparent hover:border-input focus:border-input bg-background p-1 font-mono text-xs"
+                                        className="h-8 w-full text-right ml-auto border-transparent hover:border-input focus:border-input bg-background px-2 font-mono text-sm"
                                         placeholder="0.00"
                                         {...field}
                                       />
@@ -441,9 +518,9 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                   />
                                 </TableCell>
 
-                                <TableCell className="py-2 text-right border-r bg-blue-50/10">
+                                <TableCell className="px-2 py-1 text-right border-r bg-blue-50/10">
                                   <div className="flex flex-col items-end justify-center">
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1" title={`Markup: ${markup}% from ${source}`}>
                                       <span className="text-sm font-bold text-blue-600 font-mono">
                                         ₱{suggestedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </span>
@@ -462,13 +539,10 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                         <Wand2 className="h-4 w-4" />
                                       </button>
                                     </div>
-                                    <span className="text-[9px] text-blue-500/70 uppercase font-medium">
-                                      {source}: {markup}%
-                                    </span>
                                   </div>
                                 </TableCell>
 
-                                <TableCell className="py-2 text-right border-r">
+                                <TableCell className="px-2 py-1 text-right border-r">
                                   <div className="flex items-center gap-1 justify-center">
                                     <FormField
                                       control={form.control}
@@ -477,7 +551,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                         <FormItem className="space-y-0 text-center">
                                           <Select onValueChange={field.onChange} defaultValue={field.value || 'amount'}>
                                             <FormControl>
-                                              <SelectTrigger className="h-8 w-[40px] px-1 text-xs bg-background border-transparent hover:border-input focus:border-input">
+                                              <SelectTrigger className="h-8 w-[48px] px-1 text-sm bg-background border-transparent hover:border-input focus:border-input">
                                                 <SelectValue />
                                               </SelectTrigger>
                                             </FormControl>
@@ -498,7 +572,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                             <Input
                                               type="number"
                                               step="0.01"
-                                              className="h-8 w-16 text-right border-transparent hover:border-input focus:border-input bg-background p-1 text-xs"
+                                              className="h-8 w-20 text-right border-transparent hover:border-input focus:border-input bg-background px-2 text-sm"
                                               {...field}
                                             />
                                           </FormControl>
@@ -508,7 +582,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                   </div>
                                 </TableCell>
 
-                                <TableCell className="py-2 text-center border-r">
+                                <TableCell className="px-2 py-1 text-center border-r">
                                   <FormField
                                     control={form.control}
                                     name={`items.${index}.vatSubject`}
@@ -516,7 +590,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                       <div className="flex justify-center">
                                         <input
                                           type="checkbox"
-                                          className="h-4 w-4"
+                                          className="h-5 w-5"
                                           checked={field.value}
                                           onChange={field.onChange}
                                         />
@@ -525,29 +599,29 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                   />
                                 </TableCell>
 
-                                <TableCell className="py-2 border-r">
+                                <TableCell className="px-2 py-1 border-r">
                                   <FormField
                                     control={form.control}
                                     name={`items.${index}.expirationDate`}
                                     render={({ field }) => (
                                       <Input
                                         type="date"
-                                        className="h-8 w-full border-transparent hover:border-input focus:border-input bg-background text-xs p-1"
+                                        className="h-8 w-full border-transparent hover:border-input focus:border-input bg-background text-sm px-2"
                                         {...field}
                                       />
                                     )}
                                   />
                                 </TableCell>
 
-                                <TableCell className="text-right py-2 text-xs font-mono text-muted-foreground font-bold italic bg-muted/50 border-r">
+                                <TableCell className="text-right px-2 py-1 text-sm font-mono text-muted-foreground font-bold italic bg-muted/50 border-r">
                                   ₱{landedCostPerUnit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </TableCell>
 
-                                <TableCell className="text-right py-2 pr-4 font-mono font-medium border-r">
+                                <TableCell className="text-right px-2 py-1 pr-4 font-mono font-medium border-r">
                                   ₱{(purchaseResults?.items[index]?.lineTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </TableCell>
 
-                                <TableCell className="py-2 text-center h-10">
+                                <TableCell className="px-2 py-1 text-center h-8">
                                   <div className="flex items-center gap-1 justify-center">
                                     {(() => {
                                       const rop = fields[index].reorderPoint || 0;
@@ -555,7 +629,7 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                                       return (
                                         <button
                                           type="button"
-                                          className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0", `h-8 w-8 transition-colors ${hasRop ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}`)}
+                                          className={cn("inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-8 w-10 p-0", `h-8 w-8 transition-colors ${hasRop ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}`)}
                                           title={hasRop ? `Suggest Order Qty: ${rop}` : 'No Reorder Point set'}
                                           onClick={(e) => {
                                             e.preventDefault();
@@ -601,110 +675,23 @@ export function AddPurchaseOrderDialog(props: UseAddPurchaseOrderProps & { trigg
                 </div>
 
                 {/* SUMMARY BAR */}
-                <div className="bg-background border-t p-3 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-                  <div className="text-xs text-muted-foreground font-medium">
-                    <span className="font-black text-foreground">{fields.length}</span> items added.
-                  </div>
-                  <div className="flex items-center gap-8">
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Subtotal</span>
-                      <span className="font-mono text-sm font-bold text-foreground">
-                        ₱{(total - (form.watch('shipping') || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Shipping</span>
-                      <span className="font-mono text-sm font-bold text-foreground">
-                        ₱{(form.watch('shipping') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                        VAT {activeTaxRate ? `(${activeTaxRate.rate}%)` : ''}
-                      </span>
-                      <span className="font-mono text-sm font-bold text-foreground">
-                        ₱{vatTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end border-l pl-8">
-                      <span className="text-[10px] uppercase tracking-wider text-primary font-black">Total Payable</span>
-                      <span className="font-mono text-2xl font-black text-primary">
-                        ₱{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <FormActionBar
+                  itemCount={fields.length}
+                  onCancel={requestLeave}
+                  submitLabel={hookProps.editOrder ? 'Update Order' : 'Create Order'}
+                  isSubmitting={isSubmitting}
+                  submitDisabled={fields.length === 0}
+                >
+                  <BarFigure label="Subtotal" value={`₱${(total - (form.watch('shipping') || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  <BarFigure label="Shipping" value={`₱${(form.watch('shipping') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  <BarFigure label={`VAT ${activeTaxRate ? `(${activeTaxRate.rate}%)` : ''}`.trim()} value={`₱${vatTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  <BarFigure emphasis label="Total Payable" value={`₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                </FormActionBar>
               </div>
             </div>
-
-            <SheetFooter className="p-4 bg-background border-t">
-              <div className="flex items-center text-xs text-muted-foreground font-bold mr-auto">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-600" /> Ready to process
-                </span>
-              </div>
-              <button type="button" onClick={() => setOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px]">
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || fields.length === 0}
-                className="inline-flex items-center justify-center gap-2 rounded-xl text-sm tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-40 font-semibold shadow-lg shadow-primary/20"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    {hookProps.editOrder ? 'Update Order' : 'Create Order'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </SheetFooter>
           </form>
         </Form>
-      </SheetContent>
-
-      {/* Rendered outside the order <form>: React bubbles the Add Product form's
-          submit event through the portal to the nearest ancestor <form>, which
-          would otherwise submit the purchase order too. */}
-      <AddProductDialog
-        hideTrigger
-        lockStandard
-        open={newProductOpen}
-        onOpenChange={setNewProductOpen}
-        defaultName={newProductName}
-        defaultSupplierId={form.watch('supplierId') || undefined}
-        productOptions={productOptions}
-        onOptionsRefresh={refetchProductOptions}
-        onProductAdded={handleNewProductAdded}
-      />
-
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Purchase Order</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to {hookProps.editOrder ? 'update' : 'create'} this purchase order for{' '}
-              <strong>{suppliers.find((s) => s.id === form.watch('supplierId'))?.name || 'the selected supplier'}</strong>?
-              Total Amount: <strong>₱{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmValues && processSubmit(confirmValues)}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Confirm & Save
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Sheet>
+      )}
+    </FormPageShell>
   );
 }

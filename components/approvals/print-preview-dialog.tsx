@@ -362,7 +362,7 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
               <>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="p-3 bg-indigo-50/30 border border-indigo-200 rounded-lg">
-                    <div className="text-[8pt] font-bold text-indigo-800 uppercase mb-1">Stock Count Reference</div>
+                    <div className="text-[8pt] font-bold text-indigo-800 uppercase mb-1">Inventory Count Reference</div>
                     <div className="text-[10pt] font-bold">{item.transaction_data.name}</div>
                   </div>
                   <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg">

@@ -78,10 +78,10 @@ export function useNewCount({ onCreated }: { onCreated: () => void }) {
       await logActivity({
         action: 'CREATE',
         module: 'INVENTORY',
-        description: `Initialized stock count: "${name}"${warehouseId && warehouseId !== 'all' ? ` — Warehouse: ${warehouseId}` : ''}`,
+        description: `Initialized inventory count: "${name}"${warehouseId && warehouseId !== 'all' ? ` — Warehouse: ${warehouseId}` : ''}`,
         referenceId: data.data?.id,
       });
-      toast({ title: 'Stock count initialized successfully' });
+      toast({ title: 'Inventory count initialized successfully' });
       handleClose();
       dispatchStockUpdate();
       onCreated();

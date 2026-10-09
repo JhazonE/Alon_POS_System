@@ -343,7 +343,10 @@ export function useAddPurchaseOrder({
         }
       }
 
-      if (prefillProduct && fields.length === 0) {
+      // Read the live form value, not `fields`: this effect can run twice before
+      // `fields` re-renders (the page mounts before suppliers have loaded), and
+      // a stale empty `fields` would append the product twice.
+      if (prefillProduct && form.getValues('items').length === 0) {
         if (prefillProduct.supplier) {
           const sup = suppliers.find(
             (s) => s.id === prefillProduct.supplier || s.name === prefillProduct.supplier,

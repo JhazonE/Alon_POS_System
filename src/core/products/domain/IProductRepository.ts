@@ -9,6 +9,12 @@ export interface GetProductsFilters {
   supplierId?: string | null;
   shelfLocationId?: string | null; // @deprecated: Use shelfId
   shelfId?: string | null;
+  /**
+   * POS only. Returns one row per selling unit instead of one row per product.
+   * Opt-in because the other 10 `useProducts` consumers (purchase orders, bad
+   * orders, purchases list) must keep seeing one row per product.
+   */
+  expandSellingUnits?: boolean;
 }
 
 export interface ProductRepository {

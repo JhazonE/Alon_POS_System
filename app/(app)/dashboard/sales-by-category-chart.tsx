@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { getApiUrl } from "@/lib/api-config"
-import { TrendingUp, Loader2 } from "lucide-react"
+import { TrendingUp } from "lucide-react"
 import { Pie, PieChart, Label, Cell, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
 
 import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
@@ -12,6 +12,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { Spinner } from '@/components/ui/spinner';
 
 export const description = "A donut chart with text"
 
@@ -73,7 +74,7 @@ export function SalesByCategoryChart({ data: initialData }: { data?: any[] }) {
   if (loading) {
      return (
         <MatteCard className="flex h-[350px] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+            <Spinner className="h-8 w-8 text-[rgb(var(--matte-accent))]" />
         </MatteCard>
      )
   }

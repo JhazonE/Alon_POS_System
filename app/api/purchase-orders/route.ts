@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const status = searchParams.get('status');
     const supplierId = searchParams.get('supplierId');
+    const id = searchParams.get('id');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
@@ -42,6 +43,12 @@ export async function GET(request: NextRequest) {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    // Single-order lookup (the Edit / Reorder pages load one order by id).
+    if (id) {
+      sql += ' AND po.id = ?';
+      params.push(id);
+    }
 
     if (status) {
       sql += ' AND po.status = ?';
@@ -134,6 +141,11 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     let countSql = 'SELECT COUNT(*) as total FROM purchase_orders po WHERE 1=1';
     const countParams: any[] = [];
+
+    if (id) {
+      countSql += ' AND po.id = ?';
+      countParams.push(id);
+    }
 
     if (status) {
       countSql += ' AND po.status = ?';

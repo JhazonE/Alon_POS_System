@@ -37,7 +37,7 @@ export function NewCountDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <>
       <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px] w-full sm:w-auto" onClick={() => setOpen(true)}>
-        <Plus className="mr-2 h-4 w-4" /> Start New Count
+        <Plus className="mr-2 h-4 w-4" /> Start New Inventory Count
       </button>
 
       {/* ── Mobile bottom-sheet: only mounts when truly on a small screen ── */}
@@ -57,7 +57,7 @@ export function NewCountDialog({ onCreated }: { onCreated: () => void }) {
           <form onSubmit={handleSubmit} className="flex flex-col">
             <div className="px-6 pt-6 pb-2">
               <DialogHeader>
-                <DialogTitle>Start Stock Count</DialogTitle>
+                <DialogTitle>Start Inventory Count</DialogTitle>
                 <DialogDescription>
                   Takes a snapshot of current inventory so you can physically count
                   items while business operations continue.

@@ -15,10 +15,11 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Server, Settings, CheckCircle2, XCircle, RefreshCw, Network, Monitor, Printer, ScanLine } from 'lucide-react';
+import { Server, Settings, CheckCircle2, XCircle, RefreshCw, Network, Monitor, Printer, ScanLine } from 'lucide-react';
 import { DEFAULT_API_BASE_URL } from '@/lib/api-config';
 import { useConnectionSettings } from './use-connection-settings';
 import type { ConnectionSettingsDialogProps } from './connection-settings-types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSettingsDialogProps) {
   const {
@@ -75,7 +76,7 @@ export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSetti
                     className="h-8 text-sm"
                   />
                   <button type="button" onClick={testConnection} disabled={isTesting} className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring rounded-lg gap-1.5 h-8 shrink-0 px-3 text-xs">
-                    {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Test'}
+                    {isTesting ? <Spinner className="h-3.5 w-3.5" /> : 'Test'}
                   </button>
                 </div>
                 <div className="flex items-center gap-2 min-h-[18px]">
@@ -200,7 +201,7 @@ export function ConnectionSettingsDialog({ open, onOpenChange }: ConnectionSetti
                     />
                   )}
                   <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring p-0 h-8 w-8 shrink-0" onClick={discoverPrinters} disabled={isDiscoveringPrinters} title="Scan for printers">
-                    {isDiscoveringPrinters ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
+                    {isDiscoveringPrinters ? <Spinner className="h-3.5 w-3.5" /> : <ScanLine className="h-3.5 w-3.5" />}
                   </button>
                 </div>
                 {availablePrinters.length > 0 && (

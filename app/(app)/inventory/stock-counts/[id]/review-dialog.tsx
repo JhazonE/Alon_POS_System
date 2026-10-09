@@ -45,7 +45,7 @@ export function ReviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl sm:max-w-5xl rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Review Stock Count</DialogTitle>
+          <DialogTitle>Review Inventory Count</DialogTitle>
           <DialogDescription>
             Review the variances before applying. Once completed, inventory levels will be
             adjusted immediately.
@@ -53,7 +53,7 @@ export function ReviewDialog({
         </DialogHeader>
 
         <div className="space-y-5 my-2">
-          {/* Stock count details */}
+          {/* Inventory count details */}
           <div className="bg-muted/40 rounded-xl p-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
             <div>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Count Name</p>

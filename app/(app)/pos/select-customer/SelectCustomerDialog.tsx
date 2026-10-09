@@ -17,12 +17,13 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { AddCustomerDialog } from '../add-customer/AddCustomerDialog';
 import { SearchDebounce } from './SearchDebounce';
 import { useSelectCustomer } from './use-select-customer';
 import { WALK_IN_CUSTOMER, getInitials } from './select-customer-utils';
 import type { SelectCustomerDialogProps } from './select-customer-types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function SelectCustomerDialog({
   isOpen,
@@ -66,7 +67,7 @@ export function SelectCustomerDialog({
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Spinner className="h-6 w-6 text-primary" />
                 </div>
               ) : (
                 <>

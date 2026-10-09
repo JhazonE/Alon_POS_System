@@ -1,19 +1,37 @@
 'use client';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { RefreshCw, Monitor } from 'lucide-react';
+import { PosPriceLevelSelect } from './PosPriceLevelSelect';
 
 type Props = {
   shiftActive: boolean;
   currentTime: string;
   enableCustomerDisplay: boolean;
   openOnSecondScreen: () => void;
+  enablePriceLevelSwitch: boolean;
+  priceLevels: { id: string; name: string }[];
+  activeLevelId: string;
+  selectedPriceLevelId: string;
+  setSelectedPriceLevelId: (id: string) => void;
+  customerHasOwnLevel: boolean;
 };
 
 /**
  * Slim utility bar. The cart and shift actions live in the rails flanking the
  * cart; the business name and terminal live in the summary footer.
  */
-export function PosHeader({ shiftActive, currentTime, enableCustomerDisplay, openOnSecondScreen }: Props) {
+export function PosHeader({
+  shiftActive,
+  currentTime,
+  enableCustomerDisplay,
+  openOnSecondScreen,
+  enablePriceLevelSwitch,
+  priceLevels,
+  activeLevelId,
+  selectedPriceLevelId,
+  setSelectedPriceLevelId,
+  customerHasOwnLevel,
+}: Props) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
       <div className="flex items-center gap-2">
@@ -22,6 +40,15 @@ export function PosHeader({ shiftActive, currentTime, enableCustomerDisplay, ope
       </div>
 
       <div className="flex items-center gap-2">
+        {enablePriceLevelSwitch && (
+          <PosPriceLevelSelect
+            priceLevels={priceLevels}
+            activeLevelId={activeLevelId}
+            selectedPriceLevelId={selectedPriceLevelId}
+            setSelectedPriceLevelId={setSelectedPriceLevelId}
+            lockedToCustomer={customerHasOwnLevel}
+          />
+        )}
         <span className="hidden font-mono text-xs text-muted-foreground sm:block">{currentTime}</span>
         <button
           onClick={() => window.location.reload()}

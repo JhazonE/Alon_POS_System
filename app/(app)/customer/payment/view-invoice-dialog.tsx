@@ -18,11 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Eye, Printer } from 'lucide-react';
+import { Eye, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/api-config';
 import { formatCurrency } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 
 interface ViewInvoiceDialogProps {
   invoiceId: string;
@@ -238,7 +239,7 @@ export default function ViewInvoiceDialog({ invoiceId, children }: ViewInvoiceDi
 
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Spinner className="h-8 w-8 text-muted-foreground" />
           </div>
         ) : invoice ? (
           <div className="space-y-6">

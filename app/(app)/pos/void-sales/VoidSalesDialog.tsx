@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Ban, ArrowLeft, AlertTriangle, Clock, User, Calendar, CreditCard, ShoppingBag, Loader2, ChevronRight } from 'lucide-react';
+import { Ban, ArrowLeft, AlertTriangle, Clock, User, Calendar, CreditCard, ShoppingBag, ChevronRight } from 'lucide-react';
 import type { Sale } from '@/lib/types';
 import { format } from 'date-fns';
 import { formatQuantity } from '@/lib/utils';
@@ -28,6 +28,7 @@ import { AdminAuthDialog } from '../admin-auth/AdminAuthDialog';
 import { useVoidSales } from './use-void-sales';
 import type { VoidSalesDialogProps } from './void-sales-types';
 import { TransactionSearchBar } from '../transaction-search/TransactionSearchBar';
+import { Spinner } from '@/components/ui/spinner';
 
 const peso = (n: number) => `₱${(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -176,7 +177,7 @@ function ConfirmVoidView({ sale, voidReason, onVoidReasonChange, onVoidTransacti
                     Cancel
                 </button>
                 <button onClick={onVoidTransaction} disabled={isVoiding || !canVoid} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-destructive text-destructive-foreground shadow-[0_1px_3px_hsl(var(--destructive)/0.25)] hover:bg-destructive/90 hover:shadow-[0_6px_18px_hsl(var(--destructive)/0.28)] focus-visible:ring-destructive/55 h-10 px-[18px]">
-                    {isVoiding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
+                    {isVoiding ? <Spinner className="mr-2 h-4 w-4" /> : <Ban className="mr-2 h-4 w-4" />}
                     {isVoiding ? 'Voiding...' : 'Void Transaction'}
                 </button>
             </SheetFooter>
@@ -325,7 +326,7 @@ export function VoidSalesDialog(props: VoidSalesDialogProps) {
                         <ScrollArea className="h-full">
                             {isRecentLoading ? (
                                 <div className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                                    <Spinner className="h-4 w-4" /> Loading…
                                 </div>
                             ) : recentSales.length > 0 ? (
                                 recentSales.map((sale: any, index: number) => (

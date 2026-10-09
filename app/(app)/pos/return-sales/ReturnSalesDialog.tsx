@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Undo, Clock, Loader2 } from 'lucide-react';
+import { Undo, Clock } from 'lucide-react';
 import { AdminAuthDialog } from '../admin-auth/AdminAuthDialog';
 import { TransactionPickRow } from './TransactionPickRow';
 import { SelectItemsView } from './SelectItemsView';
@@ -13,6 +13,7 @@ import { useReturnSales } from './use-return-sales';
 import type { ReturnSalesDialogProps } from './return-sales-types';
 import { format } from 'date-fns';
 import { TransactionSearchBar } from '../transaction-search/TransactionSearchBar';
+import { Spinner } from '@/components/ui/spinner';
 
 export function ReturnSalesDialog({
   isOpen,
@@ -146,7 +147,7 @@ export function ReturnSalesDialog({
                 <ScrollArea className="h-full">
                   {isRecentLoading ? (
                     <div className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                      <Spinner className="h-4 w-4" /> Loading…
                     </div>
                   ) : recentSales.length > 0 ? (
                     recentSales.map((sale: any, index: number) => (

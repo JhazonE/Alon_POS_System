@@ -41,7 +41,7 @@ export const salesNavItems = [
 // Adjustment History now has its own card.
 export const inventoryNavItems = [
   { href: '/inventory', label: 'Stock Levels' },
-  { href: '/inventory/stock-counts', label: 'Stock Counts (Snapshots)' },
+  { href: '/inventory/stock-counts', label: 'Inventory Count' },
   { href: '/inventory/repackaging', label: 'Repackaging' },
 ];
 

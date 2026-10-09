@@ -1,10 +1,10 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = { open: boolean; onClose: () => void; onConfirm: () => void; isPending: boolean };
 
@@ -21,7 +21,7 @@ export function InvoicesVoidDialog({ open, onClose, onConfirm, isPending }: Prop
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            {isPending && <Spinner className="h-4 w-4 mr-2" />}
             Void Invoice
           </AlertDialogAction>
         </AlertDialogFooter>

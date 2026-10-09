@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -12,6 +12,7 @@ import { EditTaxRateDialog } from './edit-tax-rate-dialog';
 import { AdminAuthDialog } from '../../pos/admin-auth/AdminAuthDialog';
 import { TaxRatesTable } from './TaxRatesTable';
 import { useTaxRates } from './use-tax-rates';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function TaxRatesPage() {
   const {
@@ -26,7 +27,7 @@ export default function TaxRatesPage() {
   if (isAuthLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Spinner className="h-8 w-8 text-muted-foreground" />
       </div>
     );
   }

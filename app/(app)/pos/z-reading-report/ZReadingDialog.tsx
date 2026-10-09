@@ -2,7 +2,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect, useRef } from 'react';
-import { Printer, ArrowLeft, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AdminAuthDialog } from '../admin-auth/AdminAuthDialog';
 import { ZReadingPreview, BusinessSettings } from '../../sales/z-reading/z-reading-preview';
@@ -12,6 +12,7 @@ import { ZReadingGenerator } from '@/lib/z-reading-generator';
 import { getApiUrl } from '@/lib/api-config';
 import { useReactToPrint } from 'react-to-print';
 import type { ZReadingDialogProps } from './z-reading-report-types';
+import { Spinner } from '@/components/ui/spinner';
 
 function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initialData }: { onBack: () => void, printMode: 'browser' | 'escpos' | 'usb' | 'native', terminalId?: string, terminalName?: string, initialData?: ZReadingData | null }): JSX.Element {
   const [data, setData] = useState<ZReadingData | null>(initialData || null);
@@ -121,7 +122,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
           <SheetTitle>Z-READING REPORT</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col items-center justify-center flex-1">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+          <Spinner className="h-8 w-8 text-muted-foreground mb-4" />
           <p className="text-muted-foreground">Generating Z-Reading Report...</p>
         </div>
       </div>
@@ -151,7 +152,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
           <SheetTitle>Z-READING REPORT</SheetTitle>
         </div>
         <button onClick={handlePrintAndFinalize} disabled={isLoading || isPrinting} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-8 px-[13px] text-xs rounded-lg gap-1.5">
-          {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+          {isPrinting ? <Spinner className="mr-2 h-4 w-4" /> : <Printer className="mr-2 h-4 w-4" />}
           {data.id === 'PREVIEW' ? 'Finalize & Print' : 'Print'}
         </button>
       </SheetHeader>

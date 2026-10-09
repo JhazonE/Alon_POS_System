@@ -5,6 +5,8 @@ import { deductFromBatches, getBatchCostingSettings } from '@/lib/batch-deductio
 import { ensureCustomerCreditColumn } from '@/lib/ensure-customer-credit';
 import { query } from '@/lib/mysql';
 import { isService } from '@/lib/product-type';
+import { resolveLineQtyBase, resolveLineSellingUnitId } from './selling-unit-resolve';
+import { toBaseQty } from '@/lib/selling-unit-qty';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { validateSingleDocumentType } from './mixed-cart-validation';
 import { isTerminalLocked, TERMINAL_LOCKED_MESSAGE } from './terminal-lock-check';
@@ -193,6 +195,9 @@ export async function POST(request: NextRequest) {
 
       // 2. Deduct batches + stock and insert sale_items (cost folded into the
       //    insert — no separate UPDATE per item).
+      // The invoice-items insert below runs in its own loop, where the
+      // per-item qty_base is out of scope. Carry it across by index.
+      const baseQtyByIndex = new Map<number, { baseQty: number; qtyBase: number; unitName: string | null; sellingUnitId: string | null }>();
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemId = `${saleId}-ITEM-${i + 1}`;
@@ -202,14 +207,30 @@ export async function POST(request: NextRequest) {
         const [soldProdResult]: any = await connection.query(`
           SELECT
             p.id, p.parent_id, p.unit_of_measure, p.name, p.stock, p.type, p.cost,
-            c.markup_percentage, p.category, p.earns_points
+            c.markup_percentage, p.category, p.earns_points,
+            psu.qty_base AS psu_qty_base, psu.unit_name AS psu_unit_name
           FROM products p
           LEFT JOIN categories c ON p.category = c.name
+          LEFT JOIN product_selling_units psu
+                 ON psu.id = ? AND psu.product_id = p.id
           WHERE p.id = ?
-        `, [item.id]);
+        `, [item.sellingUnitId || null, item.id]);
 
         const soldProd = soldProdResult?.[0];
         const itemIsService = soldProd ? isService(soldProd) : false;
+
+        // Stock, inventory_batches and cost are all denominated in BASE units,
+        // so a selling unit's line quantity must be converted before it touches
+        // any of them. Resolved from the DB row, never from the request body.
+        const lineQtyBase = resolveLineQtyBase(soldProd);
+        const lineBaseQty = toBaseQty(item.quantity, lineQtyBase);
+        // The scoped join (psu.id = ? AND psu.product_id = p.id) yields NULL for a
+        // unit id that does not belong to this product. Store the unit columns only
+        // when it genuinely matched, so a row can never claim a unit whose ratio it
+        // did not use — these columns are what the void path and BIR reports read.
+        const lineSellingUnitId = resolveLineSellingUnitId(soldProd, item.sellingUnitId);
+        const lineUnitName = lineSellingUnitId ? (soldProd?.psu_unit_name ?? null) : null;
+        baseQtyByIndex.set(i, { baseQty: lineBaseQty, qtyBase: lineQtyBase, unitName: lineUnitName, sellingUnitId: lineSellingUnitId });
 
         // --- BATCH COSTING: FIFO deduction & cost recording ---
         let costAtSale: number | null = null;
@@ -226,7 +247,7 @@ export async function POST(request: NextRequest) {
             const bcs = await getBCS();
             const deduction = await deductFromBatches(
               item.id,
-              item.quantity,
+              lineBaseQty,
               bcs.oversellBlock,
               connection as any
             );
@@ -245,17 +266,23 @@ export async function POST(request: NextRequest) {
 
         await connection.query(`
           INSERT INTO sale_items (
-            id, sale_id, product_id, product_name, quantity, price, cost_at_sale, batch_source, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            id, sale_id, product_id, product_name, quantity, price, cost_at_sale, batch_source,
+            selling_unit_id, selling_unit_name, selling_unit_qty_base, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         `, [
           itemId,
           saleId,
           item.id,
           item.name,
+          // UNITS SOLD, not base units: 1 Case stores 1, with qty_base 24
+          // alongside. Storing 24 here would make receipts read "24 Case".
           item.quantity,
           item.price * (1 - (item.discount || 0) / 100),
           costAtSale,
-          batchSource
+          batchSource,
+          lineSellingUnitId,
+          lineUnitName,
+          lineSellingUnitId ? lineQtyBase : null,
         ]);
 
         // --- Stock Deduction with Full Hierarchy Sync & Loyalty Calculation ---
@@ -284,13 +311,20 @@ export async function POST(request: NextRequest) {
             //     → deduct 0.2 from Sugar25kg
             //     → find Sugar1kg (factor 25) → deduct 5 from Sugar1kg
             //         → find Sugar500g (factor 2) → deduct 10 from Sugar500g ✓
+            // `lineBaseQty` ALREADY includes the selling-unit conversion. This
+            // is safe only because migration 120 removed every parent_id: a
+            // product carrying BOTH a parent_id and a non-base selling unit
+            // would have the qty_base multiplier and this family cascade
+            // compound (a Case of 24 under a family factor of 12 would deduct
+            // 288). Removing family-sync entirely is the 2026-09-11 spec's
+            // Plan 4/5; see the 2026-10-07 spec's Deviations section.
             const { rootId, factorToRoot } = soldProd.parent_id
               ? await findUltimateRoot(soldProd.id, connection)
               : { rootId: soldProd.id, factorToRoot: 1 };
 
             if (factorToRoot > 1 || rootId !== soldProd.id) {
               // Sold item is NOT the root — convert qty to root units and deduct from root down
-              const rootQty = item.quantity / factorToRoot;
+              const rootQty = lineBaseQty / factorToRoot;
               await deductFamilyStock(
                 rootId,
                 rootQty,
@@ -303,7 +337,7 @@ export async function POST(request: NextRequest) {
               // Sold item IS the root — deduct and propagate to all descendants
               await deductFamilyStock(
                 soldProd.id,
-                item.quantity,
+                lineBaseQty,
                 saleId,
                 'sale',
                 `POS Sale: ${saleId}`,
@@ -434,9 +468,14 @@ export async function POST(request: NextRequest) {
         const invoiceItemId = `${invoiceId}-ITEM-${i + 1}`;
         const posItemId = `${posTransId}-DETAIL-${i + 1}`;
 
+        const lineUnit = baseQtyByIndex.get(i);
+
         invoiceItemRows.push([
           invoiceItemId, invoiceId, item.id, item.name, item.quantity,
-          item.price * (1 - (item.discount || 0) / 100)
+          item.price * (1 - (item.discount || 0) / 100),
+          lineUnit?.sellingUnitId ?? null,
+          lineUnit?.unitName ?? null,
+          lineUnit?.sellingUnitId ? lineUnit.qtyBase : null,
         ]);
 
         const originalPrice = item.price;
@@ -459,8 +498,9 @@ export async function POST(request: NextRequest) {
 
       await connection.query(`
         INSERT INTO sales_invoice_items (
-          id, sales_invoice_id, product_id, product_name, quantity, price, created_at
-        ) VALUES ${invoiceItemRows.map(() => '(?, ?, ?, ?, ?, ?, NOW())').join(', ')}
+          id, sales_invoice_id, product_id, product_name, quantity, price,
+          selling_unit_id, selling_unit_name, selling_unit_qty_base, created_at
+        ) VALUES ${invoiceItemRows.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())').join(', ')}
       `, invoiceItemRows.flat());
 
       await connection.query(`

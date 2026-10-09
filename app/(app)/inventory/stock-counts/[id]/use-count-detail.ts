@@ -109,16 +109,16 @@ export function useCountDetail({ countId }: { countId: string }) {
       await logActivity({
         action: 'UPDATE',
         module: 'INVENTORY',
-        description: `Completed stock count${result.pendingApproval ? ' (submitted for approval)' : ' — Inventory updated'}`,
+        description: `Completed inventory count${result.pendingApproval ? ' (submitted for approval)' : ' — Inventory updated'}`,
         referenceId: countId,
       });
       if (result.pendingApproval) {
         toast({
-          title: 'Stock count submitted for approval.',
+          title: 'Inventory count submitted for approval.',
           description: 'Inventory will be updated once approved.',
         });
       } else {
-        toast({ title: 'Stock count completed! Inventory has been updated.' });
+        toast({ title: 'Inventory count completed! Inventory has been updated.' });
       }
 
       setShowReviewDialog(false);

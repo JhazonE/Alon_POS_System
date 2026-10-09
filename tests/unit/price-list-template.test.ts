@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mapParsedRowsToPriceListRows } from '../../app/(app)/products/bulk-price-update/price-list-template';
+import { mapParsedRowsToPriceListRows } from '../../app/(app)/inventory/pricing/price-list-template';
 import type { ParsedFile } from '../../lib/import/parse-file';
 
 // mapParsedRowsToPriceListRows is the boundary between "raw Excel/CSV cell

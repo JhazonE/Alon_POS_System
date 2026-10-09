@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       availability: searchParams.get('availability'),
       supplierId: searchParams.get('supplierId'),
       shelfLocationId: searchParams.get('shelfLocationId'),
+      expandSellingUnits: searchParams.get('expandSellingUnits') === 'true',
     };
 
     if (countOnly) {

@@ -15,7 +15,7 @@ export const PAGE_REGISTRY: RegistryPage[] = [
 
   // Inventory
   { key: 'inventory', href: '/inventory', label: 'Stock Levels', section: 'Inventory' },
-  { key: 'inventory_stock_counts', href: '/inventory/stock-counts', label: 'Stock Counts (Snapshots)', section: 'Inventory' },
+  { key: 'inventory_stock_counts', href: '/inventory/stock-counts', label: 'Inventory Count', section: 'Inventory' },
   { key: 'inventory_repackaging', href: '/inventory/repackaging', label: 'Repackaging', section: 'Inventory' },
   { key: 'inventory_history', href: '/inventory/history', label: 'Adjustment History', section: 'Inventory' },
   { key: 'inventory_movement', href: '/inventory/movement', label: 'Stock Movement', section: 'Inventory' },

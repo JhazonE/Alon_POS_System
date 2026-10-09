@@ -9,8 +9,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Loader2 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api-config';
+import { Spinner } from '@/components/ui/spinner';
 
 const chartConfig = {
   sales: {
@@ -67,7 +67,7 @@ export function HourlySalesChart() {
       <MatteCardBody>
         {loading ? (
           <div className="h-[300px] flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+            <Spinner className="h-8 w-8 text-[rgb(var(--matte-accent))]" />
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-[300px] w-full">

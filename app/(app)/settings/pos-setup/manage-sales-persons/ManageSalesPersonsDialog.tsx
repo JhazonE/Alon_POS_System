@@ -9,9 +9,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, UsersIcon } from 'lucide-react';
+import { PlusCircle, UsersIcon } from 'lucide-react';
 import { useManageSalesPersons } from './use-manage-sales-persons';
 import { SalesPersonRow } from './SalesPersonRow';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
   trigger?: React.ReactNode;
@@ -62,7 +63,7 @@ export function ManageSalesPersonsDialog({ trigger, onChange, open, onOpenChange
               <Input id="new-contact" placeholder="e.g., +1-555-0101" value={newContact} onChange={e => setNewContact(e.target.value)} />
             </div>
             <button onClick={handleAdd} disabled={isAdding || !newName.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
-              {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+              {isAdding ? <Spinner className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
               {isAdding ? 'Adding...' : 'Add Sales Person'}
             </button>
           </div>

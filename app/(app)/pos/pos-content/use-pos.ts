@@ -9,13 +9,26 @@ import { useCustomerDisplay } from '@/hooks/use-customer-display';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { resolvePriceLevel } from '@/lib/pricing';
 import { priceLevelLabel } from '@/lib/price-level-badge';
+import { buildLineId } from '@/lib/selling-unit-qty';
+import { priceLineForProduct } from '@/lib/selling-unit-pricing';
 import { repriceCartLines } from '@/lib/cart-reprice';
+import { resolveActivePriceLevelId, manualPickAfterCustomerChange, shouldAutoApplyTiers, repriceModeForGateChange } from '@/lib/pos-active-price-level';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { getApiUrl } from '@/lib/api-config';
 import { formatStockQuantity } from '@/lib/utils';
 import { WALK_IN_CUSTOMER } from '../customer-account/customer-account-types';
 import { type SaleItem, type SuspendedTransaction, type QueuedOrder, mapVatStatusToTaxType } from './pos-types';
 import type { Customer, SystemSettings } from '@/lib/types';
+
+/**
+ * Carts that were saved before cart lines had a `lineId` (localStorage, held
+ * transactions, queued orders) restore without one. Without a lineId every such
+ * line would compare equal (undefined === undefined), so backfill it from the
+ * product/unit the same way a freshly added line gets it.
+ */
+function withLineIds<T extends { id: string; lineId?: string; sellingUnitId?: string | null }>(items: T[] | undefined | null): (T & { lineId: string })[] {
+  return (items || []).map(item => (item.lineId ? item : { ...item, lineId: buildLineId(item.id, item.sellingUnitId) }) as T & { lineId: string });
+}
 
 export function usePOS() {
   const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
@@ -53,7 +66,7 @@ export function usePOS() {
   );
   const inventoryLocation = currentTerminal?.inventoryLocation || '';
 
-  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, inventoryLocation);
+  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, inventoryLocation, true);
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -71,7 +84,8 @@ export function usePOS() {
     debouncedSearchQuery.trim(),
     'Available',
     undefined,
-    inventoryLocation
+    inventoryLocation,
+    true
   );
 
   const [isTenderDialogOpen, setIsTenderDialogOpen] = useState(false);
@@ -150,6 +164,9 @@ export function usePOS() {
   const [editingQtyItemId, setEditingQtyItemId] = useState<string | null>(null);
   const [editingPriceItemId, setEditingPriceItemId] = useState<string | null>(null);
   const [pendingVoidItemId, setPendingVoidItemId] = useState<string | null>(null);
+  const [isCancelItemsOpen, setIsCancelItemsOpen] = useState(false);
+  // Which scope the auth gate should run once credentials clear.
+  const [pendingCancelScope, setPendingCancelScope] = useState<'selected' | 'all' | null>(null);
   const [qtyDraft, setQtyDraft] = useState('');
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [isCollisionOpen, setIsCollisionOpen] = useState(false);
@@ -157,11 +174,14 @@ export function usePOS() {
   const [isCheckingShift, setIsCheckingShift] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<{ id: string; name: string; isActive: boolean; isReferenceRequired?: boolean; pointsAmount?: number; currencyEquivalent?: number }[]>([]);
   const [showQuantityInSearch, setShowQuantityInSearch] = useState(true);
+  const [enablePriceLevelSwitch, setEnablePriceLevelSwitch] = useState(false);
+  const [posSettingsLoaded, setPosSettingsLoaded] = useState(false);
 
   // Sticky focus on main input when all dialogs close
   useEffect(() => {
     const isAnyDialogOpen =
       isTenderDialogOpen || isDiscountDialogOpen || isHeldTransOpen || isLineVoidAuthOpen ||
+      isCancelItemsOpen ||
       isEndShiftOpen || isCashTransferOpen || isCustomerSelectOpen || isLoyaltyOpen ||
       isRecentSalesOpen || isVoidSalesOpen || isReturnSalesOpen || isPriceInquiryOpen ||
       isZReadingOpen || isShutdownConfirmOpen || isInsufficientStockOpen || isProductSearchOpen ||
@@ -172,11 +192,11 @@ export function usePOS() {
       return () => clearTimeout(timer);
     }
   }, [
-    isTenderDialogOpen, isDiscountDialogOpen, isHeldTransOpen, isLineVoidAuthOpen,
+    isTenderDialogOpen, isDiscountDialogOpen, isHeldTransOpen, isLineVoidAuthOpen, isCancelItemsOpen,
     isEndShiftOpen, isCashTransferOpen, isCustomerSelectOpen, isLoyaltyOpen,
     isRecentSalesOpen, isVoidSalesOpen, isReturnSalesOpen, isPriceInquiryOpen,
     isZReadingOpen, isShutdownConfirmOpen, isInsufficientStockOpen, isProductSearchOpen,
-    showEndShiftReport, isPosLoggedIn, shiftActive,
+    showEndShiftReport, isEndingShift, isPosLoggedIn, shiftActive,
   ]);
 
   // Restore session on mount
@@ -208,7 +228,7 @@ export function usePOS() {
     }
   }, []);
 
-  const selectedItem = useMemo(() => items.find(item => item.id === selectedItemId) || null, [items, selectedItemId]);
+  const selectedItem = useMemo(() => items.find(item => item.lineId === selectedItemId) || null, [items, selectedItemId]);
 
   // Scroll to selected item
   useEffect(() => {
@@ -251,7 +271,7 @@ export function usePOS() {
   };
 
   const commitInlineName = (itemId: string, rawValue: string) => {
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (item) {
       const newName = rawValue.trim();
       if (newName && newName !== item.name) handleUpdateItem(itemId, newName, item.quantity, item.price, item.discount);
@@ -261,7 +281,7 @@ export function usePOS() {
 
   const commitQty = (itemId: string) => {
     setEditingQtyItemId(null);
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (!item) return;
     const q = parseFloat(qtyDraft);
     if (isNaN(q) || q <= 0) { setQtyDraft(String(item.quantity)); return; }
@@ -292,6 +312,8 @@ export function usePOS() {
         setOverallReadingAuthCredentials({ username: result.data.overallReadingAuthUsername, password: result.data.overallReadingAuthPassword });
         setIsTrainingMode(result.data.isTrainingMode || false);
         setShowQuantityInSearch(result.data.showQuantityInSearch ?? true);
+        setEnablePriceLevelSwitch(result.data.enablePriceLevelSwitch || false);
+        setPosSettingsLoaded(true);
         setEnableCustomerDisplay(result.data.enableCustomerDisplay || false);
 
         const localPrintMode = localStorage.getItem('pos_printer_mode');
@@ -368,8 +390,10 @@ export function usePOS() {
       try {
         const levels = await import('../../products/actions').then(m => m.getPriceLevels());
         setPriceLevels(levels);
-        const defaultLevel = levels.find((l: any) => l.isDefault);
-        if (defaultLevel) setSelectedPriceLevelId(defaultLevel.id);
+        // selectedPriceLevelId is left EMPTY on load: '' means "follow the
+        // customer, else the default level" (see resolveActivePriceLevelId).
+        // Seeding it with the default level's id made a cashier's deliberate
+        // pick indistinguishable from the startup value.
       } catch {}
     };
     fetchPriceLevels();
@@ -495,7 +519,7 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (selectedItemId && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const item = items.find(i => i.id === selectedItemId);
+            const item = items.find(i => i.lineId === selectedItemId);
             if (item) updateQuantity(selectedItemId, item.quantity + 1);
           }
           break;
@@ -505,7 +529,7 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (selectedItemId && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const item = items.find(i => i.id === selectedItemId);
+            const item = items.find(i => i.lineId === selectedItemId);
             if (item && item.quantity > 1) updateQuantity(selectedItemId, item.quantity - 1);
           }
           break;
@@ -515,8 +539,8 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (items.length > 0 && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const idx = items.findIndex(i => i.id === selectedItemId);
-            setSelectedItemId(items[idx <= 0 ? items.length - 1 : idx - 1].id);
+            const idx = items.findIndex(i => i.lineId === selectedItemId);
+            setSelectedItemId(items[idx <= 0 ? items.length - 1 : idx - 1].lineId);
           }
           break;
         }
@@ -525,8 +549,8 @@ export function usePOS() {
           const isInputEmpty = inputRef.current ? inputRef.current.value === '' : true;
           if (items.length > 0 && (!isInputFocused || isInputEmpty) && !isDialogOpen) {
             e.preventDefault();
-            const idx = items.findIndex(i => i.id === selectedItemId);
-            setSelectedItemId(items[idx >= items.length - 1 ? 0 : idx + 1].id);
+            const idx = items.findIndex(i => i.lineId === selectedItemId);
+            setSelectedItemId(items[idx >= items.length - 1 ? 0 : idx + 1].lineId);
           }
           break;
         }
@@ -561,28 +585,55 @@ export function usePOS() {
   }, [items, selectedItemId, heldTransactions, enableLineVoidAuth, isFrontliner, businessSettings?.posMode]);
 
   const defaultLevelId = useMemo(() => priceLevels.find((l: any) => l.isDefault)?.id || 'retail-level', [priceLevels]);
-  const activeLevelId = useMemo(() => selectedCustomer?.priceLevelId || selectedPriceLevelId || defaultLevelId, [selectedCustomer, selectedPriceLevelId, defaultLevelId]);
+  const activeLevelId = useMemo(
+    () => resolveActivePriceLevelId(selectedCustomer?.priceLevelId, selectedPriceLevelId, defaultLevelId),
+    [selectedCustomer, selectedPriceLevelId, defaultLevelId],
+  );
+
+  // A customer who carries their own level outranks the cashier's pick, so the
+  // pick is dropped rather than left as hidden state that would resurface the
+  // moment the cart went back to walk-in. Derived from selectedCustomer instead
+  // of done in handleSelectCustomer because setSelectedCustomer is also called
+  // directly by the dialogs and by the restored-cart path.
+  useEffect(() => {
+    setSelectedPriceLevelId(prev => manualPickAfterCustomerChange(selectedCustomer?.priceLevelId, prev));
+  }, [selectedCustomer]);
   const activeLevelName = useMemo(() => priceLevels.find((l: any) => l.id === activeLevelId)?.name || 'Retail', [activeLevelId, priceLevels]);
 
   // Price + badge for one line, so the cashier can see which level and tier
   // produced the price.
-  const priceLine = useCallback((product: any, qty: number) => {
-    const resolved = resolvePriceLevel(product, qty, activeLevelId, defaultLevelId);
-    return { price: resolved.price, priceLevelLabel: priceLevelLabel(resolved, priceLevels) };
-  }, [activeLevelId, defaultLevelId, priceLevels]);
+  const autoQuantityTiers = useMemo(
+    () => shouldAutoApplyTiers(enablePriceLevelSwitch, selectedCustomer?.priceLevelId, selectedPriceLevelId),
+    [enablePriceLevelSwitch, selectedCustomer, selectedPriceLevelId],
+  );
 
-  // Re-price items when price level changes
+  const priceLine = useCallback((product: any, qty: number) => {
+    return priceLineForProduct(product, qty, (p, q) => {
+      const resolved = resolvePriceLevel(p, q, activeLevelId, defaultLevelId, { autoQuantityTiers });
+      return { price: resolved.price, priceLevelLabel: priceLevelLabel(resolved, priceLevels) };
+    });
+  }, [activeLevelId, defaultLevelId, priceLevels, autoQuantityTiers]);
+
+  // Re-price items when the price level, or the automatic-tier gate, changes. A cashier
+  // action (switching level, picking the default level) reprices fully. The gate also
+  // flips when the POS settings first arrive at startup: that is async data, not a
+  // decision, so it refreshes badges only and never overwrites a hand-typed price on a
+  // restored cart (see repriceModeForGateChange).
+  const settingsSeenRef = useRef(false);
   useEffect(() => {
+    const settingsJustResolved = posSettingsLoaded && !settingsSeenRef.current;
+    settingsSeenRef.current = posSettingsLoaded;
     if (!activeLevelId) return;
-    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine)));
+    const labelsOnly = repriceModeForGateChange(settingsJustResolved) === 'labelsOnly';
+    setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine, labelsOnly ? { labelsOnly: true } : undefined)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLevelId]);
+  }, [activeLevelId, autoQuantityTiers, posSettingsLoaded]);
 
   // When the price level list arrives (it loads asynchronously, after a saved cart may
   // already have been restored), fill in the badges only. Prices are deliberately NOT
   // touched here: a restored line may carry a price the cashier typed by hand, and the
   // list loading is not a reason to overwrite it. Only an actual level switch (above)
-  // reprices.
+  // reprices; the settings' first load is likewise labels-only.
   useEffect(() => {
     if (priceLevels.length === 0) return;
     setItems(currentItems => (currentItems.length === 0 ? currentItems : repriceCartLines(currentItems, priceLine, { labelsOnly: true })));
@@ -592,7 +643,8 @@ export function usePOS() {
   // Handlers
   const handleAddItem = (product: any | undefined) => {
     if (product) {
-      const existing = items.find(item => item.id === product.id);
+      const lineId = buildLineId(product.id, product.sellingUnitId);
+      const existing = items.find(item => item.lineId === lineId);
       // Adding an existing line (quantity bump) never changes the cart's
       // document type, so only check on a genuinely new line.
       if (!existing && items.length > 0) {
@@ -610,17 +662,17 @@ export function usePOS() {
         }
       }
       setItems(prevItems => {
-        const existing = prevItems.find(item => item.id === product.id);
+        const existing = prevItems.find(item => item.lineId === lineId);
         if (existing) {
           const newQty = existing.quantity + 1;
-          return prevItems.map(item => item.id === product.id ? { ...item, quantity: newQty, ...priceLine(product, newQty) } : item);
+          return prevItems.map(item => item.lineId === lineId ? { ...item, quantity: newQty, ...priceLine(product, newQty) } : item);
         } else {
           const newItem: SaleItem = {
-            ...product, quantity: 1, discount: 0, name: product.name,
+            ...product, lineId, quantity: 1, discount: 0, name: product.name,
             ...priceLine(product, 1),
             taxType: mapVatStatusToTaxType(product.vatStatus),
           };
-          setSelectedItemId(newItem.id);
+          setSelectedItemId(newItem.lineId);
           return [...prevItems, newItem];
         }
       });
@@ -637,8 +689,10 @@ export function usePOS() {
     const partial: any[] = [];
     const seen = new Set<string>();
     for (const p of list) {
-      if (seen.has(p.id)) continue;
-      seen.add(p.id);
+      // Dedupe by line identity: two selling units of one product share p.id.
+      const lineKey = buildLineId(p.id, p.sellingUnitId);
+      if (seen.has(lineKey)) continue;
+      seen.add(lineKey);
       const sku = (p.sku || '').toLowerCase();
       const barcode = (p.barcode || '').toLowerCase();
       const name = (p.name || '').toLowerCase();
@@ -682,14 +736,16 @@ export function usePOS() {
     handleAddItem(product);
   };
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
+  const updateQuantity = (lineId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeItem(productId);
+      removeItem(lineId);
     } else {
       setItems(prevItems => prevItems.map(item => {
-        if (item.id === productId) {
-          const original = products?.find(p => p.id === productId);
-          return { ...item, quantity: newQuantity, ...priceLine(original || item, newQuantity) };
+        if (item.lineId === lineId) {
+          // The cart line already carries the selling-unit fields, so re-price
+          // from the LINE, not from a products[] lookup by product id: that
+          // lookup cannot tell two units of one product apart.
+          return { ...item, quantity: newQuantity, ...priceLine(item, newQuantity) };
         }
         return item;
       }));
@@ -698,24 +754,46 @@ export function usePOS() {
 
   const handleUpdateItem = (itemId: string, newName: string, newQty: number, newPrice: number, newDiscount: number) => {
     // A hand-edited price is no longer the level's price, so drop the badge rather than let it say otherwise.
-    setItems(prev => prev.map(item => item.id === itemId
+    setItems(prev => prev.map(item => item.lineId === itemId
       ? { ...item, name: newName, quantity: newQty, price: newPrice, discount: newDiscount, priceLevelLabel: newPrice !== item.price ? undefined : item.priceLevelLabel }
       : item));
   };
 
+  /** Opens the Cancel Items confirmation. Scope and auth are decided there. */
   const handleVoidLine = (itemId: string | null) => {
-    if (!itemId) { toast({ title: 'No Item Selected', description: 'Please select an item to void.', variant: 'destructive' }); return; }
-    if (enableLineVoidAuth) { setPendingVoidItemId(itemId); setIsLineVoidAuthOpen(true); }
-    else performVoidLine(itemId);
+    if (items.length === 0) { toast({ title: 'Empty Cart', description: 'There is nothing to cancel.', variant: 'destructive' }); return; }
+    setPendingVoidItemId(itemId);
+    setIsCancelItemsOpen(true);
+  };
+
+  /** Confirmed in the dialog: gate on credentials if enabled, else run now. */
+  const requestCancel = (scope: 'selected' | 'all') => {
+    if (enableLineVoidAuth) { setPendingCancelScope(scope); setIsLineVoidAuthOpen(true); return; }
+    performCancel(scope);
+  };
+
+  const performCancel = (scope: 'selected' | 'all') => {
+    if (scope === 'all') performCancelAll();
+    else if (pendingVoidItemId) performVoidLine(pendingVoidItemId);
+    setPendingCancelScope(null);
   };
 
   const performVoidLine = (itemId: string) => {
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (!item) return;
     removeItem(itemId);
     if (selectedItemId === itemId) setSelectedItemId(null);
     setPendingVoidItemId(null);
-    toast({ title: 'Line Voided', description: `Removed ${item.name} from the cart.` });
+    toast({ title: 'Item Cancelled', description: `Removed ${item.name} from the cart.` });
+  };
+
+  const performCancelAll = () => {
+    const count = items.length;
+    if (count === 0) return;
+    setItems([]);
+    setSelectedItemId(null);
+    setPendingVoidItemId(null);
+    toast({ title: 'All Items Cancelled', description: `Removed ${count} line${count === 1 ? '' : 's'} from the cart.` });
   };
 
   const focusInlineQuantity = (itemId: string | null) => {
@@ -727,8 +805,8 @@ export function usePOS() {
     focusInlineField('pos-qty', itemId);
   };
 
-  const removeItem = (productId: string) => {
-    setItems(items.filter(item => item.id !== productId));
+  const removeItem = (lineId: string) => {
+    setItems(items.filter(item => item.lineId !== lineId));
   };
 
   const handleSendToQueue = () => {
@@ -780,7 +858,7 @@ export function usePOS() {
       const response = await fetch(getApiUrl(`/pos/queue?id=${orderId}`), { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
-        setItems(result.data.items);
+        setItems(withLineIds(result.data.items));
         setQueuedOrders(prev => prev.filter(o => o.id !== orderId));
         setIsQueuePanelOpen(false);
         toast({ title: `Order #${result.data.queueNumber} Loaded`, description: `From ${result.data.frontlinerName || 'frontliner'}.` });
@@ -818,7 +896,7 @@ export function usePOS() {
   };
 
   const handleOpenEditDialog = () => {
-    if (selectedItem) startEditName(selectedItem.id);
+    if (selectedItem) startEditName(selectedItem.lineId);
     else toast({ title: 'No Item Selected', description: 'Please select an item to edit.', variant: 'destructive' });
   };
 
@@ -834,7 +912,7 @@ export function usePOS() {
       setItems(items.map(item => ({ ...item, discount: percentage, discountType, discountIdNumber, discountHolderName })));
       toast({ title: 'Global Discount Applied', description: `Applied ${percentage.toFixed(2)}% discount to all items.` });
     } else {
-      setItems(items.map(item => item.id === itemId ? { ...item, discount: percentage, discountType, discountIdNumber, discountHolderName } : item));
+      setItems(items.map(item => item.lineId === itemId ? { ...item, discount: percentage, discountType, discountIdNumber, discountHolderName } : item));
       toast({ title: 'Discount Applied', description: `Discount updated to ${percentage.toFixed(2)}%` });
     }
   };
@@ -873,7 +951,7 @@ export function usePOS() {
 
   const handleRestore = (index: number) => {
     if (items.length > 0) { toast({ title: 'Cart Not Empty', description: 'Please clear the current cart before restoring a transaction.', variant: 'destructive' }); return; }
-    setItems(heldTransactions[index].items);
+    setItems(withLineIds(heldTransactions[index].items));
     setHeldTransactions(prev => prev.filter((_, i) => i !== index));
     setIsHeldTransOpen(false);
   };
@@ -1012,7 +1090,7 @@ export function usePOS() {
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart);
-        setItems(parsed.items || []);
+        setItems(withLineIds(parsed.items));
         setSelectedCustomer(parsed.selectedCustomer || WALK_IN_CUSTOMER);
         setHeldTransactions(parsed.heldTransactions || []);
       } catch {}
@@ -1099,7 +1177,7 @@ export function usePOS() {
   const handleRequestPriceEdit = () => {
     if (selectedItem) {
       if (businessSettings?.enablePriceEditAuth) setIsPriceEditAuthOpen(true);
-      else unlockInlinePrice(selectedItem.id);
+      else unlockInlinePrice(selectedItem.lineId);
     } else {
       toast({ title: 'No Item Selected', description: 'Please select an item to authorize price change.', variant: 'destructive' });
     }
@@ -1114,7 +1192,7 @@ export function usePOS() {
   };
 
   const commitInlinePrice = (itemId: string, rawValue: string) => {
-    const item = items.find(i => i.id === itemId);
+    const item = items.find(i => i.lineId === itemId);
     if (item) {
       const newPrice = parseFloat(rawValue);
       if (!isNaN(newPrice) && newPrice >= 0 && newPrice !== item.price) handleUpdateItem(itemId, item.name, item.quantity, newPrice, item.discount);
@@ -1330,6 +1408,7 @@ export function usePOS() {
     isShutdownConfirmOpen, setIsShutdownConfirmOpen,
     // auth dialogs
     isLineVoidAuthOpen, setIsLineVoidAuthOpen, lineVoidAuthCredentials, pendingVoidItemId,
+    isCancelItemsOpen, setIsCancelItemsOpen, pendingCancelScope,
     isPriceEditAuthOpen, setIsPriceEditAuthOpen, priceEditAuthCredentials,
     isEditItemAuthOpen, setIsEditItemAuthOpen, editItemAuthCredentials, handleEditItemAuthSuccess,
     isSuspendAuthOpen, setIsSuspendAuthOpen, suspendAuthCredentials, handleSuspendAuthSuccess,
@@ -1338,6 +1417,7 @@ export function usePOS() {
     isOverallReadingAuthOpen, setIsOverallReadingAuthOpen, overallReadingAuthCredentials,
     // price levels
     priceLevels, selectedPriceLevelId, setSelectedPriceLevelId,
+    enablePriceLevelSwitch,
     activeLevelId, defaultLevelId, activeLevelName,
     // products (for search filters)
     products,
@@ -1345,7 +1425,7 @@ export function usePOS() {
     totalDue, subTotal, vatSales, vatAmount, taxDetails, numberOfItems,
     // handlers
     handleAddItem, handleAddItemBySKU, getSearchSuggestions, findExactCodeMatch, updateQuantity, handleUpdateItem,
-    handleVoidLine, performVoidLine, focusInlineQuantity,
+    handleVoidLine, performVoidLine, requestCancel, performCancel, focusInlineQuantity,
     removeItem, handleSuccessfulSale,
     handleOpenTender, handleDefaultTender,
     handleOpenEditDialog, handleOpenDiscountDialog, handleApplyDiscount,

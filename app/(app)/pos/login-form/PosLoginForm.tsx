@@ -2,11 +2,12 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Loader2, Eye, EyeOff, Settings, User, Lock, ShieldCheck, Monitor } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Settings, User, Lock, ShieldCheck, Monitor } from 'lucide-react';
 import Image from 'next/image';
 import { ConnectionSettingsDialog } from '../connection-settings/ConnectionSettingsDialog';
 import { useLoginForm } from './use-login-form';
 import type { PosLoginFormProps } from './login-form-types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function PosLoginForm({
   onLoginSuccess, terminalName, businessName, currentTime,
@@ -114,7 +115,7 @@ export function PosLoginForm({
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <><Loader2 className="h-4 w-4 animate-spin" />Logging In…</>
+                <><Spinner className="h-4 w-4" />Logging In…</>
               ) : 'Login to POS'}
             </button>
           </form>

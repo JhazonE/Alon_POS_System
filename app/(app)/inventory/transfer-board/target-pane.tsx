@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRightLeft, CheckCircle2, Loader2, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -14,6 +14,7 @@ import { cn, formatStockQuantity } from '@/lib/utils';
 import type { Warehouse } from '@/lib/types';
 
 import type { StagedTransferItem } from './transfer-board-types';
+import { Spinner } from '@/components/ui/spinner';
 
 interface TargetPaneProps {
   warehouses: Warehouse[];
@@ -110,7 +111,7 @@ export function TargetPane({
           onClick={onExecuteTransfer}
         >
           {isTransferring
-            ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ? <Spinner className="h-4 w-4 mr-2" />
             : <CheckCircle2 className="h-4 w-4 mr-2" />
           }
           Confirm Transfer

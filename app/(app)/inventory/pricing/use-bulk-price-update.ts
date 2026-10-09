@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getProducts } from '../actions';
+import { getProducts } from '@/app/(app)/products/actions';
 import { submitPriceUpdateBatch, type PriceUpdateItem } from './actions';
 import { applyAdjustment, type AdjustmentType } from '@/lib/price-update-math';
 import { useToast } from '@/hooks/use-toast';

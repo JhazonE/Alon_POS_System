@@ -1,9 +1,10 @@
 'use client';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { usePricing } from './use-pricing';
 import { MarkupAutomationCard } from './MarkupAutomationCard';
 import { MarkupPriorityCard } from './MarkupPriorityCard';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function PricingSettingsPage() {
   const { settings, isLoading, isSaving, set, handleSave, onDragEnd } = usePricing();
@@ -11,7 +12,7 @@ export default function PricingSettingsPage() {
   if (isLoading || !settings) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Spinner className="h-8 w-8 text-muted-foreground" />
       </div>
     );
   }
@@ -31,7 +32,7 @@ export default function PricingSettingsPage() {
             </button>
           </Link>
           <button onClick={handleSave} disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
-            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Changes'}
+            {isSaving ? <><Spinner className="mr-2 h-4 w-4" />Saving...</> : 'Save Changes'}
           </button>
         </div>
       </div>

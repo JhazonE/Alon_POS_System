@@ -11,7 +11,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Printer, AlertTriangle, Search, X, FileSpreadsheet } from 'lucide-react';
+import { Printer, AlertTriangle, Search, X, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { getApiUrl } from '@/lib/api-config';
@@ -44,6 +44,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Product {
   id: string;
@@ -265,7 +266,7 @@ export default function LowStockReportPage() {
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2 border-emerald-700 text-emerald-700 hover:bg-emerald-50"
             disabled={isExporting || products.length === 0}
           >
-            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            {isExporting ? <Spinner className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}
             Export to Excel
           </button>
         </div>
@@ -314,7 +315,7 @@ export default function LowStockReportPage() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <Spinner className="h-6 w-6 mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : products.length === 0 ? (

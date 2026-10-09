@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, ShoppingCart, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ShoppingCart } from 'lucide-react';
 import { Supplier } from '@/lib/types';
 import { getSuppliers } from '../products/actions';
 import {
@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
+import { Spinner } from '@/components/ui/spinner';
 
 export function ScheduledOrdersDialog({
   onCreateOrder
@@ -73,7 +74,7 @@ export function ScheduledOrdersDialog({
               {loading ? (
                  <TableRow>
                    <TableCell colSpan={4} className="text-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      <Spinner className="h-6 w-6 mx-auto text-muted-foreground" />
                    </TableCell>
                  </TableRow>
               ) : suppliers.length === 0 ? (

@@ -1,8 +1,9 @@
 'use client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Globe, PlusCircle } from 'lucide-react';
+import { Globe, PlusCircle } from 'lucide-react';
 import { ApiCard } from './ApiCard';
 import type { ExternalApi } from './external-api-types';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   apis: ExternalApi[];
@@ -19,7 +20,7 @@ export function ApiConnectionsTab({ apis, isLoading, testingId, onAddApi, onTogg
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     );
   }

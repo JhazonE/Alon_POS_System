@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { MatteCard, MatteCardHeader, MatteCardBody } from '@/components/matte/card';
-import { Calendar, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
+import { Calendar, ShoppingCart, CheckCircle2 } from 'lucide-react';
 import { getSuppliers } from '../products/actions';
-import { AddPurchaseOrderDialog } from '../purchases/add-purchase-order/add-purchase-order-dialog';
 import { Supplier } from '@/lib/types';
+import { Spinner } from '@/components/ui/spinner';
 
 export function SupplierScheduleCard() {
   const [scheduledSuppliers, setScheduledSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // State for creating an order
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string | undefined>(undefined);
-  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchAndFilter = async () => {
@@ -64,7 +62,7 @@ export function SupplierScheduleCard() {
   if (loading) {
     return (
       <MatteCard className="flex min-h-[150px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--matte-accent))]" />
+        <Spinner className="h-8 w-8 text-[rgb(var(--matte-accent))]" />
       </MatteCard>
     );
   }
@@ -97,10 +95,7 @@ export function SupplierScheduleCard() {
                 </div>
                 <button
                     className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/70 focus-visible:ring-ring px-[13px] rounded-lg gap-1.5 h-8 text-xs"
-                    onClick={() => {
-                        setSelectedSupplierId(s.id);
-                        setIsOrderDialogOpen(true);
-                    }}
+                    onClick={() => router.push(`/purchases/new?supplierId=${encodeURIComponent(s.id)}`)}
                 >
                     <ShoppingCart className="w-3 h-3 mr-1" />
                     Order
@@ -111,19 +106,6 @@ export function SupplierScheduleCard() {
         </div>
       </MatteCardBody>
     </MatteCard>
-
-    {isOrderDialogOpen && (
-        <AddPurchaseOrderDialog 
-            open={isOrderDialogOpen}
-            onOpenChange={setIsOrderDialogOpen}
-            prefillSupplierId={selectedSupplierId}
-            onAddOrder={() => {
-                // Remove from list? Or just keep it.
-                // Keeping it is safer as "done" state isn't tracked here.
-                setIsOrderDialogOpen(false);
-            }}
-        />
-    )}
     </>
   );
 }

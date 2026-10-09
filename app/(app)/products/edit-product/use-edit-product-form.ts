@@ -5,7 +5,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { calculateMarkupPercentage, calculateSuggestedPrice } from '@/lib/purchase-utils';
-import { applyPriceLevelAdjustment } from '@/lib/price-level-calc';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
@@ -31,23 +30,10 @@ import { productSchema, type ProductFormValues, type SellingUnitValues, type Sup
  * Calculate the price for a price level override.
  * Applies the price level's percentage adjustment to the selected base price (retail or cost).
  */
-export function calculatePriceLevelPrice(
-  levelId: string,
-  calculationBase: 'retail' | 'cost',
-  priceLevels: any[],
-  formPrice: number,
-  formCost: number
-): number {
-  if (!levelId) return 0;
-
-  const level = priceLevels.find(l => l.id === levelId);
-  if (!level) return 0;
-
-  const basePrice = calculationBase === 'retail' ? formPrice : formCost;
-  if (basePrice === undefined || basePrice === null) return 0;
-
-  return applyPriceLevelAdjustment(level.adjustmentType, level.percentageAdjustment, basePrice);
-}
+// Re-exported from lib so the selling-units tab can keep importing it from
+// here; the implementation moved to lib/price-level-calc.ts (it is pure, and
+// the add form needs the same function).
+export { calculatePriceLevelPrice } from '@/lib/price-level-calc';
 
 /**
  * Maps a product's stored selling units onto the form shape.

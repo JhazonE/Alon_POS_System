@@ -6,10 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { Sale } from './sales-types';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   table: ReactTable<Sale>;
@@ -77,7 +77,7 @@ export function SalesTable({ table, isLoading, expandedRows, toggleRowExpansion,
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={table.getAllColumns().length} className="h-24 text-center">
-                  <div className="flex justify-center items-center"><Loader2 className="h-6 w-6 animate-spin mr-2" />Loading transactions...</div>
+                  <div className="flex justify-center items-center"><Spinner className="h-6 w-6 mr-2 text-primary" />Loading transactions...</div>
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows.length > 0 ? (

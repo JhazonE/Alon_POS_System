@@ -7,11 +7,13 @@ import {
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
-import { Loader2, Package2, X, Eye, EyeOff, Tag, FlaskConical } from 'lucide-react';
+import { Package2, X, Eye, EyeOff, Tag, FlaskConical } from 'lucide-react';
 import { calculateEffectivePrice } from '@/lib/pricing';
 import { formatStockQuantity } from '@/lib/utils';
+import { buildLineId } from '@/lib/selling-unit-qty';
 import { useProductSearch } from './use-product-search';
 import type { ProductSearchDialogProps } from './product-search-types';
+import { Spinner } from '@/components/ui/spinner';
 
 const LS_KEY = 'pos_search_filter_visibility';
 
@@ -201,7 +203,7 @@ export function ProductSearchDialog({
                 />
                 {loading && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <Spinner className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
               </div>
@@ -243,11 +245,12 @@ export function ProductSearchDialog({
                 <CommandGroup className={loading ? 'opacity-50 transition-opacity duration-200' : 'transition-opacity duration-200'}>
                   {displayedProducts.map((product) => {
                     const outOfStock = product.stock <= 0;
+                    const lineId = buildLineId(product.id, product.sellingUnitId);
                     return (
                       <CommandItem
-                        key={product.id}
-                        value={`${product.name} ${product.barcode || ''} ${product.sku}`}
-                        onSelect={() => handleSelect(product.id)}
+                        key={lineId}
+                        value={lineId}
+                        onSelect={() => handleSelect(lineId)}
                         className="group mx-2 my-0.5 flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer transition-colors data-[selected=true]:bg-accent"
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">

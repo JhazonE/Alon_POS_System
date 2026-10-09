@@ -36,9 +36,9 @@ export function SuspendNoteDialog({
               </div>
             </div>
             <SheetTitle className="text-2xl font-extrabold text-center text-slate-800 dark:text-slate-100">
-              Suspend Transaction
+              Hold Transaction
             </SheetTitle>
-            <SheetDescription className="sr-only">Add a note to identify this suspended transaction later</SheetDescription>
+            <SheetDescription className="sr-only">Add a note to identify this held transaction later</SheetDescription>
             <p className="text-sm text-slate-500 text-center px-4">
               Add a note or description to identify this transaction later.
             </p>
@@ -73,7 +73,7 @@ export function SuspendNoteDialog({
               className="inline-flex items-center justify-center gap-2 text-sm tracking-[-0.005em] whitespace-nowrap active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 px-[18px] flex-1 h-12 rounded-xl font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-200/50 transition-all active:scale-[0.98]"
               onClick={handleConfirm}
             >
-              Suspend
+              Hold
             </button>
           </div>
         </div>

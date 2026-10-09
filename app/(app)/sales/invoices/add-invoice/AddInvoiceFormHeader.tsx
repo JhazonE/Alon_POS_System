@@ -2,6 +2,7 @@
 
 import { UseFormReturn } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InlineWarehouseSelect } from '@/app/(app)/components/inline-selects/inline-warehouse-select';
 import { InlinePaymentMethodSelect } from '@/app/(app)/components/inline-selects/inline-payment-method-select';
@@ -18,18 +19,20 @@ type Props = {
   isReferenceRequired: boolean;
   fetchWarehouses: () => void;
   fetchPaymentMethods: () => void;
+  /** Fold the fields away (kept mounted so values and validation survive). */
+  hidden?: boolean;
 };
 
 export function AddInvoiceFormHeader({
   form, customers, refetchCustomers,
   warehouses, paymentMethods, isReferenceRequired,
-  fetchWarehouses, fetchPaymentMethods,
+  fetchWarehouses, fetchPaymentMethods, hidden,
 }: Props) {
   return (
-    <div className="bg-background border-b p-4 grid grid-cols-4 gap-4 shrink-0">
+    <div className={cn('bg-background border-b px-4 py-2 grid grid-cols-4 gap-x-4 gap-y-1 shrink-0', hidden && 'hidden')}>
 
       {/* Column 1: Customer & Address */}
-      <div className="space-y-3">
+      <div className="space-y-1.5">
         <CustomerSelectionField
           control={form.control}
           customerList={customers}
@@ -43,7 +46,7 @@ export function AddInvoiceFormHeader({
           name="deliveryAddress"
           render={({ field }) => (
             <FormItem className="space-y-1">
-              <div className="flex items-center justify-between h-5">
+              <div className="flex items-center justify-between h-4">
                 <FormLabel className="text-xs font-semibold text-muted-foreground">Address</FormLabel>
               </div>
               <FormControl>
@@ -55,14 +58,14 @@ export function AddInvoiceFormHeader({
       </div>
 
       {/* Column 2: Dates & Warehouse */}
-      <div className="space-y-3">
+      <div className="space-y-1.5">
         <div className="grid grid-cols-2 gap-2">
           <FormField
             control={form.control}
             name="invoiceDate"
             render={({ field }) => (
               <FormItem className="space-y-1">
-                <div className="flex items-center justify-between h-5">
+                <div className="flex items-center justify-between h-4">
                   <FormLabel className="text-xs font-semibold text-muted-foreground">Invoice Date</FormLabel>
                 </div>
                 <FormControl><Input type="date" className="h-8 bg-background text-xs" {...field} /></FormControl>
@@ -74,7 +77,7 @@ export function AddInvoiceFormHeader({
             name="dueDate"
             render={({ field }) => (
               <FormItem className="space-y-1">
-                <div className="flex items-center justify-between h-5">
+                <div className="flex items-center justify-between h-4">
                   <FormLabel className="text-xs font-semibold text-muted-foreground">Due Date</FormLabel>
                 </div>
                 <FormControl><Input type="date" className="h-8 bg-background text-xs" {...field} /></FormControl>
@@ -87,7 +90,7 @@ export function AddInvoiceFormHeader({
           name="warehouse"
           render={({ field }) => (
             <FormItem className="space-y-1">
-              <div className="flex items-center h-5">
+              <div className="flex items-center h-4">
                 <FormLabel className="text-xs font-semibold text-muted-foreground">Warehouse</FormLabel>
               </div>
               <InlineWarehouseSelect
@@ -105,13 +108,13 @@ export function AddInvoiceFormHeader({
       </div>
 
       {/* Column 3: Payment & Shipping */}
-      <div className="space-y-3">
+      <div className="space-y-1.5">
         <FormField
           control={form.control}
           name="paymentMethod"
           render={({ field }) => (
             <FormItem className="space-y-1">
-              <div className="flex items-center h-5">
+              <div className="flex items-center h-4">
                 <FormLabel className="text-xs font-semibold text-muted-foreground">Payment Method</FormLabel>
               </div>
               <InlinePaymentMethodSelect
@@ -131,7 +134,7 @@ export function AddInvoiceFormHeader({
           name="shipping"
           render={({ field }) => (
             <FormItem className="space-y-1">
-              <div className="flex items-center justify-between h-5">
+              <div className="flex items-center justify-between h-4">
                 <FormLabel className="text-xs font-semibold text-muted-foreground">Shipping</FormLabel>
               </div>
               <FormControl><Input type="number" step="0.01" className="h-8 bg-background text-xs" {...field} /></FormControl>
@@ -141,13 +144,13 @@ export function AddInvoiceFormHeader({
       </div>
 
       {/* Column 4: Reference & Notes */}
-      <div className="space-y-3">
+      <div className="space-y-1.5">
         <FormField
           control={form.control}
           name="paymentReference"
           render={({ field }) => (
             <FormItem className="space-y-1">
-              <div className="flex items-center justify-between h-5">
+              <div className="flex items-center justify-between h-4">
                 <FormLabel className="text-xs font-semibold text-muted-foreground">
                   Reference {isReferenceRequired && <span className="text-destructive">*</span>}
                 </FormLabel>
@@ -169,7 +172,7 @@ export function AddInvoiceFormHeader({
           name="note"
           render={({ field }) => (
             <FormItem className="space-y-1">
-              <div className="flex items-center justify-between h-5">
+              <div className="flex items-center justify-between h-4">
                 <FormLabel className="text-xs font-semibold text-muted-foreground">Notes</FormLabel>
               </div>
               <FormControl>

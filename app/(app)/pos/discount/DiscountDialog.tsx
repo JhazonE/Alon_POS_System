@@ -146,6 +146,7 @@ export function DiscountDialog({ isOpen, onOpenChange, item, onApplyDiscount, ha
                   type="number"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
+                  placeholder="0"
                   className={`text-center text-3xl font-black h-20 border-2 rounded-2xl transition-all duration-200 focus-visible:ring-blue-500 focus:border-blue-500 ${
                     ['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType)
                       ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'

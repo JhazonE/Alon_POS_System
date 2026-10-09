@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Pencil, Check, X, Loader2, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Pencil, Check, X, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { FormControl } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
 
 export interface InlineEditableMultiSelectProps<T> {
   items: T[];
@@ -157,7 +158,7 @@ export function InlineEditableMultiSelect<T>({
                         disabled={isSaving || !renameDraft.trim()}
                         onClick={(e) => { e.preventDefault(); commitRename(); }}
                       >
-                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        {isSaving ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                       </button>
                       <button
                         type="button"
@@ -223,7 +224,7 @@ export function InlineEditableMultiSelect<T>({
                   disabled={isSaving || !addDraft.trim()}
                   onClick={(e) => { e.preventDefault(); commitAdd(); }}
                 >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {isSaving ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                 </button>
                 <button
                   type="button"

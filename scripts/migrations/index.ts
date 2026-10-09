@@ -128,6 +128,8 @@ import './124_add_selling_unit_to_stock_adjustments';
 import './125_add_selling_unit_to_bad_order_items';
 import './126_add_selling_unit_to_sales_order_items';
 import './127_add_selling_unit_to_stock_count_items';
+import './128_add_selling_unit_snapshot_to_sales_invoice_items';
+import './129_add_price_level_switch_to_pos_settings';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions

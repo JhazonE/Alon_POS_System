@@ -14,7 +14,7 @@ type Options = {
 export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Options) {
   const [discountType, setDiscountType] = useState<DiscountType>('percent');
   const [scope, setScope] = useState<'selected' | 'all'>('selected');
-  const [value, setValue] = useState<string>('0');
+  const [value, setValue] = useState<string>('');
   const [idNumber, setIdNumber] = useState<string>('');
   const [holderName, setHolderName] = useState<string>('');
 
@@ -25,7 +25,9 @@ export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Opt
     if (isOpen) {
       setDiscountType('percent');
       setScope('selected');
-      setValue(item?.discount.toString() || '0');
+      // Empty, not '0': a literal zero makes the cashier clear the field
+      // before typing (or they get '010'). The placeholder shows the 0.
+      setValue(item?.discount ? item.discount.toString() : '');
       setIdNumber('');
       setHolderName('');
     }
@@ -59,7 +61,11 @@ export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Opt
     if (scope === 'all') {
       onApplyDiscount('ALL', percentage, discountType, details);
     } else if (item) {
-      onApplyDiscount(item.id, percentage, discountType, details);
+      // Cart identity is lineId, not the product id: two selling units of one
+      // product are two lines, and an expanded product's base line is
+      // "<productId>::<baseUnitId>". Passing item.id would match no line and
+      // silently drop the discount, including a statutory PWD/senior one.
+      onApplyDiscount(item.lineId, percentage, discountType, details);
     }
     onOpenChange(false);
   };

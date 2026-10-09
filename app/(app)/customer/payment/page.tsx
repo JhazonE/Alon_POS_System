@@ -47,7 +47,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, TrendingUp, AlertCircle, FileText, Search, MoreHorizontal, Printer, FileDown, Banknote, Eye, Check, ChevronsUpDown, Receipt, FileSpreadsheet, Loader2, Filter, X } from 'lucide-react';
+import { CalendarIcon, TrendingUp, AlertCircle, FileText, Search, MoreHorizontal, Printer, FileDown, Banknote, Eye, Check, ChevronsUpDown, Receipt, FileSpreadsheet, Filter, X } from 'lucide-react';
 
 
 import { cn, formatCurrency } from '@/lib/utils';
@@ -63,6 +63,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { Spinner } from '@/components/ui/spinner';
 
 // --- Shared Types & Helpers ---
 
@@ -581,7 +582,7 @@ function PaymentHistory() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring px-[13px] text-xs rounded-lg gap-1.5 h-9" disabled={isExporting}>
-                                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4"/>}
+                                {isExporting ? <Spinner className="mr-2 h-4 w-4" /> : <FileDown className="mr-2 h-4 w-4"/>}
                                 Export
                             </button>
                         </DropdownMenuTrigger>

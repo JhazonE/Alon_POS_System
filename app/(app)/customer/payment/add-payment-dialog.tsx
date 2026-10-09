@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon, Plus, Loader2 } from 'lucide-react';
+import { CalendarIcon, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -50,6 +50,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 const paymentSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
@@ -478,7 +479,7 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
               <button type="submit" disabled={isSubmitting || totalAllocated > (paymentAmount || 0)} className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.12)] hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.16)] focus-visible:ring-primary/55 h-10 px-[18px]">
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner className="mr-2 h-4 w-4" />
                     Adding Payment...
                   </>
                 ) : (

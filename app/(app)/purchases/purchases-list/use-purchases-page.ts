@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { format as formatFns } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
@@ -15,7 +16,6 @@ import {
   useSystemSettings,
   useUpdatePurchaseOrder,
   useReceivePurchaseOrder,
-  useInvalidatePurchaseOrders,
 } from '@/hooks/use-purchase-order-mutations';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
@@ -25,6 +25,7 @@ import { exportToCSV, exportToPDF } from '../purchase-order-export-utils';
 import { printPurchaseOrder } from '../purchase-order-print-utils';
 
 export function usePurchasesPage() {
+  const router = useRouter();
   const { products } = useProducts();
   const { profile } = useBusinessProfile();
   const { settings } = useSystemSettings();
@@ -42,19 +43,10 @@ export function usePurchasesPage() {
 
   // ---- dialog state --------------------------------------------------------
 
-  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-
-  const [reorderData, setReorderData] = useState<PurchaseOrder | null>(null);
-  const [isReorderOpen, setIsReorderOpen] = useState(false);
-
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
   const [orderToReceive, setOrderToReceive] = useState<PurchaseOrder | null>(null);
 
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
-
-  const [isScheduledOrderOpen, setIsScheduledOrderOpen] = useState(false);
-  const [scheduledSupplierId, setScheduledSupplierId] = useState<string | undefined>(undefined);
 
   // ---- data ----------------------------------------------------------------
 
@@ -72,7 +64,6 @@ export function usePurchasesPage() {
 
   const updateOrderMutation = useUpdatePurchaseOrder();
   const receiveMutation = useReceivePurchaseOrder();
-  const invalidatePurchaseOrders = useInvalidatePurchaseOrders();
 
   // ---- effects -------------------------------------------------------------
 
@@ -147,11 +138,6 @@ export function usePurchasesPage() {
     });
   };
 
-  const addPurchaseOrder = (_order: PurchaseOrder) => {
-    invalidatePurchaseOrders();
-    setEditingOrder(null);
-  };
-
   const handleSearch = () => {
     setSearchTerm(searchQuery);
     setCurrentPage(1);
@@ -198,14 +184,17 @@ export function usePurchasesPage() {
     }
   };
 
+  // Creating / editing an order happens on its own page, not in an overlay.
   const handleEdit = (order: PurchaseOrder) => {
-    setEditingOrder(order);
-    setIsEditOpen(true);
+    router.push(`/purchases/${order.id}/edit`);
   };
 
   const handleReorder = (order: PurchaseOrder) => {
-    setReorderData(order);
-    setIsReorderOpen(true);
+    router.push(`/purchases/new?reorderFrom=${encodeURIComponent(order.id)}`);
+  };
+
+  const handleCreateScheduledOrder = (supplierId: string) => {
+    router.push(`/purchases/new?supplierId=${encodeURIComponent(supplierId)}`);
   };
 
   const handleViewDetails = (order: PurchaseOrder) => {
@@ -239,27 +228,21 @@ export function usePurchasesPage() {
     hasActiveFilters,
 
     // dialog state
-    editingOrder,
-    isEditOpen, setIsEditOpen,
-    reorderData,
-    isReorderOpen, setIsReorderOpen,
     isReceiveDialogOpen, setIsReceiveDialogOpen,
     orderToReceive,
     viewingOrder, setViewingOrder,
-    isScheduledOrderOpen, setIsScheduledOrderOpen,
-    scheduledSupplierId, setScheduledSupplierId,
 
     // handlers
     updatePurchaseOrder,
     handleReceiveConfirm,
     handleReceiveOpen,
-    addPurchaseOrder,
     handleSearch,
     resetFilters,
     handlePrint,
     handleExport,
     handleEdit,
     handleReorder,
+    handleCreateScheduledOrder,
     handleViewDetails,
   };
 }

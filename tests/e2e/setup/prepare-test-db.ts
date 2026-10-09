@@ -208,6 +208,23 @@ async function seedFixtures(): Promise<void> {
     );
   }
 
+  // Two batches at different costs so a FIFO deduction is observable: a Case of
+  // 24 must consume the OLDER batch first. Totals 60, matching the product's
+  // seeded stock. `selling_price` is NOT NULL with no default, so it must be
+  // supplied.
+  await conn.query(
+    `INSERT INTO inventory_batches
+       (id, product_id, received_date, quantity_in, quantity_remaining,
+        unit_cost, selling_price, source_type, created_at)
+     VALUES
+       (?, ?, '2026-01-01', 40, 40, 18.0000, 25.00, 'seed', NOW()),
+       (?, ?, '2026-02-01', 20, 20, 20.0000, 25.00, 'seed', NOW())`,
+    [
+      'batch-su-old', SELLING_UNITS_PRODUCT.id,
+      'batch-su-new', SELLING_UNITS_PRODUCT.id,
+    ],
+  );
+
   // Perishable product — managlahi ang insert kay kinahanglan niya ang is_perishable flag.
   await conn.query(
     `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, is_perishable)
@@ -336,7 +353,7 @@ async function seedFixtures(): Promise<void> {
   await conn.query('INSERT INTO suppliers (id, name) VALUES (?, ?)', [TEST_SUPPLIER.id, TEST_SUPPLIER.name]);
   await conn.query('INSERT INTO warehouses (id, name) VALUES (?, ?)', [TEST_WAREHOUSE.id, TEST_WAREHOUSE.name]);
 
-  // Product assigned to TEST_WAREHOUSE — the Bulk Update Price drawer's product
+  // Product assigned to TEST_WAREHOUSE — the Pricing page's product
   // picker filters by warehouse_id, and TEST_PRODUCTS all have NULL warehouse_id.
   await conn.query(
     `INSERT INTO products (id, name, price, cost, stock, sku, barcode, warehouse_id, availability)

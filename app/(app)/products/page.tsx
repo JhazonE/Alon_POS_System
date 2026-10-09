@@ -29,14 +29,13 @@ import { ManageSuppliersDialog } from './suppliers/ManageSuppliersDialog';
 import { ManageShelfLocationsDialog } from './shelf-locations/ManageShelfLocationsDialog';
 import { ManageUnitOfMeasureDialog } from './units-of-measure/ManageUnitOfMeasureDialog';
 import { ManageWarehousesDialog } from '../sales/manage-warehouses/ManageWarehousesDialog';
-import { BulkPriceUpdateDrawer } from './bulk-price-update/BulkPriceUpdateDrawer';
 
 import { Search, ChevronDown, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
 import { PrintBarcodeDialog } from './print-barcode/print-barcode-dialog';
 import { useState, useMemo, Fragment, useEffect, useCallback, Suspense } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn, formatQuantity, formatStockQuantity } from '@/lib/utils';
@@ -45,15 +44,14 @@ import { getProducts, getProductsCount, deleteProduct, getDepartments } from './
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { AddPurchaseOrderDialog } from '../purchases/add-purchase-order/add-purchase-order-dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { SellingUnitsPanel, StockDot } from './components/selling-units-panel';
 
-// Expand, Name, SKU, Barcode, Unit, Stock, Cost, Retail Price, Warehouse, Shelf, Actions
-const PRODUCT_TABLE_COLUMN_COUNT = 11;
+// Expand, Name, Barcode, Unit, Stock, Cost, Retail Price, Warehouse, Shelf, Actions
+const PRODUCT_TABLE_COLUMN_COUNT = 10;
 
 function ProductRow({ product, onProductDeleted, onProductUpdated, products, productOptions, onOptionsRefresh, depth = 0, lowStockThreshold }: {
   product: ProductWithChildren;
@@ -69,7 +67,7 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [restockDialogOpen, setRestockDialogOpen] = useState(false);
+  const router = useRouter();
   const [printBarcodeOpen, setPrintBarcodeOpen] = useState(false);
 
   const { toast } = useToast();
@@ -136,7 +134,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
             </div>
           )}
         </TableCell>
-        <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
         <TableCell className="hidden lg:table-cell">{product.barcode}</TableCell>
         <TableCell className="hidden sm:table-cell text-center text-muted-foreground">
           {product.unitOfMeasure}
@@ -185,7 +182,7 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
 
               {/* Restock Option */}
               {stockStatus !== 'in-stock' && (
-                  <DropdownMenuItem onClick={() => setRestockDialogOpen(true)} className="text-orange-600 focus:text-orange-600">
+                  <DropdownMenuItem onClick={() => router.push(`/purchases/new?productId=${encodeURIComponent(product.id)}`)} className="text-orange-600 focus:text-orange-600">
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     <span>Restock</span>
                   </DropdownMenuItem>
@@ -225,14 +222,6 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
                 onProductUpdated={onProductUpdated} 
                 productOptions={productOptions}
                 onOptionsRefresh={onOptionsRefresh}
-            />
-            <AddPurchaseOrderDialog 
-                open={restockDialogOpen}
-                onOpenChange={setRestockDialogOpen}
-                prefillProduct={product}
-                onAddOrder={() => {
-                  if (onProductUpdated) onProductUpdated();
-                }}
             />
           </div>
         </TableCell>
@@ -289,7 +278,6 @@ function ProductSkeleton() {
     <TableRow>
       <TableCell className="hidden sm:table-cell w-12"><Skeleton className="h-5 w-5" /></TableCell>
       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-      <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
       <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
       <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
       <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
@@ -351,7 +339,6 @@ function ProductsContent() {
   const [isDepartmentsOpen, setIsDepartmentsOpen] = useState(false);
   const [isUnitOfMeasureOpen, setIsUnitOfMeasureOpen] = useState(false);
   const [isWarehousesOpen, setIsWarehousesOpen] = useState(false);
-  const [isBulkPriceUpdateOpen, setIsBulkPriceUpdateOpen] = useState(false);
 
   const filters = {
     search: debouncedSearchTerm || undefined,
@@ -559,12 +546,6 @@ function ProductsContent() {
                 }}
                 trigger={<span className="sr-only">Open Warehouses</span>}
             />
-            <BulkPriceUpdateDrawer
-              open={isBulkPriceUpdateOpen}
-              onOpenChange={setIsBulkPriceUpdateOpen}
-              productOptions={productOptions || {}}
-              onUpdated={() => loadProducts(currentPage, pageSize)}
-            />
             <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
               <DialogTrigger asChild>
                 <button className="inline-flex items-center justify-center rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] gap-2" onClick={() => {
@@ -736,9 +717,6 @@ function ProductsContent() {
                 </DialogFooter>
               </DialogContent>
            </Dialog>
-            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:border-primary/40 focus-visible:ring-ring h-10 px-[18px] bg-background/50 backdrop-blur-sm" onClick={() => setIsBulkPriceUpdateOpen(true)}>
-              Bulk Update Price
-            </button>
             <AddProductDialog
               onProductAdded={() => loadProducts(currentPage, pageSize)}
               productOptions={productOptions}
@@ -846,7 +824,6 @@ function ProductsContent() {
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="w-12 hidden sm:table-cell"><span className="sr-only">Expand</span></TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">SKU</TableHead>
                 <TableHead className="hidden lg:table-cell">Barcode</TableHead>
                 <TableHead className="hidden sm:table-cell text-center">Unit</TableHead>
                 <TableHead className="text-center">Stock</TableHead>

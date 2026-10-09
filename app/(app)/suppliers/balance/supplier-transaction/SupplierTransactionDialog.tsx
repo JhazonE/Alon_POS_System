@@ -7,12 +7,13 @@ import {
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Loader2, Printer, Download, FileText } from 'lucide-react';
+import { Printer, Download, FileText } from 'lucide-react';
 import { useSupplierTransaction, PAGE_SIZE } from './use-supplier-transaction';
 import { TransactionSummaryCards } from './TransactionSummaryCards';
 import { TransactionFilters } from './TransactionFilters';
 import { TransactionItem } from './TransactionItem';
 import { SOASupplierInfo } from '@/lib/print-supplier-soa';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   supplierId: string;
@@ -85,7 +86,7 @@ export function SupplierTransactionDialog({
         <div className="flex-1 overflow-auto mt-4 px-1">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Spinner className="h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Loading history...</p>
             </div>
           ) : (

@@ -3,6 +3,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function Home() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+      <Spinner className="h-32 w-32 text-primary" />
     </div>
   );
 }
