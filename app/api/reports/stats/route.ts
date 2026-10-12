@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  warehouseIdsForBranch,
+  assertWarehouseInBranch,
+  saleBranchFilter,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 import { getFiscalYearRange, getCurrentFiscalYear, toLocalYmd, getSamePeriodLastMonth } from '@/lib/fiscal-utils';
 
 export async function GET(request: NextRequest) {
@@ -8,45 +15,91 @@ export async function GET(request: NextRequest) {
         // Optional date range filters could be added later, defaulting to "all time" or "recent"
         // For now, let's fetch summary data.
 
+        // Branch isolation. The scope comes from the database via uid, never
+        // from a branch the caller claims. A warehouseId that belongs to
+        // another branch is refused outright rather than quietly ignored.
+        let branchWarehouseIds: string[] | null;
+        let saleScope: ReturnType<typeof saleBranchFilter>;
+        try {
+            const scope = await resolveScopeFromRequest(searchParams);
+            const requestedWarehouseId =
+                searchParams.get('warehouseId') || searchParams.get('warehouse_id');
+            if (requestedWarehouseId) {
+                await assertWarehouseInBranch(requestedWarehouseId, scope);
+            }
+            branchWarehouseIds = await warehouseIdsForBranch(scope);
+            saleScope = saleBranchFilter(scope, 'st.id');
+        } catch (error) {
+            const mapped = branchErrorResponse(error);
+            if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+            throw error;
+        }
+
+        // Sales carry no warehouse column; a sale belongs to the branch of the
+        // terminal that rang it. Every sales read below goes through this
+        // scoped_sales CTE, so a branch only sees its own sales while head
+        // office (no filter) reads the table exactly as before.
+        const scopedSalesCte = `WITH scoped_sales AS (
+            SELECT st.* FROM sales_transactions st${saleScope ? ` WHERE ${saleScope.sql}` : ''}
+        )`;
+        const scopedSalesParams: any[] = saleScope ? saleScope.params : [];
+
+        // Product counts: null means head office (no filter). An empty array
+        // means a branch with no warehouses, which must count nothing, so it
+        // gets a predicate that can never match instead of an unfiltered scan.
+        const scopedProductsCte = `scoped_products AS (
+            SELECT * FROM products${
+                branchWarehouseIds === null
+                    ? ''
+                    : branchWarehouseIds.length === 0
+                        ? ' WHERE 1 = 0'
+                        : ` WHERE warehouse_id IN (${branchWarehouseIds.map(() => '?').join(',')})`
+            }
+        )`;
+        const scopedProductsParams: any[] = branchWarehouseIds ?? [];
+
         // 1. Sales Over Time (Last 30 Days)
         const salesByDayQuery = `
+            ${scopedSalesCte}
             SELECT
                 DATE(invoice_date) as date,
                 SUM(total) as sales
-            FROM sales_transactions
+            FROM scoped_sales
             WHERE status = 'Paid'
             AND invoice_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY DATE(invoice_date)
             ORDER BY DATE(invoice_date) ASC
         `;
-        const salesByDayData = await query(salesByDayQuery) as any[];
+        const salesByDayData = await query(salesByDayQuery, scopedSalesParams) as any[];
 
         // 2. Top Selling Products (Top 5 by Revenue)
         const topProductsQuery = `
+            ${scopedSalesCte}
             SELECT
                 si.product_name as name,
                 SUM(si.quantity * si.price) as sales
             FROM sale_items si
-            JOIN sales_transactions st ON si.sale_id = st.id
+            JOIN scoped_sales st ON si.sale_id = st.id
             WHERE st.status = 'Paid'
             GROUP BY si.product_id, si.product_name
             ORDER BY sales DESC
             LIMIT 5
         `;
-        const topProductsData = await query(topProductsQuery) as any[];
+        const topProductsData = await query(topProductsQuery, scopedSalesParams) as any[];
 
         // 3. Sales by Category
         const salesByCategoryQuery = `
+            ${scopedSalesCte}
             SELECT
                 IFNULL(p.category, 'Uncategorized') as name,
                 SUM(si.quantity * si.price) as value
             FROM sale_items si
-            JOIN sales_transactions st ON si.sale_id = st.id
+            JOIN scoped_sales st ON si.sale_id = st.id
             JOIN products p ON si.product_id = p.id
             WHERE st.status = 'Paid'
             GROUP BY p.category
         `;
-        const salesByCategoryData = await query(salesByCategoryQuery) as any[];
+        const salesByCategoryData = await query(salesByCategoryQuery, scopedSalesParams) as any[];
 
         // 4. Dashboard Summary Metrics
         // Total Revenue (All time or this month? Dashboard says "Total Revenue", usually implies broad or specific period. Let's do current month for "trends" or all time? 
@@ -84,7 +137,8 @@ export async function GET(request: NextRequest) {
 
         // Available fiscal years: from the earliest paid sale through the current FY.
         const [firstSaleRow] = await query(
-            "SELECT MIN(invoice_date) AS first_date FROM sales_transactions WHERE status = 'Paid'"
+            `${scopedSalesCte} SELECT MIN(invoice_date) AS first_date FROM scoped_sales WHERE status = 'Paid'`,
+            scopedSalesParams
         ) as any[];
         const availableFiscalYears: number[] = [];
         if (firstSaleRow?.first_date) {
@@ -110,24 +164,26 @@ export async function GET(request: NextRequest) {
         // Services are excluded: they have no stock, so they would otherwise appear
         // permanently out-of-stock and drag inventory valuation totals to zero.
         const summaryQuery = `
+            ${scopedSalesCte}, ${scopedProductsCte}
             SELECT
-                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid') as total_revenue_all_time,
-                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date >= ?) as total_revenue_month,
-                (SELECT COUNT(*) FROM sales_transactions WHERE status = 'Paid' AND invoice_date >= ?) as total_sales_month,
-                (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as products_sold_month,
-                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as total_revenue_fiscal_ytd,
-                (SELECT COUNT(*) FROM products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
-                (SELECT COUNT(*) FROM products WHERE type = 'standard') as total_items,
-                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date = ?) as today_revenue,
-                (SELECT COUNT(*) FROM sales_transactions WHERE status = 'Paid' AND invoice_date = ?) as today_sales,
-                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date = ?) as yesterday_revenue,
-                (SELECT COALESCE(SUM(total), 0) FROM sales_transactions WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as last_month_revenue,
-                (SELECT COALESCE(SUM(si.quantity * si.cost_at_sale), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ? AND si.cost_at_sale IS NOT NULL) as cogs_month,
-                (SELECT COALESCE(SUM(CASE WHEN si.cost_at_sale IS NOT NULL THEN si.quantity * si.price ELSE 0 END), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as covered_line_revenue_month,
-                (SELECT COALESCE(SUM(si.quantity * si.price), 0) FROM sale_items si JOIN sales_transactions st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as total_line_revenue_month
+                (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid') as total_revenue_all_time,
+                (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ?) as total_revenue_month,
+                (SELECT COUNT(*) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ?) as total_sales_month,
+                (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si JOIN scoped_sales st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as products_sold_month,
+                (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as total_revenue_fiscal_ytd,
+                (SELECT COUNT(*) FROM scoped_products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
+                (SELECT COUNT(*) FROM scoped_products WHERE type = 'standard') as total_items,
+                (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as today_revenue,
+                (SELECT COUNT(*) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as today_sales,
+                (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as yesterday_revenue,
+                (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as last_month_revenue,
+                (SELECT COALESCE(SUM(si.quantity * si.cost_at_sale), 0) FROM sale_items si JOIN scoped_sales st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ? AND si.cost_at_sale IS NOT NULL) as cogs_month,
+                (SELECT COALESCE(SUM(CASE WHEN si.cost_at_sale IS NOT NULL THEN si.quantity * si.price ELSE 0 END), 0) FROM sale_items si JOIN scoped_sales st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as covered_line_revenue_month,
+                (SELECT COALESCE(SUM(si.quantity * si.price), 0) FROM sale_items si JOIN scoped_sales st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as total_line_revenue_month
         `;
 
         const [summaryData] = await query(summaryQuery, [
+            ...scopedSalesParams, ...scopedProductsParams,
             currentMonthStartStr, currentMonthStartStr, currentMonthStartStr,
             fiscalStartDateStr, fiscalEndDateStr,
             todayStr, todayStr, yesterdayStr,

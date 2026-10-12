@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  warehouseIdsForBranch,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 const COST_VALUE_EXPR = `COALESCE(
   (SELECT SUM(quantity_remaining * unit_cost) FROM inventory_batches WHERE product_id = p.id AND quantity_remaining > 0),
@@ -25,6 +31,48 @@ export async function GET(request: NextRequest) {
     // Services are excluded: they carry no stock, so they would otherwise pad
     // this valuation report with zero-value rows and inflate totalItems.
     conditions.push("p.type = 'standard'");
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. A warehouseId that belongs to
+    // another branch is refused outright rather than quietly ignored.
+    let branchWarehouseIds: string[] | null;
+    try {
+      const scope = await resolveScopeFromRequest(searchParams);
+      const requestedWarehouseId =
+        searchParams.get('warehouseId') || searchParams.get('warehouse_id');
+      if (requestedWarehouseId) {
+        await assertWarehouseInBranch(requestedWarehouseId, scope);
+      }
+      branchWarehouseIds = await warehouseIdsForBranch(scope);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    // null means head office — apply no warehouse filter. An empty array
+    // means a branch with no warehouses, which must return nothing rather
+    // than everything.
+    if (branchWarehouseIds !== null) {
+      if (branchWarehouseIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          pagination: { page, limit, totalItems: 0, totalPages: 0 },
+          summary: {
+            totalItems: 0,
+            totalCostValue: 0,
+            totalRetailValue: 0,
+            totalProfit: 0,
+            marginPct: 0,
+          },
+        });
+      }
+      conditions.push(
+        `p.warehouse_id IN (${branchWarehouseIds.map(() => '?').join(',')})`
+      );
+      params.push(...branchWarehouseIds);
+    }
 
     if (category && category !== 'all') {
       conditions.push('p.category = ?');

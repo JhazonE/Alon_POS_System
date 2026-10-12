@@ -261,3 +261,76 @@ export function branchErrorResponse(error: unknown): {
   }
   return null;
 }
+
+/**
+ * A SQL predicate limiting a terminal column to the resolved branch.
+ *
+ * sales_transactions / pos_transactions carry no warehouse column, so a sale
+ * belongs to a branch through the terminal that rang it
+ * (pos_terminals.branch_id). Returns null for head office, meaning "apply no
+ * filter" (same convention as warehouseIdsForBranch).
+ *
+ * Unlike a warehouse id list this needs no empty-array special case: a branch
+ * with no terminals makes the subquery empty, so the predicate matches
+ * nothing. A NULL terminal_id is never IN the subquery, so a sale with no
+ * terminal belongs to no branch and is visible to head office only.
+ *
+ * `terminalColumn` must be a fixed column expression written in route code
+ * (e.g. 'pt.terminal_id'), never request input.
+ */
+export function terminalBranchFilter(
+  scope: BranchScope,
+  terminalColumn: string
+): { sql: string; params: string[] } | null {
+  if (scope.scope === 'all') return null;
+  return {
+    sql: `${terminalColumn} IN (SELECT id FROM pos_terminals WHERE branch_id = ?)`,
+    params: [scope.branchId],
+  };
+}
+
+/**
+ * Like terminalBranchFilter, for queries over sales_transactions that do not
+ * already join pos_transactions: matches a sale when the terminal that rang
+ * it belongs to the resolved branch. `saleIdColumn` is a fixed column
+ * expression (e.g. 'st.id').
+ */
+export function saleBranchFilter(
+  scope: BranchScope,
+  saleIdColumn: string
+): { sql: string; params: string[] } | null {
+  const terminal = terminalBranchFilter(scope, 'bpt.terminal_id');
+  if (!terminal) return null;
+  return {
+    sql: `EXISTS (SELECT 1 FROM pos_transactions bpt WHERE bpt.sale_id = ${saleIdColumn} AND ${terminal.sql})`,
+    params: terminal.params,
+  };
+}
+
+/**
+ * Reject a terminal that does not belong to the resolved branch.
+ *
+ * The terminal counterpart of assertWarehouseInBranch: a valid terminal in
+ * another branch must be refused, not just an unknown one, so a crafted
+ * terminalId cannot read another establishment's readings.
+ */
+export async function assertTerminalInBranch(
+  terminalId: string,
+  scope: BranchScope
+): Promise<void> {
+  if (scope.scope === 'all') return;
+
+  const rows = (await query(
+    `SELECT branch_id AS branchId FROM pos_terminals WHERE id = ?`,
+    [terminalId]
+  )) as any[];
+
+  if (rows.length === 0) {
+    throw new BranchResolutionError(`Unknown terminal: ${terminalId}`);
+  }
+  if (rows[0].branchId !== scope.branchId) {
+    throw new BranchResolutionError(
+      `Terminal ${terminalId} does not belong to branch ${scope.branchId}`
+    );
+  }
+}

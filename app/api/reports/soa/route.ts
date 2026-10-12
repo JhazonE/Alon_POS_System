@@ -4,6 +4,12 @@ import { query } from '@/lib/mysql';
 
 export async function GET(request: NextRequest) {
   try {
+    // No branch filter (deferred to Phase 2): a Statement of Account is one
+    // customer's whole ledger over the company-wide customer master (D8), and
+    // its running balance is only correct over every invoice AND payment.
+    // customer_payments has no branch column and a payment can be unallocated,
+    // so cutting the ledger by branch would produce a wrong balance. Needs
+    // branch attribution on payments first.
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
     const fromDate = searchParams.get('from');

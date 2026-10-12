@@ -3,6 +3,9 @@ import { query } from '@/lib/mysql';
 
 export async function GET(request: NextRequest) {
   try {
+    // No branch filter: this route reads only company-wide master data (D8).
+    // It returns distinct category and brand names, which D8 keeps shared across
+    // every branch; no product row, stock figure or price leaves this route.
     const categories = await query('SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != "" ORDER BY category');
     const brands = await query('SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != "" ORDER BY brand');
 

@@ -1,10 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  saleBranchFilter,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { getFiscalYearRange, getCurrentFiscalYear, formatFiscalYear, toLocalYmd } from '@/lib/fiscal-utils';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims.
+    let branchScope: BranchScope;
+    try {
+      branchScope = await resolveScopeFromRequest(searchParams);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    // Sales carry no warehouse column; a sale belongs to the branch of the
+    // terminal that rang it. Every sales read below goes through this
+    // scoped_sales CTE, so a branch only ever sees its own sales while head
+    // office (no filter) reads the table exactly as before.
+    const saleScope = saleBranchFilter(branchScope, 'st.id');
+    const scopedSalesCte = `WITH scoped_sales AS (
+      SELECT st.* FROM sales_transactions st${saleScope ? ` WHERE ${saleScope.sql}` : ''}
+    )`;
+    const scopedSalesParams: any[] = saleScope ? saleScope.params : [];
 
     const settingsResult = await query("SELECT fiscal_year_start_month FROM pos_settings LIMIT 1") as any[];
     const startMonth = settingsResult[0]?.fiscal_year_start_month || 1;
@@ -19,7 +46,8 @@ export async function GET(request: NextRequest) {
 
     // Available fiscal years from earliest paid sale through current FY.
     const [firstSaleRow] = await query(
-      "SELECT MIN(invoice_date) AS first_date FROM sales_transactions WHERE status = 'Paid'"
+      `${scopedSalesCte} SELECT MIN(invoice_date) AS first_date FROM scoped_sales WHERE status = 'Paid'`,
+      scopedSalesParams
     ) as any[];
     const availableFiscalYears: number[] = [];
     if (firstSaleRow?.first_date) {
@@ -31,21 +59,23 @@ export async function GET(request: NextRequest) {
 
     // Fiscal-year summary (revenue + transactions from transactions; profit from items).
     const [summaryRow] = await query(
-      `SELECT
+      `${scopedSalesCte}
+       SELECT
          COALESCE(SUM(st.total), 0) AS revenue,
          COUNT(*) AS transactions
-       FROM sales_transactions st
+       FROM scoped_sales st
        WHERE st.status = 'Paid' AND st.invoice_date >= ? AND st.invoice_date <= ?`,
-      [startStr, endStr]
+      [...scopedSalesParams, startStr, endStr]
     ) as any[];
 
     const [costRow] = await query(
-      `SELECT COALESCE(SUM(si.quantity * COALESCE(si.cost_at_sale, p.cost, 0)), 0) AS cost
+      `${scopedSalesCte}
+       SELECT COALESCE(SUM(si.quantity * COALESCE(si.cost_at_sale, p.cost, 0)), 0) AS cost
        FROM sale_items si
-       JOIN sales_transactions st ON si.sale_id = st.id
+       JOIN scoped_sales st ON si.sale_id = st.id
        JOIN products p ON si.product_id = p.id
        WHERE st.status = 'Paid' AND st.invoice_date >= ? AND st.invoice_date <= ?`,
-      [startStr, endStr]
+      [...scopedSalesParams, startStr, endStr]
     ) as any[];
 
     const revenue = parseFloat(summaryRow.revenue);
@@ -54,25 +84,27 @@ export async function GET(request: NextRequest) {
 
     // Per-calendar-month revenue/transactions.
     const monthlyRevRows = await query(
-      `SELECT DATE_FORMAT(st.invoice_date, '%Y-%m') AS ym,
+      `${scopedSalesCte}
+       SELECT DATE_FORMAT(st.invoice_date, '%Y-%m') AS ym,
               COALESCE(SUM(st.total), 0) AS revenue,
               COUNT(*) AS transactions
-       FROM sales_transactions st
+       FROM scoped_sales st
        WHERE st.status = 'Paid' AND st.invoice_date >= ? AND st.invoice_date <= ?
        GROUP BY DATE_FORMAT(st.invoice_date, '%Y-%m')`,
-      [startStr, endStr]
+      [...scopedSalesParams, startStr, endStr]
     ) as any[];
 
     // Per-calendar-month cost (profit = that month's revenue - cost).
     const monthlyCostRows = await query(
-      `SELECT DATE_FORMAT(st.invoice_date, '%Y-%m') AS ym,
+      `${scopedSalesCte}
+       SELECT DATE_FORMAT(st.invoice_date, '%Y-%m') AS ym,
               COALESCE(SUM(si.quantity * COALESCE(si.cost_at_sale, p.cost, 0)), 0) AS cost
        FROM sale_items si
-       JOIN sales_transactions st ON si.sale_id = st.id
+       JOIN scoped_sales st ON si.sale_id = st.id
        JOIN products p ON si.product_id = p.id
        WHERE st.status = 'Paid' AND st.invoice_date >= ? AND st.invoice_date <= ?
        GROUP BY DATE_FORMAT(st.invoice_date, '%Y-%m')`,
-      [startStr, endStr]
+      [...scopedSalesParams, startStr, endStr]
     ) as any[];
 
     const revByYm = new Map<string, { revenue: number; transactions: number }>();
