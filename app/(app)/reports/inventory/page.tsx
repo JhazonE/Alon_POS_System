@@ -22,6 +22,7 @@ import { Printer, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
 
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -99,6 +100,7 @@ export default function InventoryReportPage() {
       let rows: Product[] = products;
       let printSummary: Summary = summary;
       try {
+        appendSessionUid(params);
         const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
@@ -148,6 +150,7 @@ export default function InventoryReportPage() {
 
       let rows: Product[] = products;
       try {
+        appendSessionUid(params);
         const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
@@ -239,6 +242,7 @@ export default function InventoryReportPage() {
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
       
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();

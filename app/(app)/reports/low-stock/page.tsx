@@ -15,6 +15,7 @@ import { Printer, AlertTriangle, Search, X, FileSpreadsheet } from 'lucide-react
 import { format } from 'date-fns';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { exportReportExcel } from '@/lib/report-print';
@@ -81,6 +82,7 @@ export default function LowStockReportPage() {
         limit: '10000',
         ...(searchQuery ? { search: searchQuery } : {}),
       });
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) rows = data.data;
@@ -156,6 +158,7 @@ export default function LowStockReportPage() {
           limit: '10000',
           ...(searchQuery ? { search: searchQuery } : {}),
         });
+        appendSessionUid(params);
         const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) rows = data.data;
@@ -204,6 +207,7 @@ export default function LowStockReportPage() {
         limit: limit.toString(),
         ...(search ? { search } : {})
       });
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/reports/inventory?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();

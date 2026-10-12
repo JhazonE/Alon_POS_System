@@ -71,4 +71,24 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
       await cleanupSecondBranch(a);
     }
   });
+
+  test('mo-uli ug data ang tinuod nga uid, ug gi-403 kung walay uid', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const skuA = `ISO-UID-${Date.now()}`;
+      await seedProductInWarehouse(a.warehouseId, skuA);
+
+      const withUid = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
+      expect(withUid.status()).toBe(200);
+      const body = await withUid.json();
+      expect(body.success).toBe(true);
+      expect((body.data ?? []).map((p: any) => p.sku)).toContain(skuA);
+
+      // Ang server kinahanglan mo-reject sa wala'y uid — dili mo-fallback.
+      const noUid = await request.get('/api/reports/inventory?limit=200');
+      expect(noUid.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
 });
