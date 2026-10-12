@@ -3,6 +3,12 @@ import { query } from '@/lib/mysql';
 
 export async function GET(request: NextRequest) {
   try {
+    // No branch filter (deferred to Phase 2): approval_queue has no branch
+    // column yet -- the design adds approval_queue.branch_id together with the
+    // approval write path -- and the warehouse a queued item concerns lives
+    // inside its free-form transaction_data JSON (a different key per
+    // transaction type), so filtering on it here would be unsound. The product
+    // and warehouse lookups below only resolve display names.
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const txType = searchParams.get('txType');

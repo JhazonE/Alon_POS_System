@@ -1,6 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/mysql';
+import {
+  resolveScopeFromRequest,
+  warehouseIdsForBranch,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '../../../../../lib/branch-context';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +19,36 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const page = parseInt(searchParams.get('page') || '1');
     const offset = (page - 1) * limit;
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. A warehouseId that belongs to
+    // another branch is refused outright rather than quietly ignored.
+    let branchWarehouseIds: string[] | null;
+    try {
+      const scope = await resolveScopeFromRequest(searchParams);
+      const requestedWarehouseId =
+        searchParams.get('warehouseId') || searchParams.get('warehouse_id');
+      if (requestedWarehouseId) {
+        await assertWarehouseInBranch(requestedWarehouseId, scope);
+      }
+      branchWarehouseIds = await warehouseIdsForBranch(scope);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    // null means head office — apply no warehouse filter. An empty array
+    // means a branch with no warehouses, which must return nothing rather
+    // than everything.
+    if (branchWarehouseIds !== null && branchWarehouseIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        pagination: { total: 0, limit, page, totalPages: 0 },
+        timestamp: new Date().toISOString()
+      });
+    }
 
     // Fetch invoices that are NOT paid (Pending, Failed, Shipped, Delivered, Returned, Partially Paid if applicable)
     // Assuming 'Pending' is the main status for unpaid, but we should include others if they imply unpaid.
@@ -40,6 +76,18 @@ export async function GET(request: NextRequest) {
     `;
 
     const params: any[] = [];
+
+    // sales_invoices has no warehouse column; an invoice belongs to a branch
+    // through the warehouses of the products it sold.
+    if (branchWarehouseIds !== null) {
+      sql += ` AND EXISTS (
+        SELECT 1 FROM sales_invoice_items bii
+        JOIN products bp ON bp.id = bii.product_id
+        WHERE bii.sales_invoice_id = si.id
+          AND bp.warehouse_id IN (${branchWarehouseIds.map(() => '?').join(',')})
+      )`;
+      params.push(...branchWarehouseIds);
+    }
 
     if (search) {
       sql += ' AND (c.name LIKE ? OR si.reference LIKE ? OR si.id LIKE ?)';

@@ -12,6 +12,11 @@ export async function GET(request: NextRequest) {
   const results: any[] = [];
   
   try {
+    // No branch filter: this is a one-shot maintenance migration that renames
+    // non-conformant inventory_batches ids (and the sale_items references to
+    // them) across the whole table. Run per branch it would leave other
+    // branches' batch ids non-conformant and make the migration unrepeatable;
+    // it has no user-facing read, and no uid to resolve a branch from.
     // 1. Find all batches that don't match the 6-digit pattern
     // Note: We use a LIKE check or simple length/regexp if MySQL permits
     const batches: any[] = await query(`

@@ -3,6 +3,10 @@ import { query } from '@/lib/mysql';
 
 export async function GET() {
   try {
+    // No branch filter: these barcode/name keys exist so the product importer can
+    // detect duplicates, and the import write path is not branch-aware until
+    // Phase 2. Filtering the keys now would let an import create a duplicate of
+    // another branch's product. Revisit together with the import write path.
     const rows = await query('SELECT barcode, name FROM products') as any[];
     const keys = rows.map((r) => {
       const barcode = String(r.barcode ?? '').trim().toLowerCase();

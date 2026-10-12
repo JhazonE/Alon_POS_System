@@ -3,6 +3,11 @@ import { query } from '@/lib/mysql';
 
 export async function GET(request: Request) {
   try {
+    // No branch filter: this is the machine-to-machine sync feed that
+    // lib/scheduler.ts calls without any user session, so there is no uid to
+    // resolve a branch from, and a per-branch cut would break replication of
+    // the shared catalogue. Authenticating this endpoint belongs to the API
+    // authentication phase (docs/superpowers/specs/2026-10-05-api-authentication-design.md).
     const { searchParams } = new URL(request.url);
     const lastSync = searchParams.get('last_sync');
 

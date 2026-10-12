@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../lib/mysql';
+import {
+  resolveScopeFromRequest,
+  warehouseIdsForBranch,
+  assertWarehouseInBranch,
+  saleBranchFilter,
+  terminalBranchFilter,
+  branchErrorResponse,
+} from '../../../../lib/branch-context';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,6 +15,51 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // Optional filter by transaction type
     const search = searchParams.get('search'); // Optional search by reference
     const limit = parseInt(searchParams.get('limit') || '100');
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. A warehouseId that belongs to
+    // another branch is refused outright rather than quietly ignored.
+    let branchWarehouseIds: string[] | null;
+    let branchSaleFilter: ReturnType<typeof saleBranchFilter>;
+    let branchPosFilter: ReturnType<typeof terminalBranchFilter>;
+    try {
+      const scope = await resolveScopeFromRequest(searchParams);
+      const requestedWarehouseId =
+        searchParams.get('warehouseId') || searchParams.get('warehouse_id');
+      if (requestedWarehouseId) {
+        await assertWarehouseInBranch(requestedWarehouseId, scope);
+      }
+      branchWarehouseIds = await warehouseIdsForBranch(scope);
+      branchSaleFilter = saleBranchFilter(scope, 'sales_transactions.id');
+      branchPosFilter = terminalBranchFilter(scope, 'terminal_id');
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    // Each list below is scoped by whatever ties it to a branch: documents
+    // with a warehouse_id by warehouse, invoices through the warehouses of
+    // the products sold, POS sales through the terminal that rang them.
+    // null means head office — apply no filter. An empty warehouse array
+    // means a branch with no warehouses, whose warehouse-scoped lists must
+    // be empty rather than unfiltered.
+    const noWarehouses = branchWarehouseIds !== null && branchWarehouseIds.length === 0;
+    const whPlaceholders = (branchWarehouseIds ?? []).map(() => '?').join(',');
+    const whClause = (column: string) =>
+      branchWarehouseIds !== null ? `AND ${column} IN (${whPlaceholders})` : '';
+    const whParams: any[] = branchWarehouseIds ?? [];
+    // Invoices carry no warehouse column; they belong to a branch through the
+    // products they sold.
+    const invoiceBranchClause = (invoiceIdColumn: string) =>
+      branchWarehouseIds !== null
+        ? `AND EXISTS (
+            SELECT 1 FROM sales_invoice_items bii
+            JOIN products bp ON bp.id = bii.product_id
+            WHERE bii.sales_invoice_id = ${invoiceIdColumn}
+              AND bp.warehouse_id IN (${whPlaceholders})
+          )`
+        : '';
 
     // Fetch Sales Orders
     const salesOrdersQuery = `
@@ -21,11 +74,12 @@ export async function GET(request: NextRequest) {
       FROM sales_orders
       WHERE reference IS NOT NULL AND reference != ''
       ${search ? `AND reference LIKE ?` : ''}
+      ${whClause('warehouse_id')}
       ORDER BY order_date DESC
       LIMIT ?
     `;
-    const salesOrdersParams = search ? [`%${search}%`, limit] : [limit];
-    const salesOrders = type && type !== 'sales_order' ? [] : await query(salesOrdersQuery, salesOrdersParams);
+    const salesOrdersParams = [...(search ? [`%${search}%`] : []), ...whParams, limit];
+    const salesOrders = noWarehouses || (type && type !== 'sales_order') ? [] : await query(salesOrdersQuery, salesOrdersParams);
 
     // Fetch Sales Invoices
     const salesInvoicesQuery = `
@@ -40,11 +94,12 @@ export async function GET(request: NextRequest) {
       FROM sales_invoices
       WHERE reference IS NOT NULL AND reference != ''
       ${search ? `AND reference LIKE ?` : ''}
+      ${invoiceBranchClause('sales_invoices.id')}
       ORDER BY invoice_date DESC
       LIMIT ?
     `;
-    const salesInvoicesParams = search ? [`%${search}%`, limit] : [limit];
-    const salesInvoices = type && type !== 'sales_invoice' ? [] : await query(salesInvoicesQuery, salesInvoicesParams);
+    const salesInvoicesParams = [...(search ? [`%${search}%`] : []), ...whParams, limit];
+    const salesInvoices = noWarehouses || (type && type !== 'sales_invoice') ? [] : await query(salesInvoicesQuery, salesInvoicesParams);
 
     // Fetch Purchase Orders
     const purchaseOrdersQuery = `
@@ -59,11 +114,12 @@ export async function GET(request: NextRequest) {
       FROM purchase_orders
       WHERE reference IS NOT NULL AND reference != ''
       ${search ? `AND reference LIKE ?` : ''}
+      ${whClause('warehouse_id')}
       ORDER BY order_date DESC
       LIMIT ?
     `;
-    const purchaseOrdersParams = search ? [`%${search}%`, limit] : [limit];
-    const purchaseOrders = type && type !== 'purchase_order' ? [] : await query(purchaseOrdersQuery, purchaseOrdersParams);
+    const purchaseOrdersParams = [...(search ? [`%${search}%`] : []), ...whParams, limit];
+    const purchaseOrders = noWarehouses || (type && type !== 'purchase_order') ? [] : await query(purchaseOrdersQuery, purchaseOrdersParams);
 
     // Fetch Customer Payments
     const customerPaymentsQuery = `
@@ -78,11 +134,24 @@ export async function GET(request: NextRequest) {
       FROM customer_payments
       WHERE reference IS NOT NULL AND reference != ''
       ${search ? `AND reference LIKE ?` : ''}
+      ${
+        // A payment carries no branch of its own. It belongs to a branch only
+        // through the invoices it was allocated to, so a payment with no
+        // allocation is visible to head office alone (fail closed).
+        branchWarehouseIds !== null
+          ? `AND EXISTS (
+              SELECT 1 FROM payment_allocations bpa
+              JOIN sales_invoices bsi ON bsi.id = bpa.invoice_id
+              WHERE bpa.payment_id = customer_payments.id
+              ${invoiceBranchClause('bsi.id')}
+            )`
+          : ''
+      }
       ORDER BY payment_date DESC
       LIMIT ?
     `;
-    const customerPaymentsParams = search ? [`%${search}%`, limit] : [limit];
-    const customerPayments = type && type !== 'customer_payment' ? [] : await query(customerPaymentsQuery, customerPaymentsParams);
+    const customerPaymentsParams = [...(search ? [`%${search}%`] : []), ...whParams, limit];
+    const customerPayments = noWarehouses || (type && type !== 'customer_payment') ? [] : await query(customerPaymentsQuery, customerPaymentsParams);
 
     // Fetch Stock Adjustments
     const stockAdjustmentsQuery = `
@@ -97,11 +166,12 @@ export async function GET(request: NextRequest) {
       FROM stock_adjustments
       WHERE reference IS NOT NULL AND reference != ''
       ${search ? `AND reference LIKE ?` : ''}
+      ${whClause('warehouse_id')}
       ORDER BY adjustment_date DESC
       LIMIT ?
     `;
-    const stockAdjustmentsParams = search ? [`%${search}%`, limit] : [limit];
-    const stockAdjustments = type && type !== 'stock_adjustment' ? [] : await query(stockAdjustmentsQuery, stockAdjustmentsParams);
+    const stockAdjustmentsParams = [...(search ? [`%${search}%`] : []), ...whParams, limit];
+    const stockAdjustments = noWarehouses || (type && type !== 'stock_adjustment') ? [] : await query(stockAdjustmentsQuery, stockAdjustmentsParams);
 
     // Fetch Sales Transactions (POS)
     const salesTransactionsQuery = `
@@ -114,11 +184,17 @@ export async function GET(request: NextRequest) {
         status,
         customer_id
       FROM sales_transactions
-      ${search ? `WHERE id LIKE ?` : ''}
+      WHERE 1 = 1
+      ${search ? `AND id LIKE ?` : ''}
+      ${branchSaleFilter ? `AND ${branchSaleFilter.sql}` : ''}
       ORDER BY date DESC
       LIMIT ?
     `;
-    const salesTransactionsParams = search ? [`%${search}%`, limit] : [limit];
+    const salesTransactionsParams = [
+      ...(search ? [`%${search}%`] : []),
+      ...(branchSaleFilter ? branchSaleFilter.params : []),
+      limit,
+    ];
     const salesTransactions = type && type !== 'sales_transaction' ? [] : await query(salesTransactionsQuery, salesTransactionsParams);
 
     // Fetch POS Transactions
@@ -132,11 +208,17 @@ export async function GET(request: NextRequest) {
         transaction_type as status,
         NULL as customer_id
       FROM pos_transactions
-      ${search ? `WHERE id LIKE ?` : ''}
+      WHERE 1 = 1
+      ${search ? `AND id LIKE ?` : ''}
+      ${branchPosFilter ? `AND ${branchPosFilter.sql}` : ''}
       ORDER BY transaction_time DESC
       LIMIT ?
     `;
-    const posTransactionsParams = search ? [`%${search}%`, limit] : [limit];
+    const posTransactionsParams = [
+      ...(search ? [`%${search}%`] : []),
+      ...(branchPosFilter ? branchPosFilter.params : []),
+      limit,
+    ];
     const posTransactions = type && type !== 'pos_transaction' ? [] : await query(posTransactionsQuery, posTransactionsParams);
 
     // Combine all transactions
