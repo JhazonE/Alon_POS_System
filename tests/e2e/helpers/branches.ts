@@ -154,3 +154,60 @@ export async function seedProductInWarehouse(
   }
   return id;
 }
+
+/**
+ * Isa ka POS sale sa usa ka terminal: sales_transactions + pos_transactions.
+ * Ang sale mapunta sa branch sa terminal, mao nga kini ang paagi sa pag-seed
+ * ug sale para sa isolation tests. Ibalik ang sale id para ma-cleanup.
+ */
+export async function seedSaleOnTerminal(
+  terminalId: string,
+  userUid: string,
+  opts: { status?: string } = {}
+): Promise<string> {
+  const conn = await getConn();
+  const saleId = uuidv4();
+  const status = opts.status ?? 'Paid';
+  try {
+    await conn.query(
+      `INSERT INTO sales_transactions (id, reference, date, invoice_date, total, status, created_at, updated_at)
+       VALUES (?, ?, CURDATE(), CURDATE(), 100.00, ?, NOW(), NOW())`,
+      [saleId, `ISO-${saleId.slice(0, 8)}`, status]
+    );
+    await conn.query(
+      `INSERT INTO pos_transactions
+         (id, sale_id, user_id, terminal_id, transaction_type, subtotal, total_amount, transaction_time, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'sale', 100.00, 100.00, NOW(), NOW(), NOW())`,
+      [`pt-${saleId}`, saleId, userUid, terminalId]
+    );
+  } finally {
+    await conn.end();
+  }
+  return saleId;
+}
+
+export async function cleanupSale(saleId: string): Promise<void> {
+  const conn = await getConn();
+  try {
+    await conn.query('DELETE FROM pos_transactions WHERE sale_id = ?', [saleId]);
+    await conn.query('DELETE FROM sales_transactions WHERE id = ?', [saleId]);
+  } finally {
+    await conn.end();
+  }
+}
+
+/** Tangtangon ang mga warehouse sa branch aron mahimo kining branch nga walay warehouse. */
+export async function removeBranchWarehouses(branchId: string): Promise<void> {
+  const conn = await getConn();
+  try {
+    await conn.query('SET FOREIGN_KEY_CHECKS=0');
+    await conn.query(
+      'DELETE FROM products WHERE warehouse_id IN (SELECT id FROM warehouses WHERE branch_id = ?)',
+      [branchId]
+    );
+    await conn.query('DELETE FROM warehouses WHERE branch_id = ?', [branchId]);
+    await conn.query('SET FOREIGN_KEY_CHECKS=1');
+  } finally {
+    await conn.end();
+  }
+}
