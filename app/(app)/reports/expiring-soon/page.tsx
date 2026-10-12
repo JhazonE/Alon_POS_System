@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 import { useToast } from '@/hooks/use-toast';
 import { exportReportExcel } from '@/lib/report-print';
+import { appendSessionUid } from '@/lib/session-uid';
 
 interface ExpiringBatch {
   batchId: string;
@@ -33,7 +34,9 @@ export default function ExpiringSoonPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/reports/expiring-soon?days=${days}`)
+    const params = new URLSearchParams({ days });
+    appendSessionUid(params);
+    fetch(`/api/reports/expiring-soon?${params.toString()}`)
       .then(r => r.json())
       .then(d => setItems(d.success ? d.items : []))
       .catch(() => setItems([]))

@@ -7,6 +7,7 @@ import { format, subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import type { OverallReadingData, PrinterFormat } from './overall-reading-types';
@@ -74,6 +75,7 @@ export function useOverallReadingPage() {
       const params = new URLSearchParams();
       params.append('terminalId', selectedShift.terminal_id);
       params.append('shiftId', selectedShift.id);
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/sales/overall-reading?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();

@@ -1,3 +1,5 @@
+import { appendSessionUid } from '@/lib/session-uid';
+
 export interface RecentSalesQueryParams {
   query?: string;
   dateFrom?: string;
@@ -11,6 +13,7 @@ export function buildRecentSalesQuery(params: RecentSalesQueryParams): string {
   if (q) sp.set('query', q);
   if (params.dateFrom) sp.set('dateFrom', params.dateFrom);
   if (params.dateTo) sp.set('dateTo', params.dateTo);
+  appendSessionUid(sp);
   sp.set('_t', String(Date.now()));
   return `?${sp.toString()}`;
 }

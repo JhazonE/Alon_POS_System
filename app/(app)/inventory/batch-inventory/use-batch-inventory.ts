@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { appendSessionUid } from '@/lib/session-uid';
 
 export interface InventoryBatch {
   id: string;
@@ -40,6 +41,7 @@ export function useBatchInventory(open: boolean) {
         page: String(currentPage),
         pageSize: String(pageSize),
       });
+      appendSessionUid(params);
       const res = await fetch(`/api/inventory-batches?${params}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();

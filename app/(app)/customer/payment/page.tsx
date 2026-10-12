@@ -53,6 +53,7 @@ import { CalendarIcon, TrendingUp, AlertCircle, FileText, Search, MoreHorizontal
 import { cn, formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { DateRange } from "react-day-picker";
 import {
   Command,
@@ -95,6 +96,7 @@ function OutstandingInvoices() {
             params.append('page', pagination.currentPage.toString());
             params.append('limit', pagination.pageSize.toString());
 
+            appendSessionUid(params);
             const response = await fetch(getApiUrl(`/customers/invoices/outstanding?${params.toString()}`));
             if (!response.ok) throw new Error(`API error ${response.status}`);
             const result = await response.json();

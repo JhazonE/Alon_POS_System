@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { usePrinter } from '@/lib/use-printer';
 import { formatQuantity } from '@/lib/utils';
 import type { Customer, SystemSettings } from '@/lib/types';
@@ -17,6 +18,14 @@ type Options = {
   printMode?: 'browser' | 'escpos' | 'usb' | 'native';
   settings?: SystemSettings | null;
 };
+
+// The recent-sales route scopes to the signed-in user's branch, so it needs the
+// session uid alongside the customer filter.
+function recentSalesPath(customerId: string): string {
+  const params = new URLSearchParams({ customerId });
+  appendSessionUid(params);
+  return `/pos/recent-sales?${params.toString()}`;
+}
 
 export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, initialCustomer, printMode = 'native', settings }: Options) {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -122,7 +131,7 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
         try {
           const [detailRes, transRes, payRes] = await Promise.all([
             fetch(getApiUrl(`/customers/${selectedCustomerId}`)),
-            fetch(getApiUrl(`/pos/recent-sales?customerId=${selectedCustomerId}`)),
+            fetch(getApiUrl(recentSalesPath(selectedCustomerId))),
             fetch(getApiUrl(`/customers/payments?customerId=${selectedCustomerId}`)),
           ]);
           const [detailData, transData, payData] = await Promise.all([
@@ -158,7 +167,7 @@ export function useCustomerAccount({ isOpen, onOpenChange, onSelectCustomer, ini
       try {
         const [detailRes, transRes, payRes] = await Promise.all([
           fetch(getApiUrl(`/customers/${selectedCustomerId}`)),
-          fetch(getApiUrl(`/pos/recent-sales?customerId=${selectedCustomerId}`)),
+          fetch(getApiUrl(recentSalesPath(selectedCustomerId))),
           fetch(getApiUrl(`/customers/payments?customerId=${selectedCustomerId}`)),
         ]);
         const [detailData, transData, payData] = await Promise.all([

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import type { BackupFile, BackupSchedule, ResetAction } from './data-management-types';
 
 type CsvKey = 'products' | 'customers' | 'suppliers';
@@ -122,7 +123,10 @@ export function useDataManagement() {
   const downloadCsv = async (exportPath: string, filename: string, setExp: (v: boolean) => void, label: string) => {
     setExp(true);
     try {
-      const res = await fetch(getApiUrl(exportPath));
+      const exportParams = new URLSearchParams();
+      appendSessionUid(exportParams);
+      const exportQuery = exportParams.toString();
+      const res = await fetch(getApiUrl(exportQuery ? `${exportPath}?${exportQuery}` : exportPath));
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to export'); }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

@@ -16,6 +16,7 @@ import { WaveStatCard } from '@/components/reports/WaveStatCard';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 import { ReportSearchInput } from '@/components/reports/ReportSearchInput';
 
@@ -48,7 +49,10 @@ export default function FiscalYearReportPage() {
   const fetchReport = async (year?: string) => {
     setIsLoading(true);
     try {
-      const q = year ? `?fiscalYear=${year}` : '';
+      const params = new URLSearchParams();
+      if (year) params.append('fiscalYear', year);
+      appendSessionUid(params);
+      const q = params.toString() ? `?${params.toString()}` : '';
       const res = await fetch(getApiUrl(`/reports/fiscal-year${q}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();

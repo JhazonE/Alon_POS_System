@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useQuery } from '@tanstack/react-query';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import type { ProductSalesData } from './by-product-types';
 
 type QueryParams = {
@@ -74,6 +75,7 @@ export function useByProductQuery({
       params.append('page', currentPage.toString());
       params.append('limit', limit.toString());
       if (searchTerm) params.append('search', searchTerm);
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/sales/by-product?${params.toString()}`));
       return res.json();
     },

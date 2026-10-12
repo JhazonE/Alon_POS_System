@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 
 // Type definitions matching the API response
@@ -87,6 +88,7 @@ export default function BatchProfitPage() {
         params.append('endDate', format(toDate, 'yyyy-MM-dd'));
       }
 
+      appendSessionUid(params);
       const response = await fetch(getApiUrl(`/sales/batch-analysis?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();

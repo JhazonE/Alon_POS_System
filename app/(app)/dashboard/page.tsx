@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { formatFiscalYear } from '@/lib/fiscal-utils';
 import type { ChartConfig } from '@/components/ui/chart';
 import { SupplierScheduleCard } from './supplier-schedule-card';
@@ -50,7 +51,10 @@ export default function DashboardPage() {
     setRefreshing(true);
     setError(null);
     try {
-      const fyParam = selectedFiscalYear !== 'current' ? `?fiscalYear=${selectedFiscalYear}` : '';
+      const statsParams = new URLSearchParams();
+      if (selectedFiscalYear !== 'current') statsParams.append('fiscalYear', selectedFiscalYear);
+      appendSessionUid(statsParams);
+      const fyParam = statsParams.toString() ? `?${statsParams.toString()}` : '';
       const res = await fetch(getApiUrl(`/reports/stats${fyParam}`));
       if (!res.ok) {
         // Prefer the server-provided message (e.g. "Database unavailable")

@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import jsPDF from 'jspdf';
 
 interface DailySummary {
@@ -121,6 +122,7 @@ export default function BirSalesSummaryPage() {
       const params = new URLSearchParams();
       if (fromDate) params.append('startDate', format(fromDate, 'yyyy-MM-dd'));
       if (toDate) params.append('endDate', format(toDate, 'yyyy-MM-dd'));
+      appendSessionUid(params);
       const response = await fetch(getApiUrl(`/sales/bir-summary?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();

@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { Spinner } from '@/components/ui/spinner';
 
 const chartConfig = {
@@ -33,7 +34,9 @@ export function HourlySalesChart() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(getApiUrl('/sales/hourly'));
+        const params = new URLSearchParams();
+        appendSessionUid(params);
+        const res = await fetch(getApiUrl(`/sales/hourly?${params.toString()}`));
         if (!res.ok) {
           throw new Error('Failed to fetch hourly sales');
         }

@@ -45,6 +45,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import type { Customer, Sale } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -139,7 +140,9 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
       const fetchInvoices = async () => {
         try {
           setIsLoadingInvoices(true);
-          const response = await fetch(getApiUrl(`/customers/invoices/outstanding?customerId=${selectedCustomerId}`));
+          const outstandingParams = new URLSearchParams({ customerId: selectedCustomerId });
+          appendSessionUid(outstandingParams);
+          const response = await fetch(getApiUrl(`/customers/invoices/outstanding?${outstandingParams.toString()}`));
           if (response.ok) {
             const result = await response.json();
             // Sort by earliest date first

@@ -12,6 +12,7 @@ import { Printer, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency, formatStockQuantity } from '@/lib/utils';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { printReportTable, exportReportExcel } from '@/lib/report-print';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { getCategories } from '@/app/(app)/products/actions';
@@ -101,6 +102,7 @@ export default function CostVsRetailReportPage() {
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
 
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/reports/cost-vs-retail?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
@@ -130,6 +132,7 @@ export default function CostVsRetailReportPage() {
       let printRows: Row[] = rows;
       let printSummary: Summary = summary;
       try {
+        appendSessionUid(params);
         const res = await fetch(getApiUrl(`/reports/cost-vs-retail?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
@@ -183,6 +186,7 @@ export default function CostVsRetailReportPage() {
 
       let exportRows: Row[] = rows;
       try {
+        appendSessionUid(params);
         const res = await fetch(getApiUrl(`/reports/cost-vs-retail?${params.toString()}`));
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {

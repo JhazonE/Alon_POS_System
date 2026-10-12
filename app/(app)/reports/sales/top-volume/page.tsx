@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import { exportReportPdf, exportReportExcel } from '@/lib/report-print';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -91,6 +92,7 @@ export default function TopItemsVolumePage() {
         params.append('search', searchTerm);
       }
 
+      appendSessionUid(params);
       const response = await fetch(getApiUrl(`/sales/by-product?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();

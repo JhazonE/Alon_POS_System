@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import jsPDF from 'jspdf';
 import type { VoidRecord } from './voids-types';
 
@@ -23,6 +24,7 @@ export function useVoidsData() {
       const params = new URLSearchParams();
       if (queryDates.from) params.append('startDate', format(queryDates.from, 'yyyy-MM-dd'));
       if (queryDates.to) params.append('endDate', format(queryDates.to, 'yyyy-MM-dd'));
+      appendSessionUid(params);
       const response = await fetch(getApiUrl(`/sales/voids-report?${params.toString()}`));
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const result = await response.json();

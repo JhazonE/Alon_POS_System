@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid } from '@/lib/session-uid';
 import type { ProductSalesData } from './by-product-types';
 
 type UtilParams = {
@@ -37,6 +38,7 @@ export function useByProductUtils({
     if (searchTerm) params.append('search', searchTerm);
     params.append('limit', '1000000');
     try {
+      appendSessionUid(params);
       const res = await fetch(getApiUrl(`/sales/by-product?${params.toString()}`));
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const result = await res.json();

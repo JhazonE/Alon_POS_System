@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { getApiUrl } from "@/lib/api-config"
+import { appendSessionUid } from '@/lib/session-uid';
 import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis, LabelList, CartesianGrid } from "recharts"
 
@@ -51,7 +52,9 @@ export function TopSellingProductsChart({ data: initialData }: { data?: any[] })
 
     async function fetchData() {
         try {
-            const res = await fetch(getApiUrl('/sales/top-products'))
+            const params = new URLSearchParams()
+            appendSessionUid(params)
+            const res = await fetch(getApiUrl(`/sales/top-products?${params.toString()}`))
             if (!res.ok) throw new Error(`API error ${res.status}`)
             const result = await res.json()
             if (result.success) {
