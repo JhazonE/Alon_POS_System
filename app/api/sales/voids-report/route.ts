@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  terminalBranchFilter,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { formatSINumber } from '@/lib/si-number';
 
 // voided_by_name is added lazily by /api/pos/void-transaction — this report can be
@@ -22,6 +28,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate'); // yyyy-MM-dd
     const endDate = searchParams.get('endDate');     // yyyy-MM-dd
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. Sales belong to a branch through the
+    // terminal that rang them, so a terminal of another branch is refused.
+    let branchScope: BranchScope;
+    try {
+      branchScope = await resolveScopeFromRequest(searchParams);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
 
     let sql = `
       SELECT 
@@ -52,6 +70,14 @@ export async function GET(request: NextRequest) {
     `;
 
     const params: any[] = [];
+
+    // A void belongs to the branch of the terminal that rang the sale; head
+    // office (null) is unfiltered. A void with no terminal is head office only.
+    const branchFilter = terminalBranchFilter(branchScope, 'pt.terminal_id');
+    if (branchFilter) {
+      sql += ` AND ${branchFilter.sql}`;
+      params.push(...branchFilter.params);
+    }
 
     // Filter by VOID date (st.updated_at) — i.e. when the transaction was voided,
     // not when the sale was originally made. Range is kept sargable (no DATE()

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  warehouseIdsForBranch,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +22,38 @@ export async function GET(request: NextRequest) {
     const search = queryParams.get('search') || '';
     const sortBy = queryParams.get('sortBy') || 'sales'; // 'sales' or 'volume'
     const offset = (page - 1) * limit;
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. A warehouseId that belongs to
+    // another branch is refused outright rather than quietly ignored.
+    let branchWarehouseIds: string[] | null;
+    try {
+      const scope = await resolveScopeFromRequest(queryParams);
+      const requestedWarehouseId =
+        queryParams.get('warehouseId') || queryParams.get('warehouse_id');
+      if (requestedWarehouseId) {
+        await assertWarehouseInBranch(requestedWarehouseId, scope);
+      }
+      branchWarehouseIds = await warehouseIdsForBranch(scope);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    // null means head office — apply no warehouse filter. An empty array
+    // means a branch with no warehouses, which must return nothing rather
+    // than everything.
+    if (branchWarehouseIds !== null && branchWarehouseIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        totals: { totalRevenue: 0, totalDiscount: 0, totalCost: 0, totalProfit: 0, unitsSold: 0 },
+        pagination: { totalItems: 0, totalPages: 0, currentPage: page, itemsPerPage: limit },
+        timestamp: new Date().toISOString()
+      });
+    }
+    const branchPlaceholders = (branchWarehouseIds ?? []).map(() => '?').join(',');
 
     const params: any[] = [];
     let baseQueryStr = '';
@@ -75,6 +113,10 @@ export async function GET(request: NextRequest) {
         if (search) {
           whereClause += ` AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`;
           params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        if (branchWarehouseIds !== null) {
+          whereClause += ` AND p.warehouse_id IN (${branchPlaceholders})`;
+          params.push(...branchWarehouseIds);
         }
     } else {
         // unified query to aggregate sales from all sources
@@ -176,6 +218,10 @@ export async function GET(request: NextRequest) {
         if (search) {
             baseQueryStr += ` AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`;
             params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        if (branchWarehouseIds !== null) {
+            baseQueryStr += ` AND p.warehouse_id IN (${branchPlaceholders})`;
+            params.push(...branchWarehouseIds);
         }
     }
 

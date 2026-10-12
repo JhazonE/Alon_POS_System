@@ -21,6 +21,10 @@ const SOLD_PRODUCT_IDS = `
 
 export async function GET() {
   try {
+    // No branch filter: this route reads only company-wide master data (D8).
+    // It returns distinct category and brand names for the Sales by Product filter
+    // dropdowns, which D8 keeps shared across every branch. The report rows
+    // themselves (/api/sales/by-product) are branch-filtered.
     const categories = await query(
       `SELECT DISTINCT p.category FROM products p
        WHERE p.category IS NOT NULL AND p.category != ''

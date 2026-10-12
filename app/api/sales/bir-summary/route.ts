@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  terminalBranchFilter,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 
 // BIR Sales Summary Report (per RR 16-2018 / RMO style):
 //   - dailySummary  : one row per business day with gross/VAT breakdown, deductions and VAT adjustments
@@ -26,6 +32,18 @@ export async function GET(request: NextRequest) {
     const startDate = sp.get('startDate');
     const endDate = sp.get('endDate');
 
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. Sales belong to a branch through the
+    // terminal that rang them, so a terminal of another branch is refused.
+    let branchScope: BranchScope;
+    try {
+      branchScope = await resolveScopeFromRequest(sp);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
     const dateParams: any[] = [];
     let dateWhere = '';
     if (startDate) {
@@ -35,6 +53,17 @@ export async function GET(request: NextRequest) {
     if (endDate) {
       dateWhere += ' AND DATE(pt.transaction_time) <= ?';
       dateParams.push(endDate);
+    }
+
+    // Each branch is a separately BIR-registered establishment: its summary
+    // and sales books are never consolidated. The branch clause is appended
+    // to dateWhere/dateParams so every query below that already carries them
+    // is narrowed identically; head office (null) is unfiltered. This only
+    // narrows which sales are read -- no figure is computed differently.
+    const branchFilter = terminalBranchFilter(branchScope, 'pt.terminal_id');
+    if (branchFilter) {
+      dateWhere += ` AND ${branchFilter.sql}`;
+      dateParams.push(...branchFilter.params);
     }
 
     // Only valid (non-void / non-return) sales feed the day's gross figures.
@@ -114,8 +143,12 @@ export async function GET(request: NextRequest) {
         JOIN pos_transactions pt ON pti.pos_transaction_id = pt.id
         JOIN sales_transactions st ON pt.sale_id = st.id
         WHERE ${validSale} AND DATE(pt.transaction_time) < ?
+        ${branchFilter ? `AND ${branchFilter.sql}` : ''}
       `;
-      const [priorRow] = (await query(priorSql, [startDate])) as any[];
+      const [priorRow] = (await query(priorSql, [
+        startDate,
+        ...(branchFilter ? branchFilter.params : []),
+      ])) as any[];
       runningBalance = num(priorRow?.prior_total);
     }
 

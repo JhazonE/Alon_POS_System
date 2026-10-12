@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  assertTerminalInBranch,
+  terminalBranchFilter,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { format, startOfDay } from 'date-fns';
 
 const safeParseFloat = (val: any): number => {
@@ -26,6 +33,27 @@ export async function GET(request: NextRequest) {
 
     const isAllTerminals = terminalId === 'all';
 
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. Sales belong to a branch through the
+    // terminal that rang them, so a terminal of another branch is refused.
+    let branchScope: BranchScope;
+    try {
+      branchScope = await resolveScopeFromRequest(searchParams);
+      if (terminalId && terminalId !== 'all') {
+        await assertTerminalInBranch(terminalId, branchScope);
+      }
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    // A branch reads only its own terminals; head office (null) is
+    // unfiltered. This only narrows which sales and shifts are read -- no
+    // total or reading is computed differently.
+    const branchFilter = terminalBranchFilter(branchScope, 'pt.terminal_id');
+    const shiftBranchFilter = terminalBranchFilter(branchScope, 'terminal_id');
+
     // ─── OVERALL READING ─────────────────────────────────────────────────────
     // Shows transactions for the selected date range or current day (midnight → now)
     // for the selected terminal. This is a full reading regardless of Z-readings.
@@ -43,6 +71,10 @@ export async function GET(request: NextRequest) {
     if (!isAllTerminals) {
         terminalCondition = ' AND pt.terminal_id = ?';
         terminalParams.push(terminalId);
+    }
+    if (branchFilter) {
+        terminalCondition += ` AND ${branchFilter.sql}`;
+        terminalParams.push(...branchFilter.params);
     }
 
     const shiftId = searchParams.get('shiftId');
@@ -236,8 +268,9 @@ export async function GET(request: NextRequest) {
             s.cash_difference as total_cash_difference
         FROM shifts s
         WHERE s.start_time >= ? AND s.start_time <= ?
+        ${shiftBranchFilter ? `AND s.${shiftBranchFilter.sql}` : ''}
     `;
-    const shiftParams: any[] = [startDate, endDate];
+    const shiftParams: any[] = [startDate, endDate, ...(shiftBranchFilter ? shiftBranchFilter.params : [])];
     if (!isAllTerminals) {
         shiftSql += ' AND s.terminal_id = ? ORDER BY s.start_time DESC LIMIT 1';
         shiftParams.push(terminalId);
@@ -250,6 +283,7 @@ export async function GET(request: NextRequest) {
                 SUM(cash_difference) as total_cash_difference
             FROM shifts
             WHERE start_time >= ? AND start_time <= ?
+            ${shiftBranchFilter ? `AND ${shiftBranchFilter.sql}` : ''}
         `;
     }
     const shiftResultArray = await query(shiftSql, shiftParams) as any[];

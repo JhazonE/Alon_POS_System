@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  assertTerminalInBranch,
+  terminalBranchFilter,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { format } from 'date-fns';
 import { formatSINumber } from '@/lib/si-number';
 
@@ -15,7 +22,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Date is required' }, { status: 400 });
     }
 
-    const terminalFilter = terminalId && terminalId !== 'all' ? ' AND pt.terminal_id = ?' : '';
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. Sales belong to a branch through the
+    // terminal that rang them, so a terminal of another branch is refused.
+    let branchScope: BranchScope;
+    try {
+      branchScope = await resolveScopeFromRequest(searchParams);
+      if (terminalId && terminalId !== 'all') {
+        await assertTerminalInBranch(terminalId, branchScope);
+      }
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
+    let terminalFilter = terminalId && terminalId !== 'all' ? ' AND pt.terminal_id = ?' : '';
+    // Head office (null) reads every terminal exactly as before; a branch
+    // is limited to its own terminals. This only narrows which sales are
+    // read -- no total, SI range or sequence is computed differently.
+    const branchFilter = terminalBranchFilter(branchScope, 'pt.terminal_id');
+    if (branchFilter) terminalFilter += ` AND ${branchFilter.sql}`;
 
     // ── Detail rows: one line per item, but transaction-level totals
     //    (VAT/TOTAL/STATUS) are attached only so we can print them once per SI.
@@ -72,7 +99,8 @@ export async function GET(request: NextRequest) {
     `;
 
     const params: any[] = [date];
-    if (terminalFilter) params.push(terminalId);
+    if (terminalId && terminalId !== 'all') params.push(terminalId);
+    if (branchFilter) params.push(...branchFilter.params);
 
     const [items, txns, taxRows] = await Promise.all([
       query(itemsSql, params) as Promise<any[]>,

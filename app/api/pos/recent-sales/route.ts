@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromRequest,
+  assertTerminalInBranch,
+  terminalBranchFilter,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,6 +17,21 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get('customerId');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
+
+    // Branch isolation. The scope comes from the database via uid, never
+    // from a branch the caller claims. Sales belong to a branch through the
+    // terminal that rang them, so a terminal of another branch is refused.
+    let branchScope: BranchScope;
+    try {
+      branchScope = await resolveScopeFromRequest(searchParams);
+      if (terminalId && terminalId !== 'all') {
+        await assertTerminalInBranch(terminalId, branchScope);
+      }
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
 
     // 1. Fetch sales transactions
     // We join with pos_transactions to get terminal info and strictly filter POS sales
@@ -57,6 +79,14 @@ export async function GET(request: NextRequest) {
 
     const params: any[] = [];
     
+    // A sale belongs to the branch of the terminal that rang it; head office
+    // (null) is unfiltered.
+    const branchFilter = terminalBranchFilter(branchScope, 'pt.terminal_id');
+    if (branchFilter) {
+        salesQuery += ` AND ${branchFilter.sql}`;
+        params.push(...branchFilter.params);
+    }
+
     if (terminalId && terminalId !== 'all') {
         salesQuery += ' AND pt.terminal_id = ?';
         params.push(terminalId);
