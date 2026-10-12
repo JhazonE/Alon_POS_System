@@ -1,6 +1,7 @@
 'use server';
 
 import { query, withTransaction } from '@/lib/mysql';
+import { mainBranchId } from '@/lib/branch-context';
 import { generateBatchId } from '@/lib/batch-utils';
 import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMeasure, ShelfLocation, Account, TaxRate } from '@/lib/types';
@@ -1665,7 +1666,9 @@ export async function getWarehouses(): Promise<Warehouse[]> {
 export async function addWarehouse(name: string, location?: string) {
   try {
     const id = `wh_${Date.now()}`;
-    await query('INSERT INTO warehouses (id, name, location) VALUES (?, ?, ?)', [id, name, location || null]);
+    // No branch picker yet (Phase 5): new warehouses default to the main branch.
+    const branchId = await mainBranchId();
+    await query('INSERT INTO warehouses (id, name, location, branch_id) VALUES (?, ?, ?, ?)', [id, name, location || null, branchId]);
     return { success: true, message: 'Warehouse added successfully.' };
   } catch (error) {
     console.error('Error adding warehouse:', error);

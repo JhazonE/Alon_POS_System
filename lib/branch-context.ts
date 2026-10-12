@@ -211,3 +211,26 @@ export async function warehouseIdsForBranch(
 
   return rows.map((r) => r.id);
 }
+
+/**
+ * The id of the main branch (`branches.is_main = 1`).
+ *
+ * This is the DEFAULT for rows created before Phase 5's branch picker exists:
+ * a new warehouse or terminal with no caller-supplied branch lands in the main
+ * branch, which reproduces the pre-multi-branch single-store behaviour.
+ *
+ * It is NOT an authorization decision. A caller that has a resolved
+ * BranchScope must pass that branch instead of calling this.
+ *
+ * Throws BranchResolutionError when no main branch exists, so callers can
+ * never insert a NULL or '' branch_id.
+ */
+export async function mainBranchId(): Promise<string> {
+  const rows = (await query(
+    'SELECT id FROM branches WHERE is_main = 1 LIMIT 1'
+  )) as any[];
+  if (rows.length === 0 || !rows[0].id) {
+    throw new BranchResolutionError('No main branch is configured', 500);
+  }
+  return rows[0].id as string;
+}

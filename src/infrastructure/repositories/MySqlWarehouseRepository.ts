@@ -1,4 +1,5 @@
 import { query } from '../../../lib/mysql';
+import { mainBranchId } from '../../../lib/branch-context';
 import { WarehouseRepository } from '../../core/warehouses/domain/IWarehouseRepository';
 import { WarehouseEntity } from '../../core/warehouses/domain/Warehouse';
 
@@ -27,12 +28,14 @@ export class MySqlWarehouseRepository implements WarehouseRepository {
 
   async create(warehouse: Partial<WarehouseEntity>): Promise<string> {
     const sql = `
-      INSERT INTO warehouses (id, name, location, contact_number, active, is_main)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO warehouses (id, name, location, contact_number, active, is_main, branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
+    // No branch picker yet (Phase 5): new warehouses default to the main branch.
+    const branchId = await mainBranchId();
     await query(sql, [
       warehouse.id, warehouse.name, warehouse.location || null, warehouse.contactNumber || null,
-      warehouse.active ?? true, warehouse.isMain ?? false
+      warehouse.active ?? true, warehouse.isMain ?? false, branchId
     ]);
     return warehouse.id as string;
   }

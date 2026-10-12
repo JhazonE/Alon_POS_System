@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
 
           // Re-insert default STORE warehouse
           await connection.query(
-            "INSERT IGNORE INTO warehouses (id, name, location, is_active, is_main) VALUES (?, ?, ?, ?, ?)",
+            "INSERT IGNORE INTO warehouses (id, name, location, is_active, is_main, branch_id) VALUES (?, ?, ?, ?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))",
             ['wh_main', 'STORE', 'Main Store', 1, 1]
           );
 
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
 
           // 4. Insert default STORE warehouse
           await connection.query(
-            "INSERT IGNORE INTO warehouses (id, name, location, is_active, is_main) VALUES (?, ?, ?, ?, ?)",
+            "INSERT IGNORE INTO warehouses (id, name, location, is_active, is_main, branch_id) VALUES (?, ?, ?, ?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))",
             ['wh_main', 'STORE', 'Main Store', 1, 1]
           );
 

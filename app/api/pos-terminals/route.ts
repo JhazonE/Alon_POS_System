@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../lib/mysql';
+import { mainBranchId } from '../../../lib/branch-context';
 
 // Helper function to ensure pos_terminals table exists
 async function ensurePosTerminalsTable() {
@@ -210,10 +211,13 @@ export async function POST(request: NextRequest) {
       INSERT INTO pos_terminals (
         id, ip_address, name, serial_number, min_number,
         permit_no, accreditation_no, permit_date_issued, print_official_receipt, or_next_reference,
-        location, is_active, z_counter, reset_counter
+        location, is_active, z_counter, reset_counter, branch_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+
+    // No branch picker yet (Phase 5): new terminals default to the main branch.
+    const branchId = await mainBranchId();
 
     await query(sql, [
       id,
@@ -229,7 +233,8 @@ export async function POST(request: NextRequest) {
       inventoryLocation || 'Store',
       isActive,
       zCounter,
-      resetCounter
+      resetCounter,
+      branchId
     ]);
 
     return NextResponse.json({

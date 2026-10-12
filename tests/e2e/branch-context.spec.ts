@@ -221,3 +221,32 @@ test.describe('warehouseIdsForBranch', () => {
     expect(ids).toBeNull();
   });
 });
+
+import { mainBranchId } from '../../lib/branch-context';
+import { MySqlWarehouseRepository } from '../../src/infrastructure/repositories/MySqlWarehouseRepository';
+import { query } from '../../lib/mysql';
+
+test.describe('mainBranchId', () => {
+  test('mo-uli sa id sa seeded nga main branch', async () => {
+    const rows = (await query(
+      'SELECT id FROM branches WHERE is_main = 1'
+    )) as any[];
+    expect(rows).toHaveLength(1);
+    expect(await mainBranchId()).toBe(rows[0].id);
+  });
+
+  test('ang bag-ong warehouse nga walay gihatag nga branch mapunta sa main branch', async () => {
+    const id = `wh-default-${Date.now()}`;
+    try {
+      await new MySqlWarehouseRepository().create({ id, name: 'Default Branch WH' });
+      const rows = (await query(
+        'SELECT branch_id AS branchId FROM warehouses WHERE id = ?',
+        [id]
+      )) as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].branchId).toBe(await mainBranchId());
+    } finally {
+      await query('DELETE FROM warehouses WHERE id = ?', [id]);
+    }
+  });
+});
