@@ -193,6 +193,11 @@ export async function assertWarehouseInBranch(
  * Returns null for head office, meaning "apply no warehouse filter". Callers
  * must treat null as no-filter rather than as an empty set — an empty array
  * would silently hide every row.
+ *
+ * An empty array means the opposite: a branch that owns no warehouses, which
+ * must match NOTHING. Callers return an empty result rather than running an
+ * unfiltered query. Collapsing the two cases either hides every row (null
+ * read as empty) or exposes every branch (empty read as null).
  */
 export async function warehouseIdsForBranch(
   scope: BranchScope
