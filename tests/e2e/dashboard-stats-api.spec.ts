@@ -40,7 +40,7 @@ test.describe('getSamePeriodLastMonth', () => {
 
 test.describe('GET /api/reports/stats — bag-ong summary fields', () => {
   test('mo-uli sa today, deltas, ug profit inputs', async ({ request }) => {
-    const res = await request.get('/api/reports/stats');
+    const res = await request.get('/api/reports/stats?uid=test-admin-uid');
     expect(res.ok()).toBeTruthy();
     const { summary } = await res.json();
 
@@ -58,7 +58,7 @@ test.describe('GET /api/reports/stats — bag-ong summary fields', () => {
   });
 
   test('walay gikuha nga existing field', async ({ request }) => {
-    const res = await request.get('/api/reports/stats');
+    const res = await request.get('/api/reports/stats?uid=test-admin-uid');
     const { summary } = await res.json();
 
     for (const key of [

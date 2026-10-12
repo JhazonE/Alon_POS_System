@@ -213,7 +213,7 @@ test.describe('Adjustment expiration dates', () => {
       [PERISHABLE_PRODUCT.id],
     );
 
-    const report = await request.get('/api/reports/expiring-soon?days=30');
+    const report = await request.get('/api/reports/expiring-soon?days=30&uid=test-admin-uid');
     expect(report.ok()).toBeTruthy();
     const body = await report.json();
     expect(body.success).toBeTruthy();
