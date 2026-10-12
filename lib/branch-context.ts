@@ -234,3 +234,30 @@ export async function mainBranchId(): Promise<string> {
   }
   return rows[0].id as string;
 }
+
+/**
+ * Resolve a back-office request's scope from its query string or body.
+ *
+ * Centralised so every route reads the same two parameters the same way,
+ * and so the uid-from-request weakness has exactly one place to be fixed
+ * when API authentication lands.
+ */
+export async function resolveScopeFromRequest(
+  params: URLSearchParams,
+  bodyUid?: string
+): Promise<BranchScope> {
+  const uid = params.get('uid') || bodyUid || '';
+  const viewBranchId = params.get('viewBranchId');
+  return resolveUserBranch(uid, viewBranchId);
+}
+
+/** Map a BranchResolutionError to its JSON response shape. */
+export function branchErrorResponse(error: unknown): {
+  body: { success: false; error: string };
+  status: number;
+} | null {
+  if (error instanceof BranchResolutionError) {
+    return { body: { success: false, error: error.message }, status: error.status };
+  }
+  return null;
+}

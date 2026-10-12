@@ -96,6 +96,7 @@ export async function cleanupSecondBranch(seeded: SeededBranch): Promise<void> {
     await conn.query('DELETE FROM user_permissions WHERE user_uid = ?', [seeded.userUid]);
     await conn.query('DELETE FROM users WHERE uid = ?', [seeded.userUid]);
     await conn.query('DELETE FROM pos_terminals WHERE id = ?', [seeded.terminalId]);
+    await conn.query('DELETE FROM products WHERE warehouse_id = ?', [seeded.warehouseId]);
     await conn.query('DELETE FROM warehouses WHERE id = ?', [seeded.warehouseId]);
     await conn.query('DELETE FROM branches WHERE id = ?', [seeded.branchId]);
     await conn.query('SET FOREIGN_KEY_CHECKS=1');
@@ -134,4 +135,22 @@ export async function setUserBranch(
   } finally {
     await conn.end();
   }
+}
+
+export async function seedProductInWarehouse(
+  warehouseId: string,
+  sku: string
+): Promise<string> {
+  const conn = await getConn();
+  const id = uuidv4();
+  try {
+    await conn.query(
+      `INSERT INTO products (id, name, price, sku, stock, warehouse_id)
+       VALUES (?, ?, 1.00, ?, 10, ?)`,
+      [id, `Test Product ${sku}`, sku, warehouseId]
+    );
+  } finally {
+    await conn.end();
+  }
+  return id;
 }
