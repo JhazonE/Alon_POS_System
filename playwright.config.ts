@@ -13,6 +13,12 @@ import { defineConfig, devices } from '@playwright/test';
 const TEST_PORT = 3100;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
 
+// Specs nga mo-import sa `lib/*` (e.g. lib/branch-context) mo-query pinaagi sa
+// lib/mysql.ts sulod sa test worker mismo. Kinahanglan i-set ang DB_NAME dinhi
+// (workers mo-inherit sa env) aron dili sa dev `alon_pos` mo-query. dotenv dili
+// mo-override sa naka-set na.
+process.env.DB_NAME = 'alon_pos_test';
+
 export default defineConfig({
   testDir: './tests/e2e',
   globalSetup: './tests/e2e/setup/global-setup.ts',
