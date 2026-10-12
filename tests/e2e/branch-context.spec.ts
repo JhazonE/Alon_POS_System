@@ -72,3 +72,75 @@ test.describe('clientIpFrom — spoofing', () => {
     expect(clientIpFrom(req)).toBe('127.0.0.1');
   });
 });
+
+import { resolveUserBranch, ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
+import { grantPermission, setUserBranch } from './helpers/branches';
+
+test.describe('resolveUserBranch', () => {
+  test('mo-uli sa assigned branch sa user', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      const result = await resolveUserBranch(seeded.userUid);
+      expect(result).toEqual({ branchId: seeded.branchId, scope: 'single' });
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang head office (NULL branch + all_branches) mo-uli ug scope "all"', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      await grantPermission(seeded.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(seeded.userUid, null);
+      const result = await resolveUserBranch(seeded.userUid);
+      expect(result).toEqual({ branchId: null, scope: 'all' });
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang head office makahimo mo-switch pinaagi sa viewBranchId', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      await grantPermission(seeded.userUid, ALL_BRANCHES_PERMISSION);
+      const result = await resolveUserBranch(seeded.userUid, seeded.branchId);
+      expect(result).toEqual({ branchId: seeded.branchId, scope: 'single' });
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('gi-REJECT ang viewBranchId kung walay all_branches — dili hilom nga i-downgrade', async () => {
+    const seeded = await seedSecondBranch();
+    const other = await seedSecondBranch();
+    try {
+      await expect(
+        resolveUserBranch(seeded.userUid, other.branchId)
+      ).rejects.toThrow(/not permitted to view other branches/i);
+    } finally {
+      await cleanupSecondBranch(other);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('mo-fail closed kung inactive ang branch sa user', async () => {
+    const seeded = await seedSecondBranch({ branchActive: false });
+    try {
+      await expect(resolveUserBranch(seeded.userUid)).rejects.toThrow(/inactive/i);
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('mo-fail closed kung NULL ang branch pero walay all_branches', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      await setUserBranch(seeded.userUid, null);
+      await expect(resolveUserBranch(seeded.userUid)).rejects.toThrow(
+        /not assigned to a branch/i
+      );
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+});

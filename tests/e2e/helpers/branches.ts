@@ -79,11 +79,44 @@ export async function cleanupSecondBranch(seeded: SeededBranch): Promise<void> {
   const conn = await getConn();
   try {
     await conn.query('SET FOREIGN_KEY_CHECKS=0');
+    await conn.query('DELETE FROM user_permissions WHERE user_uid = ?', [seeded.userUid]);
     await conn.query('DELETE FROM users WHERE uid = ?', [seeded.userUid]);
     await conn.query('DELETE FROM pos_terminals WHERE id = ?', [seeded.terminalId]);
     await conn.query('DELETE FROM warehouses WHERE id = ?', [seeded.warehouseId]);
     await conn.query('DELETE FROM branches WHERE id = ?', [seeded.branchId]);
     await conn.query('SET FOREIGN_KEY_CHECKS=1');
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function grantPermission(
+  userUid: string,
+  permission: string
+): Promise<void> {
+  const conn = await getConn();
+  try {
+    // user_permissions.id is VARCHAR(50) NOT NULL with no default, so it must
+    // be supplied explicitly — omitting it fails with ER_NO_DEFAULT_FOR_FIELD.
+    await conn.query(
+      `INSERT INTO user_permissions (id, user_uid, permission) VALUES (?, ?, ?)`,
+      [uuidv4(), userUid, permission]
+    );
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function setUserBranch(
+  userUid: string,
+  branchId: string | null
+): Promise<void> {
+  const conn = await getConn();
+  try {
+    await conn.query('UPDATE users SET branch_id = ? WHERE uid = ?', [
+      branchId,
+      userUid,
+    ]);
   } finally {
     await conn.end();
   }
