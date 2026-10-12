@@ -144,3 +144,80 @@ test.describe('resolveUserBranch', () => {
     }
   });
 });
+
+import {
+  assertWarehouseInBranch,
+  warehouseIdsForBranch,
+} from '../../lib/branch-context';
+
+test.describe('assertWarehouseInBranch', () => {
+  test('mo-pass kung ang warehouse sakop sa resolved branch', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      await expect(
+        assertWarehouseInBranch(seeded.warehouseId, {
+          branchId: seeded.branchId,
+          scope: 'single',
+        })
+      ).resolves.toBeUndefined();
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('gi-REJECT ang warehouse sa laing branch bisan active ug valid kini', async () => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      await expect(
+        assertWarehouseInBranch(b.warehouseId, {
+          branchId: a.branchId,
+          scope: 'single',
+        })
+      ).rejects.toThrow(/does not belong to branch/i);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office (scope "all") makasulod sa bisan unsang warehouse', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      await expect(
+        assertWarehouseInBranch(seeded.warehouseId, {
+          branchId: null,
+          scope: 'all',
+        })
+      ).resolves.toBeUndefined();
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('gi-reject ang wala-kaila nga warehouse', async () => {
+    await expect(
+      assertWarehouseInBranch('nope', { branchId: 'x', scope: 'single' })
+    ).rejects.toThrow(/unknown warehouse/i);
+  });
+});
+
+test.describe('warehouseIdsForBranch', () => {
+  test('mo-uli sa warehouse ids sa branch', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      const ids = await warehouseIdsForBranch({
+        branchId: seeded.branchId,
+        scope: 'single',
+      });
+      expect(ids).toEqual([seeded.warehouseId]);
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('mo-uli ug null para sa scope "all" — pasabot walay filter', async () => {
+    const ids = await warehouseIdsForBranch({ branchId: null, scope: 'all' });
+    expect(ids).toBeNull();
+  });
+});

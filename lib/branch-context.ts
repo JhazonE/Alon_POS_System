@@ -158,3 +158,51 @@ export async function resolveUserBranch(
 
   return { branchId, scope: 'single' };
 }
+
+/**
+ * Reject a warehouse that does not belong to the resolved branch.
+ *
+ * Existence is not enough: a valid, active warehouse in another branch must
+ * be refused. This is the check that stops a crafted request carrying
+ * someone else's warehouse_id from reaching their stock.
+ */
+export async function assertWarehouseInBranch(
+  warehouseId: string,
+  scope: BranchScope
+): Promise<void> {
+  if (scope.scope === 'all') return;
+
+  const rows = (await query(
+    `SELECT branch_id AS branchId FROM warehouses WHERE id = ?`,
+    [warehouseId]
+  )) as any[];
+
+  if (rows.length === 0) {
+    throw new BranchResolutionError(`Unknown warehouse: ${warehouseId}`);
+  }
+  if (rows[0].branchId !== scope.branchId) {
+    throw new BranchResolutionError(
+      `Warehouse ${warehouseId} does not belong to branch ${scope.branchId}`
+    );
+  }
+}
+
+/**
+ * The warehouse ids a scope may read.
+ *
+ * Returns null for head office, meaning "apply no warehouse filter". Callers
+ * must treat null as no-filter rather than as an empty set — an empty array
+ * would silently hide every row.
+ */
+export async function warehouseIdsForBranch(
+  scope: BranchScope
+): Promise<string[] | null> {
+  if (scope.scope === 'all') return null;
+
+  const rows = (await query(
+    `SELECT id FROM warehouses WHERE branch_id = ?`,
+    [scope.branchId]
+  )) as any[];
+
+  return rows.map((r) => r.id);
+}
