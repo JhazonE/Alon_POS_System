@@ -133,6 +133,7 @@ import './129_add_price_level_switch_to_pos_settings';
 import './130_create_branches';
 import './131_add_branch_id_columns';
 import './132_backfill_default_branch';
+import './133_tighten_branch_id_not_null';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions

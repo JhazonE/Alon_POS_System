@@ -356,9 +356,19 @@ async function seedFixtures(): Promise<void> {
   );
   // REASSIGN_AUTO_NOMATCH intentionally gets NO conversion_factors row.
 
+  // --- main branch — ang schema-clone walay data, ug NOT NULL na ang
+  // warehouses.branch_id / pos_terminals.branch_id (migration 133). ---
+  await conn.query(
+    `INSERT INTO branches (id, code, name, is_main, is_active)
+     VALUES ('branch-main-test', 'MAIN', 'Main Branch', 1, 1)`,
+  );
+
   // --- supplier + warehouse (para sa purchase-order test) ---
   await conn.query('INSERT INTO suppliers (id, name) VALUES (?, ?)', [TEST_SUPPLIER.id, TEST_SUPPLIER.name]);
-  await conn.query('INSERT INTO warehouses (id, name) VALUES (?, ?)', [TEST_WAREHOUSE.id, TEST_WAREHOUSE.name]);
+  await conn.query(
+    'INSERT INTO warehouses (id, name, branch_id) VALUES (?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))',
+    [TEST_WAREHOUSE.id, TEST_WAREHOUSE.name],
+  );
 
   // Product assigned to TEST_WAREHOUSE — the Pricing page's product
   // picker filters by warehouse_id, and TEST_PRODUCTS all have NULL warehouse_id.
@@ -372,7 +382,7 @@ async function seedFixtures(): Promise<void> {
   );
 
   // --- bulk-transfer fixtures: ikaduhang warehouse + NULL-SKU nga pares + orphan ---
-  await conn.query('INSERT INTO warehouses (id, name) VALUES (?, ?)', [
+  await conn.query('INSERT INTO warehouses (id, name, branch_id) VALUES (?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))', [
     TRANSFER_TARGET_WAREHOUSE.id, TRANSFER_TARGET_WAREHOUSE.name,
   ]);
 
@@ -426,8 +436,8 @@ async function seedFixtures(): Promise<void> {
 
   // --- pos_terminals (gikinahanglan sa POS shift + sale flow) ---
   await conn.query(
-    `INSERT INTO pos_terminals (id, name, location, ip_address, is_active, x_counter, z_counter, or_next_reference)
-     VALUES (?, ?, ?, ?, 1, 0, 0, '000000')`,
+    `INSERT INTO pos_terminals (id, name, location, ip_address, is_active, x_counter, z_counter, or_next_reference, branch_id)
+     VALUES (?, ?, ?, ?, 1, 0, 0, '000000', (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))`,
     [TEST_TERMINAL.id, TEST_TERMINAL.name, TEST_TERMINAL.location, TEST_TERMINAL.ipAddress],
   );
 

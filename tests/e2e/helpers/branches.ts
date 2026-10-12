@@ -60,9 +60,23 @@ export async function seedSecondBranch(
     await conn.query(
       `INSERT INTO pos_terminals (id, name, is_active, branch_id)
        VALUES (?, ?, 1, ?)`,
-      [terminalId, `Test Term ${suffix}`,
-       opts.terminalBranchId === null ? null : (opts.terminalBranchId ?? branchId)]
+      [terminalId, `Test Term ${suffix}`, opts.terminalBranchId ?? branchId]
     );
+    if (opts.terminalBranchId === null) {
+      // Migration 133 made pos_terminals.branch_id NOT NULL with a FK, so a
+      // genuine NULL can no longer be stored. Simulate an unassigned terminal
+      // the way a backfill gap would leave one: with strict mode and FK checks
+      // off, MySQL coerces the NULL to '' (an unassigned, falsy branch_id that
+      // the resolver's `!branchId` guard must still reject). Both session
+      // settings are restored afterwards.
+      await conn.query('SET FOREIGN_KEY_CHECKS=0');
+      await conn.query("SET SESSION sql_mode=''");
+      await conn.query('UPDATE pos_terminals SET branch_id = NULL WHERE id = ?', [
+        terminalId,
+      ]);
+      await conn.query('SET SESSION sql_mode=DEFAULT');
+      await conn.query('SET FOREIGN_KEY_CHECKS=1');
+    }
     await conn.query(
       `INSERT INTO users (uid, username, password, user_type, branch_id)
        VALUES (?, ?, 'x', 'User', ?)`,
