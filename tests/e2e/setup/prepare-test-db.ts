@@ -363,6 +363,18 @@ async function seedFixtures(): Promise<void> {
      VALUES ('branch-main-test', 'MAIN', 'Main Branch', 1, 1)`,
   );
 
+  // --- branch access model: ang admin kay head office (branch_id NULL + permiso
+  // nga all_branches), ang cashier kay gi-assign sa main branch. Kinahanglan
+  // kini kay ang filtered endpoints mo-403 sa user nga walay branch. ---
+  await conn.query(
+    'INSERT INTO user_permissions (id, user_uid, permission) VALUES (?, ?, ?)',
+    [`${TEST_USERS.admin.uid}-all_branches`, TEST_USERS.admin.uid, 'all_branches'],
+  );
+  await conn.query(
+    'UPDATE users SET branch_id = (SELECT id FROM branches WHERE is_main = 1 LIMIT 1) WHERE uid = ?',
+    [TEST_USERS.cashier.uid],
+  );
+
   // --- supplier + warehouse (para sa purchase-order test) ---
   await conn.query('INSERT INTO suppliers (id, name) VALUES (?, ?)', [TEST_SUPPLIER.id, TEST_SUPPLIER.name]);
   await conn.query(
