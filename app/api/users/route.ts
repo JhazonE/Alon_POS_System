@@ -70,9 +70,15 @@ export async function POST(request: NextRequest) {
     }
 
     await withTransaction(async (connection) => {
-      // Insert user
+      // Insert user. branch_id defaults to the main branch, mirroring what
+      // migration 134 does for pre-existing users: a user with no branch and
+      // no all_branches permission gets 403 from every branch-filtered route,
+      // so a new account must not be created unassigned. Head office is an
+      // explicit reassignment (NULL + all_branches), not the default.
+      // A subselect rather than mainBranchId() because this runs on the
+      // transaction's own connection.
       await connection.execute(
-        'INSERT INTO users (uid, username, password, user_type, display_name, photo_url, disabled, creation_time) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+        'INSERT INTO users (uid, username, password, user_type, display_name, photo_url, disabled, creation_time, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))',
         [uid, username, hashedPassword, userType || 'User', displayName || username.split('@')[0], '', false]
       );
 

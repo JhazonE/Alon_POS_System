@@ -519,9 +519,14 @@ export async function processPullSync(): Promise<void> {
       if (users && users.length > 0) {
         console.log(`Pull Sync: Received ${users.length} users.`);
         for (const user of users) {
+          // branch_id defaults to the main branch for a newly pulled user, as
+          // in migration 134 and POST /api/users: an unassigned user gets 403
+          // from every branch-filtered route. It is deliberately NOT in the
+          // ON DUPLICATE KEY UPDATE list, so a local branch assignment is
+          // never overwritten by a cloud row that has no branch of its own.
           await query(`
-            INSERT INTO users (uid, username, password, user_type, display_name, disabled, creation_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (uid, username, password, user_type, display_name, disabled, creation_time, branch_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))
             ON DUPLICATE KEY UPDATE
             username = VALUES(username),
             password = VALUES(password),
