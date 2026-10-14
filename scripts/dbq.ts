@@ -3,9 +3,10 @@
  *
  *   npx tsx scripts/dbq.ts "SELECT type, COUNT(*) c FROM products GROUP BY type"
  *
- * Importing lib/mysql.ts starts a connection pool, a backup scheduler, and a
- * background sync worker, none of which stop on their own — so this exits
- * explicitly rather than waiting for the event loop to drain.
+ * Importing lib/mysql.ts starts a connection pool, which keeps the event loop
+ * open on its own — so this exits explicitly rather than waiting for it to
+ * drain. (The backup scheduler and sync worker no longer start on import; they
+ * start from instrumentation.ts, so a tsx script does not inherit them.)
  *
  * Note: mysql2 renders bare DATE columns as local-time JS Dates. Wrap date
  * columns in DATE_FORMAT(col,'%Y-%m-%d') when the exact stored value matters.
