@@ -1,11 +1,15 @@
 // Dedicated entrypoint for the update installer (VendixUpdater.iss).
 //
-// Not `npm run migrate` (scripts/migrations/index.ts) directly: importing
-// lib/mysql.ts pulls in lib/init-scheduler.ts as a side effect, which starts
-// node-cron jobs that keep the event loop alive forever — fine for the app
-// server, but it means the plain migration CLI never exits on its own. An
-// unattended installer .bat waiting on that would hang indefinitely. This
-// wrapper runs the same migrateUp() and then force-exits once it resolves.
+// Not `npm run migrate` (scripts/migrations/index.ts) directly. Historically
+// importing lib/mysql.ts pulled in lib/init-scheduler.ts as a side effect, which
+// started node-cron jobs that kept the event loop alive forever, so the plain
+// migration CLI never exited on its own and an unattended installer .bat waiting
+// on it would hang indefinitely. That is no longer the case: lib/mysql.ts does
+// not start the scheduler any more (startup moved to instrumentation.ts), so the
+// plain migration CLI should now exit on its own. This wrapper still runs the
+// same migrateUp() and then force-exits once it resolves; that is now
+// belt-and-braces rather than load-bearing, kept because a lingering DB pool
+// handle or a future side-effect import could still hold the loop open.
 //
 // This file lives under {app}\updater (its own node_modules/tsconfig.json,
 // kept separate from the app's real node_modules — see run_update.bat), but
