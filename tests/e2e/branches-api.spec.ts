@@ -36,3 +36,26 @@ test.describe('POST /api/branches', () => {
     expect(res.status()).toBe(400);
   });
 });
+
+test.describe('POST /api/branches — Phase 2 guard', () => {
+  test('ang bag-ong branch kay inactive samtang shared pa ang SI counter', async ({ request }) => {
+    const code = `G${Date.now().toString().slice(-6)}`;
+    const res = await request.post('/api/branches', {
+      data: { code, name: 'Guarded Branch' },
+    });
+    expect(res.status()).toBe(201);
+
+    const list = await (await request.get('/api/branches')).json();
+    const created = list.data.find((b: any) => b.code === code);
+    expect(created.isActive).toBe(0);
+  });
+
+  test('gi-explain sa response nganong inactive', async ({ request }) => {
+    const code = `W${Date.now().toString().slice(-6)}`;
+    const res = await request.post('/api/branches', {
+      data: { code, name: 'Warned Branch' },
+    });
+    const body = await res.json();
+    expect(body.warning).toMatch(/per-branch numbering/i);
+  });
+});
