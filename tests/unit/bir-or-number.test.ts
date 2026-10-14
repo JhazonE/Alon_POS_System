@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
-import { getNextBirOrNumber, withTransaction } from '../../lib/mysql';
+import { getNextBirOrNumber, withTransaction, query } from '../../lib/mysql';
 
 // getNextBirOrNumber() must produce a distinct, incrementing, OR-prefixed
 // sequence independent of si_number/mc_number, and must be rollback-safe
 // on the same connection (a failed sale must not burn a number).
 
 (async () => {
+  // The OR series is per-branch; use the main branch's series from the DB.
+  const mainRows: any = await query(`SELECT id FROM branches WHERE is_main = 1 LIMIT 1`);
+  assert.ok(mainRows.length > 0, 'an is_main branch exists');
+  const branchId: string = mainRows[0].id;
+
   await withTransaction(async (connection) => {
-    const first = await getNextBirOrNumber(connection);
-    const second = await getNextBirOrNumber(connection);
+    const first = await getNextBirOrNumber(branchId, connection);
+    const second = await getNextBirOrNumber(branchId, connection);
 
     assert.ok(/^OR-\d{6}$/.test(first), `first OR number is OR-prefixed 6-digit, got ${first}`);
     assert.ok(/^OR-\d{6}$/.test(second), `second OR number is OR-prefixed 6-digit, got ${second}`);
