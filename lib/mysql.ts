@@ -239,57 +239,97 @@ export async function getNextZReadingNumber(terminalId: string): Promise<string>
 }
 
 /**
- * Atomically gets and increments the next SI Number (Sales Invoice Number)
- * @returns The next SI number string (plain sequential digits, e.g. "001234")
+ * Atomically gets and increments a branch's next SI Number (Sales Invoice Number).
+ *
+ * @returns The next SI number (plain sequential digits, e.g. "001234")
+ *
+ * Each branch is a separately BIR-registered establishment with its own
+ * gapless series, so the counter lives in branch_number_series, not in the
+ * single global transaction_references row.
+ *
+ * branchId is required and first: every call site must state which
+ * establishment is issuing. There is deliberately no default — defaulting
+ * would silently interleave two branches' filed sequences.
+ *
+ * Pass the SAME connection as the inserting statement so the number rolls
+ * back with a failed transaction; a swallowed number is a gap in a filed
+ * series.
+ *
+ * @throws Error when the branch has no branch_number_series row (fails closed)
  */
-export async function getNextSINumber(connection?: mysql.PoolConnection): Promise<string> {
+export async function getNextSINumber(
+  branchId: string,
+  connection?: mysql.PoolConnection
+): Promise<string> {
   return await onConnection(connection, async (connection) => {
-    // 1. Atomically increment the numeric counter.
-    await connection.query(
-      `UPDATE transaction_references SET si_number = LPAD(IF(si_number IS NULL OR si_number = '', 0, CAST(si_number AS UNSIGNED)) + 1, 6, '0') WHERE id = 1`
+    const [res]: any = await connection.query(
+      `UPDATE branch_number_series
+       SET si_number = LPAD(IF(si_number IS NULL OR si_number = '', 0, CAST(si_number AS UNSIGNED)) + 1, 6, '0')
+       WHERE branch_id = ?`,
+      [branchId]
     );
+    if (!res || res.affectedRows === 0) {
+      throw new Error(`Branch ${branchId} has no number series row`);
+    }
 
-    // 2. Read it back.
     const [rows]: any = await connection.query(
-      `SELECT si_number as next_val FROM transaction_references WHERE id = 1`
+      `SELECT si_number as next_val FROM branch_number_series WHERE branch_id = ?`,
+      [branchId]
     );
     if (!rows || rows.length === 0) {
-      throw new Error('Failed to fetch next SI number');
+      throw new Error(`Failed to fetch next SI number for branch ${branchId}`);
     }
     return String(rows[0].next_val);
   });
 }
 
 /**
- * Atomically gets and increments the next MC Number (Merchandise Credit).
- *
- * Must be called with the SAME connection as the return's INSERT so the number
- * is rolled back with the transaction if the return fails — otherwise the
- * sequence gaps.
+ * Atomically gets and increments a branch's next MC Number (Merchandise Credit).
  *
  * @returns The next MC number, formatted (e.g. "MC-000001")
+ *
+ * Each branch is a separately BIR-registered establishment with its own
+ * gapless series, so the counter lives in branch_number_series, not in the
+ * single global transaction_references row.
+ *
+ * branchId is required and first: every call site must state which
+ * establishment is issuing. There is deliberately no default — defaulting
+ * would silently interleave two branches' filed sequences.
+ *
+ * Pass the SAME connection as the inserting statement so the number rolls
+ * back with a failed transaction; a swallowed number is a gap in a filed
+ * series.
+ *
+ * @throws Error when the branch has no branch_number_series row (fails closed)
  */
-export async function getNextMCNumber(connection?: mysql.PoolConnection): Promise<string> {
+export async function getNextMCNumber(
+  branchId: string,
+  connection?: mysql.PoolConnection
+): Promise<string> {
   return await onConnection(connection, async (connection) => {
-    // 1. Atomically increment the numeric counter.
-    await connection.query(
-      `UPDATE transaction_references SET mc_number = LPAD(IF(mc_number IS NULL OR mc_number = '', 0, CAST(mc_number AS UNSIGNED)) + 1, 6, '0') WHERE id = 1`
+    const [res]: any = await connection.query(
+      `UPDATE branch_number_series
+       SET mc_number = LPAD(IF(mc_number IS NULL OR mc_number = '', 0, CAST(mc_number AS UNSIGNED)) + 1, 6, '0')
+       WHERE branch_id = ?`,
+      [branchId]
     );
+    if (!res || res.affectedRows === 0) {
+      throw new Error(`Branch ${branchId} has no number series row`);
+    }
 
-    // 2. Read it back.
     const [rows]: any = await connection.query(
-      `SELECT mc_number as next_val FROM transaction_references WHERE id = 1`
+      `SELECT mc_number as next_val FROM branch_number_series WHERE branch_id = ?`,
+      [branchId]
     );
     if (!rows || rows.length === 0) {
-      throw new Error('Failed to fetch next MC number');
+      throw new Error(`Failed to fetch next MC number for branch ${branchId}`);
     }
     return `MC-${String(rows[0].next_val)}`;
   });
 }
 
-
 /**
- * Atomically gets and increments the next BIR Official Receipt (OR) number.
+ * Atomically gets and increments a branch's next BIR Official Receipt (OR) number.
  *
  * Named bir_or_number (not or_number) to avoid confusion with the existing,
  * unrelated getNextReceiptNumber()/or_next_reference counter, which is a
@@ -297,18 +337,42 @@ export async function getNextMCNumber(connection?: mysql.PoolConnection): Promis
  * type — not this BIR classification series.
  *
  * @returns The next BIR OR number, formatted (e.g. "OR-000001")
+ *
+ * Each branch is a separately BIR-registered establishment with its own
+ * gapless series, so the counter lives in branch_number_series, not in the
+ * single global transaction_references row.
+ *
+ * branchId is required and first: every call site must state which
+ * establishment is issuing. There is deliberately no default — defaulting
+ * would silently interleave two branches' filed sequences.
+ *
+ * Pass the SAME connection as the inserting statement so the number rolls
+ * back with a failed transaction; a swallowed number is a gap in a filed
+ * series.
+ *
+ * @throws Error when the branch has no branch_number_series row (fails closed)
  */
-export async function getNextBirOrNumber(connection?: mysql.PoolConnection): Promise<string> {
+export async function getNextBirOrNumber(
+  branchId: string,
+  connection?: mysql.PoolConnection
+): Promise<string> {
   return await onConnection(connection, async (connection) => {
-    await connection.query(
-      `UPDATE transaction_references SET bir_or_number = LPAD(IF(bir_or_number IS NULL OR bir_or_number = '', 0, CAST(bir_or_number AS UNSIGNED)) + 1, 6, '0') WHERE id = 1`
+    const [res]: any = await connection.query(
+      `UPDATE branch_number_series
+       SET bir_or_number = LPAD(IF(bir_or_number IS NULL OR bir_or_number = '', 0, CAST(bir_or_number AS UNSIGNED)) + 1, 6, '0')
+       WHERE branch_id = ?`,
+      [branchId]
     );
+    if (!res || res.affectedRows === 0) {
+      throw new Error(`Branch ${branchId} has no number series row`);
+    }
 
     const [rows]: any = await connection.query(
-      `SELECT bir_or_number as next_val FROM transaction_references WHERE id = 1`
+      `SELECT bir_or_number as next_val FROM branch_number_series WHERE branch_id = ?`,
+      [branchId]
     );
     if (!rows || rows.length === 0) {
-      throw new Error('Failed to fetch next BIR OR number');
+      throw new Error(`Failed to fetch next BIR OR number for branch ${branchId}`);
     }
     return `OR-${String(rows[0].next_val)}`;
   });

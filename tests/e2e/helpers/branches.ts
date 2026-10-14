@@ -33,6 +33,8 @@ export interface SeedOptions {
   /** `null` mo-biya sa terminal nga wala ma-assign, para sa fail-closed tests. */
   terminalBranchId?: string | null;
   branchActive?: boolean;
+  /** Mo-himo ug branch_number_series row para niining branch (default: true). */
+  withNumberSeries?: boolean;
 }
 
 export async function seedSecondBranch(
@@ -52,6 +54,12 @@ export async function seedSecondBranch(
       [branchId, `T${suffix.slice(0, 6)}`, `Test Branch ${suffix}`,
        opts.branchActive === false ? 0 : 1]
     );
+    if (opts.withNumberSeries !== false) {
+      await conn.query(
+        `INSERT INTO branch_number_series (branch_id) VALUES (?)`,
+        [branchId]
+      );
+    }
     await conn.query(
       `INSERT INTO warehouses (id, name, is_active, branch_id)
        VALUES (?, ?, 1, ?)`,
@@ -98,6 +106,7 @@ export async function cleanupSecondBranch(seeded: SeededBranch): Promise<void> {
     await conn.query('DELETE FROM pos_terminals WHERE id = ?', [seeded.terminalId]);
     await conn.query('DELETE FROM products WHERE warehouse_id = ?', [seeded.warehouseId]);
     await conn.query('DELETE FROM warehouses WHERE id = ?', [seeded.warehouseId]);
+    await conn.query('DELETE FROM branch_number_series WHERE branch_id = ?', [seeded.branchId]);
     await conn.query('DELETE FROM branches WHERE id = ?', [seeded.branchId]);
     await conn.query('SET FOREIGN_KEY_CHECKS=1');
   } finally {
