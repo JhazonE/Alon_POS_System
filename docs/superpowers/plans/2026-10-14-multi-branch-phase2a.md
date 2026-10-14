@@ -55,12 +55,20 @@ BIR numbering, which is what makes activating a second branch legal.
   unintentionally, or re-issue a number. When in doubt, stop and escalate
   rather than guess.
 - **Do NOT add a `Co-Authored-By: Claude` trailer.** Author as JhazonE.
-- **Importing `lib/mysql` currently starts background schedulers** and the
-  process never exits on its own, so `npm run migrate` may appear to hang and
-  return exit 124 even on success — judge by database state. **Task 1 fixes
-  this**; after Task 1, scripts should exit normally. Verification one-liners
-  still end with `process.exit(0)`, and use one query per invocation piped
-  through `tail -2` (scheduler noise swallows stdout before Task 1 lands).
+- **A script importing `lib/mysql` never exits on its own**, so `npm run
+  migrate` and any `tsx` one-liner may appear to hang and return exit 124 even
+  on full success — **judge by database state, never by the exit code.**
+  Verified 2026-10-14 (post-Task-1): a bare
+  `tsx -e "query('SELECT 1')"` prints its result and still times out at
+  exit 124. **The cause is the connection pool, not the schedulers.** Task 1
+  stops the *schedulers* from starting on import — which removes the log noise
+  that used to swallow a script's stdout — but nothing in the library closes
+  the pool, so the event loop stays open regardless. Every verification
+  one-liner must therefore still end with `process.exit(0)`.
+  (An earlier draft of this constraint claimed scripts would exit normally
+  after Task 1. That was wrong, and testing it is what found the stale
+  comments in `scripts/dbq.ts` and `scripts/updater/run-migrate.ts`, whose
+  force-exits are load-bearing for exactly this reason.)
 
 ## Review Focus
 
