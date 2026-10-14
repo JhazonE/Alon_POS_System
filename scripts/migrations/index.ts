@@ -137,6 +137,7 @@ import './133_tighten_branch_id_not_null';
 import './134_assign_users_to_branches';
 import './135_create_branch_number_series';
 import './136_seed_branch_number_series';
+import './137_resync_main_branch_series';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions
