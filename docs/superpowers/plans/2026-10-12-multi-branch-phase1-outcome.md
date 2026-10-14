@@ -99,11 +99,30 @@ Not caused by this branch; each is worth its own fix.
   so the script resolves `lint` as a directory and fails on every branch. The
   plan's "lint must pass" constraint was waived; `npm run typecheck` gated
   every commit instead.
-- **24 e2e failures on `main`**, independent of this work: stale `Retail (₱)`
+- **~24 e2e failures on `main`**, independent of this work: stale `Retail (₱)`
   selectors (`add-product`, `price-level-tiers`, `purchase-order-add-product`,
   `selling-units`), UI drift (`pricing`, `import-wizard`, `login`,
   `dashboard-matte`, `sidebar-panel`). Proven pre-existing — those specs and
   their UI directories are byte-identical between `main` and this branch.
+- **The full suite cannot currently complete in one run.** A verification run
+  on 2026-10-14 reported 132 failed / 90 passed / 35 did not run, which looks
+  alarming but is an infrastructure failure, not a regression: the dev server
+  on port 3100 died partway through, and 110 of the 132 are
+  `ECONNREFUSED ::1:3100` cascade failures from tests that had no server to
+  talk to. Only **22 tests failed before the crash**, matching the ~24 known
+  pre-existing failures. A contributing cause appears in the log:
+  `TypeError: query is not a function` at `lib/external-api-config.ts:83`,
+  raised from the `node-cron` scheduler ticks — a dynamic
+  `await import('./mysql')` whose destructured `query` is undefined under this
+  repo's CJS/ESM interop. That file is **unmodified by this branch**. The
+  scheduler firing during tests at all is the same side effect noted above,
+  and Phase 3's scheduler lease should address the root design.
+
+  **Phase 1's own specs were verified separately and pass: 29/29** across
+  `branch-context.spec.ts`, `branches-api.spec.ts` and
+  `branch-isolation-api.spec.ts`. Until the server-stability issue is fixed,
+  verify this branch with those three specs plus targeted runs rather than a
+  single full-suite invocation.
 - **Two endpoints 500 at baseline:** `transactions/all-references` (missing
   `reference` column on `purchase_orders` and `stock_adjustments`) and
   `/api/sales/by-product?terminalId=` (`u.id` should be `u.uid`).
