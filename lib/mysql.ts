@@ -6,9 +6,6 @@ export { formatSINumber, validateSINumber } from './si-number';
 // Load environment variables
 dotenv.config();
 
-// Initialize backup scheduler
-import './init-scheduler';
-
 // Extend the global object to hold the pool
 declare global {
   var __mysqlPool: mysql.Pool | undefined;
