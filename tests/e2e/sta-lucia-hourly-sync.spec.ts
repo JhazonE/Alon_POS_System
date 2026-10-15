@@ -58,8 +58,9 @@ async function seedHourlySale() {
 
   await testQuery(
     `INSERT INTO sales_transactions
-       (id, reference, receipt_number, total, payment_method, status, transaction_source, created_at, updated_at)
-     VALUES (?, 'REF-HRLY-1', 'RCPT-HRLY-1', 1120, 'GCash', 'Paid', 'pos', ?, ?)`,
+       (id, reference, receipt_number, total, payment_method, status, transaction_source, branch_id, created_at, updated_at)
+     VALUES (?, 'REF-HRLY-1', 'RCPT-HRLY-1', 1120, 'GCash', 'Paid', 'pos',
+             (SELECT id FROM branches WHERE is_main = 1 LIMIT 1), ?, ?)`,
     [saleId, `${HOUR_START.slice(0, 10)} 13:30:00`, `${HOUR_START.slice(0, 10)} 13:30:00`],
   );
   // sale_items is the FK target for pos_transaction_items.sale_item_id — the
@@ -72,8 +73,9 @@ async function seedHourlySale() {
   );
   await testQuery(
     `INSERT INTO pos_transactions
-       (id, sale_id, user_id, subtotal, total_amount, discount_amount, payment_method, order_number, is_training, created_at)
-     VALUES (?, ?, 'test-cashier-uid', 1120, 1120, 0, 'GCash', 999001, 0, ?)`,
+       (id, sale_id, user_id, subtotal, total_amount, discount_amount, payment_method, order_number, is_training, branch_id, created_at)
+     VALUES (?, ?, 'test-cashier-uid', 1120, 1120, 0, 'GCash', 999001, 0,
+             (SELECT id FROM branches WHERE is_main = 1 LIMIT 1), ?)`,
     [txnId, saleId, `${HOUR_START.slice(0, 10)} 13:30:00`],
   );
   await testQuery(

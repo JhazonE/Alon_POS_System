@@ -56,8 +56,8 @@ async function seedSalesForNewProducts() {
 
       // Insert transaction
       await query(`
-        INSERT INTO sales_transactions (id, customer_id, invoice_date, date, total, payment_method, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'Paid')
+        INSERT INTO sales_transactions (id, customer_id, invoice_date, date, total, payment_method, status, branch_id)
+        VALUES (?, ?, ?, ?, ?, ?, 'Paid', (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))
         ON DUPLICATE KEY UPDATE
         total = VALUES(total),
         status = VALUES(status)

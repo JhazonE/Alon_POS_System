@@ -40,8 +40,9 @@ async function insertSalesTransaction() {
         // 1. Insert into sales_transactions
         await query(
             `INSERT INTO sales_transactions 
-             (id, customer_id, invoice_date, date, due_date, total, payment_method, status, notes)
-             VALUES (?, NULL, ?, ?, NULL, ?, 'CASH', 'Paid', 'POS Sale - Receipt #7308')`,
+             (id, customer_id, invoice_date, date, due_date, total, payment_method, status, notes, branch_id)
+             VALUES (?, NULL, ?, ?, NULL, ?, 'CASH', 'Paid', 'POS Sale - Receipt #7308',
+                     (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))`,
             [saleId, '2026-01-28', '2026-01-28', total]
         );
         console.log('✅ Inserted into sales_transactions: ' + saleId);
@@ -51,9 +52,10 @@ async function insertSalesTransaction() {
             `INSERT INTO pos_transactions 
              (id, sale_id, shift_id, user_id, terminal_id, transaction_type, subtotal, tax_amount, 
               discount_amount, total_amount, payment_method, payment_reference, customer_count, 
-              transaction_time, void_reason, notes, payment_status, payment_details_id, payment_validated_at)
-             VALUES (?, ?, NULL, ?, ?, 'sale', ?, ?, ?, ?, 'CASH', NULL, 1, 
-                     ?, NULL, 'Receipt #7308, Tendered: ₱15.00, Change: ₱0.00', 'completed', ?, ?)`,
+              transaction_time, void_reason, notes, payment_status, payment_details_id, payment_validated_at, branch_id)
+             VALUES (?, ?, NULL, ?, ?, 'sale', ?, ?, ?, ?, 'CASH', NULL, 1,
+                     ?, NULL, 'Receipt #7308, Tendered: ₱15.00, Change: ₱0.00', 'completed', ?, ?,
+                     (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))`,
             [posTransId, saleId, userId, terminalId, total, vatAmount, discount, total, 
              transactionDate, paymentDetailsId, transactionDate]
         );
