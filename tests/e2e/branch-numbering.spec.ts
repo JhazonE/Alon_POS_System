@@ -66,3 +66,62 @@ test.describe('per-branch BIR counters', () => {
     );
   });
 });
+
+import { seedProductInWarehouse, cleanupSale } from './helpers/branches';
+
+test.describe('POST /api/pos/checkout — per-branch SI', () => {
+  test('ang checkout sa branch A mo-gamit sa series sa branch A', async ({ request }) => {
+    const a = await seedSecondBranch({ withNumberSeries: true });
+    let saleId: string | undefined;
+    try {
+      const sku = `NUM-A-${Date.now()}`;
+      const productId = await seedProductInWarehouse(a.warehouseId, sku);
+
+      // Ang route mogamit sa `id` (dili `productId`) kada item, ug sa `totalDue`.
+      const res = await request.post('/api/pos/checkout', {
+        data: {
+          terminalId: a.terminalId,
+          userId: a.userUid,
+          items: [{ id: productId, name: `Test Product ${sku}`, quantity: 1, price: 1.0 }],
+          paymentMethod: 'Cash',
+          totalDue: 1.0,
+          amountTendered: 1.0,
+          change: 0,
+        },
+      });
+      const body = await res.json();
+      saleId = body.data?.saleId;
+      expect(res.ok(), JSON.stringify(body)).toBeTruthy();
+      // Unang invoice sa bag-ong branch kay 000001.
+      expect(body.data.siNumber).toBe('000001');
+    } finally {
+      if (saleId) await cleanupSale(saleId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang checkout sa terminal nga walay branch series', async ({ request }) => {
+    const a = await seedSecondBranch({ withNumberSeries: false });
+    try {
+      const sku = `NUM-B-${Date.now()}`;
+      const productId = await seedProductInWarehouse(a.warehouseId, sku);
+      const res = await request.post('/api/pos/checkout', {
+        data: {
+          terminalId: a.terminalId,
+          userId: a.userUid,
+          items: [{ id: productId, name: `Test Product ${sku}`, quantity: 1, price: 1.0 }],
+          paymentMethod: 'Cash',
+          totalDue: 1.0,
+          amountTendered: 1.0,
+          change: 0,
+        },
+      });
+      // Mo-fail, dili mo-fallback sa series sa main branch.
+      expect(res.ok()).toBeFalsy();
+      const body = await res.json();
+      expect(body.error).toContain('has no number series row');
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+});

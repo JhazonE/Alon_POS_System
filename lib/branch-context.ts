@@ -50,7 +50,7 @@ export function clientIpFrom(request: Request): string {
 
 export async function resolveTerminalBranch(
   terminalId: string
-): Promise<BranchScope> {
+): Promise<Extract<BranchScope, { scope: 'single' }>> {
   if (!terminalId) {
     throw new BranchResolutionError('Unknown terminal: no terminal id supplied');
   }

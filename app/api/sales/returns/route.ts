@@ -3,6 +3,7 @@ import { query, withTransaction, getNextMCNumber } from '@/lib/mysql';
 import { addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
 import { safeQtyBase } from '@/lib/selling-unit-qty';
 import { saveEJournalFiles } from '@/lib/ejournal/ejournal-writer';
+import { resolveTerminalBranch } from '@/lib/branch-context';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Sale ID and items are required' }, { status: 400 });
     }
 
+    // The credit belongs to the establishment that made the original sale.
+    const originRows: any = await query(
+      'SELECT branch_id FROM sales_transactions WHERE id = ?',
+      [saleId]
+    );
+    const returnBranchId: string = originRows?.[0]?.branch_id
+      ?? (await resolveTerminalBranch(terminalId)).branchId;
+
     const result = await withTransaction(async (connection) => {
       // Find a valid user ID if none provided (last resort to avoid FK error)
       let finalUserId = userId;
@@ -32,15 +41,15 @@ export async function POST(request: NextRequest) {
 
       // Allocate the Merchandise Credit number on THIS connection so it rolls
       // back with the transaction — a gap here would not match the paper slips.
-      const mcNumber = await getNextMCNumber(connection);
+      const mcNumber = await getNextMCNumber(returnBranchId, connection);
 
       // 1. Insert into pos_transactions
       const insertPosTransSql = `
         INSERT INTO pos_transactions (
           id, sale_id, user_id, terminal_id, transaction_type, mc_number,
           subtotal, tax_amount, discount_amount, total_amount, payment_method,
-          payment_status, notes, transaction_time, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, 'return', ?, ?, 0, 0, ?, 'Return', 'completed', ?, NOW(), NOW(), NOW())
+          payment_status, notes, branch_id, transaction_time, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'return', ?, ?, 0, 0, ?, 'Return', 'completed', ?, ?, NOW(), NOW(), NOW())
       `;
 
       await connection.query(insertPosTransSql, [
@@ -51,7 +60,8 @@ export async function POST(request: NextRequest) {
         mcNumber,
         -totalAmount, // Negative since it's a return/outflow of money from business
         -totalAmount,
-        reason || 'Merchandise Credit'
+        reason || 'Merchandise Credit',
+        returnBranchId
       ]);
 
       const insertItemSql = `

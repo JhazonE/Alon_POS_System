@@ -363,6 +363,13 @@ async function seedFixtures(): Promise<void> {
      VALUES ('branch-main-test', 'MAIN', 'Main Branch', 1, 1)`,
   );
 
+  // --- series sa main branch — ang counters mo-fail closed kung walay row,
+  // mao nga kinahanglan ni para sa checkout/returns. Default '000000' gamit,
+  // aron ang unang test nga invoice kay 000001. ---
+  await conn.query(
+    `INSERT INTO branch_number_series (branch_id) VALUES ('branch-main-test')`,
+  );
+
   // --- branch access model: ang admin kay head office (branch_id NULL + permiso
   // nga all_branches), ang cashier kay gi-assign sa main branch. Kinahanglan
   // kini kay ang filtered endpoints mo-403 sa user nga walay branch. ---

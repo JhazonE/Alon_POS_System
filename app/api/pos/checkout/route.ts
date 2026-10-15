@@ -10,6 +10,7 @@ import { toBaseQty } from '@/lib/selling-unit-qty';
 import { resolveEffectiveTaxType } from '@/lib/tax-utils';
 import { validateSingleDocumentType } from './mixed-cart-validation';
 import { isTerminalLocked, TERMINAL_LOCKED_MESSAGE } from './terminal-lock-check';
+import { resolveTerminalBranch } from '@/lib/branch-context';
 
 // Cached per process — the columns can't disappear once ensured, so don't pay
 // an INFORMATION_SCHEMA round trip on every checkout.
@@ -125,6 +126,11 @@ export async function POST(request: NextRequest) {
     const paymentDetailsId = `PD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const auditLogId = `PAL-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
+    // Resolve the branch OUTSIDE the transaction: resolveTerminalBranch uses
+    // the pool, and taking a second connection while the transaction's own
+    // connection is held risks a deadlock.
+    const { branchId: saleBranchId } = await resolveTerminalBranch(terminalId);
+
     return await withTransaction(async (connection) => {
       // Fetch Loyalty & Training Mode Settings
       const [loyaltyRows]: any = await connection.query(
@@ -158,8 +164,8 @@ export async function POST(request: NextRequest) {
       // Training-mode sales are excluded from official BIR totals, so they
       // must not burn a real number from either series — doing so would
       // create unexplained jumps in the filed sequence.
-      const siNumber = (isTrainingMode || isServiceSale) ? null : await getNextSINumber(connection);
-      const birOrNumber = (isTrainingMode || !isServiceSale) ? null : await getNextBirOrNumber(connection);
+      const siNumber = (isTrainingMode || isServiceSale) ? null : await getNextSINumber(saleBranchId, connection);
+      const birOrNumber = (isTrainingMode || !isServiceSale) ? null : await getNextBirOrNumber(saleBranchId, connection);
 
       const isCharge = typeof paymentMethod === 'string' && paymentMethod.toUpperCase() === 'CHARGE';
       const invoiceStatus = isCharge ? 'Pending' : 'Paid';
@@ -168,8 +174,8 @@ export async function POST(request: NextRequest) {
       // 1. Insert into sales_transactions
       const insertSaleSql = `
         INSERT INTO sales_transactions (
-          id, reference, receipt_number, si_number, bir_or_number, customer_id, invoice_date, date, total, payment_method, status, transaction_source, notes, is_training, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURDATE(), ?, ?, ?, 'POS', ?, ?, NOW(), NOW())
+          id, reference, receipt_number, si_number, bir_or_number, customer_id, invoice_date, date, total, payment_method, status, transaction_source, notes, is_training, branch_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURDATE(), ?, ?, ?, 'POS', ?, ?, ?, NOW(), NOW())
       `;
       await connection.query(insertSaleSql, [
         saleId,
@@ -182,7 +188,8 @@ export async function POST(request: NextRequest) {
         paymentMethod,
         invoiceStatus,
         notes || 'POS Sale',
-        isTrainingMode
+        isTrainingMode,
+        saleBranchId
       ]);
 
       // 2a. Fetch batch costing settings once (do it once before the loop for efficiency)
@@ -433,8 +440,8 @@ export async function POST(request: NextRequest) {
           id, sale_id, shift_id, user_id, terminal_id, transaction_type, si_number, bir_or_number,
           subtotal, tax_amount, discount_amount, total_amount, payment_method,
           payment_status, payment_details_id, payment_validated_at,
-          notes, is_training, transaction_time, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, NOW(), NOW(), NOW())
+          notes, is_training, branch_id, transaction_time, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, NOW(), NOW(), NOW())
       `;
 
       const posNotes = `Tendered: ₱${(body.amountTendered || totalDue).toFixed(2)}, Change: ₱${(body.change || 0).toFixed(2)}${notes ? ' - ' + notes : ''}`;
@@ -455,7 +462,8 @@ export async function POST(request: NextRequest) {
         posPaymentStatus,
         paymentDetailsId,
         posNotes,
-        isTrainingMode
+        isTrainingMode,
+        saleBranchId
       ]);
 
       // 5. Insert items into sales_invoice_items and pos_transaction_items —
