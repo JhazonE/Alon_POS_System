@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '@/lib/mysql';
+import { query, withTransaction } from '@/lib/mysql';
 
 /**
  * Branch CRUD. Listing is intentionally unfiltered: the branch switcher and
@@ -43,52 +43,38 @@ export async function POST(request: NextRequest) {
 
     const id = uuidv4();
 
-    // Phase 2 guard. transaction_references is still a single global row
-    // (id = 1), so a second ACTIVE branch would draw SI/MC/OR numbers from
-    // the same sequence as the main branch. Two BIR-registered
-    // establishments sharing one invoice series is a filing defect, so a new
-    // branch is created inactive until per-branch numbering lands.
-    const refRows = (await query(
-      `SELECT COUNT(*) AS c FROM transaction_references`
-    )) as any[];
-    const numberingIsPerBranch = refRows[0].c > 1;
+    // Per-branch numbering is in place (branch_number_series), so a new
+    // branch no longer shares the main branch's BIR series and can be
+    // created active. Its series row is created in the same transaction:
+    // a branch without one cannot issue invoices at all, because
+    // getNextSINumber fails closed on a missing row.
+    await withTransaction(async (connection) => {
+      await connection.query(
+        `INSERT INTO branches
+           (id, code, name, business_name, address, tin, contact_number,
+            permit_no, min_number, serial_number, operated_by, is_main, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+        [
+          id,
+          code,
+          name,
+          body.businessName ?? null,
+          body.address ?? null,
+          body.tin ?? null,
+          body.contactNumber ?? null,
+          body.permitNo ?? null,
+          body.minNumber ?? null,
+          body.serialNumber ?? null,
+          body.operatedBy ?? null,
+        ]
+      );
+      await connection.query(
+        `INSERT INTO branch_number_series (branch_id) VALUES (?)`,
+        [id]
+      );
+    });
 
-    await query(
-      `INSERT INTO branches
-         (id, code, name, business_name, address, tin, contact_number,
-          permit_no, min_number, serial_number, operated_by, is_main, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-      [
-        id,
-        code,
-        name,
-        body.businessName ?? null,
-        body.address ?? null,
-        body.tin ?? null,
-        body.contactNumber ?? null,
-        body.permitNo ?? null,
-        body.minNumber ?? null,
-        body.serialNumber ?? null,
-        body.operatedBy ?? null,
-        numberingIsPerBranch ? 1 : 0,
-      ]
-    );
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: { id },
-        ...(numberingIsPerBranch
-          ? {}
-          : {
-              warning:
-                'Branch created inactive: per-branch numbering (Phase 2) is not yet ' +
-                'in place, so an active second branch would share the main branch\'s ' +
-                'BIR invoice series.',
-            }),
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data: { id } }, { status: 201 });
   } catch (error: any) {
     if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
       return NextResponse.json(

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readSeries } from './helpers/branches';
 
 test.describe('GET /api/branches', () => {
   test('mo-uli sa main branch nga gi-himo sa migration', async ({ request }) => {
@@ -37,25 +38,48 @@ test.describe('POST /api/branches', () => {
   });
 });
 
-test.describe('POST /api/branches — Phase 2 guard', () => {
-  test('ang bag-ong branch kay inactive samtang shared pa ang SI counter', async ({ request }) => {
-    const code = `G${Date.now().toString().slice(-6)}`;
+test.describe('POST /api/branches — per-branch numbering landed', () => {
+  test('ang bag-ong branch kay ACTIVE na, kay naa nay kaugalingong series', async ({ request }) => {
+    const code = `A${Date.now().toString().slice(-6)}`;
     const res = await request.post('/api/branches', {
-      data: { code, name: 'Guarded Branch' },
+      data: { code, name: 'Active Branch' },
     });
     expect(res.status()).toBe(201);
+    const body = await res.json();
+    expect(body.warning).toBeUndefined();
 
     const list = await (await request.get('/api/branches')).json();
     const created = list.data.find((b: any) => b.code === code);
-    expect(created.isActive).toBe(0);
+    expect(created).toBeTruthy();
+    expect(created.isActive).toBe(1);
   });
 
-  test('gi-explain sa response nganong inactive', async ({ request }) => {
-    const code = `W${Date.now().toString().slice(-6)}`;
+  test('ang bag-ong branch adunay series row nga nagsugod sa 000000', async ({ request }) => {
+    const code = `S${Date.now().toString().slice(-6)}`;
     const res = await request.post('/api/branches', {
-      data: { code, name: 'Warned Branch' },
+      data: { code, name: 'Series Branch' },
     });
-    const body = await res.json();
-    expect(body.warning).toMatch(/per-branch numbering/i);
+    expect(res.status()).toBe(201);
+    const { id } = (await res.json()).data;
+
+    const row = (await readSeries()).find((r) => r.branch_id === id);
+    expect(row).toBeTruthy();
+    expect(row!.si_number).toBe('000000');
+    expect(row!.mc_number).toBe('000000');
+    expect(row!.bir_or_number).toBe('000000');
+  });
+
+  test('ang gi-reject nga duplicate code walay mabilin nga series row', async ({ request }) => {
+    const code = `R${Date.now().toString().slice(-6)}`;
+    const first = await request.post('/api/branches', { data: { code, name: 'First' } });
+    const { id } = (await first.json()).data;
+    const before = (await readSeries()).length;
+
+    const dup = await request.post('/api/branches', { data: { code, name: 'Second' } });
+    expect(dup.status()).toBe(409);
+
+    const rows = await readSeries();
+    expect(rows.length).toBe(before);
+    expect(rows.filter((r) => r.branch_id === id)).toHaveLength(1);
   });
 });
