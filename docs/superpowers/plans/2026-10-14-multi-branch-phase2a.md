@@ -1202,7 +1202,20 @@ Expected: PASS, 8 tests.
 
 - [ ] **Step 7: Sweep for any other sale insert**
 
-Run: `grep -rnE "INSERT INTO (sales_transactions|pos_transactions)" --include="*.ts" app/ lib/ src/`
+Run:
+```bash
+grep -rnE "INSERT INTO (sales_transactions|pos_transactions)" \
+  --include="*.ts" --include="*.js" . 2>/dev/null \
+  | grep -v node_modules | grep -v "scripts/migrations" | grep -v "\.next"
+```
+
+**Search the whole repo, not just `app/ lib/ src/`, and include `.js`.** An
+earlier draft of this step searched only those three directories for `.ts`
+files and missed four real sites: two in `tests/`, two in `scripts/`, and
+`seed_sales_data.js` at the **repo root**. This repo keeps **112 loose
+`.ts`/`.js` utilities at the top level**, so a directory-scoped sweep is
+never sufficient here. `scripts/migrations/` is excluded because applied
+migrations are history and must not be edited.
 Every site found must supply `branch_id`. List them all in your report with
 their status — Phase 1 learned that a missed insert path fails only at
 runtime.
