@@ -217,12 +217,19 @@ missed insert path fails at runtime rather than at typecheck, so
 implementation sweeps for `INSERT INTO (sales_transactions|pos_transactions)`
 across `app/`, `src/` and `lib/` and reports every site found.
 
-**Simplification this unlocks.** Phase 1's `terminalBranchFilter` and
-`saleBranchFilter` build `IN (SELECT id FROM pos_terminals WHERE branch_id = ?)`
-subqueries. With `branch_id` on the sale itself these become a direct column
-comparison — cheaper, and immune to a terminal being reassigned later. Phase
-2a converts the call sites it touches; the helpers stay for anything not yet
-migrated and are removed when the last caller is gone.
+**Simplification this unlocks — entirely outstanding after 2a.** Phase 1's
+`terminalBranchFilter` and `saleBranchFilter` build
+`IN (SELECT id FROM pos_terminals WHERE branch_id = ?)` subqueries. With
+`branch_id` on the sale itself these become a direct column comparison —
+cheaper, and immune to a terminal being reassigned later.
+
+**As shipped, 2a converted none of them.** It touched no read route (verified
+2026-10-15: zero read routes in the 2a diff), so all **10** call sites under
+`app/api/` still use the subquery form. The helpers remain correct, just
+no longer the only option. Phase 2b or a follow-up should convert them and
+delete the helpers once the last caller is gone — it is a pure
+simplification with no behaviour change, since `branch_id` on the sale is
+derived from exactly the terminal those subqueries look up.
 
 ### 5. The five UNIQUE constraints
 
@@ -257,21 +264,45 @@ numbering is proven by tests.
 
 ## Migration order
 
-Migration numbers start at **135** (134 is the last existing).
+**As shipped** (updated 2026-10-15 after implementation; the next free number
+is **142**). Migration 137 was added during execution and shifted the rest:
 
 1. `135_create_branch_number_series` — table plus FK.
 2. `136_seed_branch_number_series` — main branch continues from
    `transaction_references`; other branches seed at `'000000'`.
-3. `137_add_branch_id_to_sales` — nullable column on both sales tables.
-4. `138_backfill_sales_branch_id` — from the terminal; NULL-terminal rows to
-   the main branch.
-5. `139_tighten_sales_branch_id` — `NOT NULL` + FK, aborting with a message
+3. `137_resync_main_branch_series` — **added during execution**, closing the
+   cutover window. Between 136 and the code switch, live sales keep advancing
+   `transaction_references` while the new table sits frozen at the copied
+   values, so an invoice issued in that window would make the new series start
+   *behind* the real filed sequence and re-issue numbers already on BIR
+   documents. This takes the `GREATEST` of the two per counter for the main
+   branch, so a counter can only ever be raised. It is a no-op on any install
+   where no invoice was issued mid-cutover.
+4. `138_add_branch_id_to_sales` — nullable column on both sales tables.
+5. `139_backfill_sales_branch_id` — from the terminal, restricted to
+   `transaction_type = 'sale'` because `pos_transactions.sale_id` is
+   non-unique (returns reuse it, so an unrestricted join can attribute a sale
+   to the branch where its *return* was rung); NULL-terminal rows fall to the
+   main branch.
+6. `140_tighten_sales_branch_id` — `NOT NULL` + FK, aborting with a message
    naming the table if any row is still NULL.
-6. `140_composite_bir_unique_keys` — the five constraint swaps, one
-   transaction per table.
+7. `141_composite_bir_unique_keys` — the five constraint swaps. **Each ADDs
+   the composite key before DROPping the old single-column one.** MySQL DDL
+   implicitly commits, so a transaction provides no atomicity here; *ordering*
+   is what keeps a uniqueness guarantee in force at every instant. Adding the
+   weaker `(branch_id, column)` key can never fail on data the stricter key
+   already permitted.
 
-Every migration has a working `down()`. Steps 5 and 6 cannot be partially
-applied.
+Every migration has a working `down()`. Steps 6 and 7 cannot be partially
+applied — though a crash between 141's ADD and DROP leaves both keys present,
+which is the safe failure mode, and a re-run completes the swap.
+
+**Production rollback warning:** the `down()` of 135, 136 and 139 each
+discard state that cannot be reconstructed once invoices have issued — 135
+drops the counter table, 136 deletes every branch's counters, and 139 NULLs
+every sale's stored branch so a re-run re-derives from *current* terminal
+assignments. They are dev-rollback tools; do not run them on a live
+multi-branch install.
 
 ## Testing
 
