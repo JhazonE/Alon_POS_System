@@ -307,3 +307,31 @@ export async function advanceSeries(): Promise<void> {
     await conn.end();
   }
 }
+
+/**
+ * Mo-insert ug minimal nga sales_transactions row direkta, aron matestingan
+ * ang unique key mismo (dili ang checkout flow).
+ */
+export async function insertRawSale(branchId: string, siNumber: string): Promise<void> {
+  const conn = await getConn();
+  try {
+    // `id` ug `total` ra ang NOT NULL nga walay default sa sales_transactions
+    // (gi-verify 2026-10-14) — ang column kay `total`, DILI `total_amount`.
+    await conn.query(
+      `INSERT INTO sales_transactions (id, branch_id, si_number, total)
+       VALUES (?, ?, ?, 0)`,
+      [uuidv4(), branchId, siNumber]
+    );
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function cleanupRawSales(siNumber: string): Promise<void> {
+  const conn = await getConn();
+  try {
+    await conn.query('DELETE FROM sales_transactions WHERE si_number = ?', [siNumber]);
+  } finally {
+    await conn.end();
+  }
+}

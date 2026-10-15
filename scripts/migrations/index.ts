@@ -141,6 +141,7 @@ import './137_resync_main_branch_series';
 import './138_add_branch_id_to_sales';
 import './139_backfill_sales_branch_id';
 import './140_tighten_sales_branch_id';
+import './141_composite_bir_unique_keys';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions

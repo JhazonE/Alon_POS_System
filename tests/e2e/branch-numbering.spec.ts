@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { getNextSINumber, getNextMCNumber, getNextBirOrNumber } from '../../lib/mysql';
-import { seedSecondBranch, cleanupSecondBranch } from './helpers/branches';
+import {
+  seedSecondBranch,
+  cleanupSecondBranch,
+  insertRawSale,
+  cleanupRawSales,
+} from './helpers/branches';
 
 /**
  * Pure nga tests — walay `page` fixture. Kada branch kay kaugalingong BIR
@@ -296,4 +301,28 @@ test.describe('data reset — ang series kinahanglan mo-reset sab', () => {
       }
     });
   }
+});
+
+test.describe('composite BIR unique keys', () => {
+  test('parehas nga si_number OK sa duha ka branch, pero dili sulod sa usa', async () => {
+    const a = await seedSecondBranch({ withNumberSeries: true });
+    const b = await seedSecondBranch({ withNumberSeries: true });
+    const si = `9${Date.now()}`.slice(-6);
+    try {
+      // Parehas nga numero, lain nga branch — kinahanglan OK.
+      await insertRawSale(a.branchId, si);
+      await insertRawSale(b.branchId, si);
+
+      // Parehas nga numero, parehas nga branch — kinahanglan gi-reject
+      // sa composite key mismo (ER_DUP_ENTRY), dili sa laing error.
+      await expect(insertRawSale(a.branchId, si)).rejects.toMatchObject({
+        code: 'ER_DUP_ENTRY',
+        message: expect.stringContaining('uq_sales_tx_branch_si'),
+      });
+    } finally {
+      await cleanupRawSales(si);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
 });
