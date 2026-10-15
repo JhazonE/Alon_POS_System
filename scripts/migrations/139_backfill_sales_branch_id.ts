@@ -39,12 +39,18 @@ export const migration: Migration = {
       console.log(`✅ pos_transactions from terminal: ${pt.affectedRows}`);
 
       // sales_transactions reaches a terminal through its pos_transactions row.
+      // Restricted to the selling transaction: pos_transactions.sale_id is
+      // non-unique because returns (and voids) insert extra rows reusing the
+      // original sale_id. An unrestricted join has several candidate rows per
+      // sale and MySQL picks one arbitrarily, so a return rung at a terminal in
+      // a different branch could stamp the sale with the return's branch.
       const [st]: any = await connection.query(
         `UPDATE sales_transactions s
          JOIN pos_transactions p ON p.sale_id = s.id
          JOIN pos_terminals t ON t.id = p.terminal_id
          SET s.branch_id = t.branch_id
-         WHERE s.branch_id IS NULL AND p.terminal_id IS NOT NULL`
+         WHERE s.branch_id IS NULL AND p.terminal_id IS NOT NULL
+           AND p.transaction_type = 'sale'`
       );
       console.log(`✅ sales_transactions from terminal: ${st.affectedRows}`);
 
