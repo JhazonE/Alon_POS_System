@@ -138,6 +138,9 @@ import './134_assign_users_to_branches';
 import './135_create_branch_number_series';
 import './136_seed_branch_number_series';
 import './137_resync_main_branch_series';
+import './138_add_branch_id_to_sales';
+import './139_backfill_sales_branch_id';
+import './140_tighten_sales_branch_id';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions
