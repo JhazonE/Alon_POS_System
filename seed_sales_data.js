@@ -152,8 +152,8 @@ async function seedSalesData() {
     for (const sale of MOCK_SALES) {
       // Insert sale transaction
       await query(`
-        INSERT INTO sales_transactions (id, customer_id, invoice_date, date, total, payment_method, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sales_transactions (id, customer_id, invoice_date, date, total, payment_method, status, branch_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))
         ON DUPLICATE KEY UPDATE
         customer_id = VALUES(customer_id),
         invoice_date = VALUES(invoice_date),
