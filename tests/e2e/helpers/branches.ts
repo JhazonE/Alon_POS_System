@@ -280,3 +280,30 @@ export async function cleanupPosTransaction(posTransactionId: string): Promise<v
     await conn.end();
   }
 }
+
+/** Mo-uli sa tanan branch_number_series rows (SI, MC ug OR counters). */
+export async function readSeries(): Promise<
+  Array<{ branch_id: string; si_number: string; mc_number: string; bir_or_number: string }>
+> {
+  const conn = await getConn();
+  try {
+    const [rows]: any = await conn.query(
+      'SELECT branch_id, si_number, mc_number, bir_or_number FROM branch_number_series'
+    );
+    return rows;
+  } finally {
+    await conn.end();
+  }
+}
+
+/** I-advance ang tanan SI/MC/OR counters aron matestingan kon mo-reset ba. */
+export async function advanceSeries(): Promise<void> {
+  const conn = await getConn();
+  try {
+    await conn.query(
+      "UPDATE branch_number_series SET si_number = '000042', mc_number = '000042', bir_or_number = '000042'"
+    );
+  } finally {
+    await conn.end();
+  }
+}

@@ -75,6 +75,8 @@ import {
   readPosTransactionBranch,
   readMainBranchId,
   cleanupPosTransaction,
+  advanceSeries,
+  readSeries,
 } from './helpers/branches';
 
 test.describe('POST /api/pos/checkout — per-branch SI', () => {
@@ -254,4 +256,44 @@ test.describe('POST /api/pos-transactions — branch stamping', () => {
       await cleanupSecondBranch(a);
     }
   });
+});
+
+test.describe('data reset — ang series kinahanglan mo-reset sab', () => {
+  // Ang duha ka action nga naghilabot sa BIR
+  // counters. Ang `factory_reset` naa sa zz-factory-reset-series.spec.ts kay
+  // gipang-truncate niini ang products/terminals/users sa test DB.
+  for (const action of ['clear_sales', 'reset_references']) {
+    test(`ang ${action} mo-reset sa branch_number_series`, async ({ request }) => {
+      const second = await seedSecondBranch({ withNumberSeries: true });
+      try {
+        await advanceSeries(); // main branch + ikaduha, tanan SI/MC/OR = 000042
+
+        const before = await readSeries();
+        expect(before.length).toBeGreaterThanOrEqual(2);
+        for (const row of before) {
+          expect([row.si_number, row.mc_number, row.bir_or_number]).toEqual([
+            '000042', '000042', '000042',
+          ]);
+        }
+
+        const res = await request.post('/api/data-management/reset', {
+          data: { action },
+        });
+        const body = await res.json();
+        expect(res.status()).toBe(200);
+        expect(body.success).toBe(true);
+
+        const after = await readSeries();
+        // Ang rows kinahanglan mabuhi gihapon (UPDATE, dili TRUNCATE/DELETE).
+        expect(after.length).toBe(before.length);
+        for (const row of after) {
+          expect([row.si_number, row.mc_number, row.bir_or_number]).toEqual([
+            '000000', '000000', '000000',
+          ]);
+        }
+      } finally {
+        await cleanupSecondBranch(second);
+      }
+    });
+  }
 });

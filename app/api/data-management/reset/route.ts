@@ -54,6 +54,16 @@ export async function POST(request: NextRequest) {
           // sale is SI 000001 (si_number '000000' — getNextSINumber increments
           // then reads). Terminal OR and X/Z counters reset too.
           await connection.query("UPDATE transaction_references SET si_number = '000000' WHERE id = 1");
+          // Reset the per-branch BIR series too. transaction_references no
+          // longer holds the series the system issues from, so resetting only
+          // that row (or truncating it) would leave each branch's counter
+          // advanced and re-issue invoice numbers already on filed documents.
+          // UPDATE only, never empty the table: branch_number_series has an ON DELETE
+          // RESTRICT FK to branches and its rows must survive, or no branch
+          // can issue an invoice at all.
+          await connection.query(
+            "UPDATE branch_number_series SET si_number = '000000', mc_number = '000000', bir_or_number = '000000'"
+          );
           await connection.query('UPDATE pos_terminals SET or_next_reference = "000001", x_counter = 0, z_counter = 0');
 
         } finally {
@@ -76,6 +86,17 @@ export async function POST(request: NextRequest) {
               receipt_number, si_number
             ) VALUES ('1000', '1000', '1000', '1000', '1000', '1000', '1000', '1000', '1000', '00000001', '000000')
          `);
+
+         // Reset the per-branch BIR series too. transaction_references no
+         // longer holds the series the system issues from, so resetting only
+         // that row (or truncating it) would leave each branch's counter
+         // advanced and re-issue invoice numbers already on filed documents.
+         // UPDATE only, never empty the table: branch_number_series has an ON DELETE
+         // RESTRICT FK to branches and its rows must survive, or no branch
+         // can issue an invoice at all.
+         await connection.query(
+           "UPDATE branch_number_series SET si_number = '000000', mc_number = '000000', bir_or_number = '000000'"
+         );
 
          // Also reset terminal counters if possible
          await connection.query('UPDATE pos_terminals SET or_next_reference = "000001", x_counter = 0, z_counter = 0');
@@ -292,6 +313,17 @@ export async function POST(request: NextRequest) {
               receipt_number, si_number
             ) VALUES ('1000', '1000', '1000', '1000', '1000', '1000', '1000', '1000', '1000', '00000001', '000000')
           `);
+
+          // Reset the per-branch BIR series too. transaction_references no
+          // longer holds the series the system issues from, so resetting only
+          // that row (or truncating it) would leave each branch's counter
+          // advanced and re-issue invoice numbers already on filed documents.
+          // UPDATE only, never empty the table: branch_number_series has an ON DELETE
+          // RESTRICT FK to branches and its rows must survive, or no branch
+          // can issue an invoice at all.
+          await connection.query(
+            "UPDATE branch_number_series SET si_number = '000000', mc_number = '000000', bir_or_number = '000000'"
+          );
 
         } finally {
           await connection.query('SET FOREIGN_KEY_CHECKS = 1');
