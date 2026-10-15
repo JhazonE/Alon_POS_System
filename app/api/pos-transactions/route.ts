@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../lib/mysql';
+import { resolveTerminalBranch, mainBranchId } from '../../../lib/branch-context';
 
 async function ensurePosTransactionItemsSchema() {
   try {
@@ -174,21 +175,29 @@ export async function POST(request: NextRequest) {
     // Generate a unique ID for the POS transaction
     const posTransactionId = `PT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // A POS transaction must always belong to an establishment. terminalId is
+    // optional here (terminalId || null below), so fall back to the main
+    // branch rather than writing a branchless row. Resolved before the INSERT
+    // so the helpers' pool use never overlaps another connection.
+    const txnBranchId: string = terminalId
+      ? (await resolveTerminalBranch(terminalId)).branchId
+      : await mainBranchId();
+
     // Insert POS transaction
     const insertQuery = `
       INSERT INTO pos_transactions (
         id, sale_id, shift_id, user_id, terminal_id, transaction_type,
         subtotal, tax_amount, discount_amount, total_amount,
         payment_method, payment_reference, customer_count,
-        void_reason, notes, transaction_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        void_reason, notes, branch_id, transaction_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `;
 
     await query(insertQuery, [
       posTransactionId, saleId, shiftId || null, userId, terminalId || null, transactionType,
       subtotal, taxAmount, discountAmount, totalAmount,
       paymentMethod, paymentReference || null, customerCount,
-      voidReason || null, notes || null
+      voidReason || null, notes || null, txnBranchId
     ]);
 
     return NextResponse.json({

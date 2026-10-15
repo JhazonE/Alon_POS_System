@@ -178,16 +178,23 @@ export async function seedSaleOnTerminal(
   const saleId = uuidv4();
   const status = opts.status ?? 'Paid';
   try {
+    // branch_id is NOT NULL (migration 140): a sale belongs to the branch of
+    // the terminal that rang it.
+    const [termRows]: any = await conn.query(
+      'SELECT branch_id FROM pos_terminals WHERE id = ?',
+      [terminalId]
+    );
+    const branchId: string = termRows[0].branch_id;
     await conn.query(
-      `INSERT INTO sales_transactions (id, reference, date, invoice_date, total, status, created_at, updated_at)
-       VALUES (?, ?, CURDATE(), CURDATE(), 100.00, ?, NOW(), NOW())`,
-      [saleId, `ISO-${saleId.slice(0, 8)}`, status]
+      `INSERT INTO sales_transactions (id, reference, date, invoice_date, total, status, branch_id, created_at, updated_at)
+       VALUES (?, ?, CURDATE(), CURDATE(), 100.00, ?, ?, NOW(), NOW())`,
+      [saleId, `ISO-${saleId.slice(0, 8)}`, status, branchId]
     );
     await conn.query(
       `INSERT INTO pos_transactions
-         (id, sale_id, user_id, terminal_id, transaction_type, subtotal, total_amount, transaction_time, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'sale', 100.00, 100.00, NOW(), NOW(), NOW())`,
-      [`pt-${saleId}`, saleId, userUid, terminalId]
+         (id, sale_id, user_id, terminal_id, transaction_type, subtotal, total_amount, branch_id, transaction_time, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'sale', 100.00, 100.00, ?, NOW(), NOW(), NOW())`,
+      [`pt-${saleId}`, saleId, userUid, terminalId, branchId]
     );
   } finally {
     await conn.end();
@@ -216,6 +223,59 @@ export async function removeBranchWarehouses(branchId: string): Promise<void> {
     );
     await conn.query('DELETE FROM warehouses WHERE branch_id = ?', [branchId]);
     await conn.query('SET FOREIGN_KEY_CHECKS=1');
+  } finally {
+    await conn.end();
+  }
+}
+
+/** Mo-uli sa branch_id sa usa ka sale, o null kon wala. */
+export async function readSaleBranch(saleId: string): Promise<string | null> {
+  const conn = await getConn();
+  try {
+    const [rows]: any = await conn.query(
+      'SELECT branch_id FROM sales_transactions WHERE id = ?',
+      [saleId]
+    );
+    return rows[0]?.branch_id ?? null;
+  } finally {
+    await conn.end();
+  }
+}
+
+/** Mo-uli sa branch_id sa usa ka pos_transactions row (by id), o null kon wala. */
+export async function readPosTransactionBranch(
+  posTransactionId: string
+): Promise<string | null> {
+  const conn = await getConn();
+  try {
+    const [rows]: any = await conn.query(
+      'SELECT branch_id FROM pos_transactions WHERE id = ?',
+      [posTransactionId]
+    );
+    return rows[0]?.branch_id ?? null;
+  } finally {
+    await conn.end();
+  }
+}
+
+/** Ang id sa main branch sa test DB. */
+export async function readMainBranchId(): Promise<string> {
+  const conn = await getConn();
+  try {
+    const [rows]: any = await conn.query(
+      'SELECT id FROM branches WHERE is_main = 1 LIMIT 1'
+    );
+    return rows[0].id as string;
+  } finally {
+    await conn.end();
+  }
+}
+
+/** Tangtangon ang usa ka pos_transactions row (by id). */
+export async function cleanupPosTransaction(posTransactionId: string): Promise<void> {
+  const conn = await getConn();
+  try {
+    await conn.query('DELETE FROM pos_transactions WHERE id = ?', [posTransactionId]);
   } finally {
     await conn.end();
   }

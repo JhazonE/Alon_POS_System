@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction, getNextReference, getNextReceiptNumber } from '@/lib/mysql';
 import { deductFromBatches, getBatchCostingSettings } from '@/lib/batch-deduction';
 import { isService } from '@/lib/product-type';
+import { resolveTerminalBranch, mainBranchId } from '@/lib/branch-context';
 
 export async function GET(request: NextRequest) {
   try {
@@ -368,6 +369,17 @@ export async function POST(request: NextRequest) {
     const paymentDetailsId = `PD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const auditLogId = `PAL-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
+    // A sale must always belong to an establishment. This route accepts a
+    // sale with no terminal (terminalId || null below), so fall back to the
+    // main branch rather than writing a branchless sale -- a NULL branch_id
+    // sale is invisible to every branch user and under-reports a tax figure.
+    // Resolved BEFORE withTransaction: these helpers use the connection pool,
+    // and taking a second connection while the transaction holds its own
+    // risks a deadlock.
+    const saleBranchId: string = terminalId
+      ? (await resolveTerminalBranch(terminalId)).branchId
+      : await mainBranchId();
+
     return await withTransaction(async (connection) => {
       // 1. Log payment initiation
       await connection.query(`
@@ -386,8 +398,8 @@ export async function POST(request: NextRequest) {
       // 2. Insert into sales_transactions
       const insertSaleSql = `
         INSERT INTO sales_transactions (
-          id, reference, receipt_number, customer_id, invoice_date, date, total, payment_method, status, transaction_source, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, CURDATE(), CURDATE(), ?, ?, 'Paid', 'POS', ?, NOW(), NOW())
+          id, reference, receipt_number, customer_id, invoice_date, date, total, payment_method, status, transaction_source, notes, branch_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, CURDATE(), CURDATE(), ?, ?, 'Paid', 'POS', ?, ?, NOW(), NOW())
       `;
       await connection.query(insertSaleSql, [
         saleId,
@@ -396,7 +408,8 @@ export async function POST(request: NextRequest) {
         (customer && customer.id !== 'walk-in') ? customer.id : null,
         totalDue,
         paymentMethod,
-        notes || 'API Sale'
+        notes || 'API Sale',
+        saleBranchId
       ]);
 
       // 3. Insert into sale_items and update stock
@@ -499,8 +512,8 @@ export async function POST(request: NextRequest) {
           id, sale_id, shift_id, user_id, terminal_id, transaction_type,
           subtotal, tax_amount, discount_amount, total_amount, payment_method, 
           payment_status, payment_details_id, payment_validated_at,
-          notes, transaction_time, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'completed', ?, NOW(), ?, NOW(), NOW(), NOW())
+          notes, branch_id, transaction_time, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'completed', ?, NOW(), ?, ?, NOW(), NOW(), NOW())
       `;
       
       const posNotes = `API Transaction. Tendered: ${amountTendered || totalDue}`;
@@ -517,7 +530,8 @@ export async function POST(request: NextRequest) {
         totalDue,
         paymentMethod,
         paymentDetailsId,
-        posNotes
+        posNotes,
+        saleBranchId
       ]);
 
       // 6. Insert items into sales_invoice_items and pos_transaction_items

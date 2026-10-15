@@ -67,7 +67,15 @@ test.describe('per-branch BIR counters', () => {
   });
 });
 
-import { seedProductInWarehouse, cleanupSale } from './helpers/branches';
+import {
+  seedProductInWarehouse,
+  seedSaleOnTerminal,
+  cleanupSale,
+  readSaleBranch,
+  readPosTransactionBranch,
+  readMainBranchId,
+  cleanupPosTransaction,
+} from './helpers/branches';
 
 test.describe('POST /api/pos/checkout — per-branch SI', () => {
   test('ang checkout sa branch A mo-gamit sa series sa branch A', async ({ request }) => {
@@ -121,6 +129,128 @@ test.describe('POST /api/pos/checkout — per-branch SI', () => {
       const body = await res.json();
       expect(body.error).toContain('has no number series row');
     } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+test.describe('POST /api/sales/transactions — branch stamping', () => {
+  test('ang sale nga walay terminal mo-landing sa main branch', async ({ request }) => {
+    const a = await seedSecondBranch({ withNumberSeries: true });
+    let saleId: string | undefined;
+    let posTransId: string | undefined;
+    try {
+      const sku = `NUM-C-${Date.now()}`;
+      const productId = await seedProductInWarehouse(a.warehouseId, sku);
+
+      const res = await request.post('/api/sales/transactions', {
+        data: {
+          // Walay terminalId -- mao ni ang path nga naghimo ug NULL terminal_id.
+          userId: a.userUid,
+          items: [{ id: productId, name: `Test Product ${sku}`, quantity: 1, price: 1.0 }],
+          paymentMethod: 'Cash',
+          totalDue: 1.0,
+          amountTendered: 1.0,
+          change: 0,
+        },
+      });
+      const body = await res.json();
+      saleId = body.data?.saleId;
+      posTransId = body.data?.posTransId;
+      expect(res.ok(), JSON.stringify(body)).toBeTruthy();
+      // Kon NULL ang branch_id, mawala ni sa tanan branch user ug
+      // maka-under-report sa buhis -- busa main branch gyud.
+      const mainId = await readMainBranchId();
+      expect(await readSaleBranch(String(saleId))).toBe(mainId);
+      expect(await readPosTransactionBranch(String(posTransId))).toBe(mainId);
+    } finally {
+      if (saleId) await cleanupSale(saleId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang sale nga naay terminal mo-landing sa branch sa terminal', async ({ request }) => {
+    const a = await seedSecondBranch({ withNumberSeries: true });
+    let saleId: string | undefined;
+    let posTransId: string | undefined;
+    try {
+      const sku = `NUM-D-${Date.now()}`;
+      const productId = await seedProductInWarehouse(a.warehouseId, sku);
+
+      const res = await request.post('/api/sales/transactions', {
+        data: {
+          terminalId: a.terminalId,
+          userId: a.userUid,
+          items: [{ id: productId, name: `Test Product ${sku}`, quantity: 1, price: 1.0 }],
+          paymentMethod: 'Cash',
+          totalDue: 1.0,
+          amountTendered: 1.0,
+          change: 0,
+        },
+      });
+      const body = await res.json();
+      saleId = body.data?.saleId;
+      posTransId = body.data?.posTransId;
+      expect(res.ok(), JSON.stringify(body)).toBeTruthy();
+      expect(await readSaleBranch(String(saleId))).toBe(a.branchId);
+      expect(await readPosTransactionBranch(String(posTransId))).toBe(a.branchId);
+    } finally {
+      if (saleId) await cleanupSale(saleId);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+test.describe('POST /api/pos-transactions — branch stamping', () => {
+  test('ang POS transaction nga walay terminal mo-landing sa main branch', async ({ request }) => {
+    const a = await seedSecondBranch({ withNumberSeries: true });
+    let saleId: string | undefined;
+    let posTransId: string | undefined;
+    try {
+      saleId = await seedSaleOnTerminal(a.terminalId, a.userUid);
+      const res = await request.post('/api/pos-transactions', {
+        data: {
+          saleId,
+          userId: a.userUid,
+          subtotal: 1.0,
+          totalAmount: 1.0,
+          paymentMethod: 'Cash',
+        },
+      });
+      const body = await res.json();
+      posTransId = body.data?.id;
+      expect(res.ok(), JSON.stringify(body)).toBeTruthy();
+      expect(await readPosTransactionBranch(String(posTransId))).toBe(await readMainBranchId());
+    } finally {
+      if (posTransId) await cleanupPosTransaction(posTransId);
+      if (saleId) await cleanupSale(saleId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang POS transaction nga naay terminal mo-landing sa branch sa terminal', async ({ request }) => {
+    const a = await seedSecondBranch({ withNumberSeries: true });
+    let saleId: string | undefined;
+    let posTransId: string | undefined;
+    try {
+      saleId = await seedSaleOnTerminal(a.terminalId, a.userUid);
+      const res = await request.post('/api/pos-transactions', {
+        data: {
+          saleId,
+          userId: a.userUid,
+          terminalId: a.terminalId,
+          subtotal: 1.0,
+          totalAmount: 1.0,
+          paymentMethod: 'Cash',
+        },
+      });
+      const body = await res.json();
+      posTransId = body.data?.id;
+      expect(res.ok(), JSON.stringify(body)).toBeTruthy();
+      expect(await readPosTransactionBranch(String(posTransId))).toBe(a.branchId);
+    } finally {
+      if (posTransId) await cleanupPosTransaction(posTransId);
+      if (saleId) await cleanupSale(saleId);
       await cleanupSecondBranch(a);
     }
   });
