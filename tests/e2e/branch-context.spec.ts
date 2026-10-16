@@ -268,6 +268,37 @@ test.describe('resolveScopeFromBody', () => {
     await expect(resolveScopeFromBody({})).rejects.toThrow(/no uid supplied/i);
   });
 
+  test('mo-refuse ang numeric nga uid — dili mo-match sa user nga uid nagsugod sa digit', async () => {
+    const seeded = await seedSecondBranch();
+    const probeUid = `1${seeded.branchId.slice(0, 8)}`;
+    try {
+      await query(
+        `INSERT INTO users (uid, username, password, user_type, branch_id)
+         VALUES (?, ?, 'x', 'User', ?)`,
+        [probeUid, `probe_${seeded.branchId.slice(0, 8)}`, seeded.branchId]
+      );
+      await expect(
+        resolveScopeFromBody({ uid: 1 } as any)
+      ).rejects.toThrow(/no uid supplied/i);
+    } finally {
+      await query('DELETE FROM users WHERE uid = ?', [probeUid]);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang non-string nga viewBranchId dili mo-abot sa branch lookup — ang kaugalingon nga branch ra', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      const scope = await resolveScopeFromBody({
+        uid: seeded.userUid,
+        viewBranchId: 5 as any,
+      });
+      expect(scope).toEqual({ branchId: seeded.branchId, scope: 'single' });
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
   test('gi-reject ang viewBranchId kung walay all_branches', async () => {
     const a = await seedSecondBranch();
     const b = await seedSecondBranch();
