@@ -81,7 +81,7 @@ test.describe('Sales order', () => {
     const before = await stockOf(SO_PRODUCT.id);
 
     const orderId = await createOrder(request, [line(SO_PRODUCT, 4)]);
-    const res = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: {} });
+    const res = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: { uid: 'test-admin-uid' } });
     const body = await res.json();
     expect(body.success, `deliver failed: ${JSON.stringify(body)}`).toBe(true);
 
@@ -97,7 +97,7 @@ test.describe('Sales order', () => {
     // mao nga na-block ang tibuok delivery.
     const orderId = await createOrder(request, [line(SO_SERVICE, 2)]);
 
-    const res = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: {} });
+    const res = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: { uid: 'test-admin-uid' } });
     const body = await res.json();
     expect(body.success, `deliver failed: ${JSON.stringify(body)}`).toBe(true);
 
@@ -118,7 +118,7 @@ test.describe('Sales order', () => {
       line(SO_SERVICE, 3),
       line(SO_PRODUCT, 2),
     ]);
-    const res = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: {} });
+    const res = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: { uid: 'test-admin-uid' } });
     expect((await res.json()).success).toBe(true);
 
     expect(await stockOf(SO_SERVICE.id)).toBe(0);
@@ -129,10 +129,10 @@ test.describe('Sales order', () => {
     const before = await stockOf(SO_PRODUCT.id);
 
     const orderId = await createOrder(request, [line(SO_PRODUCT, 5)]);
-    await request.post(`/api/sales/orders/${orderId}/deliver`, { data: {} });
+    await request.post(`/api/sales/orders/${orderId}/deliver`, { data: { uid: 'test-admin-uid' } });
     expect(await stockOf(SO_PRODUCT.id)).toBe(before - 5);
 
-    const res = await request.delete(`/api/sales/orders/${orderId}`);
+    const res = await request.delete(`/api/sales/orders/${orderId}?uid=test-admin-uid`);
     expect((await res.json()).success).toBe(true);
 
     // Balik sa orihinal: ang reversal mo-uli sa eksaktong gi-deduct.
@@ -145,7 +145,7 @@ test.describe('Sales order', () => {
     // Kinahanglan i-assert nga MILAMPUS ang delivery: kung mo-fail ni, walay
     // na-deduct, mao nga ang delete wala gyuy gi-reverse ug ang test mopasar
     // nga wala nasulayan ang restore path.
-    const deliverRes = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: {} });
+    const deliverRes = await request.post(`/api/sales/orders/${orderId}/deliver`, { data: { uid: 'test-admin-uid' } });
     const deliverBody = await deliverRes.json();
     expect(deliverBody.success, `deliver failed: ${JSON.stringify(deliverBody)}`).toBe(true);
 
@@ -155,7 +155,7 @@ test.describe('Sales order', () => {
     );
     expect(statusAfterDeliver[0].status).toBe('Delivered');
 
-    const res = await request.delete(`/api/sales/orders/${orderId}`);
+    const res = await request.delete(`/api/sales/orders/${orderId}?uid=test-admin-uid`);
     expect((await res.json()).success).toBe(true);
 
     // Kung ang reversal wala mo-skip sa serbisyo, mahimo ning 4.

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withTransaction } from '../../../../../../lib/mysql';
+import { withTransaction, query } from '../../../../../../lib/mysql';
+import {
+  resolveScopeFromBody,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 import { deductFamilyStock, findUltimateRoot } from '../../../../../../lib/family-sync';
 import { isService } from '@/lib/product-type';
 
@@ -14,6 +19,28 @@ export async function POST(
 ) {
   const resolvedParams = params instanceof Promise ? await params : params;
   const orderId = resolvedParams.id;
+
+  // The deliver body is optional for older clients; a missing or malformed
+  // body simply carries no uid and is refused below.
+  const body = await request.json().catch(() => ({}));
+
+  // Branch isolation. Requires `uid` (spec D4). Delivery deducts stock, so a
+  // valid order id in another branch is still refused — existence is not
+  // authorisation. An order reaches its branch through its warehouse; one with
+  // no warehouse belongs to no branch and is left to proceed.
+  try {
+    const scope = await resolveScopeFromBody(body);
+    const orderRows = (await query(
+      'SELECT warehouse_id FROM sales_orders WHERE id = ?',
+      [orderId]
+    )) as any[];
+    const orderWarehouseId = orderRows[0]?.warehouse_id;
+    if (orderWarehouseId) await assertWarehouseInBranch(orderWarehouseId, scope);
+  } catch (error) {
+    const mapped = branchErrorResponse(error);
+    if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+    throw error;
+  }
 
   try {
     return await withTransaction(async (connection) => {

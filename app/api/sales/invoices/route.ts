@@ -1,10 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { withTransaction, query } from '../../../../lib/mysql';
+import {
+  resolveScopeFromBody,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 export async function POST(request: NextRequest) {
   try {
-    const { orderId } = await request.json();
+    const body = await request.json();
+    const { orderId } = body;
+
+    // Branch isolation. Requires `uid` (spec D4). An invoice is made from a
+    // sales order, and the order reaches its branch through its warehouse.
+    // A valid order id in another branch is still refused — existence is not
+    // authorisation. An order with no warehouse belongs to no branch, so
+    // there is no other branch to protect and it is left to proceed.
+    try {
+      const scope = await resolveScopeFromBody(body);
+      if (orderId) {
+        const orderRows = (await query(
+          'SELECT warehouse_id FROM sales_orders WHERE id = ?',
+          [orderId]
+        )) as any[];
+        const orderWarehouseId = orderRows[0]?.warehouse_id;
+        if (orderWarehouseId) await assertWarehouseInBranch(orderWarehouseId, scope);
+      }
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
 
     if (!orderId) {
       return NextResponse.json(

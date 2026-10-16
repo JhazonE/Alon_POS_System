@@ -5,6 +5,8 @@ import {
   seedProductInWarehouse,
   grantPermission,
   setUserBranch,
+  seedSaleOnTerminal,
+  cleanupSale,
 } from './helpers/branches';
 import { ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
 import { testQuery } from './helpers/db';
@@ -281,6 +283,371 @@ test.describe('POST /api/stock-adjustments — branch isolation', () => {
       expect(res.status()).toBe(403);
     } finally {
       await cleanupSecondBranch(a);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Invoice ug order document writes. Ang branch sa matag dokumento:
+//   sales order            -> sales_orders.warehouse_id -> warehouses.branch_id
+//   invoice gikan sa order -> sales_invoices.sales_order_id -> ang order sa ibabaw
+//   invoice gikan sa POS   -> sales_invoices.reference = sales_transactions.reference
+//                             -> sales_transactions.branch_id
+// (Ang sales_invoices walay kaugalingong branch_id ni warehouse_id.)
+// ---------------------------------------------------------------------------
+
+/** Mo-seed ug sales order sa usa ka warehouse (direkta sa DB). Ibalik ang id. */
+async function seedOrderInWarehouse(
+  warehouseId: string | null,
+  status: 'Pending' | 'Delivered' | 'Invoiced' = 'Pending'
+): Promise<string> {
+  const id = `SO-ISO-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await testQuery(
+    `INSERT INTO sales_orders (id, customer_id, order_date, total, warehouse_id, status, reference)
+     VALUES (?, ?, CURDATE(), 0, ?, ?, ?)`,
+    [id, SO_CUSTOMER.id, warehouseId, status, `ISO-${id.slice(-12)}`]
+  );
+  return id;
+}
+
+/** Mo-seed ug invoice nga gikan sa usa ka order. */
+async function seedInvoiceForOrder(orderId: string): Promise<string> {
+  const id = `INV-ISO-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await testQuery(
+    `INSERT INTO sales_invoices (id, reference, sales_order_id, customer_id, invoice_date, total, status)
+     VALUES (?, ?, ?, ?, CURDATE(), 0, 'Pending')`,
+    [id, `ISO-${id.slice(-12)}`, orderId, SO_CUSTOMER.id]
+  );
+  return id;
+}
+
+/** Mo-seed ug POS-style invoice: managsama ang reference sa sale, walay order. */
+async function seedInvoiceForSale(saleId: string): Promise<string> {
+  const id = `INV-ISO-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await testQuery(
+    `INSERT INTO sales_invoices (id, reference, customer_id, invoice_date, total, status, transaction_source)
+     SELECT ?, reference, NULL, CURDATE(), 0, 'Paid', 'POS' FROM sales_transactions WHERE id = ?`,
+    [id, saleId]
+  );
+  return id;
+}
+
+async function invoiceStatus(invoiceId: string): Promise<string | undefined> {
+  const rows: any = await testQuery('SELECT status FROM sales_invoices WHERE id = ?', [invoiceId]);
+  return rows[0]?.status;
+}
+
+async function orderRow(orderId: string): Promise<any | undefined> {
+  const rows: any = await testQuery('SELECT status, warehouse_id, note FROM sales_orders WHERE id = ?', [orderId]);
+  return rows[0];
+}
+
+async function cleanupDocs(opts: { invoiceIds?: string[]; orderIds?: string[]; saleIds?: string[] }) {
+  for (const id of opts.invoiceIds ?? []) {
+    await testQuery('DELETE FROM sales_invoice_items WHERE sales_invoice_id = ?', [id]);
+    await testQuery('DELETE FROM sales_invoices WHERE id = ?', [id]);
+  }
+  for (const id of opts.orderIds ?? []) {
+    await testQuery('DELETE FROM sales_order_items WHERE sales_order_id = ?', [id]);
+    await testQuery('DELETE FROM sales_orders WHERE id = ?', [id]);
+  }
+  for (const id of opts.saleIds ?? []) await cleanupSale(id);
+}
+
+/** Tinuod nga body para sa PUT /api/sales/orders/[id] (gikan sa route mismo). */
+function putBody(uid: string | undefined, extra: Record<string, any> = {}) {
+  return {
+    ...(uid ? { uid } : {}),
+    customer: { id: SO_CUSTOMER.id, name: SO_CUSTOMER.name },
+    orderDate: '2026-07-23',
+    deliveryDate: '2026-07-23',
+    paymentMethod: 'CASH',
+    status: 'Pending',
+    note: 'edited',
+    items: [{ product: { id: SO_PRODUCT.id, name: SO_PRODUCT.name }, quantity: 1, price: SO_PRODUCT.price }],
+    ...extra,
+  };
+}
+
+test.describe('document writes — branch isolation', () => {
+  test('gi-403 ang void sa invoice (gikan sa order) sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    const invoiceIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId, 'Invoiced');
+      orderIds.push(orderId);
+      const invoiceId = await seedInvoiceForOrder(orderId);
+      invoiceIds.push(invoiceId);
+      const res = await request.post(`/api/sales/invoices/${invoiceId}/void`, {
+        data: { uid: a.userUid, voidReason: 'test' },
+      });
+      expect(res.status()).toBe(403);
+      // Wala gyud ma-void ang invoice sa laing branch.
+      expect(await invoiceStatus(invoiceId)).toBe('Pending');
+    } finally {
+      await cleanupDocs({ invoiceIds, orderIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang void sa POS invoice sa laing branch (pinaagi sa sale)', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const saleIds: string[] = [];
+    const invoiceIds: string[] = [];
+    try {
+      const saleId = await seedSaleOnTerminal(b.terminalId, b.userUid);
+      saleIds.push(saleId);
+      const invoiceId = await seedInvoiceForSale(saleId);
+      invoiceIds.push(invoiceId);
+      const res = await request.post(`/api/sales/invoices/${invoiceId}/void`, {
+        data: { uid: a.userUid, voidReason: 'test' },
+      });
+      expect(res.status()).toBe(403);
+      expect(await invoiceStatus(invoiceId)).toBe('Paid');
+    } finally {
+      await cleanupDocs({ invoiceIds, saleIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-403 ang void sa kaugalingong invoice', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    const invoiceIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId, 'Invoiced');
+      orderIds.push(orderId);
+      const invoiceId = await seedInvoiceForOrder(orderId);
+      invoiceIds.push(invoiceId);
+      const res = await request.post(`/api/sales/invoices/${invoiceId}/void`, {
+        data: { uid: b.userUid, voidReason: 'test' },
+      });
+      expect(res.status()).not.toBe(403);
+    } finally {
+      await cleanupDocs({ invoiceIds, orderIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('gi-403 ang paghimo ug invoice gikan sa order sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId, 'Delivered');
+      orderIds.push(orderId);
+      const res = await request.post('/api/sales/invoices', {
+        data: { uid: a.userUid, orderId },
+      });
+      expect(res.status()).toBe(403);
+      // Wala himoa ang invoice ug wala mausab ang status sa order.
+      const made: any = await testQuery('SELECT COUNT(*) c FROM sales_invoices WHERE sales_order_id = ?', [orderId]);
+      expect(Number(made[0].c)).toBe(0);
+      expect((await orderRow(orderId)).status).toBe('Delivered');
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang paghimo ug invoice gikan sa kaugalingong order', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    let invoiceIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId, 'Delivered');
+      orderIds.push(orderId);
+      const res = await request.post('/api/sales/invoices', {
+        data: { uid: b.userUid, orderId },
+      });
+      const body = await res.json();
+      expect(res.ok(), `create invoice failed: ${JSON.stringify(body)}`).toBe(true);
+      invoiceIds = [body.data.id];
+      expect((await orderRow(orderId)).status).toBe('Invoiced');
+    } finally {
+      await cleanupDocs({ invoiceIds, orderIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('gi-403 ang pag-edit sa order sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.put(`/api/sales/orders/${orderId}`, {
+        data: putBody(a.userUid, { warehouse: b.warehouseId }),
+      });
+      expect(res.status()).toBe(403);
+      expect((await orderRow(orderId)).note).toBeNull();
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang pag-edit sa kaugalingong order padulong sa warehouse sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(a.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.put(`/api/sales/orders/${orderId}`, {
+        data: putBody(a.userUid, { warehouse: b.warehouseId }),
+      });
+      expect(res.status()).toBe(403);
+      // Naa gihapon ang order sa warehouse ni A.
+      expect((await orderRow(orderId)).warehouse_id).toBe(a.warehouseId);
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang pag-edit sa kaugalingong order', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(a.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.put(`/api/sales/orders/${orderId}`, {
+        data: putBody(a.userUid, { warehouse: a.warehouseId }),
+      });
+      const body = await res.json();
+      expect(res.ok(), `edit failed: ${JSON.stringify(body)}`).toBe(true);
+      expect((await orderRow(orderId)).note).toBe('edited');
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang pag-delete sa order sa laing branch (uid sa query string)', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.delete(`/api/sales/orders/${orderId}?uid=${a.userUid}`);
+      expect(res.status()).toBe(403);
+      // Naa pa ang order.
+      expect(await orderRow(orderId)).toBeDefined();
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang pag-delete sa kaugalingong order', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(a.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.delete(`/api/sales/orders/${orderId}?uid=${a.userUid}`);
+      expect(res.ok()).toBe(true);
+      expect(await orderRow(orderId)).toBeUndefined();
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang delivery sa order sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.post(`/api/sales/orders/${orderId}/deliver`, {
+        data: { uid: a.userUid },
+      });
+      expect(res.status()).toBe(403);
+      expect((await orderRow(orderId)).status).toBe('Pending');
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang delivery sa kaugalingong order', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.post(`/api/sales/orders/${orderId}/deliver`, {
+        data: { uid: b.userUid },
+      });
+      const body = await res.json();
+      expect(res.ok(), `deliver failed: ${JSON.stringify(body)}`).toBe(true);
+      expect((await orderRow(orderId)).status).toBe('Delivered');
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('ang head office (test-admin-uid) makahimo sa order sa bisan unsang branch', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId);
+      orderIds.push(orderId);
+      const res = await request.post(`/api/sales/orders/${orderId}/deliver`, {
+        data: { uid: 'test-admin-uid' },
+      });
+      expect(res.ok()).toBe(true);
+      expect((await orderRow(orderId)).status).toBe('Delivered');
+    } finally {
+      await cleanupDocs({ orderIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('gi-403 ang tanang lima ka handlers kung walay uid', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const orderIds: string[] = [];
+    const invoiceIds: string[] = [];
+    try {
+      const orderId = await seedOrderInWarehouse(b.warehouseId);
+      orderIds.push(orderId);
+      const invoiceOrderId = await seedOrderInWarehouse(b.warehouseId, 'Delivered');
+      orderIds.push(invoiceOrderId);
+      const invoiceId = await seedInvoiceForOrder(invoiceOrderId);
+      invoiceIds.push(invoiceId);
+
+      const responses = {
+        create: await request.post('/api/sales/invoices', { data: { orderId: invoiceOrderId } }),
+        void: await request.post(`/api/sales/invoices/${invoiceId}/void`, { data: {} }),
+        put: await request.put(`/api/sales/orders/${orderId}`, { data: putBody(undefined) }),
+        del: await request.delete(`/api/sales/orders/${orderId}`),
+        deliver: await request.post(`/api/sales/orders/${orderId}/deliver`, { data: {} }),
+      };
+      for (const [name, res] of Object.entries(responses)) {
+        expect(res.status(), `${name} should refuse a missing uid`).toBe(403);
+      }
+      // Wala gyud ma-ilisan ang bisan unsa.
+      expect((await orderRow(orderId)).status).toBe('Pending');
+      expect(await invoiceStatus(invoiceId)).toBe('Pending');
+    } finally {
+      await cleanupDocs({ invoiceIds, orderIds });
+      await cleanupSecondBranch(b);
     }
   });
 });

@@ -1,10 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withTransaction } from '../../../../../lib/mysql';
+import { withTransaction, query } from '../../../../../lib/mysql';
+import {
+  resolveScopeFromBody,
+  resolveScopeFromRequest,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { addFamilyStock, findUltimateRoot } from '../../../../../lib/family-sync';
 import { isService } from '@/lib/product-type';
 
 // Statuses for which inventory has already been deducted (deduction happens at delivery).
 const STOCK_DEDUCTED_STATUSES = ['Delivered', 'Invoiced', 'Returned'];
+
+/**
+ * Refuse an order that belongs to another branch. An order reaches its branch
+ * through its warehouse; one with no warehouse (the field is optional) belongs
+ * to no branch, so there is no other branch to protect and it is left alone.
+ * An order id that does not exist is also left to the handler's own 404/no-op.
+ */
+async function assertOrderInBranch(orderId: string, scope: BranchScope): Promise<void> {
+    const rows = (await query(
+        'SELECT warehouse_id FROM sales_orders WHERE id = ?',
+        [orderId]
+    )) as any[];
+    const warehouseId = rows[0]?.warehouse_id;
+    if (warehouseId) await assertWarehouseInBranch(warehouseId, scope);
+}
 
 // Helper function to format ISO date strings to MySQL format
 function formatDateForMySQL(dateValue: string | null | undefined): string | null {
@@ -25,6 +47,19 @@ export async function DELETE(
 ) {
     const resolvedParams = params instanceof Promise ? await params : params;
     const orderId = resolvedParams.id;
+
+    // Branch isolation. Requires `uid` (spec D4). DELETE carries no body, so
+    // the uid and optional viewBranchId come from the query string. A valid
+    // order id in another branch is still refused — existence is not
+    // authorisation.
+    try {
+        const scope = await resolveScopeFromRequest(new URL(request.url).searchParams);
+        await assertOrderInBranch(orderId, scope);
+    } catch (error) {
+        const mapped = branchErrorResponse(error);
+        if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+        throw error;
+    }
 
     try {
         return await withTransaction(async (connection) => {
@@ -103,6 +138,19 @@ export async function PUT(
             note,
             items
         } = body;
+
+        // Branch isolation. Requires `uid` (spec D4). Both the order being
+        // edited AND the warehouse it is being moved to must be the caller's:
+        // otherwise an edit could hand an order to another branch.
+        try {
+            const scope = await resolveScopeFromBody(body);
+            await assertOrderInBranch(orderId, scope);
+            if (warehouse) await assertWarehouseInBranch(warehouse, scope);
+        } catch (error) {
+            const mapped = branchErrorResponse(error);
+            if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+            throw error;
+        }
 
         return await withTransaction(async (connection) => {
             // Editing is only permitted on Pending orders, which have NOT deducted
