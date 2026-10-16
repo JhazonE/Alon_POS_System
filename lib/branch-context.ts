@@ -334,3 +334,18 @@ export async function assertTerminalInBranch(
     );
   }
 }
+
+/**
+ * Resolve a write request's scope from its JSON body.
+ *
+ * The body-oriented sibling of resolveScopeFromRequest: writes POST JSON, so
+ * the uid arrives in the body rather than the query string. Same guarantees —
+ * the branch is re-read from users.branch_id by uid and never taken from a
+ * branch the caller claims, and a viewBranchId without the all_branches
+ * permission is refused rather than silently downgraded.
+ */
+export async function resolveScopeFromBody(
+  body: { uid?: string; viewBranchId?: string | null }
+): Promise<BranchScope> {
+  return resolveUserBranch(body?.uid || '', body?.viewBranchId ?? null);
+}

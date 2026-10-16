@@ -250,3 +250,34 @@ test.describe('mainBranchId', () => {
     }
   });
 });
+
+import { resolveScopeFromBody } from '../../lib/branch-context';
+
+test.describe('resolveScopeFromBody', () => {
+  test('mo-resolve sa branch sa user gikan sa body', async () => {
+    const a = await seedSecondBranch();
+    try {
+      const scope = await resolveScopeFromBody({ uid: a.userUid });
+      expect(scope).toEqual({ branchId: a.branchId, scope: 'single' });
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('mo-fail closed kung walay uid sa body', async () => {
+    await expect(resolveScopeFromBody({})).rejects.toThrow(/no uid supplied/i);
+  });
+
+  test('gi-reject ang viewBranchId kung walay all_branches', async () => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      await expect(
+        resolveScopeFromBody({ uid: a.userUid, viewBranchId: b.branchId })
+      ).rejects.toThrow(/not permitted to view other branches/i);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
