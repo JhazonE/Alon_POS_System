@@ -347,13 +347,24 @@ export async function assertTerminalInBranch(
  * A missing, empty or non-string uid is refused ("no uid supplied"). JSON
  * bodies can carry a number or array here, and MySQL would coerce a numeric
  * uid into a match against a uid that merely starts with that digit, so a
- * non-string uid must never reach the query. A non-string viewBranchId is
- * treated as absent for the same reason.
+ * non-string uid must never reach the query.
+ *
+ * viewBranchId follows one rule: absent means absent, and a non-string is
+ * refused. undefined and null are genuine absence. Any other non-string
+ * (number, boolean, array, object) throws rather than being treated as
+ * absent, because treating it as absent would widen a head-office caller's
+ * request to scope 'all' instead of refusing it.
  */
 export async function resolveScopeFromBody(
   body: { uid?: string; viewBranchId?: string | null }
 ): Promise<BranchScope> {
   const uid = typeof body?.uid === 'string' ? body.uid : '';
-  const viewBranchId = typeof body?.viewBranchId === 'string' ? body.viewBranchId : null;
+  let viewBranchId: string | null = null;
+  if (body?.viewBranchId !== undefined && body?.viewBranchId !== null) {
+    if (typeof body.viewBranchId !== 'string') {
+      throw new BranchResolutionError('Invalid viewBranchId: expected a string');
+    }
+    viewBranchId = body.viewBranchId;
+  }
   return resolveUserBranch(uid, viewBranchId);
 }

@@ -286,18 +286,41 @@ test.describe('resolveScopeFromBody', () => {
     }
   });
 
-  test('ang non-string nga viewBranchId dili mo-abot sa branch lookup — ang kaugalingon nga branch ra', async () => {
+  test('ang non-string nga viewBranchId gi-REJECT — dili i-treat nga walay gihatag', async () => {
     const seeded = await seedSecondBranch();
     try {
-      const scope = await resolveScopeFromBody({
-        uid: seeded.userUid,
-        viewBranchId: 5 as any,
-      });
-      expect(scope).toEqual({ branchId: seeded.branchId, scope: 'single' });
+      await expect(
+        resolveScopeFromBody({ uid: seeded.userUid, viewBranchId: 5 as any })
+      ).rejects.toThrow(/invalid viewBranchId/i);
     } finally {
       await cleanupSecondBranch(seeded);
     }
   });
+
+  test('head office nga numeric viewBranchId — dili mo-widen ngadto sa scope "all"', async () => {
+    const seeded = await seedSecondBranch();
+    try {
+      await grantPermission(seeded.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(seeded.userUid, null);
+      await expect(
+        resolveScopeFromBody({ uid: seeded.userUid, viewBranchId: 5 as any })
+      ).rejects.toThrow(/invalid viewBranchId/i);
+    } finally {
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  for (const [label, uid] of [
+    ['boolean', true],
+    ['array', ['a']],
+    ['object', { x: 1 }],
+  ] as const) {
+    test(`mo-refuse ang ${label} nga uid — walay uid nga gi-supply`, async () => {
+      await expect(
+        resolveScopeFromBody({ uid } as any)
+      ).rejects.toThrow(/no uid supplied/i);
+    });
+  }
 
   test('gi-reject ang viewBranchId kung walay all_branches', async () => {
     const a = await seedSecondBranch();
