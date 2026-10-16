@@ -42,6 +42,7 @@ async function postTransfer(request: any, productId: string, quantity: number, r
       targetWarehouseId: TRANSFER_TARGET_WAREHOUSE.id,
       notes: reason,
       userId: 'test-admin-uid',
+      uid: 'test-admin-uid',
     },
   });
 }

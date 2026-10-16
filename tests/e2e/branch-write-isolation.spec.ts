@@ -7,6 +7,8 @@ import {
   setUserBranch,
 } from './helpers/branches';
 import { ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
+import { testQuery } from './helpers/db';
+import { SO_CUSTOMER, SO_PRODUCT } from './fixtures/test-data';
 
 /**
  * Ang write kay gi-REJECT, dili gi-filter: ang caller mismo nag-ingon unsa
@@ -94,6 +96,64 @@ test.describe('POST /api/inventory/adjust/bulk — branch isolation', () => {
       });
       expect(res.status()).not.toBe(403);
     } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+/**
+ * Ang `warehouse` field (dili `warehouseId`) sa sales/orders POST.
+ */
+test.describe('POST /api/sales/orders — branch isolation', () => {
+  const orderBody = (uid: string, warehouse: string) => ({
+    uid,
+    customer: { id: SO_CUSTOMER.id, name: SO_CUSTOMER.name },
+    orderDate: '2026-07-23',
+    deliveryDate: '2026-07-23',
+    paymentMethod: 'CASH',
+    status: 'Pending',
+    warehouse,
+    items: [
+      {
+        product: { id: SO_PRODUCT.id, name: SO_PRODUCT.name },
+        quantity: 1,
+        price: SO_PRODUCT.price,
+      },
+    ],
+  });
+
+  test('gi-403 ang order nga ang warehouse sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const res = await request.post('/api/sales/orders', {
+        data: orderBody(a.userUid, b.warehouseId),
+      });
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang order sa kaugalingong warehouse', async ({ request }) => {
+    const a = await seedSecondBranch();
+    let orderId: string | undefined;
+    try {
+      const res = await request.post('/api/sales/orders', {
+        data: orderBody(a.userUid, a.warehouseId),
+      });
+      // Ang importante: DILI 403. Ang laing validation kay lain nga isyu.
+      expect(res.status()).not.toBe(403);
+      const json = await res.json().catch(() => null);
+      orderId = json?.data?.id;
+    } finally {
+      // Limpyohi ang order aron dili mabilin ang row nga nagtudlo sa
+      // warehouse nga gi-delete sa cleanup.
+      if (orderId) {
+        await testQuery('DELETE FROM sales_order_items WHERE sales_order_id = ?', [orderId]);
+        await testQuery('DELETE FROM sales_orders WHERE id = ?', [orderId]);
+      }
       await cleanupSecondBranch(a);
     }
   });

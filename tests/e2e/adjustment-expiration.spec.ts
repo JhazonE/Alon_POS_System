@@ -131,6 +131,7 @@ test.describe('Adjustment expiration dates', () => {
         }],
         adjustmentType: 'add',
         userId: 'test-admin-uid',
+        uid: 'test-admin-uid',
       },
     });
     expect(res.ok()).toBeTruthy();
@@ -153,6 +154,7 @@ test.describe('Adjustment expiration dates', () => {
         }],
         adjustmentType: 'add',
         userId: 'test-admin-uid',
+        uid: 'test-admin-uid',
       },
     });
     expect(res.ok()).toBeTruthy();
@@ -177,6 +179,7 @@ test.describe('Adjustment expiration dates', () => {
           }],
           adjustmentType: 'add',
           userId: 'test-admin-uid',
+          uid: 'test-admin-uid',
         },
       });
       expect(res.ok()).toBeTruthy();
@@ -202,6 +205,7 @@ test.describe('Adjustment expiration dates', () => {
         }],
         adjustmentType: 'add',
         userId: 'test-admin-uid',
+        uid: 'test-admin-uid',
       },
     });
     expect(res.ok()).toBeTruthy();
@@ -234,6 +238,7 @@ test.describe('Adjustment expiration dates', () => {
         }],
         adjustmentType: 'add',
         userId: 'test-admin-uid',
+        uid: 'test-admin-uid',
       },
     });
     expect(res.ok()).toBeTruthy();

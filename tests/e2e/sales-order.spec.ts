@@ -24,6 +24,7 @@ import { SO_CUSTOMER, SO_PRODUCT, SO_SERVICE } from './fixtures/test-data';
 async function createOrder(request: any, items: any[], extra: Record<string, any> = {}) {
   const res = await request.post('/api/sales/orders', {
     data: {
+      uid: 'test-admin-uid',
       customer: { id: SO_CUSTOMER.id, name: SO_CUSTOMER.name },
       orderDate: '2026-07-23',
       deliveryDate: '2026-07-23',
