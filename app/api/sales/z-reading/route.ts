@@ -3,6 +3,7 @@ import { query, getNextZReadingNumber } from '@/lib/mysql';
 import { format } from 'date-fns';
 import { saveEJournalFiles } from '@/lib/ejournal/ejournal-writer';
 import { sendZReadingToStaLucia } from '@/lib/integrations/sta-lucia/send-z-reading';
+import { resolveScopeFromBody, assertTerminalInBranch, branchErrorResponse } from '@/lib/branch-context';
 
 const safeParseFloat = (val: any): number => {
     if (val === null || val === undefined) return 0;
@@ -618,6 +619,17 @@ export async function POST(request: NextRequest) {
                 { success: false, error: 'A specific terminalId is required to generate a Z-reading (it locks that terminal\'s business date).' },
                 { status: 400 }
             );
+        }
+        // Branch isolation. A Z-reading is a per-establishment BIR filing, so
+        // a terminal in another branch must be refused outright. The existing
+        // 'all' rejection above is a separate concern and stays as it is.
+        try {
+          const scope = await resolveScopeFromBody(body);
+          await assertTerminalInBranch(terminalId, scope);
+        } catch (error) {
+          const mapped = branchErrorResponse(error);
+          if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+          throw error;
         }
         cashierName = cashierName || 'Admin';
 

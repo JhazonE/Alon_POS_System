@@ -158,3 +158,33 @@ test.describe('POST /api/sales/orders — branch isolation', () => {
     }
   });
 });
+
+test.describe('POST /api/sales/z-reading — branch isolation', () => {
+  test('gi-403 ang Z-reading sa terminal sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const res = await request.post('/api/sales/z-reading', {
+        data: { uid: a.userUid, terminalId: b.terminalId, cashierName: 'Test' },
+      });
+      // Ang Z-reading kay BIR filing — dili pwede mo-file para sa laing
+      // establishment.
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-403 ang Z-reading sa kaugalingong terminal', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const res = await request.post('/api/sales/z-reading', {
+        data: { uid: a.userUid, terminalId: a.terminalId, cashierName: 'Test' },
+      });
+      expect(res.status()).not.toBe(403);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+});
