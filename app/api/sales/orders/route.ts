@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction, query, getNextReference } from '../../../../lib/mysql';
+import {
+  resolveScopeFromBody,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 // Helper function to format ISO date strings to MySQL format
 function formatDateForMySQL(dateValue: string | null | undefined): string | null {
@@ -261,6 +266,18 @@ export async function POST(request: NextRequest) {
       items
     } = body;
     
+    // Branch isolation. NOTE: this route's field is `warehouse`, not
+    // `warehouseId`. See the spec's group table: an earlier draft had this
+    // wrong twice.
+    try {
+      const scope = await resolveScopeFromBody(body);
+      if (warehouse) await assertWarehouseInBranch(warehouse, scope);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
+
     // Basic validation
     if (!customer || !customer.id) {
         return NextResponse.json(

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction, query } from '@/lib/mysql';
 import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { deductFamilyStock, addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
+import {
+  resolveScopeFromBody,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 /**
  * Mga column nga DILI kopyahon kung mo-clone ug product row paingon sa laing
@@ -94,6 +99,21 @@ export async function POST(request: NextRequest) {
       supplierId,
       adjustmentType = 'add'
     } = body;
+
+    // Branch isolation. A write names its own target, so the server refuses a
+    // cross-branch one rather than filtering. BOTH warehouses are asserted:
+    // checking only the source would still let a caller move stock INTO
+    // another branch. The scope comes from users.branch_id via uid, never
+    // from a branch the caller claims.
+    try {
+      const scope = await resolveScopeFromBody(body);
+      if (warehouseId) await assertWarehouseInBranch(warehouseId, scope);
+      if (targetWarehouseId) await assertWarehouseInBranch(targetWarehouseId, scope);
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
 
     if (!adjustments || !Array.isArray(adjustments) || adjustments.length === 0) {
       return NextResponse.json({ success: false, error: 'No adjustments provided' }, { status: 400 });
