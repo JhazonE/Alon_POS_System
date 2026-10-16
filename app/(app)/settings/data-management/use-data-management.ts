@@ -141,8 +141,11 @@ export function useDataManagement() {
   const uploadCsv = async (importPath: string, file: File, setImp: (v: boolean) => void, clearFile: () => void) => {
     setImp(true);
     const formData = new FormData(); formData.append('file', file);
+    const importParams = new URLSearchParams();
+    appendSessionUid(importParams);
+    const importQuery = importParams.toString();
     try {
-      const res = await fetch(getApiUrl(importPath), { method: 'POST', body: formData });
+      const res = await fetch(getApiUrl(importQuery ? `${importPath}?${importQuery}` : importPath), { method: 'POST', body: formData });
       const data = await res.json();
       if (res.ok) { toast({ title: 'Import Successful', description: data.message }); clearFile(); }
       else toast({ title: 'Import Failed', description: data.error || 'Unknown error occurred', variant: 'destructive' });

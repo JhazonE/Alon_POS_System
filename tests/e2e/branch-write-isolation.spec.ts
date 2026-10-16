@@ -7,6 +7,9 @@ import {
   setUserBranch,
   seedSaleOnTerminal,
   cleanupSale,
+  removeBranchWarehouses,
+  readPosTransactionBranch,
+  cleanupPosTransaction,
 } from './helpers/branches';
 import { ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
 import { testQuery } from './helpers/db';
@@ -648,6 +651,298 @@ test.describe('document writes — branch isolation', () => {
     } finally {
       await cleanupDocs({ invoiceIds, orderIds });
       await cleanupSecondBranch(b);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 6: pos/void-transaction, sales (use case), importer, pos-transactions
+// ---------------------------------------------------------------------------
+
+async function saleStatus(saleId: string): Promise<string | undefined> {
+  const rows: any = await testQuery('SELECT status FROM sales_transactions WHERE id = ?', [saleId]);
+  return rows[0]?.status;
+}
+
+test.describe('POST /api/pos/void-transaction — branch isolation', () => {
+  test('gi-403 ang pag-void sa sale sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const saleIds: string[] = [];
+    try {
+      const saleId = await seedSaleOnTerminal(b.terminalId, b.userUid);
+      saleIds.push(saleId);
+      const res = await request.post('/api/pos/void-transaction', {
+        data: { saleId, voidReason: 'cross-branch', voidedByUserId: a.userUid, voidedByName: 'A' },
+      });
+      expect(res.status()).toBe(403);
+      expect(await saleStatus(saleId)).toBe('Paid');
+    } finally {
+      await cleanupDocs({ saleIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang pag-void sa kaugalingong sale', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const saleIds: string[] = [];
+    try {
+      const saleId = await seedSaleOnTerminal(a.terminalId, a.userUid);
+      saleIds.push(saleId);
+      const res = await request.post('/api/pos/void-transaction', {
+        data: { saleId, voidReason: 'same-branch', voidedByUserId: a.userUid, voidedByName: 'A' },
+      });
+      const body = await res.json();
+      expect(res.ok(), JSON.stringify(body)).toBe(true);
+      expect(await saleStatus(saleId)).toBe('Voided');
+    } finally {
+      await cleanupDocs({ saleIds });
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office makapa-void sa sale sa bisan unsang branch', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const saleIds: string[] = [];
+    try {
+      const saleId = await seedSaleOnTerminal(b.terminalId, b.userUid);
+      saleIds.push(saleId);
+      const res = await request.post('/api/pos/void-transaction', {
+        data: { saleId, voidReason: 'head office', voidedByUserId: 'test-admin-uid' },
+      });
+      expect(res.ok()).toBe(true);
+      expect(await saleStatus(saleId)).toBe('Voided');
+    } finally {
+      await cleanupDocs({ saleIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('gi-403 ang pag-void kung walay voidedByUserId o uid', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const saleIds: string[] = [];
+    try {
+      const saleId = await seedSaleOnTerminal(b.terminalId, b.userUid);
+      saleIds.push(saleId);
+      const res = await request.post('/api/pos/void-transaction', {
+        data: { saleId, voidReason: 'no user' },
+      });
+      expect(res.status()).toBe(403);
+      expect(await saleStatus(saleId)).toBe('Paid');
+    } finally {
+      await cleanupDocs({ saleIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+});
+
+/** Tinuod nga body para sa POST /api/sales (CreateSaleUseCase). */
+function salesBody(uid: string | undefined, productId: string, extra: Record<string, any> = {}) {
+  return {
+    ...(uid ? { uid } : {}),
+    customer: { id: SO_CUSTOMER.id, name: SO_CUSTOMER.name },
+    invoiceDate: '2026-10-16',
+    reference: `ISO-S-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    paymentMethod: 'CASH',
+    status: 'Pending',
+    items: [{ product: { id: productId, name: 'Isolation Product' }, price: 1, quantity: 1 }],
+    ...extra,
+  };
+}
+
+async function productStock(productId: string): Promise<number> {
+  const rows: any = await testQuery('SELECT stock FROM products WHERE id = ?', [productId]);
+  return Number(rows[0]?.stock);
+}
+
+test.describe('POST /api/sales — branch isolation (CreateSaleUseCase)', () => {
+  test('gi-403 ang invoice nga ang produkto naa sa warehouse sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const invoiceIds: string[] = [];
+    try {
+      const productId = await seedProductInWarehouse(b.warehouseId, `SL-X-${Date.now()}`);
+      const body = salesBody(a.userUid, productId);
+      const res = await request.post('/api/sales', { data: body });
+      expect(res.status()).toBe(403);
+      // Wala nawad-an ug stock ug wala matunga ang invoice.
+      expect(await productStock(productId)).toBe(10);
+      const made: any = await testQuery('SELECT id FROM sales_invoices WHERE reference = ?', [body.reference]);
+      invoiceIds.push(...made.map((r: any) => r.id));
+      expect(made).toHaveLength(0);
+    } finally {
+      await cleanupDocs({ invoiceIds });
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang invoice sa produkto sa kaugalingong warehouse', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const invoiceIds: string[] = [];
+    try {
+      const productId = await seedProductInWarehouse(a.warehouseId, `SL-OK-${Date.now()}`);
+      const res = await request.post('/api/sales', { data: salesBody(a.userUid, productId) });
+      const body = await res.json();
+      expect(res.ok(), JSON.stringify(body)).toBe(true);
+      invoiceIds.push(body.data.id);
+      expect(await productStock(productId)).toBe(9);
+    } finally {
+      await cleanupDocs({ invoiceIds });
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office makahimo ug invoice sa produkto sa bisan unsang branch', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const invoiceIds: string[] = [];
+    try {
+      const productId = await seedProductInWarehouse(b.warehouseId, `SL-HO-${Date.now()}`);
+      const res = await request.post('/api/sales', { data: salesBody('test-admin-uid', productId) });
+      const body = await res.json();
+      expect(res.ok(), JSON.stringify(body)).toBe(true);
+      invoiceIds.push(body.data.id);
+      expect(await productStock(productId)).toBe(9);
+    } finally {
+      await cleanupDocs({ invoiceIds });
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('gi-403 ang invoice kung walay uid', async ({ request }) => {
+    const b = await seedSecondBranch();
+    try {
+      const productId = await seedProductInWarehouse(b.warehouseId, `SL-NU-${Date.now()}`);
+      const res = await request.post('/api/sales', { data: salesBody(undefined, productId) });
+      expect(res.status()).toBe(403);
+      expect(await productStock(productId)).toBe(10);
+    } finally {
+      await cleanupSecondBranch(b);
+    }
+  });
+});
+
+const IMPORT_URL = '/api/data-management/import/products';
+
+function importRow(name: string, extra: Record<string, any> = {}) {
+  return { name, selling_price: '5', cost_price: '3', stock_quantity: '0', ...extra };
+}
+
+async function productByName(name: string): Promise<any | undefined> {
+  const rows: any = await testQuery('SELECT id, warehouse_id, price FROM products WHERE name = ?', [name]);
+  return rows[0];
+}
+
+async function deleteProductsByName(...names: string[]) {
+  for (const n of names) await testQuery('DELETE FROM products WHERE name = ?', [n]);
+}
+
+test.describe('POST /api/data-management/import/products — branch warehouse (D6)', () => {
+  test('ang produkto nga gi-import ni A mo-landing sa warehouse sa branch ni A', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const name = `IMP-A-${Date.now()}`;
+    try {
+      const res = await request.post(IMPORT_URL, { data: { uid: a.userUid, rows: [importRow(name)] } });
+      const body = await res.json();
+      expect(res.ok(), JSON.stringify(body)).toBe(true);
+      expect(body.added).toBe(1);
+      expect((await productByName(name))?.warehouse_id).toBe(a.warehouseId);
+    } finally {
+      await deleteProductsByName(name);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office nagpabilin sa global nga default warehouse', async ({ request }) => {
+    const name = `IMP-HO-${Date.now()}`;
+    try {
+      const [expected]: any = await testQuery(
+        `SELECT id FROM warehouses WHERE is_active = 1
+         ORDER BY is_main DESC, (id = 'wh_main') DESC, created_at ASC LIMIT 1`
+      );
+      const res = await request.post(IMPORT_URL, { data: { uid: 'test-admin-uid', rows: [importRow(name)] } });
+      expect(res.ok()).toBe(true);
+      expect((await productByName(name))?.warehouse_id).toBe(expected.id);
+    } finally {
+      await deleteProductsByName(name);
+    }
+  });
+
+  test('gi-403 ang import kung walay uid, ug walay produkto nga na-himo', async ({ request }) => {
+    const name = `IMP-NU-${Date.now()}`;
+    try {
+      const res = await request.post(IMPORT_URL, { data: { rows: [importRow(name)] } });
+      expect(res.status()).toBe(403);
+      expect(await productByName(name)).toBeUndefined();
+    } finally {
+      await deleteProductsByName(name);
+    }
+  });
+
+  test('gi-409 ang import sa branch nga walay active nga warehouse (dili unassigned)', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const name = `IMP-NW-${Date.now()}`;
+    try {
+      await removeBranchWarehouses(a.branchId);
+      const res = await request.post(IMPORT_URL, { data: { uid: a.userUid, rows: [importRow(name)] } });
+      expect(res.status()).toBe(409);
+      expect(await productByName(name)).toBeUndefined();
+    } finally {
+      await deleteProductsByName(name);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-usab ang produkto sa laing branch nga parehas ug ngalan', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const name = `IMP-DUP-${Date.now()}`;
+    try {
+      const otherId = await seedProductInWarehouse(b.warehouseId, `IMP-DUP-SKU-${Date.now()}`);
+      await testQuery('UPDATE products SET name = ?, price = 1.00 WHERE id = ?', [name, otherId]);
+      const res = await request.post(IMPORT_URL, {
+        data: { uid: a.userUid, rows: [importRow(name, { selling_price: '99' })] },
+      });
+      expect(res.ok()).toBe(true);
+      const rows: any = await testQuery('SELECT warehouse_id, price FROM products WHERE id = ?', [otherId]);
+      expect(Number(rows[0].price)).toBe(1);
+      expect(rows[0].warehouse_id).toBe(b.warehouseId);
+    } finally {
+      await deleteProductsByName(name);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+test.describe('POST /api/pos-transactions — sale branch wins over terminal (D7)', () => {
+  test('ang row mo-takig branch sa sale, dili sa terminal nga nagkontra', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    let saleId: string | undefined;
+    let posTransId: string | undefined;
+    try {
+      saleId = await seedSaleOnTerminal(a.terminalId, a.userUid);
+      const res = await request.post('/api/pos-transactions', {
+        data: {
+          saleId,
+          userId: a.userUid,
+          terminalId: b.terminalId, // laing branch kaysa sale
+          subtotal: 1.0,
+          totalAmount: 1.0,
+          paymentMethod: 'Cash',
+        },
+      });
+      const body = await res.json();
+      posTransId = body.data?.id;
+      expect(res.ok(), JSON.stringify(body)).toBe(true);
+      expect(await readPosTransactionBranch(String(posTransId))).toBe(a.branchId);
+    } finally {
+      if (posTransId) await cleanupPosTransaction(posTransId);
+      if (saleId) await cleanupSale(saleId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
     }
   });
 });

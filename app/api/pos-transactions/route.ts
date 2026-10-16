@@ -175,13 +175,21 @@ export async function POST(request: NextRequest) {
     // Generate a unique ID for the POS transaction
     const posTransactionId = `PT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // A POS transaction must always belong to an establishment. terminalId is
-    // optional here (terminalId || null below), so fall back to the main
-    // branch rather than writing a branchless row. Resolved before the INSERT
-    // so the helpers' pool use never overlaps another connection.
-    const txnBranchId: string = terminalId
-      ? (await resolveTerminalBranch(terminalId)).branchId
-      : await mainBranchId();
+    // A POS transaction must always belong to an establishment, and it belongs
+    // to the one that made the SALE it records. Prefer the referenced sale's
+    // own stored branch_id (as sales/returns does), so a client posting a
+    // branch-A saleId with a branch-B terminalId cannot split the two. Failing
+    // that fall back to the terminal's branch, then (terminalId is optional
+    // here) to the main branch rather than writing a branchless row. Resolved
+    // before the INSERT so the helpers' pool use never overlaps another
+    // connection.
+    const saleRows = saleId
+      ? ((await query('SELECT branch_id FROM sales_transactions WHERE id = ?', [saleId])) as any[])
+      : [];
+    const txnBranchId: string = saleRows[0]?.branch_id
+      ?? (terminalId
+        ? (await resolveTerminalBranch(terminalId)).branchId
+        : await mainBranchId());
 
     // Insert POS transaction
     const insertQuery = `

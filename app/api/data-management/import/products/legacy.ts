@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveScopeFromRequest, branchErrorResponse } from '@/lib/branch-context';
+import { getDefaultWarehouseId, productInBranchClause } from './branch-scope';
 
 // Legacy multipart CSV import, kept for backward compatibility. The wizard uses the JSON path.
 export async function legacyProductCsvImport(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+
+    // Branch isolation (spec D6), same as the JSON path. A multipart upload has
+    // no JSON body, so the uid comes from the query string or a `uid` form field.
+    const formUid = formData.get('uid');
+    const scope = await resolveScopeFromRequest(
+      new URL(request.url).searchParams,
+      typeof formUid === 'string' ? formUid : undefined,
+    );
+    const inBranch = productInBranchClause(scope);
+
     if (!file) return NextResponse.json({ success: false, error: 'No file uploaded' }, { status: 400 });
 
     const text = await file.text();
@@ -18,12 +30,12 @@ export async function legacyProductCsvImport(request: NextRequest) {
     let successCount = 0, updateCount = 0, errorCount = 0;
 
     // New products are assigned to the default STORE warehouse automatically.
-    const defaultWarehouseId = await getDefaultWarehouseId();
+    const defaultWarehouseId = await getDefaultWarehouseId(scope);
 
     for (const p of productsData) {
       if (!p.name || !p.sku) { errorCount++; continue; }
       try {
-        const [existing]: any = await query('SELECT id FROM products WHERE sku = ?', [p.sku]);
+        const [existing]: any = await query(`SELECT id FROM products WHERE sku = ?${inBranch.sql}`, [p.sku, ...inBranch.params]);
         if (existing) {
           await query(
             `UPDATE products SET name=?, barcode=?, description=?, category=?, brand=?, subcategory=?, unit_of_measure=?,
@@ -53,24 +65,9 @@ export async function legacyProductCsvImport(request: NextRequest) {
     }
     return NextResponse.json({ success: true, message: `Import processed. Added: ${successCount}, Updated: ${updateCount}, Errors: ${errorCount}` });
   } catch (error: any) {
+    const mapped = branchErrorResponse(error);
+    if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
     console.error('Error importing products (legacy):', error);
     return NextResponse.json({ success: false, error: 'Import failed' }, { status: 500 });
-  }
-}
-
-// Resolve the default STORE warehouse: is_main first, then the seeded 'wh_main',
-// then the oldest active warehouse. Returns null if none exist.
-async function getDefaultWarehouseId(): Promise<string | null> {
-  try {
-    const [wh]: any = await query(
-      `SELECT id FROM warehouses
-       WHERE is_active = 1
-       ORDER BY is_main DESC, (id = 'wh_main') DESC, created_at ASC
-       LIMIT 1`,
-    );
-    return wh?.id ?? null;
-  } catch (err) {
-    console.warn('[Import] Could not resolve default warehouse:', err);
-    return null;
   }
 }

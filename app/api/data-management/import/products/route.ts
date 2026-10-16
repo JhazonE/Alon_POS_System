@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateSku } from '@/lib/sku';
 import { recordStockMovement } from '@/lib/stock-movements';
 import { legacyProductCsvImport } from './legacy';
+import { getDefaultWarehouseId, productInBranchClause } from './branch-scope';
+import { resolveScopeFromBody, branchErrorResponse } from '@/lib/branch-context';
 
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get('content-type') || '';
@@ -13,12 +15,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    // Branch isolation (spec D6). Requires `uid`. The destination warehouse is
+    // derived from the importing user's branch, and an existing-product match
+    // is limited to that branch, so there is no caller-supplied target to assert.
+    const scope = await resolveScopeFromBody(body);
+    const inBranch = productInBranchClause(scope);
+
     const rows: Record<string, any>[] = Array.isArray(body?.rows) ? body.rows : [];
     let added = 0, updated = 0, skipped = 0;
     const errors: Array<{ row: number; reason: string }> = [];
 
-    // New products are assigned to the default STORE warehouse automatically.
-    const defaultWarehouseId = await getDefaultWarehouseId();
+    // New products are assigned to the importer's branch default STORE warehouse
+    // (head office: the global default). Throws 409 for a branch with none.
+    const defaultWarehouseId = await getDefaultWarehouseId(scope);
 
     for (let i = 0; i < rows.length; i++) {
       const p = rows[i];
@@ -30,10 +40,10 @@ export async function POST(request: NextRequest) {
         // Match on barcode first, else name.
         let existing: any = null;
         if (barcode) {
-          [existing] = await query('SELECT id FROM products WHERE barcode = ? LIMIT 1', [barcode]) as any[];
+          [existing] = await query(`SELECT id FROM products WHERE barcode = ?${inBranch.sql} LIMIT 1`, [barcode, ...inBranch.params]) as any[];
         }
         if (!existing) {
-          [existing] = await query('SELECT id FROM products WHERE name = ? LIMIT 1', [p.name]) as any[];
+          [existing] = await query(`SELECT id FROM products WHERE name = ?${inBranch.sql} LIMIT 1`, [p.name, ...inBranch.params]) as any[];
         }
 
         if (existing) {
@@ -100,6 +110,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ added, updated, skipped, errors });
   } catch (error: any) {
+    const mapped = branchErrorResponse(error);
+    if (mapped) return NextResponse.json({ error: mapped.body.error }, { status: mapped.status });
     console.error('Error importing products:', error);
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });
   }
@@ -108,22 +120,4 @@ export async function POST(request: NextRequest) {
 function num(v: any): number {
   const n = parseFloat(String(v ?? '').replace(/[₱$,\s]/g, ''));
   return Number.isNaN(n) ? 0 : n;
-}
-
-// Resolve the default STORE warehouse: the one flagged is_main, else the seeded
-// 'wh_main', else the oldest active warehouse. Returns null if none exist so the
-// import still succeeds (products just stay unassigned).
-async function getDefaultWarehouseId(): Promise<string | null> {
-  try {
-    const [wh] = await query(
-      `SELECT id FROM warehouses
-       WHERE is_active = 1
-       ORDER BY is_main DESC, (id = 'wh_main') DESC, created_at ASC
-       LIMIT 1`,
-    ) as any[];
-    return wh?.id ?? null;
-  } catch (err) {
-    console.warn('[Import] Could not resolve default warehouse:', err);
-    return null;
-  }
 }

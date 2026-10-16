@@ -5,6 +5,7 @@ import { MySqlCustomerRepository } from '../../../src/infrastructure/repositorie
 import { InventorySyncService } from '../../../src/infrastructure/services/InventorySyncService';
 import { CreateSaleUseCase } from '../../../src/core/sales/application/CreateSaleUseCase';
 import { GetSalesUseCase } from '../../../src/core/sales/application/GetSalesUseCase';
+import { resolveScopeFromBody, branchErrorResponse } from '@/lib/branch-context';
 
 // Initialize dependencies
 const saleRepository = new MySqlSaleRepository();
@@ -17,7 +18,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    const saleId = await createSaleUseCase.execute(body);
+    // Branch isolation. Requires `uid` (spec D4); the use case asserts that
+    // every product sold belongs to the caller's branch.
+    const scope = await resolveScopeFromBody(body);
+    const saleId = await createSaleUseCase.execute(body, scope);
 
     // Fetch the created sale to return it (or just return the response)
     // For consistency with original route.ts, constructing a partial response
@@ -37,6 +41,8 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
+    const mapped = branchErrorResponse(error);
+    if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
     console.error('Error creating sales invoice:', error);
     if (error.message && error.message.includes('Insufficient stock')) {
       return NextResponse.json(

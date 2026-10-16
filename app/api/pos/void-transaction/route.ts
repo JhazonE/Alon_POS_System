@@ -3,6 +3,11 @@ import { withTransaction, query } from '@/lib/mysql';
 import { addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
 import { restoreBaseQty } from '@/lib/selling-unit-restore';
 import { saveEJournalFiles } from '@/lib/ejournal/ejournal-writer';
+import {
+    resolveScopeFromBody,
+    assertTerminalInBranch,
+    branchErrorResponse,
+} from '@/lib/branch-context';
 
 // The void_reason column can't disappear once ensured — only pay the
 // INFORMATION_SCHEMA round trip until the first success this process.
@@ -30,7 +35,8 @@ async function ensureVoidReasonColumn() {
 
 export async function POST(request: NextRequest) {
     try {
-        const { saleId, voidReason, voidedByUserId, voidedByName } = await request.json();
+        const body = await request.json();
+        const { saleId, voidReason, voidedByUserId, voidedByName } = body;
         console.log('void-transaction: Received saleId:', saleId);
 
         if (!saleId) {
@@ -38,6 +44,50 @@ export async function POST(request: NextRequest) {
         }
         if (!voidReason || !String(voidReason).trim()) {
             return NextResponse.json({ success: false, error: 'A void reason is required' }, { status: 400 });
+        }
+
+        // Branch isolation. The void carries a user but no terminal or warehouse,
+        // so the scope comes from the voiding user (an explicit `uid` wins, else
+        // `voidedByUserId`, which the POS already sends). The sale is then
+        // checked against that scope using its OWN stored branch_id: a valid
+        // sale id in another branch is still refused — existence is not
+        // authorisation. A sale with no stored branch (pre-migration-138 data)
+        // falls back to the terminal that rang it; one with neither belongs to
+        // no branch, so there is nothing to protect and it is left to proceed.
+        // An unknown sale id is left to the transaction's own 404 below.
+        try {
+            const scope = await resolveScopeFromBody({
+                ...body,
+                uid: typeof body.uid === 'string' && body.uid ? body.uid : voidedByUserId,
+            });
+            if (scope.scope === 'single') {
+                const saleRows = (await query(
+                    'SELECT branch_id FROM sales_transactions WHERE id = ?',
+                    [saleId]
+                )) as any[];
+                if (saleRows.length > 0) {
+                    const saleBranchId = saleRows[0].branch_id;
+                    if (saleBranchId) {
+                        if (saleBranchId !== scope.branchId) {
+                            return NextResponse.json(
+                                { success: false, error: `Sale ${saleId} does not belong to branch ${scope.branchId}` },
+                                { status: 403 }
+                            );
+                        }
+                    } else {
+                        const termRows = (await query(
+                            'SELECT terminal_id FROM pos_transactions WHERE sale_id = ? LIMIT 1',
+                            [saleId]
+                        )) as any[];
+                        const saleTerminalId = termRows[0]?.terminal_id;
+                        if (saleTerminalId) await assertTerminalInBranch(saleTerminalId, scope);
+                    }
+                }
+            }
+        } catch (error) {
+            const mapped = branchErrorResponse(error);
+            if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+            throw error;
         }
 
         await ensureVoidReasonColumn();

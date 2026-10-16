@@ -104,7 +104,7 @@ async function lastSale() {
 
 async function voidSale(page: Page, saleId: string) {
   const res = await page.request.post('/api/pos/void-transaction', {
-    data: { saleId, voidReason: 'e2e selling-units void' },
+    data: { saleId, voidReason: 'e2e selling-units void', voidedByUserId: 'test-admin-uid' },
   });
   expect(res.ok(), await res.text()).toBeTruthy();
   expect((await res.json()).success).toBe(true);

@@ -209,7 +209,7 @@ test.describe('POST /api/sales/transactions — branch stamping', () => {
 });
 
 test.describe('POST /api/pos-transactions — branch stamping', () => {
-  test('ang POS transaction nga walay terminal mo-landing sa main branch', async ({ request }) => {
+  test('ang POS transaction nga walay terminal mo-landing sa branch sa sale', async ({ request }) => {
     const a = await seedSecondBranch({ withNumberSeries: true });
     let saleId: string | undefined;
     let posTransId: string | undefined;
@@ -227,7 +227,9 @@ test.describe('POST /api/pos-transactions — branch stamping', () => {
       const body = await res.json();
       posTransId = body.data?.id;
       expect(res.ok(), JSON.stringify(body)).toBeTruthy();
-      expect(await readPosTransactionBranch(String(posTransId))).toBe(await readMainBranchId());
+      // Ang sale kay naa na'y stored branch_id (NOT NULL, migration 140), ug kana
+      // ang modaog (spec D7) — ang main-branch fallback dili na maabot sa tinuod nga sale.
+      expect(await readPosTransactionBranch(String(posTransId))).toBe(a.branchId);
     } finally {
       if (posTransId) await cleanupPosTransaction(posTransId);
       if (saleId) await cleanupSale(saleId);

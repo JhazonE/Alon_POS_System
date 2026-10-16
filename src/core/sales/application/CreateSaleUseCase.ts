@@ -1,7 +1,8 @@
 import { SaleRepository } from '../domain/ISaleRepository';
 import { SaleEntity, SaleItemEntity } from '../domain/Sale';
 import { InventorySyncService } from '../../../infrastructure/services/InventorySyncService';
-import { getNextReference, getNextReceiptNumber } from '../../../../lib/mysql';
+import { query, getNextReference, getNextReceiptNumber } from '../../../../lib/mysql';
+import { assertWarehouseInBranch, type BranchScope } from '../../../../lib/branch-context';
 import { PoolConnection } from 'mysql2/promise';
 import { deductFromBatches, getBatchCostingSettings } from '../../../../lib/batch-deduction';
 
@@ -24,7 +25,17 @@ export class CreateSaleUseCase {
     private inventoryService: InventorySyncService
   ) {}
 
-  async execute(request: CreateSaleRequest): Promise<string> {
+  /**
+   * `scope` is the caller's resolved branch (see resolveScopeFromBody). It is
+   * required, not optional, so a new caller cannot silently skip the check:
+   * a single-branch scope may only sell products held in its own branch's
+   * warehouses, and head office (`scope: 'all'`) may sell any.
+   */
+  async execute(request: CreateSaleRequest, scope: BranchScope): Promise<string> {
+    // Before anything is generated or written: a refused sale must not consume
+    // a reference or receipt number, or leave a gap in the sequence.
+    await this.assertItemsInBranch(request.items, scope);
+
     const saleId = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const total = request.items.reduce((acc: number, item: any) => {
@@ -102,6 +113,29 @@ export class CreateSaleUseCase {
     this.triggerExternalSync(saleEntity, request.customer, request.items);
 
     return saleId;
+  }
+
+  /**
+   * Refuse a sale that would deduct another branch's stock.
+   *
+   * sales_invoices carries no branch of its own, so the sale reaches its branch
+   * through the stock it moves: each product's warehouse_id. A product with no
+   * warehouse belongs to no branch, so there is no other branch to protect and
+   * it is left alone; an unknown product id is left to checkStockAvailability's
+   * own error.
+   */
+  private async assertItemsInBranch(items: any[], scope: BranchScope): Promise<void> {
+    if (scope.scope === 'all') return;
+    const productIds = Array.from(new Set(items.map((item) => item?.product?.id).filter(Boolean)));
+    if (productIds.length === 0) return;
+    const placeholders = productIds.map(() => '?').join(',');
+    const rows = (await query(
+      `SELECT DISTINCT warehouse_id FROM products WHERE id IN (${placeholders}) AND warehouse_id IS NOT NULL`,
+      productIds
+    )) as any[];
+    for (const row of rows) {
+      await assertWarehouseInBranch(row.warehouse_id, scope);
+    }
   }
 
   private async triggerExternalSync(sale: SaleEntity, customer: any, items: any[]) {

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { getApiUrl } from '@/lib/api-config';
+import { getSessionUid } from '@/lib/session-uid';
 import { ENTITY_SCHEMAS, type EntityKey } from '@/lib/import/entity-schemas';
 import { parseFile, type ParsedFile } from '@/lib/import/parse-file';
 import { autoMapColumns } from '@/lib/import/auto-map';
@@ -71,7 +72,7 @@ export function useImportWizard(entity: EntityKey) {
         const chunk = valid.slice(i, i + BATCH);
         const res = await fetch(getApiUrl(`/data-management/import/${entity}`), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: chunk }),
+          body: JSON.stringify({ uid: getSessionUid(), rows: chunk }),
         });
         if (!res.ok) throw new Error('Import request failed');
         const data = await res.json();
