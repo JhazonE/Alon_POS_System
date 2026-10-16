@@ -118,16 +118,23 @@ destructure; needs an ownership assertion only.
 |---|---|---|
 | `app/api/sales/z-reading` | POST | Threads `terminalId` through 33 references and uses the per-terminal Z counter. A BIR filing, so the highest-stakes route here — but the lightest change, since terminal scoping already exists. |
 
-**Group B — warehouse-derived (2 routes).** Destructure `warehouseId` from
-the request body today, so they need an ownership assertion only.
+**Group B — warehouse-derived (2 routes).** The POST handler destructures a
+warehouse from its own body, so it needs an ownership assertion only.
+
+| Route | Handler | Evidence (POST handler, verified 2026-10-16) |
+|---|---|---|
+| `app/api/inventory/adjust/bulk` | POST | `warehouseId` and `targetWarehouseId` in the destructure; also `userId`. A transfer must assert **both** warehouses. |
+| `app/api/sales/orders` | POST | field is **`warehouse`**, not `warehouseId` (line 258, written at 327) |
+
+**Group B2 — user-id derived (1 route).** Carries a user id but no
+warehouse or terminal.
 
 | Route | Handler | Evidence |
 |---|---|---|
-| `app/api/inventory/adjust/bulk` | POST | `warehouseId` in the body destructure; also carries `userId` |
-| `app/api/sales/orders` | POST | `warehouseId` in the body destructure |
+| `app/api/pos/void-transaction` | POST | destructures `saleId, voidReason, voidedByUserId, voidedByName` — resolve the branch from `voidedByUserId`, and prefer the voided sale's own `branch_id` where it disagrees |
 
-**Group C — uid-derived (8 routes / 9 handlers).** No branch-deriving input
-today; start requiring `uid` (D4).
+**Group C — no branch input (6 routes / 7 handlers).** Verified to destructure
+no warehouse, terminal or user id. These start requiring `uid` (D4).
 
 | Route | Handler |
 |---|---|
@@ -136,20 +143,33 @@ today; start requiring `uid` (D4).
 | `app/api/sales/invoices/[id]/void` | POST |
 | `app/api/sales/orders/[id]/deliver` | POST |
 | `app/api/stock-adjustments` | POST |
-| `app/api/sales` | POST |
 | `app/api/sales/orders/[id]` | PUT, DELETE |
-| `app/api/pos/void-transaction` | POST |
 
-**A correction to an earlier draft of this spec, kept as a caution:** the
-first draft put `app/api/sales`, `app/api/sales/orders/[id]` and
-`app/api/pos/void-transaction` in the terminal/warehouse groups on the
-strength of a plain `grep` for `warehouseId|terminal_id`. Checking each
-route's actual body destructure showed otherwise — `sales/route.ts` matches
-`warehouse_id` only in a GET query, `sales/orders/[id]` only in an UPDATE's
-column list, and `pos/void-transaction`'s `terminalId` references are not in
-its destructure. **Implementation must confirm each route's real input rather
-than trusting this table**, and report any route whose group is wrong. The
-same class of mistake has appeared in every spec of this project so far.
+**Group E — repository-backed (1 route).** `app/api/sales` POST delegates
+entirely to `CreateSaleUseCase` (`src/core/sales/application/CreateSaleUseCase`)
+and destructures nothing itself. Like Phase 1's products route, the branch
+must be threaded through the use case rather than asserted in the handler, so
+it needs its own task and its own judgment — do not paste the five-line
+pattern here.
+
+**This table was wrong twice before it was right. Keep that in mind.**
+
+- Draft 1 grouped routes from a plain `grep` for `warehouseId|terminal_id`.
+  That put `sales`, `sales/orders/[id]` and `pos/void-transaction` in the
+  wrong groups: `sales` matched only in a GET query, `sales/orders/[id]` only
+  in an UPDATE's column list, and `pos/void-transaction`'s matches were not
+  in its destructure at all.
+- Draft 2 read the *first* `const {` in each file — which in a multi-handler
+  route is the **GET** handler, not the POST. That misread `z-reading` and
+  `sales/orders`.
+- The table above comes from reading each **write handler's own** destructure,
+  located by its `export async function POST|PUT|DELETE|PATCH` line.
+
+**Implementation must still re-confirm its own route's real input** and report
+any disagreement rather than trusting this table. Two concrete traps it
+already caught: `sales/orders` uses `warehouse`, not `warehouseId`; and
+`z-reading`'s POST already rejects `terminalId === 'all'`, so that validation
+exists and must not be duplicated.
 
 **Group D — special case (1 route).** `app/api/data-management/import/products`
 POST; see §3.
