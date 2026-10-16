@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../lib/mysql';
+import {
+  resolveScopeFromBody,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 export async function PATCH(
   request: NextRequest,
@@ -9,6 +14,27 @@ export async function PATCH(
   try {
     const { id } = params;
     const body = await request.json();
+
+    // Branch isolation. This route had no branch-deriving input, so it now
+    // requires `uid` (spec D4) — the same contract the 21 filtered read
+    // routes already use. The product's own warehouse is what identifies its
+    // branch; a valid id in another branch is still refused, because
+    // existence is not authorisation.
+    try {
+      const scope = await resolveScopeFromBody(body);
+      const owning = (await query(
+        'SELECT warehouse_id FROM products WHERE id = ?',
+        [id]
+      )) as any[];
+      const owningWarehouseId = owning[0]?.warehouse_id;
+      if (owningWarehouseId) {
+        await assertWarehouseInBranch(owningWarehouseId, scope);
+      }
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
+    }
     const { 
       name, 
       description, 

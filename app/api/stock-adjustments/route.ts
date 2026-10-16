@@ -3,6 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { withTransaction, query } from '@/lib/mysql';
 import { addFamilyStock, deductFamilyStock, findUltimateRoot } from '@/lib/family-sync';
 import { isService } from '@/lib/product-type';
+import {
+  resolveScopeFromBody,
+  assertWarehouseInBranch,
+  branchErrorResponse,
+} from '@/lib/branch-context';
 
 // GET endpoint to fetch stock adjustments
 export async function GET(request: NextRequest) {
@@ -81,6 +86,26 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Product ID, quantity, and reason are required' },
         { status: 400 }
       );
+    }
+
+    // Branch isolation. This route had no branch-deriving input, so it now
+    // requires `uid` (spec D4). The product's own warehouse identifies its
+    // branch; a valid productId in another branch is refused, because
+    // existence is not authorisation.
+    try {
+      const scope = await resolveScopeFromBody(body);
+      const owning = (await query(
+        'SELECT warehouse_id FROM products WHERE id = ?',
+        [productId]
+      )) as any[];
+      const owningWarehouseId = owning[0]?.warehouse_id;
+      if (owningWarehouseId) {
+        await assertWarehouseInBranch(owningWarehouseId, scope);
+      }
+    } catch (error) {
+      const mapped = branchErrorResponse(error);
+      if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
+      throw error;
     }
 
     return await withTransaction(async (connection) => {

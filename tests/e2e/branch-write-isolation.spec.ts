@@ -188,3 +188,47 @@ test.describe('POST /api/sales/z-reading — branch isolation', () => {
     }
   });
 });
+
+test.describe('uid-required write routes — branch isolation', () => {
+  test('gi-403 ang PATCH sa produkto sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const productId = await seedProductInWarehouse(b.warehouseId, `WI-P-${Date.now()}`);
+      const res = await request.patch(`/api/products/${productId}`, {
+        data: { uid: a.userUid, price: 99 },
+      });
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-403 ang PATCH sa kaugalingong produkto', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const productId = await seedProductInWarehouse(a.warehouseId, `WI-P-OK-${Date.now()}`);
+      const res = await request.patch(`/api/products/${productId}`, {
+        data: { uid: a.userUid, price: 99 },
+      });
+      expect(res.status()).not.toBe(403);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang PATCH nga walay uid', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const productId = await seedProductInWarehouse(a.warehouseId, `WI-P-NU-${Date.now()}`);
+      const res = await request.patch(`/api/products/${productId}`, {
+        data: { price: 99 },
+      });
+      // Walay uid = walay ma-resolve nga branch. Mo-fail closed.
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+});
