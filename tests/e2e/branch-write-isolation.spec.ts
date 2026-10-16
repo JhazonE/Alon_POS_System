@@ -232,3 +232,55 @@ test.describe('uid-required write routes — branch isolation', () => {
     }
   });
 });
+
+test.describe('POST /api/stock-adjustments — branch isolation', () => {
+  test('gi-403 ang adjustment sa produkto sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const productId = await seedProductInWarehouse(b.warehouseId, `WI-SA-${Date.now()}`);
+      const res = await request.post('/api/stock-adjustments', {
+        data: { uid: a.userUid, productId, quantity: 1, reason: 'branch isolation test' },
+      });
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang adjustment sa kaugalingong produkto', async ({ request }) => {
+    const a = await seedSecondBranch();
+    let productId: string | undefined;
+    try {
+      productId = await seedProductInWarehouse(a.warehouseId, `WI-SA-OK-${Date.now()}`);
+      const res = await request.post('/api/stock-adjustments', {
+        data: { uid: a.userUid, productId, quantity: 1, reason: 'branch isolation test' },
+      });
+      // res.ok() dili not-403: ang 500 dili motugot nga molampos kini.
+      expect(res.ok()).toBe(true);
+    } finally {
+      // Ang adjustment nagsulat ug rows nga nagtudlo sa produkto; limpyohi
+      // sila una aron walay mabilin human sa cleanup sa branch.
+      if (productId) {
+        await testQuery('DELETE FROM stock_adjustments WHERE product_id = ?', [productId]);
+        await testQuery('DELETE FROM stock_movements WHERE product_id = ?', [productId]);
+        await testQuery('DELETE FROM inventory_batches WHERE product_id = ?', [productId]);
+      }
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-403 ang adjustment nga walay uid', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const productId = await seedProductInWarehouse(a.warehouseId, `WI-SA-NU-${Date.now()}`);
+      const res = await request.post('/api/stock-adjustments', {
+        data: { productId, quantity: 1, reason: 'branch isolation test' },
+      });
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+});
