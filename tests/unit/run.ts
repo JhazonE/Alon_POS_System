@@ -71,6 +71,7 @@ const TEST_FILES = [
   'checkout-selling-unit-qty.test',
   'void-selling-unit-restore.test',
   'shelf-quantities.test',
+  'session-cookie.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
