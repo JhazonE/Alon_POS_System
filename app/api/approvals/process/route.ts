@@ -1,11 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/mysql';
 import { v4 as uuidv4 } from 'uuid';
-import { adjustStock } from '@/app/(app)/inventory/history/actions';
+import { adjustStockWithScope } from '@/lib/stock-adjust';
+import { updateProductShelfLocationsWithScope } from '@/lib/product-shelf-locations';
+import { addProductWithScope } from '@/lib/product-create';
+import { submitPriceUpdateBatchWithScope } from '@/lib/price-update-batch';
+import { resolveScopeForUid, BranchResolutionError, type BranchScope } from '@/lib/branch-context';
 import { processPurchaseOrderCreation, processPurchaseOrderReceipt } from '@/lib/purchase-actions';
 import { processBadOrderCreation } from '@/lib/bad-order-actions';
 import { processTransferStock } from '@/lib/transfer-actions';
 import { processCompleteStockCount } from '@/lib/stock-count-actions';
+
+/**
+ * The branch a queued item is finalized under: the REQUESTER's, not the
+ * approver's. The write belongs to the branch that asked for it, so a
+ * head-office approver finalizing a branch-A item writes into branch A, and an
+ * approver from branch B is not refused. The approver's own branch is
+ * deliberately never asserted here.
+ *
+ * `createdBy` is read from the approval_queue row in the DATABASE, never from
+ * the request body, so it is server-derived and as trustworthy as a session
+ * uid. (isInternalFinalization is NOT a trust boundary; a caller sets it.)
+ *
+ * FAIL CLOSED: a creator who cannot be resolved (deleted, branchless, inactive
+ * branch, or the 'system' placeholder) refuses the item with a clear message
+ * instead of falling back to unguarded. We can no longer prove which branch
+ * the write belongs to, and an unguarded fallback would let such a row write
+ * into any branch. The item stays Pending (the transaction rolls back), so an
+ * admin can Reject it.
+ */
+async function scopeForQueuedItem(
+  createdBy: string,
+): Promise<{ scope: BranchScope } | { error: string }> {
+  try {
+    return { scope: await resolveScopeForUid(createdBy) };
+  } catch (error) {
+    if (error instanceof BranchResolutionError) {
+      return {
+        error: `Cannot determine the requesting branch for this item (${error.message}). Reject it and have it re-submitted.`,
+      };
+    }
+    throw error;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,8 +161,13 @@ export async function POST(request: NextRequest) {
             if (txData.adjustmentType === 'remove' && adjQty > 0) {
               adjQty = -adjQty;
             }
-            const adjResult = await adjustStock(txData.productId, adjQty, txData.reason, item.created_by, true, txData.expirationDate || null);
-            result = { success: adjResult.success, error: (adjResult as any).error || '' };
+            const resolved = await scopeForQueuedItem(item.created_by);
+            if ('error' in resolved) {
+              result = { success: false, error: resolved.error };
+            } else {
+              const adjResult = await adjustStockWithScope(txData.productId, adjQty, txData.reason, item.created_by, true, txData.expirationDate || null, resolved.scope);
+              result = { success: adjResult.success, error: (adjResult as any).error || '' };
+            }
           }
         } else if (item.transaction_type === 'PURCHASE_ORDER') {
           const poResult = await processPurchaseOrderCreation({ ...txData, isInternalFinalization: true }, item.created_by);
@@ -150,21 +192,34 @@ export async function POST(request: NextRequest) {
           const scResult = await processCompleteStockCount(txData.stockCountId);
           result = { success: scResult.success, error: scResult.error || '' };
         } else if (item.transaction_type === 'SHELF_TRANSFER') {
-          const { updateProductShelfLocations } = await import('@/app/(app)/products/actions');
-          const stResult = await updateProductShelfLocations(
-            txData.updates,
-            item.created_by,
-            true // isInternalFinalization
-          );
-          result = { success: stResult.success, error: (stResult as any).message || '' };
+          const resolved = await scopeForQueuedItem(item.created_by);
+          if ('error' in resolved) {
+            result = { success: false, error: resolved.error };
+          } else {
+            const stResult = await updateProductShelfLocationsWithScope(
+              txData.updates,
+              item.created_by,
+              true, // isInternalFinalization
+              resolved.scope
+            );
+            result = { success: stResult.success, error: (stResult as any).message || '' };
+          }
         } else if (item.transaction_type === 'PRODUCT_CREATE') {
-          const { addProduct } = await import('@/app/(app)/products/actions');
-          const apResult = await addProduct(txData, item.created_by, true);
-          result = { success: apResult.success, error: (apResult as any).message || '' };
+          const resolved = await scopeForQueuedItem(item.created_by);
+          if ('error' in resolved) {
+            result = { success: false, error: resolved.error };
+          } else {
+            const apResult = await addProductWithScope(txData, item.created_by, true, resolved.scope);
+            result = { success: apResult.success, error: (apResult as any).message || '' };
+          }
         } else if (item.transaction_type === 'PRICE_UPDATE') {
-          const { submitPriceUpdateBatch } = await import('@/app/(app)/inventory/pricing/actions');
-          const puResult = await submitPriceUpdateBatch(txData.warehouseId, txData.items, item.created_by, true);
-          result = { success: puResult.success, error: (puResult as any).message || '' };
+          const resolved = await scopeForQueuedItem(item.created_by);
+          if ('error' in resolved) {
+            result = { success: false, error: resolved.error };
+          } else {
+            const puResult = await submitPriceUpdateBatchWithScope(txData.warehouseId, txData.items, item.created_by, true, resolved.scope);
+            result = { success: puResult.success, error: (puResult as any).message || '' };
+          }
         }
 
         if (!result.success) {

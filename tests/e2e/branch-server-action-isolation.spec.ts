@@ -1053,3 +1053,294 @@ test.describe('updateProductShelfLocations (server action) — branch isolation,
     }
   });
 });
+
+/**
+ * Approval finalization (/api/approvals/process). Ang processor mo-finalize sa
+ * item ubos sa branch sa MOHIMO (approval_queue.created_by, gikan sa DB), dili
+ * sa approver. REGRESSION GUARD: sa Task 7 mo-pasar kini sa wala pa ang
+ * kausaban (wala pay guard sa same-branch path) - ang trabaho niini mao ang
+ * mapakyas kung ma-guba ang finalization.
+ */
+const PROCESS_URL = '/api/approvals/process';
+
+/** I-queue ang item isip created_by; ibalik ang queue id. Mo-seed usab sa single-step workflow. */
+async function queueApprovalItem(type: string, data: unknown, createdBy: string): Promise<string> {
+  const queueId = `t7q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await testQuery('DELETE FROM approval_workflows WHERE id = ?', [`t7wf-${type}`]);
+  await testQuery(
+    "INSERT INTO approval_workflows (id, transaction_type, user_type_id, step_order) VALUES (?, ?, 'ut-admin', 1)",
+    [`t7wf-${type}`, type]
+  );
+  await testQuery(
+    "INSERT INTO approval_queue (id, transaction_type, transaction_data, created_by, status, current_step) VALUES (?, ?, ?, ?, 'Pending', 1)",
+    [queueId, type, JSON.stringify(data), createdBy]
+  );
+  return queueId;
+}
+
+/** Ang approver kinahanglan Admin (role check sa processor); ang seeded user 'User' ra. */
+async function makeApprover(seeded: SeededBranch) {
+  await testQuery("UPDATE users SET user_type = 'Admin' WHERE uid = ?", [seeded.userUid]);
+}
+
+async function cleanupApprovals(types: string[], ...queueIds: string[]) {
+  for (const id of queueIds) {
+    await testQuery('DELETE FROM approval_history WHERE approval_queue_id = ?', [id]);
+    await testQuery('DELETE FROM approval_queue WHERE id = ?', [id]);
+  }
+  for (const type of types) {
+    await testQuery('DELETE FROM approval_workflows WHERE id = ?', [`t7wf-${type}`]);
+  }
+}
+
+async function queueStatus(queueId: string): Promise<string> {
+  const rows: any = await testQuery('SELECT status FROM approval_queue WHERE id = ?', [queueId]);
+  return rows[0].status;
+}
+
+test.describe('approvals/process - finalization ubos sa branch sa nag-request', () => {
+  test('ang head office nga mo-approve sa item sa branch A mo-sulat sa branch A', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const hq = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(a.warehouseId, `AP-HQ-${Date.now()}`);
+    let queueId = '';
+    try {
+      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(hq.userUid, null);
+      await makeApprover(hq);
+      queueId = await queueApprovalItem(
+        'STOCK_ADJUSTMENT',
+        { productId, quantity: 5, reason: 'queued by A', adjustmentType: 'add' },
+        a.userUid
+      );
+      // Naa'y cookie sa head office; wala kini gamita sa processor.
+      await seedSession(page, branchUser(hq));
+      const res = await page.request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: hq.userUid, notes: 't7' },
+      });
+
+      expect(res.ok(), await res.text()).toBeTruthy();
+      expect(await readStock(productId), 'ang stock sa branch A tinuod nga nausab').toBe(15);
+      expect(await queueStatus(queueId)).toBe('Approved');
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupApprovals(['STOCK_ADJUSTMENT'], queueId);
+      await cleanupSecondBranch(hq);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molihok ang finalization bisan walay cookie (server-to-server)', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(a.warehouseId, `AP-NC-${Date.now()}`);
+    let queueId = '';
+    try {
+      await makeApprover(a);
+      queueId = await queueApprovalItem(
+        'STOCK_ADJUSTMENT',
+        { productId, quantity: 3, reason: 'no cookie', adjustmentType: 'add' },
+        a.userUid
+      );
+      // Ang `request` fixture walay cookie jar gikan sa usa ka browser session.
+      const res = await request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: a.userUid },
+      });
+
+      expect(res.ok(), await res.text()).toBeTruthy();
+      expect(await readStock(productId)).toBe(13);
+      expect(await queueStatus(queueId)).toBe('Approved');
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupApprovals(['STOCK_ADJUSTMENT'], queueId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang approver sa branch B maka-finalize sa adjustment nga gi-request sa branch A', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(a.warehouseId, `AP-XB-${Date.now()}`);
+    let queueId = '';
+    try {
+      await makeApprover(b);
+      queueId = await queueApprovalItem(
+        'STOCK_ADJUSTMENT',
+        { productId, quantity: -4, reason: 'removal', adjustmentType: 'remove' },
+        a.userUid
+      );
+      await seedSession(page, branchUser(b));
+      const res = await page.request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: b.userUid },
+      });
+
+      expect(res.ok(), await res.text()).toBeTruthy();
+      expect(await readStock(productId), 'ang produkto sa A (dili sa approver) ang nausab').toBe(6);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupApprovals(['STOCK_ADJUSTMENT'], queueId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang item sa branch A nga mutumong sa produkto sa branch B gi-refuse bisan head office ang approver', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const hq = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `AP-FORGE-${Date.now()}`);
+    let queueId = '';
+    try {
+      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(hq.userUid, null);
+      await makeApprover(hq);
+      // created_by = A, apan ang produkto naa sa B: ang scope sa nag-request mao ang naggahum.
+      queueId = await queueApprovalItem(
+        'STOCK_ADJUSTMENT',
+        { productId, quantity: 5, reason: 'cross-branch target', adjustmentType: 'add' },
+        a.userUid
+      );
+      await seedSession(page, branchUser(hq));
+      const res = await page.request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: hq.userUid },
+      });
+
+      expect(res.ok()).toBeFalsy();
+      expect(await readStock(productId), 'ang stock sa B wala mausab').toBe(10);
+      expect(await queueStatus(queueId), 'nagpabilin nga Pending').toBe('Pending');
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupApprovals(['STOCK_ADJUSTMENT'], queueId);
+      await cleanupSecondBranch(hq);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang item nga ang nag-request dili na ma-resolve gi-refuse (fail closed), dili unguarded', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(a.warehouseId, `AP-GHOST-${Date.now()}`);
+    let queueId = '';
+    try {
+      await makeApprover(a);
+      queueId = await queueApprovalItem(
+        'STOCK_ADJUSTMENT',
+        { productId, quantity: 5, reason: 'ghost creator', adjustmentType: 'add' },
+        `ghost-${Date.now()}`
+      );
+      const res = await request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: a.userUid },
+      });
+
+      expect(res.ok()).toBeFalsy();
+      expect(await res.text()).toContain('Cannot determine the requesting branch');
+      expect(await readStock(productId)).toBe(10);
+      expect(await queueStatus(queueId)).toBe('Pending');
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupApprovals(['STOCK_ADJUSTMENT'], queueId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang approver sa branch B maka-finalize sa PRODUCT_CREATE nga gi-request sa branch A', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const name = `AP Created Widget ${Date.now()}`;
+    let queueId = '';
+    try {
+      await makeApprover(b);
+      queueId = await queueApprovalItem(
+        'PRODUCT_CREATE',
+        {
+          name, brand: EDITABLE_PRODUCT.brand, category: EDITABLE_PRODUCT.category,
+          description: 'queued by A', unitOfMeasure: EDITABLE_PRODUCT.unitOfMeasure,
+          price: 10, cost: 5, stock: 0, reorderPoint: 0, warehouse: a.warehouseId,
+        },
+        a.userUid
+      );
+      await seedSession(page, branchUser(b));
+      const res = await page.request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: b.userUid },
+      });
+
+      expect(res.ok(), await res.text()).toBeTruthy();
+      const rows: any = await testQuery('SELECT warehouse_id FROM products WHERE name = ?', [name]);
+      expect(rows.length, 'nahimo ang produkto').toBe(1);
+      expect(rows[0].warehouse_id, 'sa warehouse sa branch A').toBe(a.warehouseId);
+    } finally {
+      await testQuery('DELETE FROM products WHERE name = ?', [name]);
+      await cleanupApprovals(['PRODUCT_CREATE'], queueId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang PRODUCT_CREATE sa branch A nga mutumong sa warehouse sa branch B gi-refuse', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const name = `AP Refused Widget ${Date.now()}`;
+    let queueId = '';
+    try {
+      await makeApprover(a);
+      queueId = await queueApprovalItem(
+        'PRODUCT_CREATE',
+        {
+          name, brand: EDITABLE_PRODUCT.brand, category: EDITABLE_PRODUCT.category,
+          description: 'wrong warehouse', unitOfMeasure: EDITABLE_PRODUCT.unitOfMeasure,
+          price: 10, cost: 5, stock: 0, reorderPoint: 0, warehouse: b.warehouseId,
+        },
+        a.userUid
+      );
+      const res = await request.post(PROCESS_URL, {
+        data: { queueId, action: 'Approve', userId: a.userUid },
+      });
+
+      expect(res.ok()).toBeFalsy();
+      const rows: any = await testQuery('SELECT id FROM products WHERE name = ?', [name]);
+      expect(rows.length, 'walay produkto nga nahimo').toBe(0);
+      expect(await queueStatus(queueId)).toBe('Pending');
+    } finally {
+      await testQuery('DELETE FROM products WHERE name = ?', [name]);
+      await cleanupApprovals(['PRODUCT_CREATE'], queueId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang approver sa branch B maka-finalize sa SHELF_TRANSFER ug PRICE_UPDATE nga gi-request sa branch A', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(a.warehouseId, `AP-SP-${Date.now()}`);
+    let shelfQueue = '';
+    let priceQueue = '';
+    try {
+      await makeApprover(b);
+      shelfQueue = await queueApprovalItem(
+        'SHELF_TRANSFER',
+        { updates: [{ productId, shelfLocationId: SHELF_A.id }] },
+        a.userUid
+      );
+      priceQueue = await queueApprovalItem(
+        'PRICE_UPDATE',
+        { warehouseId: a.warehouseId, items: [priceItem(productId, 'price', 55)] },
+        a.userUid
+      );
+      await seedSession(page, branchUser(b));
+      for (const queueId of [shelfQueue, priceQueue]) {
+        const res = await page.request.post(PROCESS_URL, {
+          data: { queueId, action: 'Approve', userId: b.userUid },
+        });
+        expect(res.ok(), await res.text()).toBeTruthy();
+      }
+
+      expect((await readShelfState(productId)).shelfLocationId).toBe(SHELF_A.id);
+      expect((await readPriceCost(productId)).price).toBe(55);
+    } finally {
+      await cleanupShelfState(productId);
+      await cleanupProducts(productId);
+      await cleanupApprovals(['SHELF_TRANSFER', 'PRICE_UPDATE'], shelfQueue, priceQueue);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});

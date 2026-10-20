@@ -5,19 +5,22 @@ import {
   mainBranchId,
   resolveScopeFromSession,
   assertProductInScope,
-  assertWarehouseInBranch,
   BranchResolutionError,
-  type BranchScope,
 } from '@/lib/branch-context';
-import { generateBatchId } from '@/lib/batch-utils';
-import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMeasure, ShelfLocation, Account, TaxRate } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
 import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
 import { updateProductShelfLocationsWithScope } from '@/lib/product-shelf-locations';
-import { baseUnitPriceLevelRows } from '@/lib/base-unit-price-level-rows';
-import { baseOverrideRow, defaultLevelFlatPrice, resolveBaseUnitPrice } from '@/lib/base-price-resolution';
+import { baseOverrideRow } from '@/lib/base-price-resolution';
+import {
+  SellingUnitConflictError,
+  writeSellingUnits,
+  validPrice,
+  writeBaseUnitPriceLevels,
+  resolveDefaultPriceLevelId,
+} from '@/lib/product-selling-unit-writes';
+import { addProductWithScope, assertWarehouseForWrite } from '@/lib/product-create';
 
 
 export type ProductFormData = {
@@ -471,243 +474,6 @@ export async function getLowStockAlerts() {
 }
 
 /**
- * A selling-unit save that must be refused with a specific message rather
- * than the generic one: it rolls back the transaction like any other throw,
- * and updateProduct returns `message` to the user.
- */
-class SellingUnitConflictError extends Error {}
-
-/**
- * Writes one product's selling units and their per-price-level prices.
- *
- * Upsert, not delete-then-reinsert: a unit that carries an `id` is UPDATEd in
- * place (scoped to this product), and that UPDATE must match a row — an id
- * that is stale (removed by a concurrent edit) or belongs to another product
- * throws SellingUnitConflictError, rolling back the caller's transaction,
- * rather than silently dropping the unit. A unit with no `id` is INSERTed
- * under a freshly minted id. This is required, not stylistic — MySQL/
- * InnoDB does not defer foreign-key checks to transaction commit the way
- * Postgres can, so `DELETE FROM product_selling_units` immediately fires the
- * `ON DELETE SET NULL` FKs from sale_items / inventory_batches /
- * sales_invoice_items / pos_transaction_items / etc., and a later re-INSERT
- * of a row with the same id does NOT undo that: those historical references
- * stay NULL forever. Callers that want to remove units the user dropped must
- * delete only those specific rows themselves (by id) before calling this.
- *
- * Before the per-unit writes, kept rows (those with an `id`) are first
- * renamed to a unique `__tmp_<id>` placeholder for `unit_name`/`barcode`.
- * This avoids transiently tripping `unique_selling_unit_barcode` or
- * `unique_product_unit_name` when the submission swaps names/barcodes
- * between two kept units (e.g. renaming unit A to what used to be unit B's
- * name) — row-by-row UPDATEs in submission order could otherwise collide
- * mid-way through.
- *
- * Returns the base row so the caller can sync products.price/cost/barcode/
- * unit_of_measure from it — that sync is what keeps the ~100+ call sites that
- * read products.* directly working unmodified.
- */
-async function writeSellingUnits(
-  connection: any,
-  productId: string,
-  units: NonNullable<ProductFormData['sellingUnits']>,
-  defaultPriceLevelId: string | null,
-) {
-  const baseUnit = units.find((u) => u.isBase) ?? units[0];
-
-  // Two-phase rename: blank out kept rows' unit_name/barcode to a unique
-  // placeholder before writing real values below, so two kept units can
-  // swap names/barcodes with each other without tripping the unique
-  // constraints mid-update.
-  for (const u of units) {
-    if (!u.id) continue;
-    await connection.query(
-      'UPDATE product_selling_units SET unit_name = ?, barcode = ? WHERE id = ? AND product_id = ?',
-      [`__tmp_${u.id}`, `__tmp_${u.id}`, u.id, productId],
-    );
-  }
-
-  let basePrice: number | undefined;
-
-  for (let i = 0; i < units.length; i++) {
-    const u = units[i];
-    const unitId = u.id || `psu_${uuidv4()}`;
-
-    // product_selling_units.price is the unit's base price. Resolve it from,
-    // in order: the submitted default-level entry, if it has no minimum; for a
-    // kept unit, the price already stored on the row; any other submitted
-    // level's entry that has no minimum; the lowest tier if every entry is
-    // tiered; 0 only when there is no entry at all. A quantity tier is never a
-    // base price (see lib/base-price-resolution.ts) — the lowest-tier fallback
-    // exists because a 0 in a price column is a free sale on a payments path,
-    // whereas a tier is at worst a discount the shopkeeper already authorised.
-    //
-    // The stored-price step matters: units written by the parent/child data
-    // migration (120) have a real `price` but no product_selling_unit_prices
-    // rows, and a form session that never renders the Selling Units tab
-    // (Radix unmounts inactive tabs) submits an empty `prices` map for them.
-    // Without this step such a save silently zeroed the unit's price.
-    const defaultLevelPrice = defaultLevelFlatPrice(u.prices, defaultPriceLevelId);
-    let storedPrice: number | undefined;
-    if (u.id && defaultLevelPrice === undefined) {
-      const [storedRows]: any = await connection.query(
-        'SELECT price FROM product_selling_units WHERE id = ? AND product_id = ?',
-        [u.id, productId],
-      );
-      const stored = Number(storedRows?.[0]?.price);
-      if (Number.isFinite(stored) && stored > 0) storedPrice = stored;
-    }
-    const resolvedPrice = resolveBaseUnitPrice(u.prices, defaultPriceLevelId, storedPrice);
-    const unitPrice = resolvedPrice ?? 0;
-    if (u === baseUnit) basePrice = resolvedPrice;
-
-    if (u.id) {
-      // Existing row — UPDATE in place. MySQL applies ON DELETE SET NULL
-      // immediately when a referenced row is deleted, even inside a
-      // transaction (InnoDB has no deferred constraint checking), so
-      // sale_items / inventory_batches / sales_invoice_items / etc. FK
-      // references to this row must never go through a delete+reinsert.
-      const [updateResult]: any = await connection.query(
-        `UPDATE product_selling_units
-           SET unit_name = ?, qty_base = ?, barcode = ?, cost = ?, price = ?, is_base = ?, sort_order = ?
-         WHERE id = ? AND product_id = ?`,
-        [
-          u.unitName,
-          Number(u.qtyBase),
-          u.barcode,
-          u.cost == null ? null : Number(u.cost),
-          unitPrice,
-          u.isBase ? 1 : 0,
-          i,
-          u.id,
-          productId,
-        ],
-      );
-      // No match means the id is stale or not this product's. Fail loudly
-      // (rolls back the whole save) instead of silently dropping the unit.
-      // mysql2 reports matched rows here (CLIENT_FOUND_ROWS is on by
-      // default), and the placeholder rename above guarantees a real change
-      // anyway, so 0 can only mean "no such row for this product".
-      if (!updateResult || updateResult.affectedRows === 0) {
-        throw new SellingUnitConflictError(
-          'One of this product\'s selling units was changed or removed by someone else. Reload the product and try again.',
-        );
-      }
-    } else {
-      // New row — nothing to preserve.
-      await connection.query(
-        `INSERT INTO product_selling_units
-           (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          unitId,
-          productId,
-          u.unitName,
-          Number(u.qtyBase),
-          u.barcode,
-          u.cost == null ? null : Number(u.cost),
-          unitPrice,
-          u.isBase ? 1 : 0,
-          i,
-        ],
-      );
-    }
-
-    // Prices are always rewritten wholesale per unit (delete then reinsert).
-    // This is safe even for a kept unit: nothing else references
-    // product_selling_unit_prices rows individually — it has a composite
-    // PK (selling_unit_id, price_level_id), no surrogate id, no dependents.
-    // Scoped through product_selling_units to this product as defense in
-    // depth, so a wrong unitId can never touch another product's prices.
-    await connection.query(
-      `DELETE psup FROM product_selling_unit_prices psup
-         JOIN product_selling_units psu ON psu.id = psup.selling_unit_id
-        WHERE psup.selling_unit_id = ? AND psu.product_id = ?`,
-      [unitId, productId],
-    );
-    for (const [levelId, entry] of Object.entries(u.prices || {})) {
-      const price = validPrice(entry);
-      if (price === undefined) continue;
-      await connection.query(
-        `INSERT INTO product_selling_unit_prices
-           (selling_unit_id, price_level_id, price, min_quantity)
-         VALUES (?, ?, ?, ?)`,
-        [
-          unitId,
-          levelId,
-          price,
-          entry.minQuantity == null ? null : Number(entry.minQuantity),
-        ],
-      );
-    }
-  }
-
-  // basePrice is undefined when nothing resolved it (no valid submitted price
-  // and no stored price) — callers then fall back to the form's own price.
-  return { baseUnit, basePrice };
-}
-
-/**
- * A submitted price entry's price as a finite number, or undefined when the
- * entry is absent or its field was left blank (the tab's inputs write
- * `undefined` for an empty field).
- */
-function validPrice(entry: { price?: unknown } | null | undefined): number | undefined {
-  if (entry == null || entry.price == null || entry.price === '') return undefined;
-  const n = Number(entry.price);
-  return Number.isFinite(n) ? n : undefined;
-}
-
-/**
- * Dual-write bridge: mirrors the BASE selling unit's per-level prices into the
- * legacy `product_price_levels` table, which POS checkout
- * (lib/pricing.ts calculateEffectivePrice, level-scoped resolution: active level,
- * then default level, then base price) and the products list (getProducts' effectivePrice) still read.
- * Without it a price entered in the Selling Units tab never reaches the POS,
- * and a stale row for the wrong level could incorrectly apply.
- *
- * Upserts on the table's real PRIMARY KEY (product_id, price_level_id), the
- * same way PO receiving and bulk price update do — a check filtered on
- * min_quantity can miss an existing tiered row and then collide on INSERT.
- * On conflict both `price` and `min_quantity` are written, so clearing a
- * minimum in the tab clears the stored tier. A level with no minimum stores 0,
- * which the POS reads as "no minimum".
- *
- * `removedLevelIds` are deleted: levels the caller established the user
- * explicitly removed (see updateProduct). Nothing else is ever deleted here —
- * a row for a level the tab never showed (e.g. a Wholesale override that
- * predates selling units) is left alone.
- */
-async function writeBaseUnitPriceLevels(
-  connection: any,
-  productId: string,
-  baseUnit: NonNullable<ProductFormData['sellingUnits']>[number],
-  removedLevelIds: string[] = [],
-) {
-  for (const row of baseUnitPriceLevelRows(baseUnit.prices)) {
-    await connection.query(
-      `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE price = VALUES(price), min_quantity = VALUES(min_quantity)`,
-      [productId, row.levelId, row.price, row.minQuantity],
-    );
-  }
-  for (const levelId of removedLevelIds) {
-    await connection.query(
-      'DELETE FROM product_price_levels WHERE product_id = ? AND price_level_id = ?',
-      [productId, levelId],
-    );
-  }
-}
-
-/** The default price level's id, or the first one, or null if none exist. */
-async function resolveDefaultPriceLevelId(connection: any): Promise<string | null> {
-  const [rows]: any = await connection.query(
-    'SELECT id FROM price_levels ORDER BY is_default DESC, name ASC LIMIT 1',
-  );
-  return rows?.[0]?.id ?? null;
-}
-
-/**
  * Branch guard for the single-product writers below.
  *
  * A server action has no request object, so the branch comes from the signed
@@ -724,23 +490,6 @@ function branchRefusal(error: unknown): { success: false; message: string } | nu
   return null;
 }
 
-/**
- * Assert a warehouse a write is about to put a product into (or already has it
- * in). A product with no warehouse belongs to no branch, so a branch-scoped
- * caller cannot claim it: NULL / '' is refused. Head office may leave it NULL.
- */
-async function assertWarehouseForWrite(
-  warehouseId: string | null | undefined,
-  scope: BranchScope,
-): Promise<void> {
-  if (scope.scope === 'all') return;
-  if (!warehouseId) {
-    throw new BranchResolutionError(
-      'A product must stay in a warehouse of your branch; it cannot be left without one.',
-    );
-  }
-  await assertWarehouseInBranch(warehouseId, scope);
-}
 
 export async function addProduct(
   formData: ProductFormData,
@@ -748,215 +497,16 @@ export async function addProduct(
   isInternalFinalization: boolean = false,
 ) {
   try {
-    // Branch guard (session cookie; null = fall back to unguarded). Services
-    // get their warehouse assigned below, so they are asserted after that.
+    // Branch guard (session cookie; null = fall back to unguarded). The core
+    // takes the scope as a parameter, so it lives outside this 'use server'
+    // file: a scope parameter on a public action would be attacker-controlled.
     const scope = await resolveScopeFromSession();
-    if (scope && formData.itemType !== 'service') {
-      await assertWarehouseForWrite(formData.warehouse || null, scope);
-    }
-
-    // --- Check if approval is required ---
-    if (!isInternalFinalization) {
-      const isApprovalRequired = await checkApprovalRequired('PRODUCT_CREATE');
-      if (isApprovalRequired) {
-        const items = [{
-          productId: 'NEW',
-          productName: formData.name,
-          sku: formData.sku || '',
-          barcode: formData.barcode || '',
-          price: formData.price,
-          cost: formData.cost || 0,
-          quantity: formData.stock || 0,
-          unit: formData.unitOfMeasure,
-        }];
-        // Strip the non-serializable File; keep the base64 `image` string.
-        const { imageFile, ...serializable } = formData;
-        const { queueId, pendingApproval } = await submitToApprovalQueue(
-          'PRODUCT_CREATE',
-          { ...serializable, items },
-          userId,
-        );
-        if (pendingApproval) {
-          return {
-            success: true,
-            pendingApproval: true,
-            queueId,
-            message: 'Product creation submitted for approval.',
-          };
-        }
-        // pendingApproval === false (all steps auto-skipped) → fall through to immediate insert.
-      }
-    }
-
-    // Products carry no SKU of their own, so the id cannot derive from one.
-    // Same shape the duplicate-product flows below already use.
-    const productId = `product_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const isServiceProduct = formData.itemType === 'service';
-
-    // Services are performed at the store, not stocked in a warehouse the user
-    // picks — so the field is hidden on the form and the main warehouse is
-    // assigned here instead. Without this they would land with a NULL
-    // warehouse and show a blank column in the product list.
-    let resolvedWarehouseId = formData.warehouse || null;
-    if (isServiceProduct) {
-      // A branch-scoped caller gets a warehouse of its OWN branch; the global
-      // "main" one would put the service in someone else's branch.
-      const [mainWarehouse]: any = await query(
-        `SELECT id FROM warehouses
-         WHERE is_active = 1${scope?.scope === 'single' ? ' AND branch_id = ?' : ''}
-         ORDER BY is_main DESC, (id = 'wh_main') DESC, created_at ASC
-         LIMIT 1`,
-        scope?.scope === 'single' ? [scope.branchId] : [],
-      );
-      resolvedWarehouseId = mainWarehouse?.id ?? null;
-    }
-    if (scope) {
-      await assertWarehouseForWrite(resolvedWarehouseId, scope);
-    }
-
-    await withTransaction(async (connection) => {
-      const productData = {
-        id: productId,
-        name: formData.name,
-        description: formData.description,
-        additional_description: formData.additionalDescription || null,
-        category: formData.category,
-        brand: formData.brand,
-        // Department groups stocked goods for markup and reporting; it does not
-        // apply to services, so it is never written for one.
-        department: isServiceProduct ? null : (formData.department || null),
-        subcategory: formData.subcategory || null,
-        supplier_id: formData.supplier || null,
-        warehouse_id: resolvedWarehouseId,
-        stock: formData.stock || 0,
-        reorder_point: formData.reorderPoint || formData.supplierMappings?.find(m => m.isPrimary)?.rop || 0,
-        avg_daily_sales: 0,
-        price: formData.price,
-        // `|| null` would turn a deliberate 0 into NULL. That matters for
-        // services: cost is required at creation precisely so cost_at_sale is
-        // never NULL, and 0 is a legitimate answer for a pure-margin service.
-        cost: formData.cost ?? null,
-        sku: formData.sku || null,
-        barcode: formData.barcode || null,
-        image_url: formData.image || null,
-        image_hint: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        unit_of_measure: formData.unitOfMeasure,
-        expense_account: formData.expenseAccount || null,
-        income_account: formData.incomeAccount || null,
-        vat_status: formData.vatStatus || 'YES (Subject to 12% VAT)',
-        availability: formData.availability || 'Available',
-        earns_points: formData.earnsPoints !== false,
-        is_perishable: formData.isPerishable ? 1 : 0,
-        type: formData.itemType === 'service' ? 'service' : 'standard',
-      };
-
-      const sql = `
-        INSERT INTO products (
-          id, name, description, additional_description, category, brand, department,
-          subcategory, supplier_id, warehouse_id, stock, reorder_point, avg_daily_sales, price, cost,
-          sku, barcode, image_url, image_hint,
-          unit_of_measure, income_account, expense_account,
-          vat_status, availability, earns_points, shelf_location_id, is_perishable, type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const legacyShelfId = formData.shelfLocationIds && formData.shelfLocationIds.length > 0 ? formData.shelfLocationIds[0] : null;
-
-      const values_array = [
-        productData.id, productData.name, productData.description, productData.additional_description,
-        productData.category, productData.brand, productData.department, productData.subcategory,
-        productData.supplier_id, productData.warehouse_id, productData.stock, productData.reorder_point,
-        productData.avg_daily_sales, productData.price, productData.cost, productData.sku,
-        productData.barcode, productData.image_url, productData.image_hint, productData.unit_of_measure,
-        productData.income_account,
-        productData.expense_account, productData.vat_status, productData.availability, productData.earns_points,
-        legacyShelfId, productData.is_perishable, productData.type
-      ];
-
-      await connection.query(sql, values_array);
-
-      // --- BATCH COSTING: Auto-create batch for initial stock ---
-      // Services never get a batch: they have no stock, and an empty batch
-      // would make them appear in FIFO deduction and valuation reports.
-      if (productData.type === 'standard' && formData.stock && formData.stock > 0) {
-        try {
-          const batchId = generateBatchId();
-          await connection.query(`
-            INSERT INTO inventory_batches
-              (id, product_id, received_date, quantity_in, quantity_remaining, unit_cost, selling_price, source_type, notes)
-            VALUES (?, ?, CURDATE(), ?, ?, ?, ?, 'adjustment', 'Initial Stock')
-          `, [
-            batchId, 
-            productId, 
-            formData.stock, 
-            formData.stock, 
-            formData.cost || 0, 
-            formData.price || 0
-          ]);
-        } catch (batchErr) {
-          console.warn('[BatchCosting] Could not create batch for initial product stock:', batchErr);
-        }
-      }
-
-      if (formData.shelfLocationIds && formData.shelfLocationIds.length > 0) {
-        for (let i = 0; i < formData.shelfLocationIds.length; i++) {
-          const shelfId = formData.shelfLocationIds[i];
-          const qty = i === 0 ? (formData.stock || 0) : 0;
-          await connection.query('INSERT INTO product_shelves (product_id, shelf_id, quantity) VALUES (?, ?, ?)', [productId, shelfId, qty]);
-        }
-      }
-
-      if (formData.sellingUnits && formData.sellingUnits.length > 0) {
-        const defaultLevelId = await resolveDefaultPriceLevelId(connection);
-        const { baseUnit, basePrice: resolvedBasePrice } =
-          await writeSellingUnits(connection, productId, formData.sellingUnits, defaultLevelId);
-
-        // Sync the scalar columns from the base row — one source of truth.
-        if (baseUnit) {
-          await writeBaseUnitPriceLevels(connection, productId, baseUnit);
-
-          const basePrice = resolvedBasePrice ?? Number(productData.price ?? 0);
-          await connection.query(
-            'UPDATE products SET price = ?, cost = ?, barcode = ?, unit_of_measure = ? WHERE id = ?',
-            [
-              basePrice,
-              baseUnit.cost == null ? productData.cost : Number(baseUnit.cost),
-              baseUnit.barcode,
-              baseUnit.unitName,
-              productId,
-            ],
-          );
-        }
-      }
-
-      if (formData.supplierMappings && formData.supplierMappings.length > 0) {
-        for (const mapping of formData.supplierMappings) {
-          // supplier_product_mapping.id is VARCHAR(50) — a productId-prefixed id
-          // can overflow it. A short prefix + uuid (already imported in this
-          // file) is both well under the limit and collision-safe across
-          // concurrent requests, unlike a Date.now()-based id — this project
-          // runs one server per terminal against a shared DB.
-          const mappingId = `spm_${uuidv4()}`;
-          await connection.query('INSERT INTO supplier_product_mapping (id, product_id, supplier_id, supplier_sku, supplier_lead_time, supplier_specific_rop, supplier_cost, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [mappingId, productId, mapping.supplierId, mapping.supplierSku || null, mapping.leadTime, mapping.rop, mapping.cost || null, mapping.isPrimary ? 1 : 0]);
-        }
-      }
-    });
-
-    return { success: true, message: `${formData.name} has been added to the inventory.`, productId };
-  } catch (error: any) {
+    return await addProductWithScope(formData, userId, isInternalFinalization, scope);
+  } catch (error) {
+    // resolveScopeFromSession throws for a valid cookie of an unknown/branchless uid.
     const refused = branchRefusal(error);
     if (refused) return refused;
-    console.error('Error saving product:', error);
-    if (error instanceof SellingUnitConflictError) {
-      return { success: false, message: error.message };
-    }
-    if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_selling_unit_barcode')) {
-      return { success: false, message: "That barcode is already used by another product's selling unit." };
-    }
-    if (error.code === 'ER_DUP_ENTRY' && error.message?.includes('unique_product_unit_name')) {
-      return { success: false, message: 'Two selling units of this product have the same unit name.' };
-    }
-    return { success: false, message: 'There was an error saving the product.' };
+    throw error;
   }
 }
 
