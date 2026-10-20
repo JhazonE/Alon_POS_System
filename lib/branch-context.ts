@@ -1,4 +1,6 @@
+import { cookies } from 'next/headers';
 import { query } from './mysql';
+import { SESSION_COOKIE_NAME, verifySession, sessionSecret } from './session-cookie';
 
 /**
  * Server-side branch resolution.
@@ -367,4 +369,52 @@ export async function resolveScopeFromBody(
     viewBranchId = body.viewBranchId;
   }
   return resolveUserBranch(uid, viewBranchId);
+}
+
+/**
+ * Resolve the scope of a write made on behalf of a known uid.
+ *
+ * A thin wrapper over resolveUserBranch with no viewBranchId: a write path
+ * takes no view switch, so the branch is always the user's own (or 'all' for a
+ * branchless head-office user).
+ *
+ * THROWS BranchResolutionError for an unknown or branchless uid. Throw means
+ * REFUSE the write. Contrast resolveScopeFromSession, where null means "no
+ * trustworthy identity, fall back".
+ */
+export async function resolveScopeForUid(uid: string): Promise<BranchScope> {
+  return resolveUserBranch(uid);
+}
+
+/**
+ * Resolve the scope of the signed session cookie on the current request.
+ *
+ * Returns null when there is no trustworthy identity: the cookie is absent,
+ * invalid (tampered, expired, wrong secret), or there is no request scope at
+ * all. null means FALL BACK to today's unguarded behaviour. It is NOT "refuse"
+ * and it is NOT head office; widening an absent cookie to { scope: 'all' }
+ * would turn every anonymous caller into a head-office writer. Failing closed
+ * instead would lock out sessions created before the cookie existed, so
+ * isolation is real only for sessions that carry the cookie.
+ *
+ * A valid cookie whose uid is unknown or branchless THROWS
+ * BranchResolutionError (identity known, target out of bounds: refuse).
+ *
+ * cookies() throws outside a request scope (server-to-server calls such as the
+ * approval processor); that is treated as "no session", not a crash.
+ */
+export async function resolveScopeFromSession(): Promise<BranchScope | null> {
+  let token: string | undefined;
+  try {
+    const store = await cookies();
+    token = store.get(SESSION_COOKIE_NAME)?.value;
+  } catch {
+    return null;
+  }
+  if (!token) return null;
+
+  const uid = verifySession(token, sessionSecret());
+  if (!uid) return null;
+
+  return resolveScopeForUid(uid);
 }

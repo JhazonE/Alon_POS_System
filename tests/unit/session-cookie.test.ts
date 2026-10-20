@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { resolveScopeFromSession } from '../../lib/branch-context';
 import { signSession, verifySession, sessionSecret, SESSION_MAX_AGE_MS } from '../../lib/session-cookie';
 
 // Signs an arbitrary payload object, so a test can control iat directly.
@@ -66,5 +67,20 @@ try {
   else process.env.SESSION_SECRET = savedEnv;
   fs.rmSync(scratch, { recursive: true, force: true });
 }
+
+// A cookie signed with a different secret yields no uid, so callers fall back.
+assert.equal(
+  verifySession(signSession('u1', 'other-secret'), sessionSecret()),
+  null,
+  'a cookie signed with the wrong secret yields no uid, so callers fall back'
+);
+
+// Outside a request scope next/headers cookies() throws. That must read as "no
+// session" (null = fall back), never a thrown error and never head office.
+// Top-level await is unavailable under tsx's CJS output, so assert via a promise;
+// a rejection becomes an unhandled rejection and fails the run loudly.
+resolveScopeFromSession().then((scope) => {
+  assert.equal(scope, null, 'no request scope means no session, so null (fall back)');
+});
 
 console.log('session-cookie: all assertions passed');
