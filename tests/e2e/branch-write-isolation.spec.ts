@@ -36,6 +36,9 @@ test.describe('POST /api/inventory/adjust/bulk — branch isolation', () => {
         },
       });
       expect(res.status()).toBe(403);
+      // Ang 403 dili pa igo: paneguroha nga walay na-write bisan gamay.
+      const rows: any = await testQuery('SELECT stock FROM products WHERE id = ?', [productId]);
+      expect(Number(rows[0].stock)).toBe(10);
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
@@ -58,6 +61,9 @@ test.describe('POST /api/inventory/adjust/bulk — branch isolation', () => {
         },
       });
       expect(res.status()).toBe(403);
+      // Ang source stock kinahanglan dili ma-deduct kung gi-refuse ang transfer.
+      const rows: any = await testQuery('SELECT stock FROM products WHERE id = ?', [productId]);
+      expect(Number(rows[0].stock)).toBe(10);
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
@@ -205,6 +211,9 @@ test.describe('uid-required write routes — branch isolation', () => {
         data: { uid: a.userUid, price: 99 },
       });
       expect(res.status()).toBe(403);
+      // Ang presyo sa produkto sa laing branch kinahanglan 1.00 gihapon.
+      const rows: any = await testQuery('SELECT price FROM products WHERE id = ?', [productId]);
+      expect(Number(rows[0].price)).toBe(1);
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
@@ -249,6 +258,14 @@ test.describe('POST /api/stock-adjustments — branch isolation', () => {
         data: { uid: a.userUid, productId, quantity: 1, reason: 'branch isolation test' },
       });
       expect(res.status()).toBe(403);
+      // Walay stock nga ma-usab ug walay adjustment row nga mahimo.
+      const rows: any = await testQuery('SELECT stock FROM products WHERE id = ?', [productId]);
+      expect(Number(rows[0].stock)).toBe(10);
+      const adj: any = await testQuery(
+        'SELECT COUNT(*) AS n FROM stock_adjustments WHERE product_id = ?',
+        [productId]
+      );
+      expect(Number(adj[0].n)).toBe(0);
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
