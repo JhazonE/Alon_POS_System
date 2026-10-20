@@ -704,3 +704,352 @@ test.describe('adjustStock (server action) — branch isolation', () => {
     }
   });
 });
+
+/**
+ * Batch writers (submitPriceUpdateBatch, updateProductShelfLocations):
+ * ALL-OR-NOTHING. Kung bisan usa ra ka target sa batch ang sa laing branch,
+ * ang tibuok batch gisalikway ug walay gisulat - ang partial apply mobiya ug
+ * half-done nga update nga walay rekord kung unsa ang gilaktawan. Mao nga ang
+ * matag refusal test mo-assert sa DB rows sa TANAN nga targets, lakip ang
+ * mga produkto sa kaugalingong branch.
+ */
+import { SHELF_A, SHELF_B } from './fixtures/test-data';
+
+const PRICING = { route: '/inventory/pricing', fileSuffix: 'inventory/pricing/actions.ts' };
+const priceBatch = (page: Page, args: unknown[]) =>
+  callServerAction(page, 'submitPriceUpdateBatch', args, PRICING);
+const shelfUpdate = (page: Page, args: unknown[]) =>
+  callServerAction(page, 'updateProductShelfLocations', args);
+
+function priceItem(productId: string, field: 'price' | 'cost', newValue: number) {
+  return {
+    productId,
+    sku: 'x',
+    barcode: '',
+    productName: 'Batch item',
+    field,
+    oldValue: 1,
+    newValue,
+    adjustmentType: 'exact',
+    adjustmentValue: newValue,
+  };
+}
+
+async function readPriceCost(productId: string) {
+  const rows: any = await testQuery('SELECT price, cost FROM products WHERE id = ?', [productId]);
+  return {
+    price: Number(rows[0].price),
+    cost: rows[0].cost === null ? null : Number(rows[0].cost),
+  };
+}
+
+async function readShelfState(productId: string) {
+  const prod: any = await testQuery('SELECT shelf_location_id FROM products WHERE id = ?', [productId]);
+  const shelves: any = await testQuery('SELECT COUNT(*) AS n FROM product_shelves WHERE product_id = ?', [productId]);
+  const moves: any = await testQuery(
+    "SELECT COUNT(*) AS n FROM stock_movements WHERE product_id = ? AND reference_type = 'shelf_transfer'",
+    [productId]
+  );
+  return {
+    shelfLocationId: prod[0].shelf_location_id as string | null,
+    shelfRows: Number(shelves[0].n),
+    movements: Number(moves[0].n),
+  };
+}
+
+async function cleanupShelfState(...productIds: string[]) {
+  for (const id of productIds) {
+    await testQuery('DELETE FROM product_shelves WHERE product_id = ?', [id]);
+    await testQuery('DELETE FROM stock_movements WHERE product_id = ?', [id]);
+  }
+}
+
+test.describe('submitPriceUpdateBatch (server action) — branch isolation, all-or-nothing', () => {
+  test('kung usa ra sa batch ang sa laing branch, walay bisan usa nga ma-apply', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `PB-A1-${Date.now()}`);
+    const a2 = await seedProductInWarehouse(a.warehouseId, `PB-A2-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `PB-B1-${Date.now()}`);
+    try {
+      const before = [await readPriceCost(a1), await readPriceCost(a2), await readPriceCost(b1)];
+      await seedSession(page, branchUser(a));
+      const result = await priceBatch(page, [
+        a.warehouseId,
+        [priceItem(a1, 'price', 55), priceItem(a2, 'cost', 33), priceItem(b1, 'price', 77)],
+        a.userUid,
+      ]);
+
+      expect(result.success).toBe(false);
+      // Tanan tulo: ang duha sa A DILI usab maapektuhan (walay partial apply).
+      expect(await readPriceCost(a1), 'a1 wala mausab').toEqual(before[0]);
+      expect(await readPriceCost(a2), 'a2 wala mausab').toEqual(before[1]);
+      expect(await readPriceCost(b1), 'b1 wala mausab').toEqual(before[2]);
+    } finally {
+      await cleanupProducts(a1, a2, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-exempt ang guard sa isInternalFinalization flag, ug gi-ignore ang forged scope {all}', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `PB-F-A1-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `PB-F-B1-${Date.now()}`);
+    const forged = { branchId: null, scope: 'all' };
+    try {
+      const before = [await readPriceCost(a1), await readPriceCost(b1)];
+      await seedSession(page, branchUser(a));
+      const result = await priceBatch(page, [
+        a.warehouseId,
+        [priceItem(a1, 'price', 55), priceItem(b1, 'price', 77)],
+        b.userUid,
+        true,
+        forged,
+        forged,
+      ]);
+
+      expect(result.success).toBe(false);
+      expect(await readPriceCost(a1)).toEqual(before[0]);
+      expect(await readPriceCost(b1)).toEqual(before[1]);
+    } finally {
+      await cleanupProducts(a1, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang batch nga tanan sa kaugalingong branch', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `PB-OK-A1-${Date.now()}`);
+    const a2 = await seedProductInWarehouse(a.warehouseId, `PB-OK-A2-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await priceBatch(page, [
+        a.warehouseId,
+        [priceItem(a1, 'price', 55), priceItem(a2, 'cost', 33)],
+        a.userUid,
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.applied).toBe(2);
+      expect((await readPriceCost(a1)).price).toBe(55);
+      expect((await readPriceCost(a2)).cost).toBe(33);
+    } finally {
+      await cleanupProducts(a1, a2);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office (all_branches) maka-apply ug batch nga tabok sa mga branch', async ({ page }) => {
+    const hq = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const hq1 = await seedProductInWarehouse(hq.warehouseId, `PB-HQ-1-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `PB-HQ-2-${Date.now()}`);
+    try {
+      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(hq.userUid, null);
+      await seedSession(page, branchUser(hq));
+      const result = await priceBatch(page, [
+        hq.warehouseId,
+        [priceItem(hq1, 'price', 55), priceItem(b1, 'price', 77)],
+        hq.userUid,
+      ]);
+
+      expect(result.success).toBe(true);
+      expect((await readPriceCost(hq1)).price).toBe(55);
+      expect((await readPriceCost(b1)).price).toBe(77);
+    } finally {
+      await cleanupProducts(hq1, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(hq);
+    }
+  });
+
+  test('walay cookie (pre-upgrade session) — mo-fallback sa wala-guard nga batasan', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `PB-NC-A1-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `PB-NC-B1-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      await page.context().clearCookies();
+      const result = await priceBatch(page, [
+        a.warehouseId,
+        [priceItem(a1, 'price', 55), priceItem(b1, 'price', 77)],
+        a.userUid,
+      ]);
+
+      expect(result.success).toBe(true);
+      expect((await readPriceCost(a1)).price).toBe(55);
+      expect((await readPriceCost(b1)).price).toBe(77);
+    } finally {
+      await cleanupProducts(a1, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+test.describe('updateProductShelfLocations (server action) — branch isolation, all-or-nothing', () => {
+  test('kung usa ra sa batch ang sa laing branch, walay shelf assignment nga ma-apply', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `SL-A1-${Date.now()}`);
+    const a2 = await seedProductInWarehouse(a.warehouseId, `SL-A2-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `SL-B1-${Date.now()}`);
+    try {
+      const before = [await readShelfState(a1), await readShelfState(a2), await readShelfState(b1)];
+      await seedSession(page, branchUser(a));
+      const result = await shelfUpdate(page, [
+        [
+          { productId: a1, shelfLocationId: SHELF_A.id },
+          { productId: a2, shelfLocationId: SHELF_A.id },
+          { productId: b1, shelfLocationId: SHELF_A.id },
+        ],
+        a.userUid,
+      ]);
+
+      expect(result.success).toBe(false);
+      expect(await readShelfState(a1), 'a1 wala mausab').toEqual(before[0]);
+      expect(await readShelfState(a2), 'a2 wala mausab').toEqual(before[1]);
+      expect(await readShelfState(b1), 'b1 wala mausab').toEqual(before[2]);
+    } finally {
+      await cleanupShelfState(a1, a2, b1);
+      await cleanupProducts(a1, a2, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('kung usa ra sa transfer batch ang sa laing branch, walay shelf row o stock movement nga ma-sulat', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `SL-T-A1-${Date.now()}`);
+    const a2 = await seedProductInWarehouse(a.warehouseId, `SL-T-A2-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `SL-T-B1-${Date.now()}`);
+    try {
+      const before = [await readShelfState(a1), await readShelfState(a2), await readShelfState(b1)];
+      await seedSession(page, branchUser(a));
+      const result = await shelfUpdate(page, [
+        [
+          { productId: a1, sourceShelfId: 'unassigned', targetShelfId: SHELF_B.id, quantity: 2 },
+          { productId: a2, sourceShelfId: 'unassigned', targetShelfId: SHELF_B.id, quantity: 2 },
+          { productId: b1, sourceShelfId: 'unassigned', targetShelfId: SHELF_B.id, quantity: 2 },
+        ],
+        a.userUid,
+        true,
+      ]);
+
+      expect(result.success).toBe(false);
+      expect(await readShelfState(a1), 'a1 wala mausab').toEqual(before[0]);
+      expect(await readShelfState(a2), 'a2 wala mausab').toEqual(before[1]);
+      expect(await readShelfState(b1), 'b1 wala mausab').toEqual(before[2]);
+    } finally {
+      await cleanupShelfState(a1, a2, b1);
+      await cleanupProducts(a1, a2, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-ignore ang forged scope {all} sa extra args', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const b1 = await seedProductInWarehouse(b.warehouseId, `SL-F-B1-${Date.now()}`);
+    const forged = { branchId: null, scope: 'all' };
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await shelfUpdate(page, [
+        [{ productId: b1, shelfLocationId: SHELF_A.id }],
+        b.userUid,
+        true,
+        forged,
+        forged,
+      ]);
+
+      expect(result.success).toBe(false);
+      expect((await readShelfState(b1)).shelfLocationId).toBeNull();
+    } finally {
+      await cleanupShelfState(b1);
+      await cleanupProducts(b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang batch nga tanan sa kaugalingong branch', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const a1 = await seedProductInWarehouse(a.warehouseId, `SL-OK-A1-${Date.now()}`);
+    const a2 = await seedProductInWarehouse(a.warehouseId, `SL-OK-A2-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await shelfUpdate(page, [
+        [
+          { productId: a1, shelfLocationId: SHELF_A.id },
+          { productId: a2, sourceShelfId: 'unassigned', targetShelfId: SHELF_B.id, quantity: 2 },
+        ],
+        a.userUid,
+      ]);
+
+      expect(result.success).toBe(true);
+      expect((await readShelfState(a1)).shelfLocationId).toBe(SHELF_A.id);
+      expect((await readShelfState(a2)).movements).toBe(1);
+    } finally {
+      await cleanupShelfState(a1, a2);
+      await cleanupProducts(a1, a2);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office (all_branches) maka-apply ug batch nga tabok sa mga branch', async ({ page }) => {
+    const hq = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const hq1 = await seedProductInWarehouse(hq.warehouseId, `SL-HQ-1-${Date.now()}`);
+    const b1 = await seedProductInWarehouse(b.warehouseId, `SL-HQ-2-${Date.now()}`);
+    try {
+      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(hq.userUid, null);
+      await seedSession(page, branchUser(hq));
+      const result = await shelfUpdate(page, [
+        [
+          { productId: hq1, shelfLocationId: SHELF_A.id },
+          { productId: b1, shelfLocationId: SHELF_A.id },
+        ],
+        hq.userUid,
+      ]);
+
+      expect(result.success).toBe(true);
+      expect((await readShelfState(hq1)).shelfLocationId).toBe(SHELF_A.id);
+      expect((await readShelfState(b1)).shelfLocationId).toBe(SHELF_A.id);
+    } finally {
+      await cleanupShelfState(hq1, b1);
+      await cleanupProducts(hq1, b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(hq);
+    }
+  });
+
+  test('walay cookie (pre-upgrade session) — mo-fallback sa wala-guard nga batasan', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const b1 = await seedProductInWarehouse(b.warehouseId, `SL-NC-B1-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      await page.context().clearCookies();
+      const result = await shelfUpdate(page, [
+        [{ productId: b1, shelfLocationId: SHELF_A.id }],
+        a.userUid,
+      ]);
+
+      expect(result.success).toBe(true);
+      expect((await readShelfState(b1)).shelfLocationId).toBe(SHELF_A.id);
+    } finally {
+      await cleanupShelfState(b1);
+      await cleanupProducts(b1);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
