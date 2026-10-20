@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
 import { getApiUrl } from '@/lib/api-config';
+import { getSessionUid } from '@/lib/session-uid';
 import type { Product, PaymentMethod, SalesPerson, Customer, Sale } from '@/lib/types';
 import { salesOrderSchema, type SalesOrderFormValues } from './add-order-types';
 
@@ -124,6 +125,7 @@ export function useAddOrderForm({ paymentMethods, salesPersons, customers, initi
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
+          uid: getSessionUid(),
           salesPerson: values.salesPersonId,
           status: initialData ? initialData.status : 'Pending',
         }),

@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/client-activity-logger';
 import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, ShelfLocation, Supplier, Warehouse } from '@/lib/types';
+import { getSessionUid } from '@/lib/session-uid';
 
 import { getProducts, updateProductShelfLocations } from '../../products/actions';
 import type { AdjustmentItem, AdjustmentType, TransferTarget } from './constants';
@@ -263,7 +264,7 @@ export function useBulkAdjustment() {
           expirationDate: a.product.isPerishable && adjustmentType === 'add' ? (a.expirationDate || null) : null,
         })),
         notes: note || 'Bulk Stock Adjustment',
-        userId, warehouseId, targetWarehouseId, referenceNo, supplierId, adjustmentType
+        userId, uid: getSessionUid(), warehouseId, targetWarehouseId, referenceNo, supplierId, adjustmentType
       };
       const response = await fetch('/api/inventory/adjust/bulk', {
         method: 'POST',

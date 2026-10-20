@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { appendSessionUid, getSessionUid } from '@/lib/session-uid';
 import type { Sale, SalesPerson, Customer } from '@/lib/types';
 import type { OrderFilters } from './use-orders-filters';
 
@@ -70,7 +71,11 @@ export function useOrdersMutations() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(getApiUrl(`/sales/orders/${id}`), { method: 'DELETE' });
+      // DELETE carries no body, so the uid travels on the query string.
+      const params = new URLSearchParams();
+      appendSessionUid(params);
+      const qs = params.toString();
+      const res = await fetch(getApiUrl(`/sales/orders/${id}${qs ? `?${qs}` : ''}`), { method: 'DELETE' });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Failed to delete order');
@@ -90,6 +95,7 @@ export function useOrdersMutations() {
       const res = await fetch(getApiUrl(`/sales/orders/${sale.id}/deliver`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: getSessionUid() }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Failed to deliver order');
@@ -109,7 +115,7 @@ export function useOrdersMutations() {
       const res = await fetch(getApiUrl('/sales/invoices'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId, uid: getSessionUid() }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Failed to create invoice');

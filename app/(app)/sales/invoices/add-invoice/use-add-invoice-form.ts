@@ -7,6 +7,7 @@ import { addDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/client-activity-logger';
 import { getApiUrl } from '@/lib/api-config';
+import { getSessionUid } from '@/lib/session-uid';
 import type { Product, PaymentMethod } from '@/lib/types';
 import { salesInvoiceSchema, type SalesInvoiceFormValues } from './add-invoice-types';
 
@@ -108,7 +109,7 @@ export function useAddInvoiceForm({ paymentMethods, onClose, onSuccess }: Props)
       const res = await fetch(getApiUrl('/sales'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, uid: getSessionUid() }),
       });
       const data = await res.json();
       if (data.success) {

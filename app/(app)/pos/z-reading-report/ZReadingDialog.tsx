@@ -10,6 +10,7 @@ import type { ZReadingData } from '@/lib/types';
 import { usePrinter } from '@/lib/use-printer';
 import { ZReadingGenerator } from '@/lib/z-reading-generator';
 import { getApiUrl } from '@/lib/api-config';
+import { getSessionUid } from '@/lib/session-uid';
 import { useReactToPrint } from 'react-to-print';
 import type { ZReadingDialogProps } from './z-reading-report-types';
 import { Spinner } from '@/components/ui/spinner';
@@ -98,7 +99,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
         const saveResponse = await fetch(getApiUrl('/sales/z-reading'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...data, terminalId: terminalId || 'all', cashierName: data.cashierName || 'Admin' })
+          body: JSON.stringify({ ...data, uid: getSessionUid(), terminalId: terminalId || 'all', cashierName: data.cashierName || 'Admin' })
         });
         const saveResult = await saveResponse.json();
         if (!saveResult.success) throw new Error(saveResult.error || 'Failed to save Z-Reading to database');

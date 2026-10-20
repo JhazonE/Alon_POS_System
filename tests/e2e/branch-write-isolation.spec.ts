@@ -13,6 +13,7 @@ import {
 } from './helpers/branches';
 import { ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
 import { testQuery } from './helpers/db';
+import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { SO_CUSTOMER, SO_PRODUCT } from './fixtures/test-data';
 
 /**
@@ -984,6 +985,93 @@ test.describe('POST /api/data-management/import/products (multipart) — branch 
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
+    }
+  });
+});
+
+/**
+ * Page-level: ang server-contract tests sa taas dili makakita kung ang CLIENT
+ * mawad-an sa iyang `appendSessionUid` / `getSessionUid` call (mo-agi ra gihapon
+ * kay ang test mismo ang naghatag ug uid). Dinhi ang tinuod nga page ang
+ * mo-drive, ug ang outgoing request ang gi-assert.
+ */
+test.describe('page-level — ang client mo-apil sa session uid sa write request', () => {
+  async function createPendingOrder(request: any): Promise<{ id: string; reference: string }> {
+    const res = await request.post('/api/sales/orders', {
+      data: {
+        uid: 'test-admin-uid',
+        customer: { id: SO_CUSTOMER.id, name: SO_CUSTOMER.name },
+        orderDate: '2026-07-23',
+        deliveryDate: '2026-07-23',
+        paymentMethod: 'CASH',
+        status: 'Pending',
+        items: [{ product: { id: SO_PRODUCT.id, name: SO_PRODUCT.name }, quantity: 1, price: SO_PRODUCT.price }],
+      },
+    });
+    const body = await res.json();
+    expect(body.success, `create failed: ${JSON.stringify(body)}`).toBe(true);
+    const rows: any = await testQuery('SELECT reference FROM sales_orders WHERE id = ?', [body.data.id]);
+    return { id: body.data.id as string, reference: rows[0].reference as string };
+  }
+
+  /** I-search ang order sa /sales/orders ug ablihi ang row actions menu niini. */
+  async function openRowMenu(page: any, reference: string) {
+    await page.goto('/sales/orders');
+    await page.getByPlaceholder('Search orders...').fill(reference);
+    const row = page.getByRole('row').filter({ hasText: reference });
+    await expect(row).toBeVisible({ timeout: 15000 });
+    await row.getByRole('button', { name: 'Open menu' }).click();
+  }
+
+  test('ang "Cancel Order" sa /sales/orders mo-DELETE nga naay ?uid= gikan sa session', async ({ page, request }) => {
+    await seedSession(page);
+    const order = await createPendingOrder(request);
+    try {
+      const seen: { method: string; url: string }[] = [];
+      await page.route('**/api/sales/orders/*', async (route) => {
+        const req = route.request();
+        if (req.method() === 'DELETE') seen.push({ method: req.method(), url: req.url() });
+        await route.continue();
+      });
+
+      await openRowMenu(page, order.reference);
+      await page.getByRole('menuitem', { name: 'Cancel Order' }).click();
+      const respPromise = page.waitForResponse(
+        (r) => r.request().method() === 'DELETE' && r.url().includes(`/api/sales/orders/${order.id}`),
+      );
+      await page.getByRole('button', { name: 'Cancel Order' }).click();
+      const resp = await respPromise;
+
+      expect(seen).toHaveLength(1);
+      expect(new URL(seen[0].url).searchParams.get('uid')).toBe(DEFAULT_ADMIN.uid);
+      // Ang uid gidawat sa server — dili 403 — mao nga nawala ang order.
+      expect(resp.status()).toBe(200);
+      const rows: any = await testQuery('SELECT id FROM sales_orders WHERE id = ?', [order.id]);
+      expect(rows).toHaveLength(0);
+    } finally {
+      await request.delete(`/api/sales/orders/${order.id}?uid=test-admin-uid`).catch(() => {});
+    }
+  });
+
+  test('ang "Make Delivery" sa /sales/orders mo-POST nga naay "uid" sa body gikan sa session', async ({ page, request }) => {
+    await seedSession(page);
+    const order = await createPendingOrder(request);
+    try {
+      const seen: string[] = [];
+      // Gi-stub ang response aron dili ma-deduct ang stock sa shared fixture;
+      // ang gi-assert ra kay unsay gipadala sa client.
+      await page.route(`**/api/sales/orders/${order.id}/deliver`, async (route) => {
+        seen.push(route.request().postData() ?? '');
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+      });
+
+      await openRowMenu(page, order.reference);
+      await page.getByRole('menuitem', { name: 'Make Delivery' }).click();
+      await expect.poll(() => seen.length).toBe(1);
+
+      expect(JSON.parse(seen[0]).uid).toBe(DEFAULT_ADMIN.uid);
+    } finally {
+      await request.delete(`/api/sales/orders/${order.id}?uid=test-admin-uid`).catch(() => {});
     }
   });
 });
