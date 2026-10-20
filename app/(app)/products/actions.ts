@@ -1,7 +1,14 @@
 'use server';
 
 import { query, withTransaction } from '@/lib/mysql';
-import { mainBranchId } from '@/lib/branch-context';
+import {
+  mainBranchId,
+  resolveScopeFromSession,
+  assertProductInScope,
+  assertWarehouseInBranch,
+  BranchResolutionError,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { generateBatchId } from '@/lib/batch-utils';
 import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMeasure, ShelfLocation, Account, TaxRate } from '@/lib/types';
@@ -699,12 +706,54 @@ async function resolveDefaultPriceLevelId(connection: any): Promise<string | nul
   return rows?.[0]?.id ?? null;
 }
 
+/**
+ * Branch guard for the single-product writers below.
+ *
+ * A server action has no request object, so the branch comes from the signed
+ * session cookie (resolveScopeFromSession). null means "no trustworthy
+ * identity" and the caller proceeds exactly as before the guard existed; a
+ * session created before the cookie existed must keep working. A refusal is a
+ * BranchResolutionError, which `branchRefusal` turns into the action's own
+ * `{ success: false, message }` shape - an action never throws a refusal.
+ */
+function branchRefusal(error: unknown): { success: false; message: string } | null {
+  if (error instanceof BranchResolutionError) {
+    return { success: false, message: error.message };
+  }
+  return null;
+}
+
+/**
+ * Assert a warehouse a write is about to put a product into (or already has it
+ * in). A product with no warehouse belongs to no branch, so a branch-scoped
+ * caller cannot claim it: NULL / '' is refused. Head office may leave it NULL.
+ */
+async function assertWarehouseForWrite(
+  warehouseId: string | null | undefined,
+  scope: BranchScope,
+): Promise<void> {
+  if (scope.scope === 'all') return;
+  if (!warehouseId) {
+    throw new BranchResolutionError(
+      'A product must stay in a warehouse of your branch; it cannot be left without one.',
+    );
+  }
+  await assertWarehouseInBranch(warehouseId, scope);
+}
+
 export async function addProduct(
   formData: ProductFormData,
   userId: string = 'system',
   isInternalFinalization: boolean = false,
 ) {
   try {
+    // Branch guard (session cookie; null = fall back to unguarded). Services
+    // get their warehouse assigned below, so they are asserted after that.
+    const scope = await resolveScopeFromSession();
+    if (scope && formData.itemType !== 'service') {
+      await assertWarehouseForWrite(formData.warehouse || null, scope);
+    }
+
     // --- Check if approval is required ---
     if (!isInternalFinalization) {
       const isApprovalRequired = await checkApprovalRequired('PRODUCT_CREATE');
@@ -749,13 +798,19 @@ export async function addProduct(
     // warehouse and show a blank column in the product list.
     let resolvedWarehouseId = formData.warehouse || null;
     if (isServiceProduct) {
+      // A branch-scoped caller gets a warehouse of its OWN branch; the global
+      // "main" one would put the service in someone else's branch.
       const [mainWarehouse]: any = await query(
         `SELECT id FROM warehouses
-         WHERE is_active = 1
+         WHERE is_active = 1${scope?.scope === 'single' ? ' AND branch_id = ?' : ''}
          ORDER BY is_main DESC, (id = 'wh_main') DESC, created_at ASC
          LIMIT 1`,
+        scope?.scope === 'single' ? [scope.branchId] : [],
       );
       resolvedWarehouseId = mainWarehouse?.id ?? null;
+    }
+    if (scope) {
+      await assertWarehouseForWrite(resolvedWarehouseId, scope);
     }
 
     await withTransaction(async (connection) => {
@@ -888,6 +943,8 @@ export async function addProduct(
 
     return { success: true, message: `${formData.name} has been added to the inventory.`, productId };
   } catch (error: any) {
+    const refused = branchRefusal(error);
+    if (refused) return refused;
     console.error('Error saving product:', error);
     if (error instanceof SellingUnitConflictError) {
       return { success: false, message: error.message };
@@ -904,6 +961,19 @@ export async function addProduct(
 
 export async function updateProduct(id: string, formData: ProductFormData) {
   try {
+    // Branch guard (session cookie; null = fall back to unguarded). Both ends
+    // of the write are asserted: the product's EXISTING warehouse (you may not
+    // touch a product you do not own) and the INCOMING one (you may not move a
+    // product into another branch, or NULL it out and detach it from branch
+    // scope - a one-way door). An omitted warehouse leaves it unchanged.
+    const scope = await resolveScopeFromSession();
+    if (scope) {
+      await assertProductInScope(id, scope);
+      if (formData.warehouse !== undefined) {
+        await assertWarehouseForWrite(formData.warehouse || null, scope);
+      }
+    }
+
     await withTransaction(async (connection) => {
       // Fetch existing product to preserve fields not in the form
       const [existingRows]: any = await connection.query('SELECT * FROM products WHERE id = ?', [id]);
@@ -1101,6 +1171,8 @@ export async function updateProduct(id: string, formData: ProductFormData) {
 
     return { success: true, message: `${formData.name} has been updated.` };
   } catch (error: any) {
+    const refused = branchRefusal(error);
+    if (refused) return refused;
     console.error('Error updating product:', error);
     if (error instanceof SellingUnitConflictError) {
       return { success: false, message: error.message };
@@ -1117,6 +1189,11 @@ export async function updateProduct(id: string, formData: ProductFormData) {
 
 export async function deleteProduct(id: string) {
   try {
+    const scope = await resolveScopeFromSession();
+    if (scope) {
+      await assertProductInScope(id, scope);
+    }
+
     await withTransaction(async (connection) => {
       await connection.query('DELETE FROM product_shelves WHERE product_id = ?', [id]);
       await connection.query('DELETE FROM conversion_factors WHERE product_id = ?', [id]);
@@ -1126,6 +1203,8 @@ export async function deleteProduct(id: string) {
     });
     return { success: true, message: 'Product deleted successfully.' };
   } catch (error) {
+    const refused = branchRefusal(error);
+    if (refused) return refused;
     console.error('Error deleting product:', error);
     return { success: false, message: 'Error deleting product. It might be referenced by other records.' };
   }
@@ -1982,12 +2061,24 @@ export async function getSupplierMappingsStrict(productId: string) {
 
 export async function setPrimarySupplier(productId: string, mappingId: string) {
   try {
+    const scope = await resolveScopeFromSession();
+    if (scope) {
+      await assertProductInScope(productId, scope);
+    }
+
     await withTransaction(async (connection) => {
       // 1. Reset all primary flags for this product
       await connection.query('UPDATE supplier_product_mapping SET is_primary = 0 WHERE product_id = ?', [productId]);
-      
-      // 2. Set new primary mapping
-      await connection.query('UPDATE supplier_product_mapping SET is_primary = 1 WHERE id = ?', [mappingId]);
+
+      // 2. Set new primary mapping. Scoped to the product too: the guard above
+      // vouches for productId only, so a mappingId that belongs to another
+      // (possibly another branch's) product must not be reachable through it.
+      const [setResult]: any = await connection.query('UPDATE supplier_product_mapping SET is_primary = 1 WHERE id = ? AND product_id = ?', [mappingId, productId]);
+      if (!setResult?.affectedRows) {
+        // Not this product's mapping. Throwing rolls back step 1, so the
+        // product is not left with no primary supplier at all.
+        throw new Error(`Mapping ${mappingId} does not belong to product ${productId}`);
+      }
       
       // 3. Get the ROP from the new primary mapping.
       // connection.query() is the raw PoolConnection API — unlike the query()
@@ -1995,7 +2086,7 @@ export async function setPrimarySupplier(productId: string, mappingId: string) {
       // [rows, fields]. Destructuring straight to `[mapping]` binds `mapping`
       // to the rows array itself (always truthy), so `mapping.supplier_specific_rop`
       // was always undefined and this silently wrote NULL to reorder_point.
-      const [[mapping]]: any = await connection.query('SELECT supplier_specific_rop FROM supplier_product_mapping WHERE id = ?', [mappingId]);
+      const [[mapping]]: any = await connection.query('SELECT supplier_specific_rop FROM supplier_product_mapping WHERE id = ? AND product_id = ?', [mappingId, productId]);
 
       if (mapping) {
         // 4. Update the product's main reorder point
@@ -2004,6 +2095,8 @@ export async function setPrimarySupplier(productId: string, mappingId: string) {
     });
     return { success: true, message: 'Primary supplier updated successfully.' };
   } catch (error) {
+    const refused = branchRefusal(error);
+    if (refused) return refused;
     console.error('Error setting primary supplier:', error);
     return { success: false, message: 'Error setting primary supplier.' };
   }

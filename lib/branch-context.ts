@@ -418,3 +418,39 @@ export async function resolveScopeFromSession(): Promise<BranchScope | null> {
 
   return resolveScopeForUid(uid);
 }
+
+/**
+ * Reject a product that does not belong to the resolved branch.
+ *
+ * A product has no branch column of its own: it belongs to a branch through its
+ * warehouse (products.warehouse_id -> warehouses.branch_id). The product's own
+ * warehouse is resolved here and handed to assertWarehouseInBranch, so a valid
+ * productId in another branch is refused (existence is not authorisation).
+ *
+ * A product with a NULL warehouse_id belongs to no branch, so a branch-scoped
+ * caller cannot assert it is theirs and is refused. Head office (scope 'all')
+ * may touch it. An unknown product is refused for a branch-scoped caller too:
+ * absence is not ownership.
+ */
+export async function assertProductInScope(
+  productId: string,
+  scope: BranchScope
+): Promise<void> {
+  if (scope.scope === 'all') return;
+
+  const rows = (await query(
+    'SELECT warehouse_id AS warehouseId FROM products WHERE id = ?',
+    [productId]
+  )) as any[];
+
+  if (rows.length === 0) {
+    throw new BranchResolutionError(`Unknown product: ${productId}`);
+  }
+  const warehouseId = rows[0].warehouseId;
+  if (!warehouseId) {
+    throw new BranchResolutionError(
+      `Product ${productId} has no warehouse, so it belongs to no branch`
+    );
+  }
+  await assertWarehouseInBranch(warehouseId, scope);
+}
