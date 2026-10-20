@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS, signSession, sessionSecret } f
 
 export async function POST(request: NextRequest) {
     try {
-        const { username, password } = await request.json();
+        const { username, password, verifyOnly } = await request.json();
 
         if (!username || !password) {
             return NextResponse.json(
@@ -74,13 +74,22 @@ export async function POST(request: NextRequest) {
         // Additive: a signed session cookie lets 'use server' actions (which have
         // no request object) identify the caller. Never fail login over it —
         // users without a cookie keep working via the localStorage session.
+        //
+        // `verifyOnly: true` is sent by callers that only check a user's
+        // credentials (e.g. the POS supervisor override) while someone else stays
+        // logged in. Verification-only callers must not adopt the verified user's
+        // session identity: the cookie is trusted server-side, so minting it here
+        // would silently swap the terminal's identity to the supervisor's. The
+        // default (flag absent) is to issue, so real logins can never lose it.
         try {
-            response.cookies.set(SESSION_COOKIE_NAME, signSession(user.uid, sessionSecret()), {
-                httpOnly: true,
-                sameSite: 'lax',
-                path: '/',
-                maxAge: SESSION_MAX_AGE_MS / 1000,
-            });
+            if (verifyOnly !== true) {
+                response.cookies.set(SESSION_COOKIE_NAME, signSession(user.uid, sessionSecret()), {
+                    httpOnly: true,
+                    sameSite: 'lax',
+                    path: '/',
+                    maxAge: SESSION_MAX_AGE_MS / 1000,
+                });
+            }
         } catch (cookieError) {
             console.error('Session cookie could not be issued:', cookieError);
         }

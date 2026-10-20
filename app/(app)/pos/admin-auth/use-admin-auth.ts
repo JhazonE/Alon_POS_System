@@ -50,7 +50,8 @@ export function useAdminAuth({ isOpen, onSuccess, onOpenChange, requiredCredenti
       const response = await fetch(getApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        // verifyOnly: credential check for an override; must not replace the cashier's session cookie.
+        body: JSON.stringify({ username, password, verifyOnly: true }),
       });
       const result = await response.json();
 
