@@ -946,3 +946,44 @@ test.describe('POST /api/pos-transactions — sale branch wins over terminal (D7
     }
   });
 });
+
+// Ang multipart (legacy) nga importer — kini ang dalan nga gigamit sa Settings
+// uploader. Parehas nga SKU mahimong naa sa daghang branch (unique key kay
+// (sku, warehouse_id)), mao nga ang UPDATE dili pwede mag-target sa sku ra.
+test.describe('POST /api/data-management/import/products (multipart) — branch isolation', () => {
+  test('dili ma-usab ang produkto sa laing branch nga parehas ug SKU', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const sku = `IMP-LEG-${Date.now()}`;
+    try {
+      const aId = await seedProductInWarehouse(a.warehouseId, sku);
+      const bId = await seedProductInWarehouse(b.warehouseId, sku);
+      await testQuery('UPDATE products SET name = ?, cost = 2.00, price = 3.00, stock = 10 WHERE id = ?', ['Legacy B Original', bId]);
+
+      const csv =
+        'name,sku,cost_price,selling_price,stock_quantity\n' +
+        `Legacy A Updated,${sku},40,50,77\n`;
+      const res = await request.post(`/api/data-management/import/products?uid=${a.userUid}`, {
+        multipart: { file: { name: 'products.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) } },
+      });
+      const body = await res.json();
+      expect(res.ok(), JSON.stringify(body)).toBe(true);
+      expect(body.message).toContain('Updated: 1');
+
+      const aRow: any = (await testQuery('SELECT name, cost, price, stock FROM products WHERE id = ?', [aId]) as any)[0];
+      expect(aRow.name).toBe('Legacy A Updated');
+      expect(Number(aRow.price)).toBe(50);
+      expect(Number(aRow.stock)).toBe(77);
+
+      // Ang branch B walay nausab: ngalan, cost, price ug stock.
+      const bRow: any = (await testQuery('SELECT name, cost, price, stock FROM products WHERE id = ?', [bId]) as any)[0];
+      expect(bRow.name).toBe('Legacy B Original');
+      expect(Number(bRow.cost)).toBe(2);
+      expect(Number(bRow.price)).toBe(3);
+      expect(Number(bRow.stock)).toBe(10);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
