@@ -1,12 +1,6 @@
 'use server';
 
 import { query } from '@/lib/mysql';
-import {
-  resolveScopeFromSession,
-  assertProductInScope,
-  BranchResolutionError,
-  type BranchScope,
-} from '@/lib/branch-context';
 import { recordAdjustmentMovement } from '@/lib/stock-movements';
 import type { StockAdjustment } from '@/lib/types';
 
@@ -216,132 +210,16 @@ export async function migrateAdjustmentsToMovements() {
   }
 }
 
-import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
-import { withTransaction } from '@/lib/mysql';
-import { deductFamilyStock, addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
+import { resolveScopeFromSession } from '@/lib/branch-context';
+import { adjustStockWithScope } from '@/lib/stock-adjust';
 
 /**
- * Branch guard for adjustStock.
- *
- * `userId` is an ordinary argument of a public 'use server' endpoint, so a
- * caller can set it to anything: it is attribution only and is NEVER used to
- * derive a branch. The branch comes from an explicit `scope` (trusted callers
- * that derived it from DB state, e.g. the approval queue) or else from the
- * signed session cookie. null from the session means "no trustworthy identity"
- * and the action proceeds exactly as before the guard existed. A refusal
- * becomes the action's own `{ success: false, error }` shape; it never throws.
+ * Public server action. Its parameters are all attacker-controlled, so it
+ * takes NO scope: the branch comes only from the signed session cookie
+ * (null = no trustworthy identity, falls back to unguarded). `userId` is
+ * attribution only. The guarded implementation lives in lib/stock-adjust.ts.
  */
-function branchRefusal(error: unknown): { success: false; error: string } | null {
-  if (error instanceof BranchResolutionError) {
-    return { success: false, error: error.message };
-  }
-  return null;
+export async function adjustStock(productId: string, quantity: number, reason: string, userId: string = 'system', isInternalFinalization: boolean = false, expirationDate?: string | null) {
+  const scope = await resolveScopeFromSession();
+  return adjustStockWithScope(productId, quantity, reason, userId, isInternalFinalization, expirationDate, scope);
 }
-
-export async function adjustStock(productId: string, quantity: number, reason: string, userId: string = 'system', isInternalFinalization: boolean = false, expirationDate?: string | null, scope?: BranchScope) {
-  try {
-    // Branch guard. Only the TARGET product is asserted: family sync below
-    // writes related family members too, but cross-warehouse family links do
-    // not exist in practice (Phase 2b), so members are deliberately not asserted.
-    // isInternalFinalization is caller-settable, so it is not a trust boundary
-    // and does not exempt this check.
-    const effectiveScope = scope ?? (await resolveScopeFromSession());
-    if (effectiveScope) {
-      await assertProductInScope(productId, effectiveScope);
-    }
-
-    // 1. Check if multi-level approval is required
-    const isApprovalRequired = !isInternalFinalization && await checkApprovalRequired('STOCK_ADJUSTMENT');
-    
-    if (isApprovalRequired) {
-      // Get product info for enrichment
-      const productInfoRes: any = await query(`
-        SELECT p.name, p.stock, p.sku, p.barcode, w.name as warehouse_name, s.name as shelf_name
-        FROM products p
-        LEFT JOIN warehouses w ON p.warehouse_id = w.id
-        LEFT JOIN shelf_locations s ON p.shelf_location_id = s.id
-        WHERE p.id = ?
-      `, [productId]);
-      const productInfo = productInfoRes[0] || { name: 'Unknown', stock: 0, sku: '', barcode: '', warehouse_name: null, shelf_name: null };
-
-      // Submit to approval queue instead of executing
-      console.log('Stock adjustment submitted for approval:', { productId, quantity, reason });
-      const { queueId, pendingApproval } = await submitToApprovalQueue('STOCK_ADJUSTMENT', {
-        productId,
-        quantity,
-        reason,
-        productName: productInfo.name,
-        productSku: productInfo.sku,
-        productBarcode: productInfo.barcode,
-        warehouseName: productInfo.warehouse_name,
-        shelfName: productInfo.shelf_name,
-        currentStock: parseInt(productInfo.stock || 0),
-        expirationDate: expirationDate || null
-      }, userId);
-      
-      if (pendingApproval) {
-        return { success: true, pendingApproval: true, queueId };
-      }
-      // If not pending (all steps auto-skipped), fall through to immediate execution
-    }
-
-    // Get current stock and product info
-    const productResult = await query('SELECT stock, name, parent_id FROM products WHERE id = ?', [productId]);
-
-    if (productResult.length === 0) {
-      return { success: false, error: 'Product not found' };
-    }
-
-    const currentStock = parseInt(productResult[0].stock);
-    const productName = productResult[0].name;
-    const parentId = productResult[0].parent_id;
-    const newStock = currentStock + quantity;
-
-    // Validate new stock is not negative
-    if (newStock < 0) {
-      return { success: false, error: 'Stock cannot go below zero' };
-    }
-
-    // Create stock adjustment record ID (used as the reference for movements)
-    const adjustmentId = `adj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // Create stock adjustment record for the main product (before we update stock)
-    const createAdjustmentSql = `
-      INSERT INTO stock_adjustments (id, product_id, quantity, reason, new_stock)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-    await query(createAdjustmentSql, [adjustmentId, productId, quantity, reason, newStock]);
-
-    // Use recursive family sync within a transaction so all levels update atomically
-    const result = await withTransaction(async (connection) => {
-      // Walk the FULL ancestor chain (handles grandchildren, any depth)
-      const { rootId, factorToRoot } = await findUltimateRoot(productId, connection);
-
-      if (factorToRoot > 1 || rootId !== productId) {
-        // This product is NOT the root — convert to root units and sync from root
-        const rootQty = Math.abs(quantity) / factorToRoot;
-        if (quantity < 0) {
-          await deductFamilyStock(rootId, rootQty, adjustmentId, 'adjustment', reason, connection);
-        } else {
-          await addFamilyStock(rootId, rootQty, adjustmentId, 'adjustment', reason, connection, 0, expirationDate, productId);
-        }
-      } else {
-        // This IS the root — propagate down through all descendants
-        if (quantity < 0) {
-          await deductFamilyStock(productId, Math.abs(quantity), adjustmentId, 'adjustment', reason, connection);
-        } else {
-          await addFamilyStock(productId, quantity, adjustmentId, 'adjustment', reason, connection, 0, expirationDate, productId);
-        }
-      }
-      return { success: true, adjustmentId, newStock };
-    });
-
-    return result;
-  } catch (error) {
-    const refused = branchRefusal(error);
-    if (refused) return refused;
-    console.error('Error adjusting stock:', error);
-    return { success: false, error: 'Failed to adjust stock' };
-  }
-}
-

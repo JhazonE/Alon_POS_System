@@ -626,25 +626,44 @@ test.describe('adjustStock (server action) — branch isolation', () => {
     }
   });
 
-  test('ang gi-pasa nga scope mao ang gamiton, dili ang session (para sa approval queue)', async ({ page }) => {
-    const hq = await seedSecondBranch();
+  test('gi-ignore ang scope {all} nga gi-pasa sa caller sa posisyon sa dating scope parameter', async ({ page }) => {
+    const a = await seedSecondBranch();
     const b = await seedSecondBranch();
-    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-SCOPE-${Date.now()}`);
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-FORGE-${Date.now()}`);
     try {
-      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
-      await setUserBranch(hq.userUid, null);
-      await seedSession(page, branchUser(hq));
-      // Ang session kay head office (makasulod sa B), apan ang scope nga gi-pasa kay branch A.
-      const refused = await adjust(page, [
-        productId, 2, 'explicit scope', 'system', false, null,
-        { branchId: hq.branchId, scope: 'single' },
+      await seedSession(page, branchUser(a));
+      // Branch-A session, produkto sa B, ug forged scope 'all' sa 7th arg.
+      const result = await adjust(page, [
+        productId, 5, 'forged scope', a.userUid, false, null,
+        { branchId: null, scope: 'all' },
       ]);
-      expect(refused.success).toBe(false);
+
+      expect(result.success).toBe(false);
+      expect(await readStock(productId), 'ang forged scope wala makalabay sa guard').toBe(10);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-ignore ang forged scope {all} bisan sa ubang posisyon sa extra args ug uban sa forged userId', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-FORGE2-${Date.now()}`);
+    const forged = { branchId: null, scope: 'all' };
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await adjust(page, [
+        productId, 5, 'forged scope 2', b.userUid, true, null, forged, forged, forged,
+      ]);
+
+      expect(result.success).toBe(false);
       expect(await readStock(productId)).toBe(10);
     } finally {
       await cleanupAdjustments(productId);
       await cleanupSecondBranch(b);
-      await cleanupSecondBranch(hq);
+      await cleanupSecondBranch(a);
     }
   });
 
