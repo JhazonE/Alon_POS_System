@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { signSession, verifySession, SESSION_MAX_AGE_MS } from '../../lib/session-cookie';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { signSession, verifySession, sessionSecret, SESSION_MAX_AGE_MS } from '../../lib/session-cookie';
 
 // Signs an arbitrary payload object, so a test can control iat directly.
 function signRaw(payload: object, secret: string): string {
@@ -38,5 +41,30 @@ assert.equal(
   null,
   'future-dated iat returns null',
 );
+
+// Non-canonical signature: same HMAC bytes with trailing junk must be rejected.
+const [p1, s1] = t.split('.');
+assert.equal(verifySession(`${p1}.${s1}=`, 'secret-1'), null, 'non-canonical signature (=) returns null');
+assert.equal(verifySession(`${p1}.${s1}!!`, 'secret-1'), null, 'non-canonical signature (!!) returns null');
+
+// sessionSecret is total: with SESSION_SECRET unset it returns a usable,
+// non-empty secret and does not throw. It runs in a temp cwd so the real .env
+// is never written. The EISDIR/unreadable-.env case is covered by the
+// try/catch in readEnvSecret, not by a test here.
+const savedEnv = process.env.SESSION_SECRET;
+const savedCwd = process.cwd();
+const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'session-cookie-test-'));
+try {
+  delete process.env.SESSION_SECRET;
+  process.chdir(scratch);
+  const secret = sessionSecret();
+  assert.equal(typeof secret, 'string', 'sessionSecret returns a string');
+  assert.ok(secret.length > 0, 'sessionSecret returns a non-empty secret');
+} finally {
+  process.chdir(savedCwd);
+  if (savedEnv === undefined) delete process.env.SESSION_SECRET;
+  else process.env.SESSION_SECRET = savedEnv;
+  fs.rmSync(scratch, { recursive: true, force: true });
+}
 
 console.log('session-cookie: all assertions passed');

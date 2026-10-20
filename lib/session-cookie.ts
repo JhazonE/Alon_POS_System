@@ -43,6 +43,9 @@ export function verifySession(token: string, secret: string): string | null {
 
     const expected = sign(payload, secret);
     const given = Buffer.from(sigPart, 'base64url');
+    // Node's base64url decoder is lenient; require the canonical encoding so a
+    // valid signature with trailing junk characters is rejected.
+    if (given.toString('base64url') !== sigPart) return null;
     if (given.length !== expected.length) return null;
     if (!crypto.timingSafeEqual(given, expected)) return null;
 
@@ -78,6 +81,18 @@ function electronUserDataDir(): string | null {
 function readSecretFile(file: string): string | null {
   try {
     const value = fs.readFileSync(file, 'utf8').trim();
+    return value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** SESSION_SECRET line from <cwd>/.env, or null. Never throws. */
+function readEnvSecret(): string | null {
+  try {
+    const envFile = path.join(process.cwd(), '.env');
+    const match = fs.readFileSync(envFile, 'utf8').match(/^SESSION_SECRET=(.+)$/m);
+    const value = match ? match[1].trim() : '';
     return value.length > 0 ? value : null;
   } catch {
     return null;
@@ -124,12 +139,9 @@ export function sessionSecret(): string {
       return cachedSecret;
     }
   } else {
-    const envFile = path.join(process.cwd(), '.env');
-    const match = fs.existsSync(envFile)
-      ? fs.readFileSync(envFile, 'utf8').match(/^SESSION_SECRET=(.+)$/m)
-      : null;
-    if (match && match[1].trim().length > 0) {
-      cachedSecret = match[1].trim();
+    const fromFile = readEnvSecret();
+    if (fromFile) {
+      cachedSecret = fromFile;
       return cachedSecret;
     }
   }
