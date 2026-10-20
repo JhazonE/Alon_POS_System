@@ -2,13 +2,21 @@
  * Signed session cookie primitives (zero external deps).
  * Token layout: base64url(JSON payload) + '.' + base64url(HMAC-SHA256(payload)).
  * Payload: { uid, iat }. verifySession never throws — it returns null for any
- * malformed, unsigned, tampered or expired token, matching lib/crypto/aes-gcm.ts.
+ * malformed, unsigned, tampered, expired or future-dated token, matching
+ * lib/crypto/aes-gcm.ts.
  */
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
 export const SESSION_COOKIE_NAME = 'alon-session';
+
+/**
+ * Maximum session age: 12 hours. Sized to one POS shift (a single long shift,
+ * not days or weeks) so a copied cookie stops working by the end of the shift.
+ * Task 3 uses this for the cookie's maxAge (seconds = ms / 1000).
+ */
+export const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 const SECRET_ENV_KEY = 'SESSION_SECRET';
 const SECRET_FILE_NAME = 'session-secret';
@@ -40,6 +48,14 @@ export function verifySession(token: string, secret: string): string | null {
 
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!data || typeof data.uid !== 'string' || data.uid.length === 0) return null;
+
+    // A missing, non-numeric or future-dated iat is invalid: a token without a
+    // usable issue time must never be accepted as "never expires".
+    const iat = data.iat;
+    if (typeof iat !== 'number' || !Number.isFinite(iat)) return null;
+    const age = Date.now() - iat;
+    if (age < 0 || age > SESSION_MAX_AGE_MS) return null;
+
     return data.uid;
   } catch {
     return null;
