@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
 import { compare } from 'bcryptjs';
+import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS, signSession, sessionSecret } from '@/lib/session-cookie';
 
 export async function POST(request: NextRequest) {
     try {
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
         const userPermissions = permissions.map((p: any) => p.permission);
 
         // Return user session data
-        return NextResponse.json({
+        const response = NextResponse.json({
             uid: user.uid,
             username: user.username, // using "username" as the field
             email: user.username, // keeping "email" for compatibility if frontend expects it, or we can just use username
@@ -69,6 +70,22 @@ export async function POST(request: NextRequest) {
             photoURL: user.photoURL,
             permissions: userPermissions,
         });
+
+        // Additive: a signed session cookie lets 'use server' actions (which have
+        // no request object) identify the caller. Never fail login over it —
+        // users without a cookie keep working via the localStorage session.
+        try {
+            response.cookies.set(SESSION_COOKIE_NAME, signSession(user.uid, sessionSecret()), {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                maxAge: SESSION_MAX_AGE_MS / 1000,
+            });
+        } catch (cookieError) {
+            console.error('Session cookie could not be issued:', cookieError);
+        }
+
+        return response;
     } catch (error: any) {
         console.error('Login error:', error);
         return NextResponse.json(

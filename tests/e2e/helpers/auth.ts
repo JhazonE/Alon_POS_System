@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS, signSession, sessionSecret } from '../../../lib/session-cookie';
 
 /**
  * Auth helpers para sa e2e tests.
@@ -29,6 +30,26 @@ export const DEFAULT_ADMIN: SessionUser = {
 };
 
 /**
+ * I-install ang tinuod nga signed session cookie sa browser context — parehas
+ * sa gi-set sa production login. Kung wala ni, ang 'use server' actions walay
+ * identity ug ang mga test mo-agi ra sa unguarded fallback imbes sa guard.
+ * Ang cookie domain `localhost` (walay port) mo-match sa test server (3100).
+ */
+async function installSessionCookie(page: Page, uid: string): Promise<void> {
+  await page.context().addCookies([
+    {
+      name: SESSION_COOKIE_NAME,
+      value: signSession(uid, sessionSecret()),
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+      expires: Math.floor((Date.now() + SESSION_MAX_AGE_MS) / 1000),
+    },
+  ]);
+}
+
+/**
  * I-intercept ang `/api/auth/login` ug mo-balik ug fixed nga user — walay DB hit.
  * Itawag ni una sa page.goto('/login').
  */
@@ -48,6 +69,9 @@ export async function mockLoginEndpoint(
       return;
     }
 
+    // Parehas sa production: ang login mo-issue sa session cookie.
+    await installSessionCookie(page, user.uid);
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -64,6 +88,7 @@ export async function mockLoginEndpoint(
  * routes nga dili mo-agi sa login form. Itawag ni una mo-navigate.
  */
 export async function seedSession(page: Page, user: SessionUser = DEFAULT_ADMIN): Promise<void> {
+  await installSessionCookie(page, user.uid);
   await page.addInitScript((u) => {
     window.localStorage.setItem(
       'mock-user-session',
