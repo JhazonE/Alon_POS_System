@@ -1,6 +1,12 @@
 'use server';
 
 import { query } from '@/lib/mysql';
+import {
+  resolveScopeFromSession,
+  assertProductInScope,
+  BranchResolutionError,
+  type BranchScope,
+} from '@/lib/branch-context';
 import { recordAdjustmentMovement } from '@/lib/stock-movements';
 import type { StockAdjustment } from '@/lib/types';
 
@@ -214,8 +220,36 @@ import { checkApprovalRequired, submitToApprovalQueue } from '@/lib/approvals';
 import { withTransaction } from '@/lib/mysql';
 import { deductFamilyStock, addFamilyStock, findUltimateRoot } from '@/lib/family-sync';
 
-export async function adjustStock(productId: string, quantity: number, reason: string, userId: string = 'system', isInternalFinalization: boolean = false, expirationDate?: string | null) {
+/**
+ * Branch guard for adjustStock.
+ *
+ * `userId` is an ordinary argument of a public 'use server' endpoint, so a
+ * caller can set it to anything: it is attribution only and is NEVER used to
+ * derive a branch. The branch comes from an explicit `scope` (trusted callers
+ * that derived it from DB state, e.g. the approval queue) or else from the
+ * signed session cookie. null from the session means "no trustworthy identity"
+ * and the action proceeds exactly as before the guard existed. A refusal
+ * becomes the action's own `{ success: false, error }` shape; it never throws.
+ */
+function branchRefusal(error: unknown): { success: false; error: string } | null {
+  if (error instanceof BranchResolutionError) {
+    return { success: false, error: error.message };
+  }
+  return null;
+}
+
+export async function adjustStock(productId: string, quantity: number, reason: string, userId: string = 'system', isInternalFinalization: boolean = false, expirationDate?: string | null, scope?: BranchScope) {
   try {
+    // Branch guard. Only the TARGET product is asserted: family sync below
+    // writes related family members too, but cross-warehouse family links do
+    // not exist in practice (Phase 2b), so members are deliberately not asserted.
+    // isInternalFinalization is caller-settable, so it is not a trust boundary
+    // and does not exempt this check.
+    const effectiveScope = scope ?? (await resolveScopeFromSession());
+    if (effectiveScope) {
+      await assertProductInScope(productId, effectiveScope);
+    }
+
     // 1. Check if multi-level approval is required
     const isApprovalRequired = !isInternalFinalization && await checkApprovalRequired('STOCK_ADJUSTMENT');
     
@@ -304,6 +338,8 @@ export async function adjustStock(productId: string, quantity: number, reason: s
 
     return result;
   } catch (error) {
+    const refused = branchRefusal(error);
+    if (refused) return refused;
     console.error('Error adjusting stock:', error);
     return { success: false, error: 'Failed to adjust stock' };
   }

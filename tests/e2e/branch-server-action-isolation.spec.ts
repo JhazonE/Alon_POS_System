@@ -7,6 +7,7 @@ import {
   cleanupSecondBranch,
   grantPermission,
   setUserBranch,
+  seedProductInWarehouse,
   type SeededBranch,
 } from './helpers/branches';
 import { ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
@@ -301,13 +302,13 @@ test.describe('updateProduct (server action) — branch isolation', () => {
  * POST sa action id (gikan sa server-reference manifest) uban sa session cookie
  * sa context.
  */
-function actionIdFor(exportedName: string): string {
+function actionIdFor(exportedName: string, fileSuffix = 'products/actions.ts'): string {
   for (const dir of ['.next-test/dev/server', '.next-test/server']) {
     const file = path.join(process.cwd(), dir, 'server-reference-manifest.json');
     if (!fs.existsSync(file)) continue;
     const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
     for (const [id, entry] of Object.entries<any>(manifest.node ?? {})) {
-      if (entry.exportedName === exportedName && String(entry.filename).includes('products/actions.ts')) {
+      if (entry.exportedName === exportedName && String(entry.filename).includes(fileSuffix)) {
         return id;
       }
     }
@@ -315,12 +316,17 @@ function actionIdFor(exportedName: string): string {
   throw new Error(`Server action ${exportedName} wala sa manifest`);
 }
 
-async function callServerAction(page: Page, exportedName: string, args: unknown[]): Promise<any> {
-  // I-compile una ang /products aron naa na ang action sa manifest.
-  await page.goto('/products');
-  const res = await page.request.post('/products', {
+async function callServerAction(
+  page: Page,
+  exportedName: string,
+  args: unknown[],
+  target: { route: string; fileSuffix: string } = { route: '/products', fileSuffix: 'products/actions.ts' }
+): Promise<any> {
+  // I-compile una ang page nga mo-import sa action aron naa na kini sa manifest.
+  await page.goto(target.route);
+  const res = await page.request.post(target.route, {
     headers: {
-      'Next-Action': actionIdFor(exportedName),
+      'Next-Action': actionIdFor(exportedName, target.fileSuffix),
       'Content-Type': 'text/plain;charset=UTF-8',
       Accept: 'text/x-component',
     },
@@ -522,6 +528,159 @@ test.describe('deleteProduct (server action) — branch isolation', () => {
       }).toPass({ timeout: 10_000 });
     } finally {
       await cleanupProducts(product.id);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+/**
+ * Ang adjustStock walay UI path nga mo-drive niini nga diretso (ang dialog
+ * mo-asa sa localStorage), mao nga gitawag kini isip server action pinaagi sa
+ * history/actions.ts. Ang `userId` argument kay gi-pasa sa caller - mao nga
+ * DILI kini mahimong basehan sa branch.
+ */
+const ADJUST_STOCK = { route: '/inventory', fileSuffix: 'inventory/history/actions.ts' };
+const adjust = (page: Page, args: unknown[]) => callServerAction(page, 'adjustStock', args, ADJUST_STOCK);
+
+async function readStock(productId: string): Promise<number> {
+  const rows: any = await testQuery('SELECT stock FROM products WHERE id = ?', [productId]);
+  return Number(rows[0].stock);
+}
+
+async function cleanupAdjustments(...productIds: string[]) {
+  for (const id of productIds) {
+    await testQuery('DELETE FROM stock_adjustments WHERE product_id = ?', [id]);
+    await testQuery('DELETE FROM stock_movements WHERE product_id = ?', [id]);
+    await testQuery('DELETE FROM inventory_batches WHERE product_id = ?', [id]);
+  }
+}
+
+test.describe('adjustStock (server action) — branch isolation', () => {
+  test('ang cookie sa branch A mo-labaw sa userId sa branch B nga gi-pasa sa caller', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-PREM-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      // Cookie = branch A; userId argument = user sa branch B; target = produkto sa B.
+      // Kung ang guard mo-basa sa userId, mo-pasar kini nga write.
+      const result = await adjust(page, [productId, 5, 'forged userId', b.userUid]);
+
+      expect(result.success).toBe(false);
+      expect(await readStock(productId), 'ang stock sa B wala mausab').toBe(10);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-adjust sa branch A ang stock sa produkto sa branch B', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-X-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await adjust(page, [productId, -4, 'cross-branch', a.userUid]);
+
+      expect(result.success).toBe(false);
+      expect(await readStock(productId)).toBe(10);
+      const adjRows: any = await testQuery('SELECT COUNT(*) AS n FROM stock_adjustments WHERE product_id = ?', [productId]);
+      expect(Number(adjRows[0].n), 'walay stock_adjustments row nga nahimo').toBe(0);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('dili ma-exempt ang guard sa isInternalFinalization flag', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-INT-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await adjust(page, [productId, 3, 'internal flag', a.userUid, true]);
+
+      expect(result.success).toBe(false);
+      expect(await readStock(productId)).toBe(10);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('molampos ang pag-adjust sa stock sa kaugalingong produkto', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(a.warehouseId, `ADJ-OWN-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      const result = await adjust(page, [productId, 5, 'own product', a.userUid]);
+
+      expect(result.success).toBe(true);
+      expect(await readStock(productId)).toBe(15);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang gi-pasa nga scope mao ang gamiton, dili ang session (para sa approval queue)', async ({ page }) => {
+    const hq = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-SCOPE-${Date.now()}`);
+    try {
+      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(hq.userUid, null);
+      await seedSession(page, branchUser(hq));
+      // Ang session kay head office (makasulod sa B), apan ang scope nga gi-pasa kay branch A.
+      const refused = await adjust(page, [
+        productId, 2, 'explicit scope', 'system', false, null,
+        { branchId: hq.branchId, scope: 'single' },
+      ]);
+      expect(refused.success).toBe(false);
+      expect(await readStock(productId)).toBe(10);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(hq);
+    }
+  });
+
+  test('ang head office (all_branches) maka-adjust sa stock sa bisan unsang branch', async ({ page }) => {
+    const hq = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-HQ-${Date.now()}`);
+    try {
+      await grantPermission(hq.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(hq.userUid, null);
+      await seedSession(page, branchUser(hq));
+      const result = await adjust(page, [productId, 2, 'hq', hq.userUid]);
+
+      expect(result.success).toBe(true);
+      expect(await readStock(productId)).toBe(12);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(hq);
+    }
+  });
+
+  test('walay cookie (pre-upgrade session) — mo-fallback sa wala-guard nga batasan', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const productId = await seedProductInWarehouse(b.warehouseId, `ADJ-NOCK-${Date.now()}`);
+    try {
+      await seedSession(page, branchUser(a));
+      await page.context().clearCookies();
+      const result = await adjust(page, [productId, 1, 'no cookie', a.userUid]);
+
+      expect(result.success).toBe(true);
+      expect(await readStock(productId)).toBe(11);
+    } finally {
+      await cleanupAdjustments(productId);
+      await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
     }
   });
