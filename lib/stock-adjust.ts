@@ -19,10 +19,11 @@ function branchRefusal(error: unknown): { success: false; error: string } | null
  * Branch-guarded stock adjustment - the TRUSTED entry point.
  *
  * This module deliberately has NO 'use server' directive: it is not an HTTP
- * endpoint, so `scope` can only come from server code that resolved it itself
- * (the public `adjustStock` action passes the signed session's scope; the
- * approval processor passes a scope derived from the queue row's DB-stored
- * created_by). Never re-export this from a 'use server' file: every parameter
+ * endpoint, so `scope` can only come from server code that resolved it itself.
+ * Today the only caller is the public `adjustStock` action, which passes the
+ * signed session's scope. Phase 2c Task 7 adds a second trusted caller: the
+ * approval processor, passing a scope derived from the queue row's DB-stored
+ * created_by. Never re-export this from a 'use server' file: every parameter
  * of a server action is attacker-controlled, and `{ scope: 'all' }` would
  * bypass the guard.
  *
