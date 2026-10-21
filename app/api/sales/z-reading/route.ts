@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, getNextZReadingNumber } from '@/lib/mysql';
 import { format } from 'date-fns';
 import { saveEJournalFiles } from '@/lib/ejournal/ejournal-writer';
-import { sendZReadingToStaLucia } from '@/lib/integrations/sta-lucia/send-z-reading';
+import { sendZReadingToStaLucia, zReadingRef } from '@/lib/integrations/sta-lucia/send-z-reading';
 import { resolveScopeFromBody, assertTerminalInBranch, branchErrorResponse } from '@/lib/branch-context';
 
 const safeParseFloat = (val: any): number => {
@@ -911,7 +911,7 @@ export async function POST(request: NextRequest) {
         // third-party HTTP failure must not be able to fail, delay, or roll back
         // this response. Failures land in external_api_logs and are picked up by
         // the sync-queue sweep in lib/scheduler.ts.
-        sendZReadingToStaLucia(String(readingNumber)).catch((e) =>
+        sendZReadingToStaLucia(zReadingRef(terminalId, String(readingNumber))).catch((e) =>
           console.error('Sta Lucia sales submission failed:', e),
         );
 

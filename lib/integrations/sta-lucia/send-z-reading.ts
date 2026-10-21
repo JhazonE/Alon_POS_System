@@ -5,6 +5,68 @@ import type { ZReadingLike } from './types';
 
 export const TRANSACTION_TYPE = 'STA_LUCIA_SALES';
 
+/**
+ * A Z-reading is identified by (terminal, reading number), NOT by the number
+ * alone. The number is Z-YYYYMMDD-NNN with a per-terminal counter and no
+ * terminal identifier, so two registers in one store legitimately hold the same
+ * one (z_readings is UNIQUE on (terminal_id, reading_number) since migration
+ * 142). Keying anything on the bare number lets one terminal's submission mask
+ * the other's, and the masked terminal's sales are silently never reported to
+ * the mall.
+ *
+ * A "ref" is how that identity travels through external_api_logs.transaction_id
+ * and back into sendZReadingToStaLucia() (the retry sweep and the Retry button
+ * both feed log.transaction_id straight back in): `<terminalId>|<readingNumber>`.
+ * A bare reading number is still accepted as a ref - log rows written before
+ * per-terminal readings carry one - and resolves only when it is unambiguous.
+ * Reading numbers never contain '|'.
+ */
+const REF_SEPARATOR = '|';
+
+export function zReadingRef(terminalId: string | null | undefined, readingNumber: string): string {
+  return terminalId ? `${terminalId}${REF_SEPARATOR}${readingNumber}` : readingNumber;
+}
+
+function parseZReadingRef(ref: string): { terminalId: string | null; readingNumber: string } {
+  const i = ref.lastIndexOf(REF_SEPARATOR);
+  return i > 0
+    ? { terminalId: ref.slice(0, i), readingNumber: ref.slice(i + 1) }
+    : { terminalId: null, readingNumber: ref };
+}
+
+export type ZReadingLookup =
+  | { kind: 'found'; row: any }
+  | { kind: 'missing' }
+  | { kind: 'ambiguous' };
+
+/**
+ * Resolve a ref to exactly one z_readings row. Never picks "whichever LIMIT 1
+ * returns": a qualified ref hits the (terminal_id, reading_number) unique key,
+ * and a bare number that matches more than one terminal is reported as
+ * ambiguous instead of silently resolving to the wrong terminal's sales.
+ * No ref means the most recent Z-reading.
+ */
+export async function resolveZReadingRow(ref?: string): Promise<ZReadingLookup> {
+  if (!ref) {
+    const rows = await query('SELECT * FROM z_readings ORDER BY id DESC LIMIT 1', []) as any[];
+    return rows?.length ? { kind: 'found', row: rows[0] } : { kind: 'missing' };
+  }
+  const { terminalId, readingNumber } = parseZReadingRef(ref);
+  if (terminalId) {
+    const rows = await query(
+      'SELECT * FROM z_readings WHERE terminal_id = ? AND reading_number = ? LIMIT 1',
+      [terminalId, readingNumber],
+    ) as any[];
+    return rows?.length ? { kind: 'found', row: rows[0] } : { kind: 'missing' };
+  }
+  const rows = await query(
+    'SELECT * FROM z_readings WHERE reading_number = ? ORDER BY id LIMIT 2',
+    [readingNumber],
+  ) as any[];
+  if (!rows?.length) return { kind: 'missing' };
+  return rows.length > 1 ? { kind: 'ambiguous' } : { kind: 'found', row: rows[0] };
+}
+
 export interface SendZReadingResult {
   success: boolean;
   error?: string;
@@ -237,15 +299,21 @@ const CLAIM_STALE_MINUTES = 15;
  * 095_dedupe_external_api_logs), so it cannot be a concurrency guard on its
  * own: a SELECT-then-INSERT check against that table is check-then-act and
  * two concurrent sends for the same Z-reading can both pass it before either
- * writes its row. This table's PRIMARY KEY on z_reading_id makes the claim
- * below atomic — only one concurrent INSERT can win.
+ * writes its row. This table's PRIMARY KEY on (terminal_id, z_reading_id) makes
+ * the claim below atomic — only one concurrent INSERT can win. It is per
+ * terminal because two terminals may hold the same reading number (see
+ * zReadingRef); migration 143 owns the swap on existing installs, this CREATE
+ * only matters for a table that does not exist yet. terminal_id is '' for a
+ * legacy reading with no terminal, never NULL: NULLs never collide in a key.
  */
 async function ensureClaimsTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS sta_lucia_submissions (
-      z_reading_id VARCHAR(50) PRIMARY KEY,
+      z_reading_id VARCHAR(50) NOT NULL,
+      terminal_id  VARCHAR(50) NOT NULL DEFAULT '',
       claimed_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      succeeded    TINYINT(1) NOT NULL DEFAULT 0
+      succeeded    TINYINT(1) NOT NULL DEFAULT 0,
+      PRIMARY KEY (terminal_id, z_reading_id)
     )
   `);
 }
@@ -255,7 +323,8 @@ type ClaimOutcome =
   | { claimed: false; result: SendZReadingResult };
 
 /**
- * Atomically claim a Z-reading for submission via the table's PRIMARY KEY.
+ * Atomically claim a Z-reading for submission via the table's PRIMARY KEY,
+ * (terminal_id, z_reading_id): each terminal claims, and is retried, independently.
  *
  * On a duplicate key, a succeeded claim or a fresh (< CLAIM_STALE_MINUTES)
  * in-flight claim is left alone and the caller is told to skip. A claim
@@ -282,9 +351,12 @@ type ClaimOutcome =
  * can match, so the decision comes from `affectedRows`, never from a value
  * read in a separate statement.
  */
-async function claimZReading(resolvedId: string): Promise<ClaimOutcome> {
+export async function claimZReading(terminalId: string, resolvedId: string): Promise<ClaimOutcome> {
   try {
-    await query(`INSERT INTO sta_lucia_submissions (z_reading_id) VALUES (?)`, [resolvedId]);
+    await query(
+      `INSERT INTO sta_lucia_submissions (terminal_id, z_reading_id) VALUES (?, ?)`,
+      [terminalId, resolvedId],
+    );
     return { claimed: true };
   } catch (err: any) {
     if (err?.code !== 'ER_DUP_ENTRY') throw err;
@@ -292,10 +364,10 @@ async function claimZReading(resolvedId: string): Promise<ClaimOutcome> {
     const takeover = await query(
       `UPDATE sta_lucia_submissions
           SET claimed_at = NOW()
-        WHERE z_reading_id = ?
+        WHERE terminal_id = ? AND z_reading_id = ?
           AND succeeded = 0
           AND claimed_at < NOW() - INTERVAL ${CLAIM_STALE_MINUTES} MINUTE`,
-      [resolvedId],
+      [terminalId, resolvedId],
     ) as any;
     if (takeover?.affectedRows === 1) {
       return { claimed: true };
@@ -305,14 +377,14 @@ async function claimZReading(resolvedId: string): Promise<ClaimOutcome> {
     // succeeded, or another caller's UPDATE won the race a moment ago. Read
     // the row only to report why — this SELECT does not decide anything.
     const rows = await query(
-      `SELECT succeeded FROM sta_lucia_submissions WHERE z_reading_id = ?`,
-      [resolvedId],
+      `SELECT succeeded FROM sta_lucia_submissions WHERE terminal_id = ? AND z_reading_id = ?`,
+      [terminalId, resolvedId],
     ) as any[];
     const existing = rows?.[0];
 
     // The row that caused the duplicate-key error was removed (e.g. its
     // failure-path DELETE ran) between our INSERT and now. Retake it.
-    if (!existing) return claimZReading(resolvedId);
+    if (!existing) return claimZReading(terminalId, resolvedId);
 
     return { claimed: false, result: { success: true, skipped: true, zReadingId: resolvedId } };
   }
@@ -339,11 +411,19 @@ export async function sendZReadingToStaLucia(
   const cfg = await loadStaLuciaConfig(apiId);
   if (!cfg) return { success: false, error: 'No enabled Sta Lucia API is configured' };
 
-  const rows = zReadingId
-    ? await query('SELECT * FROM z_readings WHERE reading_number = ? LIMIT 1', [zReadingId]) as any[]
-    : await query('SELECT * FROM z_readings ORDER BY id DESC LIMIT 1', []) as any[];
+  const lookup = await resolveZReadingRow(zReadingId);
 
-  if (!rows?.length) {
+  if (lookup.kind === 'ambiguous') {
+    // Deliberately NOT `permanent`: the reading exists and is sendable, the
+    // caller just has to say which terminal's. Guessing here is the bug this
+    // lookup exists to prevent.
+    return {
+      success: false,
+      error: `Z-reading ${zReadingId} exists on more than one terminal — specify the terminal as "<terminalId>|<readingNumber>"`,
+    };
+  }
+
+  if (lookup.kind === 'missing') {
     // A named Z-reading that is gone can never come back on its own, so this
     // is terminal: without `permanent` the sweep would defer the row 15
     // minutes and re-resolve the same dead reference forever.
@@ -357,22 +437,28 @@ export async function sendZReadingToStaLucia(
     return { success: false, error: 'No Z-readings have been saved yet' };
   }
 
-  const row = rows[0];
+  const row = lookup.row;
   const resolvedId = String(row.reading_number);
+  const terminalId = String(row.terminal_id ?? '');
+  // The key external_api_logs rows for this reading live under. A caller that
+  // handed us a ref (the retry sweep, the Retry button, the finalize hook) gets
+  // its own ref back so a retry folds into the row it came from; "latest" gets
+  // the qualified form.
+  const logKey = zReadingId ?? zReadingRef(terminalId, resolvedId);
 
   // Fast path: kept even with the claim table below in case that table is
   // ever lost or reset — the log survives and still prevents a resend.
   const done = await query(
     `SELECT id FROM external_api_logs
      WHERE transaction_type = ? AND transaction_id = ? AND status = 'success' LIMIT 1`,
-    [TRANSACTION_TYPE, resolvedId],
+    [TRANSACTION_TYPE, logKey],
   ) as any[];
   if (done?.length) {
     return { success: true, skipped: true, zReadingId: resolvedId };
   }
 
   await ensureClaimsTable();
-  const claim = await claimZReading(resolvedId);
+  const claim = await claimZReading(terminalId, resolvedId);
   if (!claim.claimed) {
     return claim.result;
   }
@@ -399,9 +485,15 @@ export async function sendZReadingToStaLucia(
     // throw, which is exactly why `sendSucceeded` above — not "we got past
     // this line" — is the thing the catch block trusts.)
     if (result.success) {
-      await query(`UPDATE sta_lucia_submissions SET succeeded = 1 WHERE z_reading_id = ?`, [resolvedId]);
+      await query(
+        `UPDATE sta_lucia_submissions SET succeeded = 1 WHERE terminal_id = ? AND z_reading_id = ?`,
+        [terminalId, resolvedId],
+      );
     } else {
-      await query(`DELETE FROM sta_lucia_submissions WHERE z_reading_id = ?`, [resolvedId]);
+      await query(
+        `DELETE FROM sta_lucia_submissions WHERE terminal_id = ? AND z_reading_id = ?`,
+        [terminalId, resolvedId],
+      );
     }
 
     // The log write is audit trail, not the source of truth for whether the
@@ -409,7 +501,7 @@ export async function sendZReadingToStaLucia(
     // above, nor turn an accepted mall submission into a 500 for the caller.
     try {
       await writeLog({
-        transactionId: resolvedId,
+        transactionId: logKey,
         endpoint,
         payload,
         response: result.response ?? null,
@@ -441,7 +533,10 @@ export async function sendZReadingToStaLucia(
     // takeover will re-send it after CLAIM_STALE_MINUTES — window (1) of the
     // at-least-once note above.
     if (!sendSucceeded) {
-      await query(`DELETE FROM sta_lucia_submissions WHERE z_reading_id = ?`, [resolvedId]).catch(() => {});
+      await query(
+        `DELETE FROM sta_lucia_submissions WHERE terminal_id = ? AND z_reading_id = ?`,
+        [terminalId, resolvedId],
+      ).catch(() => {});
     }
     throw error;
   }

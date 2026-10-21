@@ -22,6 +22,8 @@ const T1 = `ut_rdg_t1_${RUN}`;
 const T2 = `ut_rdg_t2_${RUN}`;
 const READING_Z = 'Z-99991231-001';
 const READING_X = 'X-99991231-001';
+// Sta. Lucia claim section: distinct from READING_Z so the two sections never share a row.
+const READING_CLAIM = 'Z-99991231-002';
 
 let lastError = '';
 
@@ -46,7 +48,60 @@ async function cleanup() {
   for (const table of ['z_readings', 'x_readings']) {
     await query(`DELETE FROM ${table} WHERE terminal_id IN (?, ?)`, [T1, T2]);
   }
+  await query(`DELETE FROM sta_lucia_submissions WHERE z_reading_id = ?`, [READING_CLAIM]);
   await query(`DELETE FROM pos_terminals WHERE id IN (?, ?)`, [T1, T2]);
+}
+
+// The Sta. Lucia sender claims each Z-reading in sta_lucia_submissions before it
+// posts to the mall. That claim used to be keyed on the bare reading_number, so
+// once two terminals may legally share a number the second terminal's claim
+// collided, was read as "already submitted", and that terminal's sales were
+// silently never reported to the mall (mall rent is commonly a percentage of
+// reported sales). The claim must be unique per (terminal, reading number).
+async function staLuciaClaims() {
+  const { claimZReading } = await import('../../lib/integrations/sta-lucia/send-z-reading');
+  const claimFor = async (terminalId: string, readingNumber: string) =>
+    (await claimZReading(terminalId, readingNumber)).claimed;
+
+  assert.equal(await claimFor(T1, READING_CLAIM), true, 'claim: terminal 1 claims');
+  assert.equal(
+    await claimFor(T2, READING_CLAIM),
+    true,
+    'claim: terminal 2 claims the same number too, not "already submitted" (its sales would never reach the mall)'
+  );
+  // Negative cases: dropping the constraint altogether must not pass.
+  assert.equal(await claimFor(T1, READING_CLAIM), false, 'claim: a repeat claim by terminal 1 is refused');
+  assert.equal(await claimFor(T2, READING_CLAIM), false, 'claim: a repeat claim by terminal 2 is refused');
+
+  // The Z-reading lookup must hand back the terminal that was asked for, never
+  // whichever row LIMIT 1 happens to return, and must refuse to guess when the
+  // bare number is shared. (READING_Z rows for T1 and T2 exist at this point.)
+  const { resolveZReadingRow, zReadingRef } = await import('../../lib/integrations/sta-lucia/send-z-reading');
+  for (const t of [T1, T2]) {
+    const found = await resolveZReadingRow(zReadingRef(t, READING_Z));
+    assert.equal(found.kind, 'found', `lookup: ${t} resolves`);
+    assert.equal(found.kind === 'found' && found.row.terminal_id, t, `lookup: ${t}'s ref returns ${t}'s row, not the other terminal's`);
+  }
+  assert.equal((await resolveZReadingRow(READING_Z)).kind, 'ambiguous', 'lookup: a bare number shared by two terminals is ambiguous, not a guess');
+  assert.equal((await resolveZReadingRow(zReadingRef(T1, 'Z-99991231-777'))).kind, 'missing', 'lookup: unknown reading is missing');
+
+  // Stale takeover still works, and is scoped to the terminal that owns the claim.
+  await query(
+    `UPDATE sta_lucia_submissions SET claimed_at = NOW() - INTERVAL 20 MINUTE
+      WHERE z_reading_id = ? AND terminal_id = ?`,
+    [READING_CLAIM, T1]
+  );
+  assert.equal(await claimFor(T2, READING_CLAIM), false, 'claim: terminal 1 being stale does not free terminal 2');
+  assert.equal(await claimFor(T1, READING_CLAIM), true, 'claim: terminal 1 retakes its own stale claim');
+  assert.equal(await claimFor(T1, READING_CLAIM), false, 'claim: the retaken claim is fresh again');
+
+  // A succeeded claim is never taken over, however old.
+  await query(
+    `UPDATE sta_lucia_submissions SET succeeded = 1, claimed_at = NOW() - INTERVAL 20 MINUTE
+      WHERE z_reading_id = ? AND terminal_id = ?`,
+    [READING_CLAIM, T2]
+  );
+  assert.equal(await claimFor(T2, READING_CLAIM), false, 'claim: a succeeded claim is not retaken');
 }
 
 async function main() {
@@ -70,6 +125,8 @@ async function main() {
       // The same terminal reusing its own number is still a duplicate.
       assert.equal(await insertReading(table, T1, num), false, `${table}: same terminal is refused`);
     }
+
+    await staLuciaClaims();
   } finally {
     await cleanup();
   }

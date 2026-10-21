@@ -143,6 +143,7 @@ import './139_backfill_sales_branch_id';
 import './140_tighten_sales_branch_id';
 import './141_composite_bir_unique_keys';
 import './142_per_terminal_reading_unique_keys';
+import './143_per_terminal_sta_lucia_claim';
 import './120_migrate_parent_child_to_selling_units';
 
 // Import runner functions
