@@ -172,6 +172,13 @@ export async function assertWarehouseInBranch(
   warehouseId: string,
   scope: BranchScope
 ): Promise<void> {
+  // Runtime type check: TS types are erased and server-action arguments arrive off
+  // the wire. query() uses pool.query, which escapes an OBJECT as `key` = value, so
+  // `WHERE id = ?` with {x: 0} becomes a match-many predicate. Runs before the
+  // head-office early return: an object id is malformed input from anyone.
+  if (typeof warehouseId !== 'string' || !warehouseId) {
+    throw new BranchResolutionError('Invalid warehouse id');
+  }
   if (scope.scope === 'all') return;
 
   const rows = (await query(
@@ -320,6 +327,13 @@ export async function assertTerminalInBranch(
   terminalId: string,
   scope: BranchScope
 ): Promise<void> {
+  // Runtime type check: TS types are erased and server-action arguments arrive off
+  // the wire. query() uses pool.query, which escapes an OBJECT as `key` = value, so
+  // `WHERE id = ?` with {x: 0} becomes a match-many predicate. Runs before the
+  // head-office early return: an object id is malformed input from anyone.
+  if (typeof terminalId !== 'string' || !terminalId) {
+    throw new BranchResolutionError('Invalid terminal id');
+  }
   if (scope.scope === 'all') return;
 
   const rows = (await query(
@@ -436,6 +450,13 @@ export async function assertProductInScope(
   productId: string,
   scope: BranchScope
 ): Promise<void> {
+  // Runtime type check: TS types are erased and server-action arguments arrive off
+  // the wire. query() uses pool.query, which escapes an OBJECT as `key` = value, so
+  // `WHERE id = ?` with {x: 0} becomes a match-many predicate. Runs before the
+  // head-office early return: an object id is malformed input from anyone.
+  if (typeof productId !== 'string' || !productId) {
+    throw new BranchResolutionError('Invalid product id');
+  }
   if (scope.scope === 'all') return;
 
   const rows = (await query(
@@ -453,4 +474,32 @@ export async function assertProductInScope(
     );
   }
   await assertWarehouseInBranch(warehouseId, scope);
+}
+
+const warnedUnguardedActions = new Set<string>();
+
+/**
+ * resolveScopeFromSession() plus a warn-once signal for the unguarded fallback.
+ *
+ * null means no trustworthy session cookie, and the guarded action then writes
+ * with NO branch check. That used to be silent. The cookie expires after 12h
+ * with no renewal while the localStorage session never expires, so a
+ * long-lived terminal can quietly lose its guard. Logged once per action name
+ * per process (not per call) so a busy terminal's output is not flooded. A
+ * server-to-server call outside a request scope also lands here; that is
+ * expected and the one-line log is harmless. Still throws
+ * BranchResolutionError exactly as resolveScopeFromSession does.
+ */
+export async function resolveScopeForAction(
+  action: string
+): Promise<BranchScope | null> {
+  const scope = await resolveScopeFromSession();
+  if (!scope && !warnedUnguardedActions.has(action)) {
+    warnedUnguardedActions.add(action);
+    console.warn(
+      `[branch-guard] ${action} ran WITHOUT a branch guard: no valid session cookie ` +
+        `(absent, expired after 12h, or called outside a request). Logged once per action.`
+    );
+  }
+  return scope;
 }

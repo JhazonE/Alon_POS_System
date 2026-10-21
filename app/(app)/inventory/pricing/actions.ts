@@ -4,7 +4,7 @@ import { query } from '@/lib/mysql';
 import { applyAdjustment, isValidPriceValue } from '@/lib/price-update-math';
 import { addProduct } from '@/app/(app)/products/actions';
 import { generateSku } from '@/lib/sku';
-import { resolveScopeFromSession } from '@/lib/branch-context';
+import { resolveScopeForAction, BranchResolutionError } from '@/lib/branch-context';
 import {
   submitPriceUpdateBatchWithScope,
   type PriceUpdateItem,
@@ -25,8 +25,15 @@ export async function submitPriceUpdateBatch(
   userId: string,
   isInternalFinalization: boolean = false,
 ): Promise<PriceUpdateResult> {
-  const scope = await resolveScopeFromSession();
-  return submitPriceUpdateBatchWithScope(warehouseId, items, userId, isInternalFinalization, scope);
+  try {
+    const scope = await resolveScopeForAction('submitPriceUpdateBatch');
+    return await submitPriceUpdateBatchWithScope(warehouseId, items, userId, isInternalFinalization, scope);
+  } catch (error) {
+    // A valid cookie of a deleted/branchless/inactive-branch user makes the scope
+    // lookup throw; return the action's own failure shape rather than an unhandled error.
+    if (error instanceof BranchResolutionError) return { success: false, message: error.message };
+    throw error;
+  }
 }
 
 export interface PriceListRow {

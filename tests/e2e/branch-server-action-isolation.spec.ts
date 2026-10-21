@@ -10,7 +10,13 @@ import {
   seedProductInWarehouse,
   type SeededBranch,
 } from './helpers/branches';
-import { ALL_BRANCHES_PERMISSION } from '../../lib/branch-context';
+import {
+  ALL_BRANCHES_PERMISSION,
+  BranchResolutionError,
+  assertProductInScope,
+  assertWarehouseInBranch,
+  assertTerminalInBranch,
+} from '../../lib/branch-context';
 import { testQuery } from './helpers/db';
 import { seedSession } from './helpers/auth';
 import { EDITABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/test-data';
@@ -1340,6 +1346,104 @@ test.describe('approvals/process - finalization ubos sa branch sa nag-request', 
       await cleanupProducts(productId);
       await cleanupApprovals(['SHELF_TRANSFER', 'PRICE_UPDATE'], shelfQueue, priceQueue);
       await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+/**
+ * Type-confusion: ang server-action args moabot gikan sa wire ug ang TS types
+ * nawala na. lib/mysql.ts naggamit ug pool.query, mao nga ang OBJECT nga
+ * parameter ma-escape nga `key` = value — ang `WHERE id = ?` nga adunay
+ * {supplier_id: 0} mahimong `WHERE id = `supplier_id` = 0`, nga motugma sa
+ * daghang row. Ang assert nagbasa ra sa rows[0], busa kung ang unang row
+ * naa sa branch sa attacker, molapas ang guard samtang ang write mo-igo sa
+ * tanan. Ang assert kinahanglan mo-refuse sa non-string id sa sinugdanan.
+ */
+test.describe('object-id type confusion — branch isolation', () => {
+  const ATTACK_ID = { supplier_id: 0 };
+
+  async function setSupplier(productId: string) {
+    await testQuery('UPDATE products SET supplier_id = ? WHERE id = ?', [TEST_SUPPLIER.id, productId]);
+  }
+
+  async function countReorder(rop: number): Promise<number> {
+    const rows: any = await testQuery('SELECT COUNT(*) AS n FROM products WHERE reorder_point = ?', [rop]);
+    return Number(rows[0].n);
+  }
+
+  test('gi-refuse ang object nga productId sa setPrimarySupplier ug walay row nga mausab', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const rop = 4242;
+    // Ang '!' nga prefix mohimo nga ang produkto sa A ang unang row sa table scan,
+    // aron ang rows[0]-only nga assert molapas kung wala ang type check.
+    const own = await seedFullProduct(a.warehouseId, 'OBJ-OWN');
+    const foreign = await seedFullProduct(b.warehouseId, 'OBJ-FOR');
+    const ownId = `!${own.id}`;
+    await testQuery('UPDATE products SET id = ? WHERE id = ?', [ownId, own.id]);
+    await setSupplier(ownId);
+    await setSupplier(foreign.id);
+    const ownMapping = await seedMapping(ownId, false, rop);
+    try {
+      const before = await countReorder(rop);
+      await seedSession(page, branchUser(a));
+      const result = await callServerAction(page, 'setPrimarySupplier', [ATTACK_ID, ownMapping]);
+
+      expect(result.success).toBe(false);
+      expect(await readReorderPoint(foreign.id), 'reorder_point sa produkto sa B wala mausab').not.toBe(rop);
+      expect(await readReorderPoint(ownId)).not.toBe(rop);
+      expect((await readMapping(ownMapping))?.is_primary).toBe(0);
+      expect(await countReorder(rop), 'walay row nga na-update').toBe(before);
+    } finally {
+      await cleanupProducts(ownId, foreign.id);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('gi-refuse sa tulo ka assert ang object/walay-sulod nga id, bisan sa head office', async () => {
+    const single = { scope: 'single', branchId: 'any-branch' } as const;
+    const all = { scope: 'all', branchId: null } as const;
+    const bad: unknown[] = [ATTACK_ID, { id: 1 }, ['x'], 0, 1, null, undefined, ''];
+    for (const scope of [single, all]) {
+      for (const id of bad) {
+        for (const assertFn of [assertProductInScope, assertWarehouseInBranch, assertTerminalInBranch]) {
+          await expect(assertFn(id as string, scope)).rejects.toBeInstanceOf(BranchResolutionError);
+        }
+      }
+    }
+  });
+});
+
+/**
+ * Ang valid nga cookie sa user nga wala na sa DB (gipapas) mohimo nga mo-throw
+ * ang resolveScopeFromSession. Ang tulo ka wrapper kinahanglan mobalik ug
+ * ilang kaugalingong failure shape, dili unhandled server error.
+ */
+test.describe('wrapper nga ang cookie dili na ma-resolve — mobalik ug failure, dili mo-throw', () => {
+  test('adjustStock, updateProductShelfLocations ug submitPriceUpdateBatch', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const product = await seedFullProduct(a.warehouseId, 'GHOST');
+    try {
+      await seedSession(page, { ...branchUser(a), uid: `ghost-cookie-${Date.now()}` });
+      const adj = await callServerAction(page, 'adjustStock', [product.id, 1, 'ghost'], ADJUST_STOCK);
+      const shelf = await callServerAction(page, 'updateProductShelfLocations', [
+        [{ productId: product.id, shelfLocationId: SHELF_A.id }],
+      ]);
+      const price = await callServerAction(
+        page,
+        'submitPriceUpdateBatch',
+        [a.warehouseId, [priceItem(product.id, 'price', 50)], 'ghost'],
+        PRICING
+      );
+
+      for (const r of [adj, shelf, price]) expect(r.success).toBe(false);
+      expect(await readStock(product.id)).toBe(5);
+      expect((await readPriceCost(product.id)).price).toBe(40);
+    } finally {
+      await cleanupAdjustments(product.id);
+      await cleanupProducts(product.id);
       await cleanupSecondBranch(a);
     }
   });

@@ -3,7 +3,7 @@
 import { query, withTransaction } from '@/lib/mysql';
 import {
   mainBranchId,
-  resolveScopeFromSession,
+  resolveScopeForAction,
   assertProductInScope,
   BranchResolutionError,
 } from '@/lib/branch-context';
@@ -499,7 +499,7 @@ export async function addProduct(
     // Branch guard (session cookie; null = fall back to unguarded). The core
     // takes the scope as a parameter, so it lives outside this 'use server'
     // file: a scope parameter on a public action would be attacker-controlled.
-    const scope = await resolveScopeFromSession();
+    const scope = await resolveScopeForAction('addProduct');
     return await addProductWithScope(formData, userId, isInternalFinalization, scope);
   } catch (error) {
     // resolveScopeFromSession throws for a valid cookie of an unknown/branchless uid.
@@ -516,7 +516,7 @@ export async function updateProduct(id: string, formData: ProductFormData) {
     // touch a product you do not own) and the INCOMING one (you may not move a
     // product into another branch, or NULL it out and detach it from branch
     // scope - a one-way door). An omitted warehouse leaves it unchanged.
-    const scope = await resolveScopeFromSession();
+    const scope = await resolveScopeForAction('updateProduct');
     if (scope) {
       await assertProductInScope(id, scope);
       if (formData.warehouse !== undefined) {
@@ -739,7 +739,7 @@ export async function updateProduct(id: string, formData: ProductFormData) {
 
 export async function deleteProduct(id: string) {
   try {
-    const scope = await resolveScopeFromSession();
+    const scope = await resolveScopeForAction('deleteProduct');
     if (scope) {
       await assertProductInScope(id, scope);
     }
@@ -773,8 +773,16 @@ export async function updateProductShelfLocations(updates: {
   targetShelfId?: string | null;
   quantity?: number;
 }[], userId: string = 'system', isInternalFinalization: boolean = false) {
-  const scope = await resolveScopeFromSession();
-  return updateProductShelfLocationsWithScope(updates, userId, isInternalFinalization, scope);
+  try {
+    const scope = await resolveScopeForAction('updateProductShelfLocations');
+    return await updateProductShelfLocationsWithScope(updates, userId, isInternalFinalization, scope);
+  } catch (error) {
+    // A valid cookie of a deleted/branchless/inactive-branch user makes the scope
+    // lookup throw; return the action's own failure shape rather than an unhandled error.
+    const refused = branchRefusal(error);
+    if (refused) return refused;
+    throw error;
+  }
 }
 
 export async function getLowStockProducts() {
@@ -1428,7 +1436,7 @@ export async function getSupplierMappingsStrict(productId: string) {
 
 export async function setPrimarySupplier(productId: string, mappingId: string) {
   try {
-    const scope = await resolveScopeFromSession();
+    const scope = await resolveScopeForAction('setPrimarySupplier');
     if (scope) {
       await assertProductInScope(productId, scope);
     }

@@ -184,7 +184,7 @@ export async function migrateAdjustmentsToMovements() {
   }
 }
 
-import { resolveScopeFromSession } from '@/lib/branch-context';
+import { resolveScopeForAction, BranchResolutionError } from '@/lib/branch-context';
 import { adjustStockWithScope } from '@/lib/stock-adjust';
 
 /**
@@ -194,6 +194,13 @@ import { adjustStockWithScope } from '@/lib/stock-adjust';
  * attribution only. The guarded implementation lives in lib/stock-adjust.ts.
  */
 export async function adjustStock(productId: string, quantity: number, reason: string, userId: string = 'system', isInternalFinalization: boolean = false, expirationDate?: string | null) {
-  const scope = await resolveScopeFromSession();
-  return adjustStockWithScope(productId, quantity, reason, userId, isInternalFinalization, expirationDate, scope);
+  try {
+    const scope = await resolveScopeForAction('adjustStock');
+    return await adjustStockWithScope(productId, quantity, reason, userId, isInternalFinalization, expirationDate, scope);
+  } catch (error) {
+    // A valid cookie of a deleted/branchless/inactive-branch user makes the scope
+    // lookup throw; return the action's own failure shape rather than an unhandled error.
+    if (error instanceof BranchResolutionError) return { success: false, error: error.message };
+    throw error;
+  }
 }
