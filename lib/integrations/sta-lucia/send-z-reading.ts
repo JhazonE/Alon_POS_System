@@ -2,6 +2,7 @@ import { query } from '@/lib/mysql';
 import { buildSalesPayload } from './payload';
 import { sendSales, type StaLuciaApiConfig } from './client';
 import type { ZReadingLike } from './types';
+import { ensureClaimsSchemaOnce } from './claims-schema';
 
 export const TRANSACTION_TYPE = 'STA_LUCIA_SALES';
 
@@ -290,34 +291,6 @@ async function writeLog(entry: {
  */
 const CLAIM_STALE_MINUTES = 15;
 
-/**
- * Defensive guard so existing installs self-heal without a migration run —
- * same pattern used by the external-api routes (see e.g.
- * app/api/external-api/logs/route.ts's ensureTables()).
- *
- * `external_api_logs` deliberately allows duplicate success rows (see
- * 095_dedupe_external_api_logs), so it cannot be a concurrency guard on its
- * own: a SELECT-then-INSERT check against that table is check-then-act and
- * two concurrent sends for the same Z-reading can both pass it before either
- * writes its row. This table's PRIMARY KEY on (terminal_id, z_reading_id) makes
- * the claim below atomic — only one concurrent INSERT can win. It is per
- * terminal because two terminals may hold the same reading number (see
- * zReadingRef); migration 143 owns the swap on existing installs, this CREATE
- * only matters for a table that does not exist yet. terminal_id is '' for a
- * legacy reading with no terminal, never NULL: NULLs never collide in a key.
- */
-async function ensureClaimsTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS sta_lucia_submissions (
-      z_reading_id VARCHAR(50) NOT NULL,
-      terminal_id  VARCHAR(50) NOT NULL DEFAULT '',
-      claimed_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      succeeded    TINYINT(1) NOT NULL DEFAULT 0,
-      PRIMARY KEY (terminal_id, z_reading_id)
-    )
-  `);
-}
-
 type ClaimOutcome =
   | { claimed: true }
   | { claimed: false; result: SendZReadingResult };
@@ -457,8 +430,36 @@ export async function sendZReadingToStaLucia(
     return { success: true, skipped: true, zReadingId: resolvedId };
   }
 
-  await ensureClaimsTable();
-  const claim = await claimZReading(terminalId, resolvedId);
+  // The claim table is created / upgraded to the (terminal_id, z_reading_id)
+  // shape on first use, so new code running before migration 143 self-heals
+  // instead of failing (see claims-schema.ts).
+  //
+  // If the schema heal or the claim itself throws, it MUST leave a retryable
+  // trace. Before the claim there is no external_api_logs row yet, so a bare
+  // throw would reach only the finalize hook's console.error and this Z-reading
+  // would be silently unreported with nothing for the retry sweep to pick up.
+  // Logging it as `failed` hands it to the sweep / Sync Logs Retry button.
+  let claim: ClaimOutcome;
+  try {
+    await ensureClaimsSchemaOnce();
+    claim = await claimZReading(terminalId, resolvedId);
+  } catch (claimError) {
+    const message = claimError instanceof Error ? claimError.message : String(claimError);
+    console.error('Sta Lucia: could not claim', logKey, claimError);
+    try {
+      await writeLog({
+        transactionId: logKey,
+        endpoint: `${cfg.apiEndpoint.replace(/\/+$/, '')}/api/get-sales`,
+        payload: null,
+        response: null,
+        status: 'failed',
+        errorMessage: `Could not claim Z-reading for submission: ${message}`,
+      });
+    } catch (logError) {
+      console.error('Sta Lucia: failed to log claim failure for', logKey, logError);
+    }
+    return { success: false, error: `Could not claim Z-reading for submission: ${message}`, zReadingId: resolvedId };
+  }
   if (!claim.claimed) {
     return claim.result;
   }

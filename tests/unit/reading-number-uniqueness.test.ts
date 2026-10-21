@@ -24,6 +24,7 @@ const READING_Z = 'Z-99991231-001';
 const READING_X = 'X-99991231-001';
 // Sta. Lucia claim section: distinct from READING_Z so the two sections never share a row.
 const READING_CLAIM = 'Z-99991231-002';
+const API_ID = `ut_rdg_api_${RUN}`;
 
 let lastError = '';
 
@@ -48,7 +49,15 @@ async function cleanup() {
   for (const table of ['z_readings', 'x_readings']) {
     await query(`DELETE FROM ${table} WHERE terminal_id IN (?, ?)`, [T1, T2]);
   }
+  await query(`DELETE FROM sta_lucia_submissions WHERE terminal_id IN (?, ?)`, [T1, T2]);
   await query(`DELETE FROM sta_lucia_submissions WHERE z_reading_id = ?`, [READING_CLAIM]);
+  await query(
+    `DELETE FROM external_api_logs WHERE transaction_type = 'STA_LUCIA_SALES' AND (transaction_id LIKE ? OR transaction_id LIKE ? OR id IN (?, ?))`,
+    [`${T1}|%`, `${T2}|%`, `ut_lg_u_${RUN}`, `ut_lg_a_${RUN}`]
+  );
+  await query(`DELETE FROM external_api_sessions WHERE api_id = ?`, [API_ID]);
+  await query(`DELETE FROM external_apis WHERE id = ?`, [API_ID]);
+  await query(`DROP TABLE IF EXISTS ut_sta_claims_${process.pid}`);
   await query(`DELETE FROM pos_terminals WHERE id IN (?, ?)`, [T1, T2]);
 }
 
@@ -104,6 +113,108 @@ async function staLuciaClaims() {
   assert.equal(await claimFor(T2, READING_CLAIM), false, 'claim: a succeeded claim is not retaken');
 }
 
+// Terminal 1's SUCCESS log must not mask terminal 2's send. Before the log key was
+// qualified, external_api_logs rows were keyed on the bare reading number, so the
+// sender's "already succeeded" fast path answered "skipped" for terminal 2 before
+// it ever reached the claim table - the same silent under-report one layer up.
+// This drives the real sender against a local stand-in for the mall's API.
+async function staLuciaSendsPerTerminal() {
+  const http = await import('node:http');
+  let sales = 0;
+  const server = http.createServer((req, res) => {
+    req.resume();
+    req.on('end', () => {
+      res.setHeader('Content-Type', 'application/json');
+      if (req.url === '/api/login') return void res.end(JSON.stringify({ status: 1, token: 't', owner_token: 'o' }));
+      if (req.url === '/api/get-sales') { sales++; return void res.end(JSON.stringify({ ok: true })); }
+      res.statusCode = 404; res.end('{}');
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+  try {
+    const port = (server.address() as any).port;
+    await query(
+      `INSERT INTO external_apis
+         (id, name, description, enabled, api_endpoint, auth_type, allowed_methods,
+          timeout, retry_attempts, retry_delay, sync_mode, on_error_action, role,
+          provider, login_email, login_password)
+       VALUES (?, 'ut sta lucia', '', 1, ?, 'none', 'send_only', 10000, 1, 500, 'realtime',
+               'log_only', 'general', 'sta_lucia', 'tenant@example.com', 'secret')`,
+      [API_ID, `http://127.0.0.1:${port}`]
+    );
+    const { sendZReadingToStaLucia, zReadingRef } = await import('../../lib/integrations/sta-lucia/send-z-reading');
+    const ref1 = zReadingRef(T1, READING_Z);
+    const ref2 = zReadingRef(T2, READING_Z);
+
+    const r1 = await sendZReadingToStaLucia(ref1, API_ID);
+    assert.equal(r1.success && !r1.skipped, true, `send: terminal 1 sends (${r1.error ?? ''})`);
+    assert.equal(sales, 1, 'send: one submission reached the mall');
+
+    const r2 = await sendZReadingToStaLucia(ref2, API_ID);
+    assert.equal(
+      r2.success && !r2.skipped,
+      true,
+      `send: terminal 1's success log must not mask terminal 2 - it would never be reported (${r2.error ?? 'skipped'})`
+    );
+    assert.equal(sales, 2, 'send: terminal 2 reached the mall too');
+
+    const r1b = await sendZReadingToStaLucia(ref1, API_ID);
+    assert.equal(r1b.skipped, true, 'send: a repeat for terminal 1 is skipped');
+    assert.equal(sales, 2, 'send: the repeat did not reach the mall');
+  } finally {
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+}
+
+// A pre-143 FAILED log row carries a bare reading number. Retried after another
+// terminal files the same number it would be "ambiguous" forever, and no UI can
+// supply a terminal. Migration 143 qualifies the unambiguous ones and leaves the
+// genuinely ambiguous alone.
+async function legacyLogKeysQualified() {
+  const READING_UNIQUE = 'Z-99991231-003';
+  await query(`INSERT INTO z_readings (reading_number, report_date, terminal_id) VALUES (?, NOW(), ?)`, [READING_UNIQUE, T1]);
+  const seed = async (id: string, txn: string) =>
+    query(
+      `INSERT INTO external_api_logs (id, transaction_type, transaction_id, endpoint, payload, status, error_message, retry_count)
+       VALUES (?, 'STA_LUCIA_SALES', ?, 'http://x/api/get-sales', '{}', 'failed', 'seeded', 0)`,
+      [id, txn]
+    );
+  await seed(`ut_lg_u_${RUN}`, READING_UNIQUE);
+  await seed(`ut_lg_a_${RUN}`, READING_Z);
+  const { migration } = await import('../../scripts/migrations/143_per_terminal_sta_lucia_claim');
+  await migration.up();
+  await migration.up(); // idempotent
+  const keyOf = async (id: string) => ((await query(`SELECT transaction_id FROM external_api_logs WHERE id = ?`, [id])) as any[])[0].transaction_id;
+  assert.equal(await keyOf(`ut_lg_u_${RUN}`), `${T1}|${READING_UNIQUE}`, 'legacy: an unambiguous bare log key is qualified with its terminal');
+  assert.equal(await keyOf(`ut_lg_a_${RUN}`), READING_Z, 'legacy: a bare key shared by two terminals is left alone, not guessed');
+}
+
+// The sender must not depend on migration 143 having run first: new code on an old
+// table would otherwise throw "Unknown column terminal_id" before any log row
+// exists, silently losing the submission. Runs on a scratch table in the legacy shape.
+async function claimsSchemaSelfHeals() {
+  const { ensureClaimsSchema, claimsPrimaryKey } = await import('../../lib/integrations/sta-lucia/claims-schema');
+  const scratch = `ut_sta_claims_${process.pid}`;
+  const num = 'Z-99991231-009';
+  await query(`DROP TABLE IF EXISTS ${scratch}`);
+  await query(`CREATE TABLE ${scratch} (z_reading_id VARCHAR(50) PRIMARY KEY, claimed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, succeeded TINYINT(1) NOT NULL DEFAULT 0)`);
+  try {
+    await query(`INSERT INTO ${scratch} (z_reading_id, succeeded) VALUES (?, 1)`, [num]);
+    await query(`INSERT INTO z_readings (reading_number, report_date, terminal_id) VALUES (?, NOW(), ?)`, [num, T1]);
+    const first = await ensureClaimsSchema(scratch);
+    assert.deepEqual([first.addedColumn, first.swappedKey, first.backfilled], [true, true, 1], 'heal: legacy table gets the column, the key and a backfill');
+    assert.deepEqual(await claimsPrimaryKey(scratch), ['terminal_id', 'z_reading_id'], 'heal: key is (terminal_id, z_reading_id)');
+    const rows = (await query(`SELECT terminal_id, succeeded FROM ${scratch}`)) as any[];
+    assert.deepEqual([rows[0].terminal_id, Number(rows[0].succeeded)], [T1, 1], 'heal: a legacy succeeded claim is backfilled to its terminal, not left at "" (that would re-send the day)');
+    const second = await ensureClaimsSchema(scratch);
+    assert.deepEqual([second.addedColumn, second.swappedKey, second.backfilled], [false, false, 0], 'heal: second run is a no-op');
+    await Promise.all([ensureClaimsSchema(scratch), ensureClaimsSchema(scratch), ensureClaimsSchema(scratch)]);
+    assert.deepEqual(await claimsPrimaryKey(scratch), ['terminal_id', 'z_reading_id'], 'heal: concurrent runs leave the key intact');
+  } finally {
+    await query(`DROP TABLE IF EXISTS ${scratch}`);
+  }
+}
+
 async function main() {
   const mainRows: any = await query(`SELECT id FROM branches WHERE is_main = 1 LIMIT 1`);
   assert.ok(mainRows.length > 0, 'an is_main branch exists');
@@ -127,6 +238,9 @@ async function main() {
     }
 
     await staLuciaClaims();
+    await staLuciaSendsPerTerminal();
+    await legacyLogKeysQualified();
+    await claimsSchemaSelfHeals();
   } finally {
     await cleanup();
   }

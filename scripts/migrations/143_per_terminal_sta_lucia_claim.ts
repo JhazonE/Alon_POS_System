@@ -1,5 +1,6 @@
 import { registerMigration, Migration } from './runner';
 import { query } from '../../lib/mysql';
+import { ensureClaimsSchema, claimsPrimaryKey, CLAIMS_TABLE } from '../../lib/integrations/sta-lucia/claims-schema';
 
 /**
  * Make the Sta. Lucia submission claim unique per (terminal, Z-reading number)
@@ -14,6 +15,28 @@ import { query } from '../../lib/mysql';
  * commonly a percentage of reported sales, so that is an under-report, and it is
  * strictly worse than the loud duplicate-key error 142 removed. 142 and 143 must
  * ship together.
+ *
+ * SHARED WITH THE RUNTIME. The column / backfill / key-swap steps live in
+ * lib/integrations/sta-lucia/claims-schema.ts (ensureClaimsSchema) and are called
+ * from here AND lazily by the sender on first use, so new code running before this
+ * migration self-heals instead of throwing "Unknown column" with no log row (which
+ * would be a silent under-report). One implementation, idempotent and safe to run
+ * concurrently, so the two can never drift or fight.
+ *
+ * LEGACY LOG KEYS. external_api_logs.transaction_id for STA_LUCIA_SALES rows is
+ * now `<terminalId>|<readingNumber>` (see zReadingRef in send-z-reading.ts). A
+ * pre-deploy row carries the bare number; if a second terminal later files that
+ * number, the sweep and the Retry button would feed the bare id back, get
+ * "ambiguous", and retry forever with no UI path able to supply a terminal. So
+ * up() rewrites bare ids to the qualified form WHERE the number maps to exactly
+ * one terminal in z_readings (and the result fits the 50-char column). The
+ * ambiguous remainder (several terminals, or no z_readings row / no terminal) is
+ * left untouched: the data does not say which terminal it belonged to, and
+ * guessing would resend another terminal's sales. Those rows stay failed and
+ * visible in Sync Logs; they can only exist if the number was shared before this
+ * migration ran, i.e. 142 shipped without 143. down() strips the prefix again so
+ * the previous code (which looks readings up by bare number) can still resolve
+ * every row instead of abandoning it as "not found".
  *
  * THE KEY: PRIMARY KEY (terminal_id, z_reading_id). It is a primary key rather
  * than a secondary UNIQUE index on purpose:
@@ -60,32 +83,7 @@ import { query } from '../../lib/mysql';
  * an ASCII identifier, so byte equality is the right equality. terminal_id
  * inherits the table default.
  */
-const TABLE = 'sta_lucia_submissions';
-
-async function hasTerminalColumn(): Promise<boolean> {
-  const rows: any = await query(
-    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'terminal_id'`,
-    [TABLE]
-  );
-  return rows.length > 0;
-}
-
-/** Columns of the PRIMARY KEY in key order; empty when the table has none. */
-async function primaryKeyColumns(): Promise<string[]> {
-  const rows: any = await query(
-    `SELECT COLUMN_NAME
-       FROM INFORMATION_SCHEMA.STATISTICS
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = 'PRIMARY'
-      ORDER BY SEQ_IN_INDEX`,
-    [TABLE]
-  );
-  return rows.map((r: any) => r.COLUMN_NAME);
-}
-
-function sameColumns(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((c, i) => c === b[i]);
-}
+const LOG_TYPE = 'STA_LUCIA_SALES';
 
 export const migration: Migration = {
   name: '143_per_terminal_sta_lucia_claim',
@@ -94,79 +92,68 @@ export const migration: Migration = {
   async up() {
     console.log('Running migration: 143_per_terminal_sta_lucia_claim');
 
-    // 1. Column. The old primary key stays in force.
-    if (await hasTerminalColumn()) {
-      console.log(`⚠️ ${TABLE}.terminal_id already exists`);
-    } else {
-      try {
-        await query(
-          `ALTER TABLE \`${TABLE}\` ADD COLUMN terminal_id VARCHAR(50) NOT NULL DEFAULT '' AFTER z_reading_id`
-        );
-        console.log(`✅ Added ${TABLE}.terminal_id`);
-      } catch (e: any) {
-        if (e.code === 'ER_DUP_FIELDNAME' || e.errno === 1060) {
-          console.log(`⚠️ ${TABLE}.terminal_id already exists`);
-        } else {
-          throw e;
-        }
-      }
-    }
+    // Column, backfill and key swap: shared with the sender's runtime self-heal.
+    const r = await ensureClaimsSchema();
+    console.log(r.addedColumn ? `✅ Added ${CLAIMS_TABLE}.terminal_id` : `⚠️ ${CLAIMS_TABLE}.terminal_id already present`);
+    console.log(`✅ Backfilled terminal_id on ${r.backfilled} claim(s)`);
+    console.log(r.swappedKey
+      ? `✅ ${CLAIMS_TABLE} PRIMARY KEY is now (terminal_id, z_reading_id)`
+      : `⚠️ ${CLAIMS_TABLE} already keyed on (terminal_id, z_reading_id)`);
 
-    // 2. Backfill legacy claims from z_readings; only unambiguous matches.
-    const res: any = await query(
-      `UPDATE \`${TABLE}\` s
+    // Qualify legacy bare log keys where unambiguous (see LEGACY LOG KEYS).
+    const logs: any = await query(
+      `UPDATE external_api_logs l
          JOIN (SELECT reading_number, MIN(terminal_id) AS tid
                  FROM z_readings
-                WHERE terminal_id IS NOT NULL AND terminal_id <> ''
                 GROUP BY reading_number
-               HAVING COUNT(DISTINCT terminal_id) = 1) z
-           ON CAST(z.reading_number AS BINARY) = CAST(s.z_reading_id AS BINARY)
-          SET s.terminal_id = z.tid
-        WHERE s.terminal_id = ''`
+               HAVING COUNT(*) = 1 AND MAX(terminal_id IS NOT NULL AND terminal_id <> '') = 1) z
+           ON CAST(l.transaction_id AS BINARY) = CAST(z.reading_number AS BINARY)
+          SET l.transaction_id = CONCAT(z.tid, '|', z.reading_number)
+        WHERE l.transaction_type = ?
+          AND l.transaction_id NOT LIKE '%|%'
+          AND CHAR_LENGTH(z.tid) + 1 + CHAR_LENGTH(z.reading_number) <= 50`,
+      [LOG_TYPE]
     );
-    console.log(`✅ Backfilled terminal_id on ${res?.affectedRows ?? 0} claim(s)`);
-
-    // 3. Swap the key in one atomic statement (see ORDERING above).
-    const want = ['terminal_id', 'z_reading_id'];
-    const pk = await primaryKeyColumns();
-    if (sameColumns(pk, want)) {
-      console.log(`⚠️ ${TABLE} is already keyed on (terminal_id, z_reading_id)`);
-      return;
-    }
-    try {
-      await query(
-        pk.length > 0
-          ? `ALTER TABLE \`${TABLE}\` DROP PRIMARY KEY, ADD PRIMARY KEY (terminal_id, z_reading_id)`
-          : `ALTER TABLE \`${TABLE}\` ADD PRIMARY KEY (terminal_id, z_reading_id)`
-      );
-      console.log(`✅ ${TABLE} PRIMARY KEY is now (terminal_id, z_reading_id)`);
-    } catch (e: any) {
-      // 1068 multiple primary key / 1091 cannot drop: a concurrent or earlier run already swapped it.
-      if ((e.errno === 1068 || e.errno === 1091) && sameColumns(await primaryKeyColumns(), want)) {
-        console.log(`⚠️ ${TABLE} key already swapped`);
-      } else {
-        throw e;
-      }
-    }
+    console.log(`✅ Qualified ${logs?.affectedRows ?? 0} legacy ${LOG_TYPE} log key(s)`);
+    const left: any = await query(
+      `SELECT COUNT(*) AS n FROM external_api_logs
+        WHERE transaction_type = ? AND transaction_id NOT LIKE '%|%'`,
+      [LOG_TYPE]
+    );
+    console.log(`ℹ️ ${left?.[0]?.n ?? 0} bare ${LOG_TYPE} log key(s) left as-is (ambiguous, or no terminal on record)`);
   },
 
   async down() {
     console.log('Rolling back migration: 143_per_terminal_sta_lucia_claim');
 
     // 1. Restore the old key FIRST. THROWS (by design) if two terminals have
-    //    claimed the same reading number - see the note above.
-    const pk = await primaryKeyColumns();
-    if (!sameColumns(pk, ['z_reading_id'])) {
+    //    claimed the same reading number - see the note above - leaving
+    //    everything exactly as it was.
+    const pk = await claimsPrimaryKey();
+    if (!(pk.length === 1 && pk[0] === 'z_reading_id')) {
       await query(
         pk.length > 0
-          ? `ALTER TABLE \`${TABLE}\` DROP PRIMARY KEY, ADD PRIMARY KEY (z_reading_id)`
-          : `ALTER TABLE \`${TABLE}\` ADD PRIMARY KEY (z_reading_id)`
+          ? `ALTER TABLE ${CLAIMS_TABLE} DROP PRIMARY KEY, ADD PRIMARY KEY (z_reading_id)`
+          : `ALTER TABLE ${CLAIMS_TABLE} ADD PRIMARY KEY (z_reading_id)`
       );
     }
 
-    // 2. Only then drop the column.
-    if (await hasTerminalColumn()) {
-      await query(`ALTER TABLE \`${TABLE}\` DROP COLUMN terminal_id`);
+    // 2. Strip the terminal prefix from log keys so the previous code resolves them.
+    await query(
+      `UPDATE external_api_logs
+          SET transaction_id = SUBSTRING_INDEX(transaction_id, '|', -1)
+        WHERE transaction_type = ? AND transaction_id LIKE '%|%'`,
+      [LOG_TYPE]
+    );
+
+    // 3. Only then drop the column.
+    const col: any = await query(
+      `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'terminal_id'`,
+      [CLAIMS_TABLE]
+    );
+    if (col.length > 0) {
+      await query(`ALTER TABLE ${CLAIMS_TABLE} DROP COLUMN terminal_id`);
     }
   }
 };
