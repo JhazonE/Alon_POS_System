@@ -72,6 +72,7 @@ const TEST_FILES = [
   'void-selling-unit-restore.test',
   'shelf-quantities.test',
   'session-cookie.test',
+  'reading-number-uniqueness.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
