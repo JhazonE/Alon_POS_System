@@ -101,32 +101,6 @@ export async function getStockAdjustmentsCount() {
   }
 }
 
-export async function createStockAdjustment(productId: string, quantity: number, reason: string, newStock: number) {
-  try {
-    const adjustmentId = `adj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const sql = `
-      INSERT INTO stock_adjustments (id, product_id, quantity, reason, new_stock)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-
-    await query(sql, [adjustmentId, productId, quantity, reason, newStock]);
-
-    // Get product name for recording movement
-    const getProductSql = `SELECT name FROM products WHERE id = ?`;
-    const productResult = await query(getProductSql, [productId]);
-    const productName = productResult[0]?.name || 'Unknown Product';
-
-    // Record the adjustment in stock movements
-    await recordAdjustmentMovement(adjustmentId, productId, productName, quantity, reason);
-
-    return { success: true, adjustmentId };
-  } catch (error) {
-    console.error('Error creating stock adjustment:', error);
-    return { success: false, error: 'Failed to create stock adjustment' };
-  }
-}
-
 export async function getStockAdjustmentsByProduct(productId: string, limit?: number) {
   try {
     let sql = `

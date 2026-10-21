@@ -10,7 +10,6 @@ import {
 import { PriceLevel, Category, Brand, Supplier, Warehouse, Department, UnitOfMeasure, ShelfLocation, Account, TaxRate } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { findUltimateRoot, deductFamilyStock, addFamilyStock } from '@/lib/family-sync';
-import { syncBaseSellingUnit } from '@/lib/selling-unit-sync';
 import { updateProductShelfLocationsWithScope } from '@/lib/product-shelf-locations';
 import { baseOverrideRow } from '@/lib/base-price-resolution';
 import {
@@ -758,50 +757,6 @@ export async function deleteProduct(id: string) {
     if (refused) return refused;
     console.error('Error deleting product:', error);
     return { success: false, message: 'Error deleting product. It might be referenced by other records.' };
-  }
-}
-
-export async function updateProductPrice(id: string, newPrice: number) {
-  try {
-    const defaultPriceLevelSql = `SELECT id FROM price_levels WHERE is_default = 1 LIMIT 1`;
-    const defaultPriceLevelResult = await query(defaultPriceLevelSql);
-    const defaultLevelId = defaultPriceLevelResult.length > 0 ? defaultPriceLevelResult[0].id : 'retail-level';
-
-    await withTransaction(async (connection) => {
-      // product_price_levels' PK is (product_id, price_level_id) — min_quantity is
-      // not part of it, so a SELECT filtered on min_quantity misses a tiered row
-      // and the follow-up INSERT collides on the PK. Upsert on the real PK and
-      // touch only `price` on conflict: this path is not the Selling Units tab, so
-      // it does not own the minimum and must not reset a stored one.
-      await connection.query(
-        `INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity)
-         VALUES (?, ?, ?, 0)
-         ON DUPLICATE KEY UPDATE price = VALUES(price)`,
-        [id, defaultLevelId, newPrice],
-      );
-
-      await connection.query('UPDATE products SET price = ? WHERE id = ?', [newPrice, id]);
-      // Keep the base selling unit (what the Edit form hydrates from) in step.
-      await syncBaseSellingUnit(connection, id, {
-        price: newPrice,
-        levelPrices: { [defaultLevelId]: newPrice },
-      });
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating product price:', error);
-    return { success: false };
-  }
-}
-
-export async function updateProductStock(id: string, newStock: number) {
-  try {
-    await query('UPDATE products SET stock = ? WHERE id = ?', [newStock, id]);
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating product stock:', error);
-    return { success: false };
   }
 }
 
