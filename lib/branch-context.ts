@@ -503,3 +503,46 @@ export async function resolveScopeForAction(
   }
   return scope;
 }
+
+/**
+ * Refuse unless the user may administer branches (create, edit, deactivate).
+ *
+ * The check is the all_branches GRANT alone, deliberately not
+ * `users.branch_id IS NULL`. Migration 134 left admins branchless-with-grant,
+ * but a branch-assigned user who also holds the grant is a legitimate branch
+ * manager who administers; the question here is "may you administer
+ * branches?", not "which branch are you?". The grant is re-read from
+ * user_permissions on every call, never taken from the session.
+ *
+ * Throws BranchResolutionError (403) for a missing grant and for an unknown
+ * user. Resolves with no value on success.
+ */
+export async function assertHeadOffice(uid: string): Promise<void> {
+  // Runtime type check: TS types are erased and ids arrive off the wire.
+  // query() uses pool.query, which escapes an OBJECT as `key` = value, so
+  // `WHERE u.uid = ?` with {x: 0} becomes a match-many predicate and a guard
+  // reading rows[0] would pass for whichever user happened to come first.
+  // Runs before any query.
+  if (typeof uid !== 'string' || !uid) {
+    throw new BranchResolutionError('Invalid user id');
+  }
+
+  const rows = (await query(
+    `SELECT EXISTS (
+              SELECT 1 FROM user_permissions p
+              WHERE p.user_uid = u.uid AND p.permission = ?
+            ) AS allBranches
+     FROM users u
+     WHERE u.uid = ?`,
+    [ALL_BRANCHES_PERMISSION, uid]
+  )) as any[];
+
+  if (rows.length === 0) {
+    throw new BranchResolutionError(`Unknown user: ${uid}`);
+  }
+  if (Number(rows[0].allBranches) !== 1) {
+    throw new BranchResolutionError(
+      `User ${uid} is not permitted to administer branches`
+    );
+  }
+}
