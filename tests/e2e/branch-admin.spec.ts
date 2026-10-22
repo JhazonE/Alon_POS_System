@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   assertHeadOffice,
   BranchResolutionError,
@@ -15,7 +15,7 @@ import {
   readMainBranchId,
 } from './helpers/branches';
 import { testQuery } from './helpers/db';
-import { DEFAULT_ADMIN } from './helpers/auth';
+import { DEFAULT_ADMIN, seedSession } from './helpers/auth';
 
 /**
  * Branch administration — pure nga tests sa authorisation helper, walay `page`.
@@ -1113,6 +1113,364 @@ test.describe('POST /api/pos-terminals — branchId', () => {
     } finally {
       await dropTask6Terminals();
       await cleanupSecondBranch(inactive);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+/**
+ * Ang branch administration PAGE (/settings/branches).
+ *
+ * Page-level ra ni nga tests, tungod kay ang server-contract tests pasar bisan
+ * ang client mohulog sa uid (Phase 2b). Gi-intercept ang tinuod nga request
+ * gamit ang `page.route` ug gi-assert ang uid UG ang spelling sa field
+ * (POST = camelCase, PATCH = snake_case), tungod kay ang PATCH whitelist
+ * mo-ignore sa wala-kaila nga key nga walay error.
+ */
+test.describe('/settings/branches — ang page', () => {
+  const PAGE_URL = '/settings/branches';
+
+  type Captured = { method: string; url: string; body: any };
+
+  /** I-record ang tanang write (non-GET) nga request ngadto sa branches API; ipadayon sa tinuod nga server. */
+  async function captureWrites(page: Page): Promise<Captured[]> {
+    const captured: Captured[] = [];
+    await page.route('**/api/branches**', async (route) => {
+      const req = route.request();
+      if (req.method() !== 'GET') {
+        captured.push({ method: req.method(), url: req.url(), body: req.postDataJSON() });
+      }
+      await route.continue();
+    });
+    return captured;
+  }
+
+  async function dropBranchByCode(code: string) {
+    const rows = (await testQuery('SELECT id FROM branches WHERE code = ?', [code])) as any[];
+    for (const r of rows) {
+      await testQuery('DELETE FROM branch_number_series WHERE branch_id = ?', [r.id]);
+      await testQuery('DELETE FROM branches WHERE id = ?', [r.id]);
+    }
+  }
+
+  async function codeOf(branchId: string): Promise<string> {
+    return (await testQuery('SELECT code FROM branches WHERE id = ?', [branchId]))[0].code;
+  }
+
+  async function pickOption(page: Page, trigger: string | RegExp, option: string | RegExp) {
+    await page.getByRole('combobox', { name: trigger }).click();
+    await page.getByRole('option', { name: option }).click();
+  }
+
+  async function dropReassignAudit() {
+    if (await auditTableExists()) {
+      await testQuery("DELETE FROM user_activity_logs WHERE module = 'BRANCHES' AND description LIKE 'Reassigned %'");
+    }
+  }
+
+  test('ang pag-himo ug branch mo-POST nga naay uid ug camelCase nga fields, ug makita sa listahan', async ({ page }) => {
+    const code = `P7${Date.now().toString().slice(-6)}`;
+    await seedSession(page);
+    const writes = await captureWrites(page);
+    try {
+      await page.goto(PAGE_URL);
+      await page.getByRole('button', { name: 'New Branch' }).click();
+      await page.getByLabel('Code', { exact: true }).fill(code);
+      await page.getByLabel('Name', { exact: true }).fill('Page Made Branch');
+      await page.getByLabel('Registered Business Name').fill('Page Made Trading');
+      await page.getByLabel('Permit No').fill('PTU-PAGE-1');
+      await page.getByRole('button', { name: 'Save' }).click();
+
+      await expect(page.getByTestId(`branch-row-${code}`)).toBeVisible();
+
+      const posts = writes.filter((w) => w.method === 'POST' && new URL(w.url).pathname === '/api/branches');
+      expect(posts).toHaveLength(1);
+      expect(posts[0].body.uid).toBe(DEFAULT_ADMIN.uid);
+      expect(posts[0].body.code).toBe(code);
+      // camelCase para sa POST: ang snake_case mohimo ug null sa database nga walay error.
+      expect(posts[0].body.businessName).toBe('Page Made Trading');
+      expect(posts[0].body.permitNo).toBe('PTU-PAGE-1');
+      expect(posts[0].body).not.toHaveProperty('business_name');
+
+      const rows = (await testQuery(
+        'SELECT business_name, permit_no, is_active FROM branches WHERE code = ?', [code]
+      )) as any[];
+      expect(rows[0].business_name).toBe('Page Made Trading');
+      expect(rows[0].permit_no).toBe('PTU-PAGE-1');
+      expect(Number(rows[0].is_active)).toBe(1);
+    } finally {
+      await dropBranchByCode(code);
+    }
+  });
+
+  test('ang pag-load sa page mo-hatod sa uid sa members request ug mo-display sa mga count matag branch', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const memberUrls: string[] = [];
+    await page.route('**/api/branches/members**', async (route) => {
+      memberUrls.push(route.request().url());
+      await route.continue();
+    });
+    try {
+      await seedSession(page);
+      await page.goto(PAGE_URL);
+      const row = page.getByTestId(`branch-row-${await codeOf(a.branchId)}`);
+      await expect(row).toBeVisible();
+      await expect(row.getByTestId('count-warehouses')).toHaveText('1');
+      await expect(row.getByTestId('count-users')).toHaveText('1');
+      await expect(row.getByTestId('count-terminals')).toHaveText('1');
+      expect(memberUrls.length).toBeGreaterThan(0);
+      expect(new URL(memberUrls[0]).searchParams.get('uid')).toBe(DEFAULT_ADMIN.uid);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang pag-edit mo-PATCH nga naay uid ug snake_case nga fields, ug mausab gyud ang database', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const code = await codeOf(a.branchId);
+    await seedSession(page);
+    const writes = await captureWrites(page);
+    try {
+      await page.goto(PAGE_URL);
+      await page.getByRole('button', { name: `Edit ${code}` }).click();
+      await expect(page.getByLabel('Code', { exact: true })).toBeDisabled();
+      await page.getByLabel('Name', { exact: true }).fill('Renamed By Page');
+      await page.getByLabel('Registered Business Name').fill('Edited Trading Co');
+      await page.getByLabel('TIN').fill('123-456-789-000');
+      await page.getByLabel('Contact Number').fill('0917-000-0000');
+      await page.getByLabel('Permit No').fill('PTU-EDIT-9');
+      await page.getByLabel('MIN', { exact: true }).fill('MIN-EDIT-9');
+      await page.getByLabel('Serial Number').fill('SN-EDIT-9');
+      await page.getByLabel('Operated By').fill('Operator X');
+      await page.getByLabel('Address').fill('1 Edit Street');
+      await page.getByRole('button', { name: 'Save' }).click();
+
+      await expect(page.getByTestId(`branch-row-${code}`)).toContainText('Renamed By Page');
+
+      const patches = writes.filter((w) => w.method === 'PATCH');
+      expect(patches).toHaveLength(1);
+      expect(new URL(patches[0].url).pathname).toBe(`/api/branches/${a.branchId}`);
+      expect(patches[0].body.uid).toBe(DEFAULT_ADMIN.uid);
+      for (const key of [
+        'name', 'business_name', 'address', 'tin', 'contact_number',
+        'permit_no', 'min_number', 'serial_number', 'operated_by',
+      ]) {
+        expect(patches[0].body, key).toHaveProperty(key);
+      }
+      expect(patches[0].body).not.toHaveProperty('businessName');
+
+      // Ang tinuod nga pamatuod: ang row sa database mausab gyud, dili lang ang request.
+      const row = await readBranch(a.branchId);
+      expect(row.name).toBe('Renamed By Page');
+      expect(row.business_name).toBe('Edited Trading Co');
+      expect(row.tin).toBe('123-456-789-000');
+      expect(row.contact_number).toBe('0917-000-0000');
+      expect(row.permit_no).toBe('PTU-EDIT-9');
+      expect(row.min_number).toBe('MIN-EDIT-9');
+      expect(row.serial_number).toBe('SN-EDIT-9');
+      expect(row.operated_by).toBe('Operator X');
+      expect(row.address).toBe('1 Edit Street');
+    } finally {
+      await cleanupAudit(a.branchId);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang deactivate nga naay attached rows mo-display sa 409 nga naay count, dili generic nga "failed"', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const code = await codeOf(a.branchId);
+    await seedSession(page);
+    const writes = await captureWrites(page);
+    try {
+      await page.goto(PAGE_URL);
+      await page.getByRole('button', { name: `Deactivate ${code}` }).click();
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Deactivate' }).click();
+
+      const refused = page.getByTestId('failure-refused');
+      await expect(refused).toBeVisible();
+      await expect(refused).toContainText('1 warehouse, 1 user, 1 terminal');
+      await expect(page.getByTestId('failure-forbidden')).toHaveCount(0);
+
+      const patches = writes.filter((w) => w.method === 'PATCH');
+      expect(patches).toHaveLength(1);
+      expect(patches[0].body.uid).toBe(DEFAULT_ADMIN.uid);
+      expect(patches[0].body.is_active).toBe(0);
+      // Gi-refuse sa server: nagpabilin nga active ang branch.
+      expect(Number((await readBranch(a.branchId)).is_active)).toBe(1);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang main branch dili ma-deactivate: mo-display sa 409 nga mensahe', async ({ page }) => {
+    await seedSession(page);
+    await page.goto(PAGE_URL);
+    await page.getByRole('button', { name: 'Deactivate MAIN' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Deactivate' }).click();
+    await expect(page.getByTestId('failure-refused')).toContainText('The main branch cannot be deactivated');
+  });
+
+  test('ang branch nga walay attached rows ma-deactivate ug ma-activate pag-usab, nga naay uid ang duha ka PATCH', async ({ page, request }) => {
+    const code = `P7${Date.now().toString().slice(-6)}`;
+    const created = await request.post('/api/branches', { data: { uid: DEFAULT_ADMIN.uid, code, name: 'Toggle Me' } });
+    expect(created.status()).toBe(201);
+    const id = (await created.json()).data.id;
+    await seedSession(page);
+    const writes = await captureWrites(page);
+    try {
+      await page.goto(PAGE_URL);
+      await page.getByRole('button', { name: `Deactivate ${code}` }).click();
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Deactivate' }).click();
+      await expect(page.getByTestId(`branch-row-${code}`)).toContainText('Inactive');
+      expect(Number((await readBranch(id)).is_active)).toBe(0);
+
+      await page.getByRole('button', { name: `Activate ${code}` }).click();
+      await expect(page.getByTestId(`branch-row-${code}`)).not.toContainText('Inactive');
+      expect(Number((await readBranch(id)).is_active)).toBe(1);
+
+      const patches = writes.filter((w) => w.method === 'PATCH');
+      expect(patches.map((p) => p.body.is_active)).toEqual([0, 1]);
+      expect(patches.every((p) => p.body.uid === DEFAULT_ADMIN.uid)).toBe(true);
+    } finally {
+      await cleanupAudit(id);
+      await dropBranchByCode(code);
+    }
+  });
+
+  test('ang pag-reassign sa warehouse mo-POST nga naay uid, mo-display sa kopya bahin sa stock ug sales, ug ang past sale magpabilin sa old branch', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const aCode = await codeOf(a.branchId);
+    const bCode = await codeOf(b.branchId);
+    const saleId = await seedSaleOnTerminal(a.terminalId, a.userUid);
+    await seedSession(page);
+    const writes = await captureWrites(page);
+    try {
+      await page.goto(PAGE_URL);
+      await expect(page.getByTestId(`branch-row-${aCode}`)).toBeVisible();
+      await page.getByRole('button', { name: `Move something into ${bCode}` }).click();
+
+      await pickOption(page, 'Choose Warehouse', new RegExp(`Test WH ${a.branchId.slice(0, 8)}`));
+      const note = page.getByTestId('warehouse-move-note');
+      await expect(note).toContainText('stock and history move with it');
+      await expect(note).toContainText('Past sales keep the branch that issued them');
+
+      await page.getByRole('button', { name: 'Move', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+
+      const posts = writes.filter((w) => new URL(w.url).pathname === REASSIGN);
+      expect(posts).toHaveLength(1);
+      expect(posts[0].method).toBe('POST');
+      expect(posts[0].body).toEqual({
+        uid: DEFAULT_ADMIN.uid,
+        kind: 'warehouse',
+        id: a.warehouseId,
+        branchId: b.branchId,
+      });
+
+      expect(await readWarehouseBranch(a.warehouseId)).toBe(b.branchId);
+      // Ang asymmetry: ang past sale dili mo-uban sa warehouse.
+      expect(await readSaleBranch(saleId)).toBe(a.branchId);
+      // Ang page mo-update sa count: ang B naa na'y 2 ka warehouse, ang A zero.
+      await expect(page.getByTestId(`branch-row-${bCode}`).getByTestId('count-warehouses')).toHaveText('2');
+      await expect(page.getByTestId(`branch-row-${aCode}`).getByTestId('count-warehouses')).toHaveText('0');
+    } finally {
+      await cleanupSale(saleId);
+      await dropReassignAudit();
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang pag-reassign sa terminal ug user mo-POST nga naay uid ug sakto nga kind', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const bCode = await codeOf(b.branchId);
+    await seedSession(page);
+    const writes = await captureWrites(page);
+    try {
+      await page.goto(PAGE_URL);
+      await page.getByRole('button', { name: `Move something into ${bCode}` }).click();
+      await pickOption(page, 'What to move', 'POS Terminal');
+      await pickOption(page, 'Choose POS Terminal', new RegExp(`Test Term ${a.branchId.slice(0, 8)}`));
+      await page.getByRole('button', { name: 'Move', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      expect(await readTerminalBranch(a.terminalId)).toBe(b.branchId);
+
+      await page.getByRole('button', { name: `Move something into ${bCode}` }).click();
+      await pickOption(page, 'What to move', 'User');
+      await pickOption(page, 'Choose User', new RegExp(`testuser_${a.branchId.slice(0, 8)}`));
+      await page.getByRole('button', { name: 'Move', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      expect(await readUserBranch(a.userUid)).toBe(b.branchId);
+
+      const posts = writes.filter((w) => new URL(w.url).pathname === REASSIGN);
+      expect(posts.map((p) => p.body)).toEqual([
+        { uid: DEFAULT_ADMIN.uid, kind: 'terminal', id: a.terminalId, branchId: b.branchId },
+        { uid: DEFAULT_ADMIN.uid, kind: 'user', id: a.userUid, branchId: b.branchId },
+      ]);
+    } finally {
+      await dropReassignAudit();
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang 409 gikan sa reassign (warehouse busy) gi-display sa dialog uban ang count, ug dili mausab ang warehouse', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const bCode = await codeOf(b.branchId);
+    // Tinuod nga busy warehouse: usa ka Pending nga sales order batok niini.
+    const orderId = `p7-order-${Date.now()}`;
+    await testQuery(
+      "INSERT INTO sales_orders (id, order_date, warehouse_id, status) VALUES (?, CURDATE(), ?, 'Pending')",
+      [orderId, a.warehouseId]
+    );
+    await seedSession(page);
+    try {
+      await page.goto(PAGE_URL);
+      await page.getByRole('button', { name: `Move something into ${bCode}` }).click();
+      await pickOption(page, 'Choose Warehouse', new RegExp(`Test WH ${a.branchId.slice(0, 8)}`));
+      await page.getByRole('button', { name: 'Move', exact: true }).click();
+
+      // Nagpabilin nga bukas ang dialog aron makita sa admin ang hinungdan ug ang count.
+      const refused = page.getByRole('dialog').getByTestId('failure-refused');
+      await expect(refused).toBeVisible();
+      await expect(refused).toContainText('1 open order');
+      expect(await readWarehouseBranch(a.warehouseId)).toBe(a.branchId);
+    } finally {
+      await testQuery('DELETE FROM sales_orders WHERE id = ?', [orderId]);
+      await dropReassignAudit();
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang user nga walay all_branches grant makakita ug 403 nga "Not permitted", lahi sa 409, sa pag-load ug sa pag-himo', async ({ page }) => {
+    const a = await seedSecondBranch();
+    const code = `P7${Date.now().toString().slice(-6)}`;
+    // Ang UI nagtuo nga admin ni; ang server ang mo-desisyon base sa grant.
+    await seedSession(page, {
+      ...DEFAULT_ADMIN,
+      uid: a.userUid,
+      username: 'no.grant',
+      displayName: 'No Grant',
+    });
+    try {
+      await page.goto(PAGE_URL);
+      const loadNotice = page.getByTestId('page-notice').getByTestId('failure-forbidden');
+      await expect(loadNotice).toBeVisible();
+      await expect(loadNotice).toContainText('Not permitted');
+
+      await page.getByRole('button', { name: 'New Branch' }).click();
+      await page.getByLabel('Code', { exact: true }).fill(code);
+      await page.getByLabel('Name', { exact: true }).fill('Should Not Exist');
+      await page.getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByRole('dialog').getByTestId('failure-forbidden')).toBeVisible();
+      await expect(page.getByRole('dialog').getByTestId('failure-refused')).toHaveCount(0);
+      expect(await testQuery('SELECT id FROM branches WHERE code = ?', [code])).toHaveLength(0);
+    } finally {
+      await dropBranchByCode(code);
       await cleanupSecondBranch(a);
     }
   });

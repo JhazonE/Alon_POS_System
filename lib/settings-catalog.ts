@@ -1,6 +1,6 @@
 import {
   Database, Bell, Key, Palette, Globe, RefreshCw, Settings as SettingsIcon,
-  Percent, Monitor, Store,
+  Percent, Monitor, Store, GitBranch,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -55,6 +55,13 @@ export const settingsSections: SettingsSection[] = [
         description: 'Manage your POS terminal devices and their configurations.',
         icon: Monitor,
         iconClassName: 'text-sky-600',
+      },
+      {
+        href: '/settings/branches',
+        title: 'Branches',
+        description: 'Create branches and move warehouses, users and terminals between them.',
+        icon: GitBranch,
+        iconClassName: 'text-fuchsia-600',
       },
       {
         href: '/settings/pricing',
