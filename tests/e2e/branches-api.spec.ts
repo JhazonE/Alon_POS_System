@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readSeries } from './helpers/branches';
+import { DEFAULT_ADMIN } from './helpers/auth';
 
 test.describe('GET /api/branches', () => {
   test('mo-uli sa main branch nga gi-himo sa migration', async ({ request }) => {
@@ -17,7 +18,7 @@ test.describe('POST /api/branches', () => {
   test('mo-himo ug bag-ong branch', async ({ request }) => {
     const code = `B${Date.now().toString().slice(-6)}`;
     const res = await request.post('/api/branches', {
-      data: { code, name: 'Cebu Branch', address: 'Cebu City', tin: '123-456-789-000' },
+      data: { uid: DEFAULT_ADMIN.uid, code, name: 'Cebu Branch', address: 'Cebu City', tin: '123-456-789-000' },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
@@ -27,13 +28,13 @@ test.describe('POST /api/branches', () => {
 
   test('gi-reject ang duplicate nga code', async ({ request }) => {
     const code = `D${Date.now().toString().slice(-6)}`;
-    await request.post('/api/branches', { data: { code, name: 'First' } });
-    const res = await request.post('/api/branches', { data: { code, name: 'Second' } });
+    await request.post('/api/branches', { data: { uid: DEFAULT_ADMIN.uid, code, name: 'First' } });
+    const res = await request.post('/api/branches', { data: { uid: DEFAULT_ADMIN.uid, code, name: 'Second' } });
     expect(res.status()).toBe(409);
   });
 
   test('gi-reject kung walay code o name', async ({ request }) => {
-    const res = await request.post('/api/branches', { data: { name: 'No code' } });
+    const res = await request.post('/api/branches', { data: { uid: DEFAULT_ADMIN.uid, name: 'No code' } });
     expect(res.status()).toBe(400);
   });
 });
@@ -42,7 +43,7 @@ test.describe('POST /api/branches — per-branch numbering landed', () => {
   test('ang bag-ong branch kay ACTIVE na, kay naa nay kaugalingong series', async ({ request }) => {
     const code = `A${Date.now().toString().slice(-6)}`;
     const res = await request.post('/api/branches', {
-      data: { code, name: 'Active Branch' },
+      data: { uid: DEFAULT_ADMIN.uid, code, name: 'Active Branch' },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
@@ -57,7 +58,7 @@ test.describe('POST /api/branches — per-branch numbering landed', () => {
   test('ang bag-ong branch adunay series row nga nagsugod sa 000000', async ({ request }) => {
     const code = `S${Date.now().toString().slice(-6)}`;
     const res = await request.post('/api/branches', {
-      data: { code, name: 'Series Branch' },
+      data: { uid: DEFAULT_ADMIN.uid, code, name: 'Series Branch' },
     });
     expect(res.status()).toBe(201);
     const { id } = (await res.json()).data;
@@ -71,11 +72,11 @@ test.describe('POST /api/branches — per-branch numbering landed', () => {
 
   test('ang gi-reject nga duplicate code walay mabilin nga series row', async ({ request }) => {
     const code = `R${Date.now().toString().slice(-6)}`;
-    const first = await request.post('/api/branches', { data: { code, name: 'First' } });
+    const first = await request.post('/api/branches', { data: { uid: DEFAULT_ADMIN.uid, code, name: 'First' } });
     const { id } = (await first.json()).data;
     const before = (await readSeries()).length;
 
-    const dup = await request.post('/api/branches', { data: { code, name: 'Second' } });
+    const dup = await request.post('/api/branches', { data: { uid: DEFAULT_ADMIN.uid, code, name: 'Second' } });
     expect(dup.status()).toBe(409);
 
     const rows = await readSeries();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { query, withTransaction } from '@/lib/mysql';
+import { assertHeadOffice, branchErrorResponse } from '@/lib/branch-context';
 
 /**
  * Branch CRUD. Listing is intentionally unfiltered: the branch switcher and
@@ -32,6 +33,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // Creating a branch is head-office administration. Authorise before any
+    // validation or write, so a refused caller creates nothing.
+    await assertHeadOffice(body?.uid);
+
     const { code, name } = body;
 
     if (!code || !name) {
@@ -76,6 +82,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: { id } }, { status: 201 });
   } catch (error: any) {
+    const mapped = branchErrorResponse(error);
+    if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
     if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
       return NextResponse.json(
         { success: false, error: 'A branch with that code already exists' },
