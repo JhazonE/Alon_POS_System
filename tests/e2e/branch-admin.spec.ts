@@ -636,3 +636,484 @@ test.describe('PATCH /api/branches/[id] — is_active', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 6 — POST /api/branches/reassign + branchId sa POST /api/pos-terminals
+// ---------------------------------------------------------------------------
+import { v4 as uuidv4 } from 'uuid';
+import {
+  seedSaleOnTerminal,
+  cleanupSale,
+  readSaleBranch,
+  seedProductInWarehouse,
+} from './helpers/branches';
+
+const REASSIGN = '/api/branches/reassign';
+
+async function readWarehouseBranch(id: string): Promise<string | null> {
+  const rows = await testQuery('SELECT branch_id FROM warehouses WHERE id = ?', [id]);
+  return rows[0]?.branch_id ?? null;
+}
+async function readUserBranch(uid: string): Promise<string | null> {
+  const rows = await testQuery('SELECT branch_id FROM users WHERE uid = ?', [uid]);
+  return rows[0]?.branch_id ?? null;
+}
+async function readTerminalBranch(id: string): Promise<string | null> {
+  const rows = await testQuery('SELECT branch_id FROM pos_terminals WHERE id = ?', [id]);
+  return rows[0]?.branch_id ?? null;
+}
+
+/** Snapshot sa (id, branch_id) sa tanan rows, aron mapamatud-an nga walay na-match nga lain. */
+async function snapshotAssignments(): Promise<string> {
+  const [w, u, t] = await Promise.all([
+    testQuery('SELECT id, branch_id FROM warehouses ORDER BY id'),
+    testQuery('SELECT uid, branch_id FROM users ORDER BY uid'),
+    testQuery('SELECT id, branch_id FROM pos_terminals ORDER BY id'),
+  ]);
+  return JSON.stringify({ w, u, t });
+}
+
+async function countGrants(): Promise<number> {
+  const rows = await testQuery(
+    'SELECT COUNT(*) AS n FROM user_permissions WHERE permission = ?',
+    [ALL_BRANCHES_PERMISSION]
+  );
+  return Number(rows[0].n);
+}
+
+type Kind = 'warehouse' | 'user' | 'terminal';
+function idOf(kind: Kind, s: { warehouseId: string; userUid: string; terminalId: string }) {
+  return kind === 'warehouse' ? s.warehouseId : kind === 'user' ? s.userUid : s.terminalId;
+}
+async function readBranchOf(kind: Kind, id: string) {
+  return kind === 'warehouse'
+    ? readWarehouseBranch(id)
+    : kind === 'user'
+      ? readUserBranch(id)
+      : readTerminalBranch(id);
+}
+
+test.describe('POST /api/branches/reassign', () => {
+  // Ang route mo-audit sa matag molampos nga move; limpyohan aron dili mo-tapok.
+  test.afterEach(async () => {
+    if (!(await auditTableExists())) return;
+    await testQuery("DELETE FROM user_activity_logs WHERE description LIKE 'Reassigned %'");
+  });
+
+  for (const kind of ['warehouse', 'user', 'terminal'] as const) {
+    test(`ang branch-scoped user gi-403 sa ${kind} UG wala mausab ang row sa DB`, async ({ request }) => {
+      const a = await seedSecondBranch();
+      const b = await seedSecondBranch();
+      try {
+        const id = idOf(kind, b);
+        const before = await snapshotAssignments();
+        const res = await request.post(REASSIGN, {
+          data: { uid: a.userUid, kind, id, branchId: a.branchId },
+        });
+        expect(res.status()).toBe(403);
+        expect(await readBranchOf(kind, id)).toBe(b.branchId);
+        expect(await snapshotAssignments()).toBe(before);
+      } finally {
+        await cleanupSecondBranch(b);
+        await cleanupSecondBranch(a);
+      }
+    });
+  }
+
+  test('ang request nga walay uid gi-403 ug wala mausab ang row', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const before = await snapshotAssignments();
+      const res = await request.post(REASSIGN, {
+        data: { kind: 'terminal', id: b.terminalId, branchId: a.branchId },
+      });
+      expect(res.status()).toBe(403);
+      expect(await snapshotAssignments()).toBe(before);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang head office mo-reassign sa user ngadto sa laing branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const res = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'user', id: b.userUid, branchId: a.branchId },
+      });
+      expect(res.status()).toBe(200);
+      expect((await res.json()).success).toBe(true);
+      expect(await readUserBranch(b.userUid)).toBe(a.branchId);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang user nga walay branch (branch_id NULL) gi-reject, wala mausab ang row', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const before = await snapshotAssignments();
+      for (const bad of [null, '', undefined]) {
+        const res = await request.post(REASSIGN, {
+          data: { uid: DEFAULT_ADMIN.uid, kind: 'user', id: a.userUid, branchId: bad },
+        });
+        expect(res.status(), `branchId=${JSON.stringify(bad)}`).toBe(400);
+        expect(await readUserBranch(a.userUid)).toBe(a.branchId);
+      }
+      expect(await snapshotAssignments()).toBe(before);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang pag-reassign sa user dili mo-usab sa grants, busa ang last-administrator invariant dili ma-guba', async ({ request }) => {
+    // Ang reassignment mo-usab ra sa users.branch_id. assertHeadOffice mo-basa
+    // sa grant ra (dili sa branch), busa ang pag-move sa admin padulong sa branch
+    // dili makapakunhod sa numero sa all_branches holders: walay guard nga
+    // makalihok, ug dili ma-lockout ang branch page.
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      await grantPermission(b.userUid, ALL_BRANCHES_PERMISSION);
+      await setUserBranch(b.userUid, null);
+      const grantsBefore = await countGrants();
+      const res = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'user', id: b.userUid, branchId: a.branchId },
+      });
+      expect(res.status()).toBe(200);
+      expect(await readUserBranch(b.userUid)).toBe(a.branchId);
+      expect(await countGrants()).toBe(grantsBefore);
+      await expect(assertHeadOffice(b.userUid)).resolves.toBeUndefined();
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang warehouse nga naay pending approval gi-409 nga naghisgot sa count, wala mausab ang row', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const queueId = uuidv4();
+    try {
+      // Ang STOCK_ADJUSTMENT approval mo-dala ra sa productId, dili sa warehouse id.
+      const productId = await seedProductInWarehouse(b.warehouseId, `RA-${Date.now()}`);
+      await testQuery(
+        `INSERT INTO approval_queue (id, transaction_type, transaction_data, created_by, status)
+         VALUES (?, 'STOCK_ADJUSTMENT', ?, ?, 'Pending')`,
+        [queueId, JSON.stringify({ productId, quantity: 1, reason: 'test' }), b.userUid]
+      );
+      const res = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'warehouse', id: b.warehouseId, branchId: a.branchId },
+      });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toMatch(/1 pending approval/);
+      expect(await readWarehouseBranch(b.warehouseId)).toBe(b.branchId);
+      const prod = await testQuery('SELECT warehouse_id FROM products WHERE id = ?', [productId]);
+      expect(prod[0].warehouse_id).toBe(b.warehouseId);
+
+      // Control: kung ma-approve na, mo-lusot ang parehas nga move.
+      await testQuery("UPDATE approval_queue SET status = 'Approved' WHERE id = ?", [queueId]);
+      const ok = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'warehouse', id: b.warehouseId, branchId: a.branchId },
+      });
+      expect(ok.status()).toBe(200);
+      expect(await readWarehouseBranch(b.warehouseId)).toBe(a.branchId);
+    } finally {
+      await testQuery('DELETE FROM approval_queue WHERE id = ?', [queueId]);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang warehouse nga naay active shift sa iyang branch gi-409 nga naghisgot sa count', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const shiftId = uuidv4();
+    try {
+      await testQuery(
+        `INSERT INTO shifts (id, user_id, terminal_id, status) VALUES (?, ?, ?, 'active')`,
+        [shiftId, b.userUid, b.terminalId]
+      );
+      const res = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'warehouse', id: b.warehouseId, branchId: a.branchId },
+      });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toMatch(/1 open shift/);
+      expect(await readWarehouseBranch(b.warehouseId)).toBe(b.branchId);
+    } finally {
+      await testQuery('DELETE FROM shifts WHERE id = ?', [shiftId]);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang warehouse nga naay open sales order gi-409 nga naghisgot sa count', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    const orderId = uuidv4();
+    try {
+      await testQuery(
+        `INSERT INTO sales_orders (id, order_date, total, warehouse_id, status)
+         VALUES (?, CURDATE(), 10.00, ?, 'Pending')`,
+        [orderId, b.warehouseId]
+      );
+      const res = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'warehouse', id: b.warehouseId, branchId: a.branchId },
+      });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toMatch(/1 open order/);
+      expect(await readWarehouseBranch(b.warehouseId)).toBe(b.branchId);
+    } finally {
+      await testQuery('DELETE FROM sales_orders WHERE id = ?', [orderId]);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang main branch dili makuha sa iyang katapusan nga active warehouse', async ({ request }) => {
+    const b = await seedSecondBranch();
+    const mainId = await readMainBranchId();
+    const lastId = `wh-last-${uuidv4().slice(0, 8)}`;
+    let deactivated: string[] = [];
+    try {
+      await testQuery(
+        'INSERT INTO warehouses (id, name, is_active, branch_id) VALUES (?, ?, 1, ?)',
+        [lastId, `Last WH ${lastId}`, mainId]
+      );
+      const others = (await testQuery(
+        'SELECT id FROM warehouses WHERE branch_id = ? AND id <> ? AND (is_active IS NULL OR is_active <> 0)',
+        [mainId, lastId]
+      )) as any[];
+      deactivated = others.map((r) => r.id);
+      for (const id of deactivated) {
+        await testQuery('UPDATE warehouses SET is_active = 0 WHERE id = ?', [id]);
+      }
+
+      const res = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'warehouse', id: lastId, branchId: b.branchId },
+      });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toMatch(/last warehouse/i);
+      expect(await readWarehouseBranch(lastId)).toBe(mainId);
+
+      // Control: kung naay lain nga active nga warehouse ang main, dili na kini
+      // ang rason sa refusal.
+      for (const id of deactivated) {
+        await testQuery('UPDATE warehouses SET is_active = 1 WHERE id = ?', [id]);
+      }
+      deactivated = [];
+      const ok = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'warehouse', id: lastId, branchId: b.branchId },
+      });
+      expect(JSON.stringify(await ok.json())).not.toMatch(/last warehouse/i);
+    } finally {
+      for (const id of deactivated) {
+        await testQuery('UPDATE warehouses SET is_active = 1 WHERE id = ?', [id]);
+      }
+      await testQuery('DELETE FROM warehouses WHERE id = ?', [lastId]);
+      await cleanupSecondBranch(b);
+    }
+  });
+
+  test('ang terminal mo-move ug makahimo na ug Z-reading sa bag-ong branch, ug ang past sale nagpabilin sa daan', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    let saleId: string | null = null;
+    try {
+      saleId = await seedSaleOnTerminal(a.terminalId, a.userUid);
+      expect(await readSaleBranch(saleId)).toBe(a.branchId);
+
+      // Sa wala pa ang move, ang user sa branch b dili makahimo Z-reading sa terminal sa a.
+      const refused = await request.post('/api/sales/z-reading', {
+        data: { uid: b.userUid, terminalId: a.terminalId, cashierName: 'Test' },
+      });
+      expect(refused.status()).toBe(403);
+
+      const move = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'terminal', id: a.terminalId, branchId: b.branchId },
+      });
+      expect(move.status()).toBe(200);
+      expect(await readTerminalBranch(a.terminalId)).toBe(b.branchId);
+
+      // Karon ang user sa b makahimo na ug Z-reading sa gi-move nga terminal...
+      const z = await request.post('/api/sales/z-reading', {
+        data: { uid: b.userUid, terminalId: a.terminalId, cashierName: 'Test' },
+      });
+      expect(z.status(), await z.text()).toBe(200);
+      expect((await z.json()).success).toBe(true);
+      // ...ug ang user sa daan nga branch dili na.
+      const stale = await request.post('/api/sales/z-reading', {
+        data: { uid: a.userUid, terminalId: a.terminalId, cashierName: 'Test' },
+      });
+      expect(stale.status()).toBe(403);
+
+      // Ang past sale nagpabilin sa BIR establishment nga nag-issue niini.
+      expect(await readSaleBranch(saleId)).toBe(a.branchId);
+    } finally {
+      if (saleId) await cleanupSale(saleId);
+      await testQuery('DELETE FROM z_readings WHERE terminal_id = ?', [a.terminalId]);
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  for (const kind of ['warehouse', 'user', 'terminal'] as const) {
+    test(`ang pag-reassign sa ${kind} padulong sa inactive nga branch gi-409, wala mausab ang row`, async ({ request }) => {
+      const src = await seedSecondBranch();
+      const inactive = await seedSecondBranch({ branchActive: false });
+      try {
+        const id = idOf(kind, src);
+        const before = await snapshotAssignments();
+        const res = await request.post(REASSIGN, {
+          data: { uid: DEFAULT_ADMIN.uid, kind, id, branchId: inactive.branchId },
+        });
+        expect(res.status()).toBe(409);
+        expect((await res.json()).error).toMatch(/inactive/i);
+        expect(await readBranchOf(kind, id)).toBe(src.branchId);
+        expect(await snapshotAssignments()).toBe(before);
+      } finally {
+        await cleanupSecondBranch(inactive);
+        await cleanupSecondBranch(src);
+      }
+    });
+
+    test(`ang pag-reassign sa ${kind} padulong sa branch nga wala gyud gi-404, wala mausab ang row`, async ({ request }) => {
+      const src = await seedSecondBranch();
+      try {
+        const id = idOf(kind, src);
+        const before = await snapshotAssignments();
+        const res = await request.post(REASSIGN, {
+          data: { uid: DEFAULT_ADMIN.uid, kind, id, branchId: 'no-such-branch' },
+        });
+        expect(res.status()).toBe(404);
+        expect(await snapshotAssignments()).toBe(before);
+      } finally {
+        await cleanupSecondBranch(src);
+      }
+    });
+  }
+
+  test('ang wala-kaila nga kind gi-400 ug ang wala-kaila nga id gi-404, wala mausab', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const before = await snapshotAssignments();
+      const badKind = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'branch', id: a.warehouseId, branchId: a.branchId },
+      });
+      expect(badKind.status()).toBe(400);
+      const missing = await request.post(REASSIGN, {
+        data: { uid: DEFAULT_ADMIN.uid, kind: 'terminal', id: 'no-such-terminal', branchId: a.branchId },
+      });
+      expect(missing.status()).toBe(404);
+      expect(await snapshotAssignments()).toBe(before);
+    } finally {
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('ang non-string (object) nga id/branchId/uid gi-reject, dili mo-match ug row', async ({ request }) => {
+    // pool.query mo-escape sa object ingon `key` = value: {branch_id: 0} mahimong
+    // match-many predicate. Kinahanglan i-reject sa wala pa ang query.
+    const a = await seedSecondBranch();
+    const b = await seedSecondBranch();
+    try {
+      const before = await snapshotAssignments();
+      const grantsBefore = await countGrants();
+      const evil: unknown[] = [{ branch_id: 0 }, { uid: 1 }, { id: 0 }, 0, 1, true, ['x'], ['a', 'b']];
+      for (const kind of ['warehouse', 'user', 'terminal'] as const) {
+        for (const bad of evil) {
+          const badId = await request.post(REASSIGN, {
+            data: { uid: DEFAULT_ADMIN.uid, kind, id: bad, branchId: a.branchId },
+          });
+          expect(badId.status(), `${kind} id=${JSON.stringify(bad)}`).toBe(400);
+          const badBranch = await request.post(REASSIGN, {
+            data: { uid: DEFAULT_ADMIN.uid, kind, id: idOf(kind, b), branchId: bad },
+          });
+          expect(badBranch.status(), `${kind} branchId=${JSON.stringify(bad)}`).toBe(400);
+        }
+      }
+      for (const bad of evil) {
+        const badUid = await request.post(REASSIGN, {
+          data: { uid: bad, kind: 'user', id: b.userUid, branchId: a.branchId },
+        });
+        expect(badUid.status(), `uid=${JSON.stringify(bad)}`).toBe(403);
+      }
+      expect(await snapshotAssignments()).toBe(before);
+      expect(await countGrants()).toBe(grantsBefore);
+    } finally {
+      await cleanupSecondBranch(b);
+      await cleanupSecondBranch(a);
+    }
+  });
+});
+
+test.describe('POST /api/pos-terminals — branchId', () => {
+  async function task6TerminalIds(): Promise<string[]> {
+    const rows = (await testQuery(
+      "SELECT id FROM pos_terminals WHERE name LIKE 'Task6 Term %'"
+    )) as any[];
+    return rows.map((r) => r.id);
+  }
+  async function dropTask6Terminals() {
+    await testQuery("DELETE FROM pos_terminals WHERE name LIKE 'Task6 Term %'");
+  }
+
+  test('ang branchId nga gi-supply mo-assign sa bag-ong terminal ngadto sa maong branch', async ({ request }) => {
+    const a = await seedSecondBranch();
+    try {
+      const res = await request.post('/api/pos-terminals', {
+        data: { uid: DEFAULT_ADMIN.uid, branchId: a.branchId, terminalDescription: `Task6 Term ${Date.now()}` },
+      });
+      expect(res.status(), await res.text()).toBe(200);
+      const id = (await res.json()).data.id;
+      expect(await readTerminalBranch(id)).toBe(a.branchId);
+    } finally {
+      await dropTask6Terminals();
+      await cleanupSecondBranch(a);
+    }
+  });
+
+  test('kung walay branchId, mo-default gihapon sa main branch (existing callers wala maguba)', async ({ request }) => {
+    try {
+      const res = await request.post('/api/pos-terminals', {
+        data: { terminalDescription: `Task6 Term ${Date.now()}` },
+      });
+      expect(res.status(), await res.text()).toBe(200);
+      const id = (await res.json()).data.id;
+      expect(await readTerminalBranch(id)).toBe(await readMainBranchId());
+    } finally {
+      await dropTask6Terminals();
+    }
+  });
+
+  test('ang branchId gi-refuse kung dili head office ang caller, o inactive/wala ang branch, ug walay terminal nga nahimo', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const inactive = await seedSecondBranch({ branchActive: false });
+    try {
+      const noAuth = await request.post('/api/pos-terminals', {
+        data: { uid: a.userUid, branchId: a.branchId, terminalDescription: `Task6 Term ${Date.now()}` },
+      });
+      expect(noAuth.status()).toBe(403);
+      const inactiveRes = await request.post('/api/pos-terminals', {
+        data: { uid: DEFAULT_ADMIN.uid, branchId: inactive.branchId, terminalDescription: `Task6 Term ${Date.now()}` },
+      });
+      expect(inactiveRes.status()).toBe(409);
+      const missing = await request.post('/api/pos-terminals', {
+        data: { uid: DEFAULT_ADMIN.uid, branchId: 'no-such-branch', terminalDescription: `Task6 Term ${Date.now()}` },
+      });
+      expect(missing.status()).toBe(404);
+      const objectId = await request.post('/api/pos-terminals', {
+        data: { uid: DEFAULT_ADMIN.uid, branchId: { id: 0 }, terminalDescription: `Task6 Term ${Date.now()}` },
+      });
+      expect(objectId.status()).toBe(400);
+      expect(await task6TerminalIds()).toHaveLength(0);
+    } finally {
+      await dropTask6Terminals();
+      await cleanupSecondBranch(inactive);
+      await cleanupSecondBranch(a);
+    }
+  });
+});

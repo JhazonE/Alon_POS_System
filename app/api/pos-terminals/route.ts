@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../lib/mysql';
-import { mainBranchId } from '../../../lib/branch-context';
+import {
+  mainBranchId,
+  assertHeadOffice,
+  branchErrorResponse,
+} from '../../../lib/branch-context';
 
 // Helper function to ensure pos_terminals table exists
 async function ensurePosTerminalsTable() {
@@ -216,8 +220,43 @@ export async function POST(request: NextRequest) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    // No branch picker yet (Phase 5): new terminals default to the main branch.
-    const branchId = await mainBranchId();
+    // A terminal lands in the main branch unless the caller names one, so every
+    // existing caller (which sends no branchId) behaves exactly as before.
+    // Naming a branch is a branch-administration act: it needs the all_branches
+    // grant, and the branch must exist and be active (a terminal in an inactive
+    // branch could never ring a sale).
+    let branchId: string;
+    if (body.branchId === undefined) {
+      branchId = await mainBranchId();
+    } else {
+      // Authorise before anything else, then check the type before any query:
+      // an object here would be escaped by pool.query as `key` = value and
+      // match many rows.
+      await assertHeadOffice(body.uid);
+      if (typeof body.branchId !== 'string' || !body.branchId) {
+        return NextResponse.json(
+          { success: false, error: 'branchId must be a non-empty string' },
+          { status: 400 }
+        );
+      }
+      const targets = (await query(
+        'SELECT id, code, is_active FROM branches WHERE id = ?',
+        [body.branchId]
+      )) as any[];
+      if (targets.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Branch not found' },
+          { status: 404 }
+        );
+      }
+      if (targets[0].is_active !== null && Number(targets[0].is_active) === 0) {
+        return NextResponse.json(
+          { success: false, error: `Branch ${targets[0].code} is inactive` },
+          { status: 409 }
+        );
+      }
+      branchId = body.branchId;
+    }
 
     await query(sql, [
       id,
@@ -259,6 +298,8 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
+    const mapped = branchErrorResponse(error);
+    if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });
     console.error('Error creating POS terminal:', error);
 
     return NextResponse.json(
