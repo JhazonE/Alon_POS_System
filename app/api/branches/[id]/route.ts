@@ -5,8 +5,11 @@ import { ensureActivityLogTable, writeActivityLog } from '@/lib/activity-log';
 
 /**
  * Editable branch columns. `code` is deliberately absent (immutable after
- * creation) and so are `is_main` / `is_active` / the number series: those are
- * not an "edit", and activation has its own endpoint.
+ * creation) and so are `is_main` and the number series: those are not an
+ * "edit". `is_active` is absent too, on purpose: it is not a plain field
+ * because every change to it must pass the deactivation guard, so it is
+ * handled as its own explicit step in the handler (never via this loop, which
+ * would let a generic write path skip the guard).
  */
 const EDITABLE_FIELDS = [
   'name',
@@ -34,6 +37,61 @@ const BIR_IDENTITY_FIELDS = new Set<string>([
 
 function describeValue(value: unknown): string {
   return value === null || value === undefined ? '(empty)' : `"${String(value)}"`;
+}
+
+function plural(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
+}
+
+/** A refusal decided inside the transaction, before anything was written. */
+type Refusal = { status: number; error: string };
+
+/**
+ * Why this branch may not be deactivated, or null when it may. Runs on the
+ * transaction's connection, after the branch row is locked.
+ *
+ * "Attached" means active: a warehouse / terminal that is not inactive, and a
+ * user that is not disabled. A NULL flag counts as active, so a row of
+ * unknown state blocks rather than slips through. Inactive rows are not
+ * blockers: they cannot sell, log in or hold stock, so they lock nobody out,
+ * and reactivating the branch restores nothing by itself.
+ */
+async function deactivationRefusal(
+  connection: { query: (sql: string, params: any[]) => Promise<any> },
+  branch: { id: string; code: string; is_main: unknown }
+): Promise<Refusal | null> {
+  // is_main first and unconditionally: mainBranchId() is the default for
+  // several inserts across the app and migration 137 re-synced its BIR series.
+  if (Number(branch.is_main) === 1) {
+    return { status: 409, error: 'The main branch cannot be deactivated' };
+  }
+
+  const [rows] = await connection.query(
+    `SELECT
+       (SELECT COUNT(*) FROM warehouses
+         WHERE branch_id = ? AND (is_active IS NULL OR is_active <> 0)) AS warehouses,
+       (SELECT COUNT(*) FROM users
+         WHERE branch_id = ? AND (disabled IS NULL OR disabled = 0)) AS users,
+       (SELECT COUNT(*) FROM pos_terminals
+         WHERE branch_id = ? AND (is_active IS NULL OR is_active <> 0)) AS terminals`,
+    [branch.id, branch.id, branch.id]
+  );
+  const counts = {
+    warehouse: Number(rows[0].warehouses),
+    user: Number(rows[0].users),
+    terminal: Number(rows[0].terminals),
+  };
+  const attached = (Object.keys(counts) as Array<keyof typeof counts>)
+    .filter((k) => counts[k] > 0)
+    .map((k) => plural(counts[k], k));
+  if (attached.length === 0) return null;
+
+  // A warehouse or user orphaned on an inactive branch gets 403 from every
+  // branch-filtered route: a silent lockout. Name what to move first.
+  return {
+    status: 409,
+    error: `Cannot deactivate branch ${branch.code}: it still has active rows attached (${attached.join(', ')}). Move or disable them first.`,
+  };
 }
 
 /**
@@ -102,23 +160,51 @@ export async function PATCH(
       updates[field] = value;
     }
 
-    if (Object.keys(updates).length === 0) {
+    // is_active is not an editable field: it is read explicitly, strictly
+    // typed (a string "0" or an object is refused, not coerced), and every
+    // change to it goes through deactivationRefusal() below, inside the
+    // transaction that writes it.
+    let desiredActive: 0 | 1 | undefined;
+    if ('is_active' in body) {
+      const raw = body.is_active;
+      if (raw === 1 || raw === true) desiredActive = 1;
+      else if (raw === 0 || raw === false) desiredActive = 0;
+      else {
+        return NextResponse.json(
+          { success: false, error: 'is_active must be 0, 1, true or false' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (Object.keys(updates).length === 0 && desiredActive === undefined) {
       return NextResponse.json(
         { success: false, error: 'No editable fields supplied' },
         { status: 400 }
       );
     }
 
+    // The main branch refusal is unconditional, so it is decided before the
+    // "nothing changed" shortcut: even a no-op deactivation of it is refused.
+    if (desiredActive === 0 && Number(current.is_main) === 1) {
+      return NextResponse.json(
+        { success: false, error: 'The main branch cannot be deactivated' },
+        { status: 409 }
+      );
+    }
+
     const changedFields = Object.keys(updates).filter(
       (f) => (current[f] ?? null) !== updates[f]
     );
-    if (changedFields.length === 0) {
+    const activeChanged =
+      desiredActive !== undefined && desiredActive !== Number(current.is_active);
+    if (changedFields.length === 0 && !activeChanged) {
       return NextResponse.json({ success: true, data: { id, changed: [] } });
     }
 
     const auditedFields = changedFields.filter((f) => BIR_IDENTITY_FIELDS.has(f));
     let userName = 'Unknown';
-    if (auditedFields.length > 0) {
+    if (auditedFields.length > 0 || activeChanged) {
       const users = (await query(
         'SELECT display_name, username FROM users WHERE uid = ?',
         [uid]
@@ -129,12 +215,32 @@ export async function PATCH(
 
     // The update and its audit rows commit together: an edit to a BIR field
     // can never land without its audit record, or the reverse.
-    await withTransaction(async (connection) => {
-      // Column names come from the fixed EDITABLE_FIELDS list, never from input.
-      const setClause = changedFields.map((f) => `${f} = ?`).join(', ');
+    const refusal = await withTransaction(async (connection): Promise<Refusal | null> => {
+      if (activeChanged && desiredActive === 0) {
+        // Lock the branch row and re-check against it, not the earlier
+        // unlocked read, so the decision and the write see the same row. The
+        // guard runs before ANY write, so a refusal leaves the whole request
+        // (including any field edits sent alongside) unapplied.
+        const [locked] = (await connection.query(
+          'SELECT id, code, is_main FROM branches WHERE id = ? FOR UPDATE',
+          [id]
+        )) as any[];
+        if (locked.length === 0) return { status: 404, error: 'Branch not found' };
+        const refused = await deactivationRefusal(connection, locked[0]);
+        if (refused) return refused;
+      }
+
+      // Column names come from the fixed EDITABLE_FIELDS list, never from
+      // input; is_active is appended here as a literal, from the validated flag.
+      const assignments = changedFields.map((f) => `${f} = ?`);
+      const values: Array<string | number | null> = changedFields.map((f) => updates[f]);
+      if (activeChanged) {
+        assignments.push('is_active = ?');
+        values.push(desiredActive as number);
+      }
       await connection.query(
-        `UPDATE branches SET ${setClause} WHERE id = ?`,
-        [...changedFields.map((f) => updates[f]), id]
+        `UPDATE branches SET ${assignments.join(', ')} WHERE id = ?`,
+        [...values, id]
       );
       for (const field of auditedFields) {
         await writeActivityLog(connection, {
@@ -146,9 +252,30 @@ export async function PATCH(
           referenceId: id,
         });
       }
+      if (activeChanged) {
+        // branch_number_series is deliberately not touched: reactivating must
+        // never re-issue an invoice number already on a filed BIR document.
+        await writeActivityLog(connection, {
+          userUid: uid,
+          userName,
+          action: 'UPDATE',
+          module: 'BRANCHES',
+          description: `${desiredActive === 1 ? 'Reactivated' : 'Deactivated'} branch ${current.code} (${current.name})`,
+          referenceId: id,
+        });
+      }
+      return null;
     });
 
-    return NextResponse.json({ success: true, data: { id, changed: changedFields } });
+    if (refusal) {
+      return NextResponse.json(
+        { success: false, error: refusal.error },
+        { status: refusal.status }
+      );
+    }
+
+    const changed = activeChanged ? [...changedFields, 'is_active'] : changedFields;
+    return NextResponse.json({ success: true, data: { id, changed } });
   } catch (error: any) {
     const mapped = branchErrorResponse(error);
     if (mapped) return NextResponse.json(mapped.body, { status: mapped.status });

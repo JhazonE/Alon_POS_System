@@ -11,6 +11,8 @@ import {
   setUserBranch,
   insertRawSale,
   cleanupRawSales,
+  removeBranchWarehouses,
+  readMainBranchId,
 } from './helpers/branches';
 import { testQuery } from './helpers/db';
 import { DEFAULT_ADMIN } from './helpers/auth';
@@ -343,12 +345,12 @@ test.describe('PATCH /api/branches/[id]', () => {
     expect(res.status()).toBe(404);
   });
 
-  test('ang is_main ug is_active dili ma-set pinaagi sa PATCH', async ({ request }) => {
+  test('ang is_main dili ma-set pinaagi sa PATCH (ang is_active naay kaugalingong guard, tan-awa sa ubos)', async ({ request }) => {
     const seeded = await seedSecondBranch();
     try {
       const before = await readBranch(seeded.branchId);
       const res = await request.patch(`/api/branches/${seeded.branchId}`, {
-        data: { uid: DEFAULT_ADMIN.uid, name: 'Flags Test', is_main: 1, is_active: 0 },
+        data: { uid: DEFAULT_ADMIN.uid, name: 'Flags Test', is_main: 1 },
       });
       expect(res.status()).toBe(200);
       const after = await readBranch(seeded.branchId);
@@ -406,5 +408,231 @@ test.describe('POST /api/branches — head office ra', () => {
     );
     expect(series).toHaveLength(1);
     expect(series[0].si_number).toBe('000000');
+  });
+});
+
+/**
+ * Task 5 — activate / deactivate nga naay attached-rows guard.
+ * Ang matag refusal test mo-verify sa DB (dili status ra): kon ang write
+ * nahitabo una sa refusal, ang status-only assertion mopasar gihapon.
+ */
+test.describe('PATCH /api/branches/[id] — is_active', () => {
+  /** Himoong walay attached rows ang seeded branch (walay warehouse/user/terminal). */
+  async function emptyOut(seeded: Awaited<ReturnType<typeof seedSecondBranch>>) {
+    await removeBranchWarehouses(seeded.branchId);
+    await testQuery('DELETE FROM user_permissions WHERE user_uid = ?', [seeded.userUid]);
+    await testQuery('DELETE FROM users WHERE uid = ?', [seeded.userUid]);
+    await testQuery('DELETE FROM pos_terminals WHERE id = ?', [seeded.terminalId]);
+  }
+
+  async function readSeriesRow(branchId: string): Promise<any> {
+    const rows = await testQuery('SELECT * FROM branch_number_series WHERE branch_id = ?', [branchId]);
+    return rows[0];
+  }
+
+  async function restoreMainActive(): Promise<void> {
+    await testQuery('UPDATE branches SET is_active = 1 WHERE is_main = 1');
+  }
+
+  test('ang branch nga naay warehouse, user ug terminal dili ma-deactivate — gi-name ang counts UG wala mausab ang DB', async ({ request }) => {
+    const seeded = await seedSecondBranch();
+    try {
+      const before = await readBranch(seeded.branchId);
+      const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: DEFAULT_ADMIN.uid, is_active: 0 },
+      });
+      expect(res.status()).toBe(409);
+      const body = await res.json();
+      expect(body.success).toBe(false);
+      expect(body.error).toMatch(/1 warehouse/);
+      expect(body.error).toMatch(/1 user/);
+      expect(body.error).toMatch(/1 terminal/);
+
+      const after = await readBranch(seeded.branchId);
+      expect(Number(after.is_active)).toBe(1);
+      expect(after).toEqual(before);
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  for (const attached of ['warehouse', 'user', 'terminal'] as const) {
+    test(`ang usa ra ka active ${attached} igo na aron dili ma-deactivate, ug wala mausab ang is_active`, async ({ request }) => {
+      const seeded = await seedSecondBranch();
+      try {
+        // Tanggala ang duha pa, ibilin ang usa ra.
+        if (attached !== 'warehouse') await removeBranchWarehouses(seeded.branchId);
+        if (attached !== 'user') {
+          await testQuery('DELETE FROM user_permissions WHERE user_uid = ?', [seeded.userUid]);
+          await testQuery('DELETE FROM users WHERE uid = ?', [seeded.userUid]);
+        }
+        if (attached !== 'terminal') {
+          await testQuery('DELETE FROM pos_terminals WHERE id = ?', [seeded.terminalId]);
+        }
+
+        const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+          data: { uid: DEFAULT_ADMIN.uid, is_active: 0 },
+        });
+        expect(res.status()).toBe(409);
+        expect((await res.json()).error).toMatch(new RegExp(`1 ${attached}`));
+        expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(1);
+      } finally {
+        await cleanupAudit(seeded.branchId);
+        await cleanupSecondBranch(seeded);
+      }
+    });
+  }
+
+  test('ang inactive nga warehouse, user ug terminal dili blocker — ma-deactivate ang branch', async ({ request }) => {
+    const seeded = await seedSecondBranch();
+    try {
+      await testQuery('UPDATE warehouses SET is_active = 0 WHERE id = ?', [seeded.warehouseId]);
+      await testQuery('UPDATE pos_terminals SET is_active = 0 WHERE id = ?', [seeded.terminalId]);
+      await testQuery('UPDATE users SET disabled = 1 WHERE uid = ?', [seeded.userUid]);
+
+      const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: DEFAULT_ADMIN.uid, is_active: 0 },
+      });
+      expect(res.status()).toBe(200);
+      expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(0);
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang main branch dili gyud ma-deactivate, ug wala mausab ang DB', async ({ request }) => {
+    const mainId = await readMainBranchId();
+    try {
+      const before = await readBranch(mainId);
+      const res = await request.patch(`/api/branches/${mainId}`, {
+        data: { uid: DEFAULT_ADMIN.uid, is_active: 0 },
+      });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toMatch(/main branch/i);
+      expect(await readBranch(mainId)).toEqual(before);
+      expect(Number((await readBranch(mainId)).is_active)).toBe(1);
+    } finally {
+      await restoreMainActive();
+      await cleanupAudit(mainId);
+    }
+  });
+
+  test('ang empty nga non-main branch ma-deactivate, mo-audit, ug ma-reactivate', async ({ request }) => {
+    const seeded = await seedSecondBranch();
+    try {
+      await emptyOut(seeded);
+
+      const off = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: DEFAULT_ADMIN.uid, is_active: 0 },
+      });
+      expect(off.status()).toBe(200);
+      expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(0);
+
+      const audit = await auditRows(seeded.branchId);
+      expect(audit).toHaveLength(1);
+      expect(audit[0].description).toMatch(/deactivated/i);
+
+      const on = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: DEFAULT_ADMIN.uid, is_active: 1 },
+      });
+      expect(on.status()).toBe(200);
+      expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(1);
+      expect(await auditRows(seeded.branchId)).toHaveLength(2);
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang pag-deactivate ug reactivate dili mo-usab sa branch_number_series', async ({ request }) => {
+    const seeded = await seedSecondBranch();
+    try {
+      await emptyOut(seeded);
+      // I-advance ang counters aron ang pag-reset (000001) dili ma-mask.
+      await testQuery(
+        "UPDATE branch_number_series SET si_number = '000123', mc_number = '000045', bir_or_number = '000067' WHERE branch_id = ?",
+        [seeded.branchId]
+      );
+      const snapshot = await readSeriesRow(seeded.branchId);
+      expect(snapshot.si_number).toBe('000123');
+
+      for (const flag of [0, 1]) {
+        const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+          data: { uid: DEFAULT_ADMIN.uid, is_active: flag },
+        });
+        expect(res.status()).toBe(200);
+        expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(flag);
+        expect(await readSeriesRow(seeded.branchId)).toEqual(snapshot);
+      }
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang branch-scoped user nga walay grant dili maka-toggle sa is_active, bisan ang branch empty', async ({ request }) => {
+    const seeded = await seedSecondBranch();
+    try {
+      // Walay attached rows nga mo-block (gawas sa user mismo, nga dili na i-count
+      // kay ang auth mo-refuse una): ang auth ra ang rason sa refusal.
+      await removeBranchWarehouses(seeded.branchId);
+      await testQuery('DELETE FROM pos_terminals WHERE id = ?', [seeded.terminalId]);
+      const before = await readBranch(seeded.branchId);
+
+      const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: seeded.userUid, is_active: 0 },
+      });
+      expect(res.status()).toBe(403);
+      expect(await readBranch(seeded.branchId)).toEqual(before);
+      expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(1);
+      expect(await auditRows(seeded.branchId)).toHaveLength(0);
+
+      // Ug ang inactive nga branch dili ma-reactivate sa branch-scoped user.
+      await testQuery('UPDATE branches SET is_active = 0 WHERE id = ?', [seeded.branchId]);
+      const res2 = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: seeded.userUid, is_active: 1 },
+      });
+      expect(res2.status()).toBe(403);
+      expect(Number((await readBranch(seeded.branchId)).is_active)).toBe(0);
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang crafted nga is_active value gi-400 ug wala mausab ang row', async ({ request }) => {
+    const seeded = await seedSecondBranch();
+    try {
+      await emptyOut(seeded);
+      const before = await readBranch(seeded.branchId);
+      for (const bad of ['0', 'false', 2, -1, null, { x: 0 }, [0]]) {
+        const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+          data: { uid: DEFAULT_ADMIN.uid, is_active: bad },
+        });
+        expect(res.status(), `is_active=${JSON.stringify(bad)}`).toBe(400);
+        expect((await res.json()).error).toMatch(/is_active/);
+        expect(await readBranch(seeded.branchId)).toEqual(before);
+      }
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
+  });
+
+  test('ang refused nga deactivation dili mo-apply sa uban nga fields sa parehas nga request', async ({ request }) => {
+    const seeded = await seedSecondBranch(); // naay warehouse nga mo-block
+    try {
+      const before = await readBranch(seeded.branchId);
+      const res = await request.patch(`/api/branches/${seeded.branchId}`, {
+        data: { uid: DEFAULT_ADMIN.uid, name: 'Rename Alongside', is_active: 0 },
+      });
+      expect(res.status()).toBe(409);
+      expect(await readBranch(seeded.branchId)).toEqual(before);
+    } finally {
+      await cleanupAudit(seeded.branchId);
+      await cleanupSecondBranch(seeded);
+    }
   });
 });
