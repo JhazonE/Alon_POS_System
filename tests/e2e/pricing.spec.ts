@@ -9,10 +9,12 @@ const WORKFLOW_ID = 'wf-priceupdate-e2e';
  * Pricing page (DB-backed) — drives the bulk price update form and its Excel
  * upload path on /inventory/pricing against the seeded alon_pos_test DB.
  *
- * Uses BULK_PRICE_PRODUCT, the only seeded product in "Test Warehouse"
- * (see fixtures/test-data.ts) — the page's product picker filters by warehouse and
- * these tests take the FIRST row, so it must stay alone there. Every other seeded
- * product lives in TEST_MAIN_WAREHOUSE.
+ * Uses BULK_PRICE_PRODUCT, one of three seeded products in "Test Warehouse"
+ * (the other two are the bulk-transfer fixtures TRANSFER_NULL_SKU_SOURCE and
+ * TRANSFER_ORPHAN_PRODUCT; see fixtures/test-data.ts). The page's product picker
+ * filters by warehouse, so these tests select the row by BULK_PRICE_PRODUCT's
+ * barcode rather than by position. The rest of the seeded catalogue lives in
+ * TEST_MAIN_WAREHOUSE.
  *
  * Selectors were verified against the real rendered markup (not assumed from the
  * plan): the shadcn Checkbox renders `button[role="checkbox"]`, the "Value" input
@@ -59,10 +61,10 @@ test.describe('Pricing', () => {
 
     const pricing = await openPricingAndSelectWarehouse(page);
 
-    // Select the (only) product row's checkbox — shadcn Checkbox renders as
+    // Select BULK_PRICE_PRODUCT's row (by barcode) checkbox — shadcn Checkbox renders as
     // button[role="checkbox"], not a native input.
     const table = pricing.locator('table').first();
-    await table.locator('tbody tr').first().getByRole('checkbox').check();
+    await table.locator('tbody tr').filter({ hasText: BULK_PRICE_PRODUCT.barcode }).getByRole('checkbox').check();
 
     // "Value" Label/Input are siblings with no htmlFor/id link, so getByLabel
     // doesn't resolve it — target the (only) number input on the page instead.
@@ -108,7 +110,7 @@ test.describe('Pricing', () => {
     const pricing = await openPricingAndSelectWarehouse(page);
 
     const table = pricing.locator('table').first();
-    await table.locator('tbody tr').first().getByRole('checkbox').check();
+    await table.locator('tbody tr').filter({ hasText: BULK_PRICE_PRODUCT.barcode }).getByRole('checkbox').check();
     await pricing.locator('input[type="number"]').fill('5');
 
     const submitButton = pricing.getByRole('button', { name: /Update 1 Product/ });

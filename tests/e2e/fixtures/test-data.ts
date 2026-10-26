@@ -50,10 +50,9 @@ export const TEST_PRODUCTS: TestProduct[] = [
 /** POS terminal — ip 127.0.0.1 aron auto-match sa local test client; fallback usab
  * isip terminalsData[0] kay kini ra ang terminal.
  *
- * location MUST be '' (walay inventory location). Ang POS mo-filter sa products
- * pinaagi sa terminal.location → products.warehouse_id; ang atong test products
- * naa sa TEST_MAIN_WAREHOUSE, mao nga ang location nga naay value mo-filter ug
- * mo-exclude nila -- busa '' (walay filter) ang gamiton. */
+ * location MUST be '' (walay inventory location). Nota: ang seeded products naa na
+ * karon sa usa ka warehouse (TEST_MAIN_WAREHOUSE / TEST_WAREHOUSE), dili na NULL;
+ * wala nako gi-verify kung unsaon sa POS paggamit ang terminal.location. */
 export const TEST_TERMINAL = {
   id: 'test-terminal-1',
   name: 'Test Counter 1',
@@ -355,16 +354,17 @@ export const TEST_WAREHOUSE = { id: 'wh-test', name: 'Test Warehouse' };
 /**
  * Ang default warehouse sa main branch (pinakaluma, gi-seed nga naay explicit
  * created_at) -- ang products table mo-land dinhi. Gihuptan niya ang general
- * catalogue; ang TEST_WAREHOUSE gitagana para sa BULK_PRICE_PRODUCT ra.
+ * catalogue. Ang TEST_WAREHOUSE gihuptan ang BULK_PRICE_PRODUCT ug ang duha ka
+ * bulk-transfer fixtures (TRANSFER_NULL_SKU_SOURCE, TRANSFER_ORPHAN_PRODUCT).
  */
 export const TEST_MAIN_WAREHOUSE = { id: 'wh-main-test', name: 'Main Warehouse' };
 
 /**
  * Product nga naka-assign sa TEST_WAREHOUSE — gikinahanglan sa bulk-price-update
  * e2e test kay ang Pricing page's product picker mo-filter pinaagi
- * sa warehouse_id. Ang ubang seeded products naa sa TEST_MAIN_WAREHOUSE, mao nga
- * kini ra ang product sa "Test Warehouse" -- gikinahanglan kana sa pricing.spec.ts,
- * nga mokuha sa UNANG row sa maong warehouse.
+ * sa warehouse_id. Tulo ka seeded products ang naa sa "Test Warehouse" (kini ug ang
+ * duha ka transfer fixtures), mao nga ang pricing.spec.ts mopili sa row pinaagi sa
+ * barcode, dili sa posisyon. Ang ubang seeded products naa sa TEST_MAIN_WAREHOUSE.
  */
 export const BULK_PRICE_PRODUCT = {
   id: 'test-bulk-price-product-1',

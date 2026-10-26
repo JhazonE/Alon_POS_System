@@ -195,8 +195,8 @@ async function seedFixtures(): Promise<void> {
   // dili pa ang products, aron ma-assign sila kada INSERT.
   //
   // TEST_MAIN_WAREHOUSE (explicitly oldest) is the default and holds the general
-  // catalogue. TEST_WAREHOUSE is kept separate and holds ONLY BULK_PRICE_PRODUCT:
-  // pricing.spec.ts picks the first row of that warehouse's product table.
+  // catalogue. TEST_WAREHOUSE is kept separate: it holds BULK_PRICE_PRODUCT plus the
+  // two bulk-transfer fixtures (pricing.spec.ts selects its row by barcode).
   await conn.query(
     `INSERT INTO warehouses (id, name, created_at, branch_id)
      VALUES (?, ?, '2000-01-01 00:00:00', (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))`,
@@ -412,8 +412,9 @@ async function seedFixtures(): Promise<void> {
   await conn.query('INSERT INTO suppliers (id, name) VALUES (?, ?)', [TEST_SUPPLIER.id, TEST_SUPPLIER.name]);
 
   // Product assigned to TEST_WAREHOUSE — the Pricing page's product
-  // picker filters by warehouse_id. (The other seeded products live in
-  // TEST_MAIN_WAREHOUSE; see the main-branch warehouse seed above.)
+  // picker filters by warehouse_id. (It shares Test Warehouse with the two
+  // bulk-transfer fixtures seeded below; the rest of the catalogue lives in
+  // TEST_MAIN_WAREHOUSE, see the main-branch warehouse seed above.)
   await conn.query(
     `INSERT INTO products (id, name, price, cost, stock, sku, barcode, warehouse_id, availability)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
