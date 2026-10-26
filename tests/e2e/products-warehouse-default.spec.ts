@@ -223,6 +223,28 @@ test.describe('products table defaults to a single warehouse', () => {
     await expect(page.getByRole('row', { name: new RegExp(`Elsewhere ${tag}`) })).toHaveCount(0);
   });
 
+  test('a FAILED default resolution falls back to All, not to an empty page', async ({ page }) => {
+    // mainBranchId() THROWS (status 500) when no branch is is_main: a resolution
+    // failure, not "no warehouse". Head office resolves through it. Before the fix
+    // the action swallowed that into { warehouseId: null }, the client pinned the
+    // match-nothing sentinel, and the catalogue was blank for the whole session.
+    const name = `Visible ${tag}`;
+    const id = await seedProductInWarehouse(firstWh, `${tag}-FAIL`);
+    await testQuery('UPDATE products SET name = ? WHERE id = ?', [name, id]);
+    const mains: any[] = await testQuery('SELECT id FROM branches WHERE is_main = 1');
+    try {
+      await testQuery('UPDATE branches SET is_main = 0 WHERE is_main = 1');
+      await openProducts(page, DEFAULT_ADMIN);
+      await page.getByPlaceholder('Search products...').fill(name);
+
+      await expect(page.getByRole('row', { name: new RegExp(name) })).toHaveCount(1, { timeout: 15000 });
+      await expect(page.getByText('No products found.')).toHaveCount(0);
+      await expect(page.getByText(/Warehouse: /)).toHaveCount(0); // fell back to All, no chip
+    } finally {
+      for (const m of mains) await testQuery('UPDATE branches SET is_main = 1 WHERE id = ?', [m.id]);
+    }
+  });
+
   test('head office lands on a main-branch warehouse, not on another branch', async ({ page }) => {
     await openProducts(page, DEFAULT_ADMIN);
 

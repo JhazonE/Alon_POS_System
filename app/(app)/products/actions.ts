@@ -1138,9 +1138,20 @@ export async function getWarehouses(): Promise<Warehouse[]> {
  * app/api/warehouses/route.ts and has no migration -- but the oldest active
  * warehouse of the branch, which is the original one in a single-store install.
  *
- * Returns `{ warehouseId: null }` when the branch has no active warehouse or the
- * identity cannot be resolved to a branch. The caller must treat that as "show
- * nothing", never as "show everything".
+ * Returns `{ warehouseId: null }` when the answer is genuinely "none": the branch has
+ * no active warehouse, or the identity is known not to belong to a usable branch
+ * (a BranchResolutionError with a 4xx status: unassigned, inactive branch, unknown
+ * uid). The caller treats that as "show nothing", never as "show everything".
+ *
+ * It THROWS when resolution itself failed -- a non-BranchResolutionError (e.g. a
+ * transient DB error) or a 5xx BranchResolutionError (mainBranchId() with no
+ * is_main branch: an install misconfiguration, not a statement about the user).
+ * Returning null there would be indistinguishable from "no warehouse" to
+ * react-query, which would never see an error, so the client would pin the
+ * NO_WAREHOUSE sentinel for the whole session (staleTime: Infinity) and show an
+ * empty catalogue. Throwing lets isError fire so products/page.tsx falls back to
+ * "all" -- a degraded but non-blank view (getProducts is not branch-filtered; see
+ * CLAUDE.md "Still open after the fan-out work").
  */
 export async function getDefaultProductWarehouse(): Promise<{ warehouseId: string | null }> {
   try {
@@ -1156,10 +1167,12 @@ export async function getDefaultProductWarehouse(): Promise<{ warehouseId: strin
     )) as any[];
     return { warehouseId: rows.length > 0 ? (rows[0].id as string) : null };
   } catch (error) {
-    if (!(error instanceof BranchResolutionError)) {
-      console.error('Error resolving default product warehouse:', error);
+    // 4xx: the identity has no usable branch -> genuinely "none".
+    if (error instanceof BranchResolutionError && error.status < 500) {
+      return { warehouseId: null };
     }
-    return { warehouseId: null };
+    console.error('Error resolving default product warehouse:', error);
+    throw error;
   }
 }
 

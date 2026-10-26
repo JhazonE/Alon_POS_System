@@ -119,7 +119,7 @@ test.describe('reports counts after product fan-out', () => {
     const all = await (await request.get(`${base}&limit=1000`)).json();
     expect(all.data).toHaveLength(3);
     expect(all.pagination.totalItems).toBe(all.data.length);
-    expect(all.summary.totalItems).toBe(all.data.length);
+    expect(all.summary.totalItems).toBe(2); // distinct products, not listed rows (3)
 
     // Page-by-page: totalPages kinahanglan mo-cover sa matag listed row.
     const page1 = await (await request.get(`${base}&limit=2&page=1`)).json();
@@ -133,4 +133,57 @@ test.describe('reports counts after product fan-out', () => {
     const ids = [...page1.data, ...page2.data].map((r: any) => r.id);
     expect(new Set(ids).size).toBe(3);
   });
+
+  // Ang `summary.totalItems` sa duha ka valuation report kay business metric (grand
+  // total), dili pagination -- kinahanglan mag-count ug product kausa. Ang
+  // `pagination.totalItems` sa parehas nga response kinahanglan magpabilin nga
+  // COUNT(*) (= mga row nga gilista), kay kung i-DISTINCT kini mawala ang paging.
+  for (const route of ['inventory', 'cost-vs-retail']) {
+    test.describe(`reports/${route} grand total vs pagination count`, () => {
+      async function fetchReport(request: any, extra = '') {
+        const res = await request.get(`/api/reports/${route}?uid=${branch.userUid}${extra}`);
+        expect(res.ok()).toBeTruthy();
+        return res.json();
+      }
+
+      test('summary.totalItems counts a fanned-out product once', async ({ request }) => {
+        const sku = `DST-${uuidv4().slice(0, 8)}`;
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Sum ${sku}`, sku, stock: 10 });
+        await insertProduct({ warehouseId: secondWarehouse, name: `Sum ${sku}`, sku, stock: 0 });
+
+        const body = await fetchReport(request, '&limit=1000');
+        expect(body.summary.totalItems).toBe(1); // not 2
+        expect(body.data).toHaveLength(2); // the listing still shows both copies
+      });
+
+      test('summary.totalItems still counts a NULL-sku product', async ({ request }) => {
+        const sku = `DST-${uuidv4().slice(0, 8)}`;
+        const nullName = `Null sku ${sku}`;
+        await insertProduct({ warehouseId: branch.warehouseId, name: nullName, sku: null, stock: 4 });
+        await insertProduct({ warehouseId: secondWarehouse, name: nullName, sku: null, stock: 0 });
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Normal ${sku}`, sku, stock: 4 });
+
+        const body = await fetchReport(request, '&limit=1000');
+        // COUNT(*) = 3, plain COUNT(DISTINCT sku) = 1 (drops NULL). Correct = 2.
+        expect(body.summary.totalItems).toBe(2);
+      });
+
+      test('pagination.totalItems stays equal to the rows listed (not DISTINCT)', async ({ request }) => {
+        const sku = `DST-${uuidv4().slice(0, 8)}`;
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Pg A ${sku}`, sku, stock: 5 });
+        await insertProduct({ warehouseId: secondWarehouse, name: `Pg A ${sku}`, sku, stock: 0 });
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Pg B ${sku}`, sku: `${sku}-B`, stock: 5 });
+
+        const all = await fetchReport(request, '&limit=1000');
+        expect(all.data).toHaveLength(3);
+        expect(all.pagination.totalItems).toBe(3); // rows, whereas summary.totalItems is 2
+        expect(all.summary.totalItems).toBe(2);
+
+        const page1 = await fetchReport(request, '&limit=2&page=1');
+        expect(page1.pagination.totalPages).toBe(2);
+        const page2 = await fetchReport(request, '&limit=2&page=2');
+        expect(page2.data).toHaveLength(1); // not an empty/truncated trailing page
+      });
+    });
+  }
 });

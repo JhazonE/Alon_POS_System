@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     // Grand totals over the whole filtered set
     const sumSql = `
       SELECT
-        COUNT(*) as totalItems,
+        COUNT(DISTINCT COALESCE(CONCAT('sku:', NULLIF(p.sku, '')), CONCAT('name:', p.name))) as totalItems,
         SUM(${COST_VALUE_EXPR}) as totalCostValue,
         SUM(p.stock * COALESCE(p.price, 0)) as totalRetailValue
       ${baseSql}

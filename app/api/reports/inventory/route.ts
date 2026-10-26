@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     
     let sumSql = `
       SELECT 
-        COUNT(*) as totalItems,
+        COUNT(DISTINCT COALESCE(CONCAT('sku:', NULLIF(p.sku, '')), CONCAT('name:', p.name))) as totalItems,
         SUM(p.stock) as totalStock,
         SUM(
           COALESCE(
