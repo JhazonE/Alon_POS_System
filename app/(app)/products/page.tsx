@@ -30,7 +30,7 @@ import { ManageShelfLocationsDialog } from './shelf-locations/ManageShelfLocatio
 import { ManageUnitOfMeasureDialog } from './units-of-measure/ManageUnitOfMeasureDialog';
 import { ManageWarehousesDialog } from '../sales/manage-warehouses/ManageWarehousesDialog';
 
-import { Search, ChevronDown, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
+import { Search, ChevronRight, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
 import { PrintBarcodeDialog } from './print-barcode/print-barcode-dialog';
 import { useState, useMemo, Fragment, useEffect, useCallback, Suspense } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -112,11 +112,16 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
 
   return (
     <>
-      <TableRow className={cn(depth > 0 && "bg-muted/20")}>
+      <TableRow className={cn(depth > 0 && "bg-muted/20", isOpen && "bg-muted/40 hover:bg-muted/40")}>
         <TableCell className="hidden sm:table-cell" style={indentStyle}>
           {hasChildren || hasSellingUnits ? (
-            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 group" onClick={() => setIsOpen(!isOpen)}>
-              <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
+            <button
+              aria-expanded={isOpen}
+              aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${product.name}`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 group"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-90")} />
             </button>
           ) : depth > 0 ? (
             <div className="text-sm text-muted-foreground">└</div>
@@ -125,7 +130,16 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
           )}
         </TableCell>
         <TableCell className="font-medium">
-          {product.name}
+          <span className="inline-flex items-center gap-2">
+            {product.name}
+            {/* Surfaces that a product HAS selling units without expanding it --
+                the caret alone did not say whether anything was under it. */}
+            {hasSellingUnits && (
+              <span className="shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                {product.sellingUnits!.length} units
+              </span>
+            )}
+          </span>
           {product.parentId && <div className="text-xs text-muted-foreground">Child Unit</div>}
           {product.expirationDate && (
             <div className="text-[10px] text-orange-600 font-medium flex items-center gap-1 mt-0.5">
@@ -227,18 +241,15 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
         </TableCell>
       </TableRow>
 
+      {/* Rendered as sibling <tr> of this row, sharing the table's columns --
+          see SellingUnitsPanel. Not wrapped in anything: a wrapper element
+          between <tbody> and these rows is invalid table markup. */}
       {isOpen && hasSellingUnits && (
-        <TableRow className="bg-muted/30 hover:bg-muted/30" data-testid="selling-units-panel">
-          <TableCell colSpan={PRODUCT_TABLE_COLUMN_COUNT} className="py-2 pr-4 pl-4 sm:pl-14">
-            <div style={indentStyle}>
-              <SellingUnitsPanel
-                product={product}
-                priceLevels={productOptions?.priceLevels ?? []}
-                effectiveReorderPoint={effectiveReorderPoint}
-              />
-            </div>
-          </TableCell>
-        </TableRow>
+        <SellingUnitsPanel
+          product={product}
+          priceLevels={productOptions?.priceLevels ?? []}
+          effectiveReorderPoint={effectiveReorderPoint}
+        />
       )}
 
       {isOpen && hasChildren && product.children!.map(child => (

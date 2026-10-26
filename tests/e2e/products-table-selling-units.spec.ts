@@ -62,6 +62,18 @@ test.describe('Products table — stock indicator & selling units panel', () => 
     await expect(row.getByTestId('stock-indicator')).toHaveAttribute('data-status', 'out-of-stock');
   });
 
+  test('a product with selling units advertises the count before it is expanded', async ({ page }) => {
+    await seedSession(page, DEFAULT_ADMIN);
+    await page.goto('/products');
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+
+    const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('2 units');
+    // Closed by default: the unit rows must not be in the DOM yet.
+    await expect(page.getByTestId('selling-unit-item')).toHaveCount(0);
+  });
+
   test('expanding a row lists selling units with barcode, derived stock and price levels', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
@@ -69,11 +81,9 @@ test.describe('Products table — stock indicator & selling units panel', () => 
 
     const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
     await expect(row).toBeVisible();
-    await row.locator('button').first().click();
+    await row.getByRole('button', { name: `Expand ${PRODUCT_NAME}` }).click();
 
-    const panel = page.getByTestId('selling-units-panel');
-    await expect(panel).toBeVisible();
-    const items = panel.getByTestId('selling-unit-item');
+    const items = page.getByTestId('selling-unit-item');
     await expect(items).toHaveCount(2);
 
     const box = items.filter({ hasText: 'Box' });
@@ -81,12 +91,28 @@ test.describe('Products table — stock indicator & selling units panel', () => 
     await expect(box).toContainText('₱110.00');
     // 24 base pcs / 12 per Box = 2 boxes
     await expect(box.getByTestId('selling-unit-stock')).toHaveAttribute('data-status', 'in-stock');
-    await expect(box.getByRole('button')).toContainText('2');
+    await expect(box).toContainText('2');
 
-    await box.getByRole('button').click();
+    // Both price levels are visible on the FIRST expand -- the old nested
+    // accordion needed a second click to reach the wholesale price.
     await expect(box).toContainText(TEST_PRICE_LEVEL.name);
     await expect(box).toContainText(TEST_PRICE_LEVEL_WHOLESALE.name);
     await expect(box).toContainText('₱100.00');
-    await expect(box).toContainText('Cost: ₱60.00');
+    // Cost sits in the table's own Cost column now, not in a "Cost: x" line.
+    await expect(box).toContainText('₱60.00');
+  });
+
+  test('selling-unit rows share the products table columns', async ({ page }) => {
+    await seedSession(page, DEFAULT_ADMIN);
+    await page.goto('/products');
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+
+    const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
+    await row.getByRole('button', { name: `Expand ${PRODUCT_NAME}` }).click();
+
+    const box = page.getByTestId('selling-unit-item').filter({ hasText: 'Box' });
+    // Same cell count as the product row => the columns line up. This is the
+    // whole point of the redesign, so it gets an assertion of its own.
+    await expect(box.locator('td')).toHaveCount(await row.locator('td').count());
   });
 });
