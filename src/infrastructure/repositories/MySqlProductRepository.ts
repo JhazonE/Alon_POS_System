@@ -4,6 +4,37 @@ import { ProductRepository, GetProductsFilters } from '../../core/products/domai
 import { ProductEntity } from '../../core/products/domain/Product';
 import { expandProductSellingUnits } from './product-selling-unit-expansion';
 
+/**
+ * Outcome of interpreting `filters.warehouseId`.
+ *
+ *  - `none`    : no warehouse filter was requested (undefined / null).
+ *  - `match`   : a usable warehouse id; restrict to it.
+ *  - `nothing` : a filter WAS supplied but cannot resolve to a warehouse (blank,
+ *                whitespace, or not a string at all). It must match no rows.
+ *
+ * This used to be `if (filters.warehouseId)`, which treated a blank id the same
+ * as an absent one and so DROPPED the restriction: a POS terminal whose
+ * `location` was '' returned every warehouse's copy of every product. Fan-out
+ * makes those copies same-sku duplicates, so that is a correctness problem.
+ *
+ * A non-string is "unresolved", not "absent": TypeScript types are erased at
+ * the HTTP boundary and `pool.query` escapes an OBJECT parameter as
+ * `` `key` = value ``, which is a match-many predicate.
+ *
+ * A well-formed string that names no warehouse (e.g. the literal 'Store') needs
+ * no special case: `products.warehouse_id = 'Store'` already matches nothing.
+ */
+type WarehouseFilter =
+  | { kind: 'none' }
+  | { kind: 'match'; id: string }
+  | { kind: 'nothing' };
+
+function resolveWarehouseFilter(warehouseId: unknown): WarehouseFilter {
+  if (warehouseId === undefined || warehouseId === null) return { kind: 'none' };
+  if (typeof warehouseId !== 'string' || warehouseId.trim() === '') return { kind: 'nothing' };
+  return { kind: 'match', id: warehouseId };
+}
+
 export class MySqlProductRepository implements ProductRepository {
   async findAll(limit: number, offset: number, filters: GetProductsFilters): Promise<ProductEntity[]> {
     let sql = `
@@ -63,9 +94,12 @@ export class MySqlProductRepository implements ProductRepository {
       }
     }
 
-    if (filters.warehouseId) {
+    const warehouseFilter = resolveWarehouseFilter(filters.warehouseId);
+    if (warehouseFilter.kind === 'match') {
       sql += ' AND products.warehouse_id = ?';
-      params.push(filters.warehouseId);
+      params.push(warehouseFilter.id);
+    } else if (warehouseFilter.kind === 'nothing') {
+      sql += ' AND 1=0';
     }
 
     if (filters.availability) {
@@ -193,9 +227,12 @@ export class MySqlProductRepository implements ProductRepository {
       }
     }
 
-    if (filters.warehouseId) {
+    const warehouseFilter = resolveWarehouseFilter(filters.warehouseId);
+    if (warehouseFilter.kind === 'match') {
       countSql += ' AND warehouse_id = ?';
-      countParams.push(filters.warehouseId);
+      countParams.push(warehouseFilter.id);
+    } else if (warehouseFilter.kind === 'nothing') {
+      countSql += ' AND 1=0';
     }
 
     if (filters.availability) {
