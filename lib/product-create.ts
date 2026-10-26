@@ -300,6 +300,64 @@ export async function addProductWithScope(
           await connection.query('INSERT INTO supplier_product_mapping (id, product_id, supplier_id, supplier_sku, supplier_lead_time, supplier_specific_rop, supplier_cost, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [mappingId, productId, mapping.supplierId, mapping.supplierSku || null, mapping.leadTime, mapping.rop, mapping.cost || null, mapping.isPrimary ? 1 : 0]);
         }
       }
+
+      // --- FAN-OUT: zero-stock copies in the branch's other active warehouses ---
+      // Runs LAST and inside this transaction, with no try/catch: a failure here
+      // must roll the primary insert back, not leave a half-created product.
+      // The branch of `resolvedWarehouseId` was already asserted against `scope`
+      // by assertWarehouseForWrite above, which fanoutTargetWarehouses relies on.
+      // Services never fan out, and a product with no warehouse has no branch.
+      if (!isServiceProduct && resolvedWarehouseId) {
+        const targets = await fanoutTargetWarehouses(resolvedWarehouseId, scope);
+        if (targets.length > 0) {
+          // Read the primary back so the copies pick up the scalar columns the
+          // selling-unit sync above may have rewritten (price/cost/barcode/uom).
+          const [primaryRows]: any = await connection.query(
+            `SELECT name, description, additional_description, category, brand, department,
+                    subcategory, supplier_id, reorder_point, price, cost, sku, barcode,
+                    image_url, image_hint, unit_of_measure, income_account, expense_account,
+                    vat_status, availability, earns_points, is_perishable, type
+             FROM products WHERE id = ?`,
+            [productId],
+          );
+          const primary = primaryRows[0];
+          const [levelRows]: any = await connection.query(
+            'SELECT price_level_id, price, min_quantity FROM product_price_levels WHERE product_id = ?',
+            [productId],
+          );
+
+          // Deliberately NOT copied: stock (0), avg_daily_sales (0), inventory_batches,
+          // product_shelves / shelf_location_id (physical to one warehouse),
+          // product_selling_units (global UNIQUE barcode), parent_id, conversion_factor.
+          for (const targetWarehouseId of targets) {
+            const copyId = `product_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            await connection.query(
+              `INSERT INTO products (
+                 id, name, description, additional_description, category, brand, department,
+                 subcategory, supplier_id, warehouse_id, stock, reorder_point, avg_daily_sales,
+                 price, cost, sku, barcode, image_url, image_hint, unit_of_measure,
+                 income_account, expense_account, vat_status, availability, earns_points,
+                 is_perishable, type
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                copyId, primary.name, primary.description, primary.additional_description,
+                primary.category, primary.brand, primary.department, primary.subcategory,
+                primary.supplier_id, targetWarehouseId, primary.reorder_point,
+                primary.price, primary.cost, primary.sku, primary.barcode, primary.image_url,
+                primary.image_hint, primary.unit_of_measure, primary.income_account,
+                primary.expense_account, primary.vat_status, primary.availability,
+                primary.earns_points, primary.is_perishable, primary.type,
+              ],
+            );
+            for (const pl of levelRows) {
+              await connection.query(
+                'INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, ?)',
+                [copyId, pl.price_level_id, pl.price, pl.min_quantity],
+              );
+            }
+          }
+        }
+      }
     });
 
     return { success: true, message: `${formData.name} has been added to the inventory.`, productId };
