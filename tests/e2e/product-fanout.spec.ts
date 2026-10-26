@@ -234,6 +234,88 @@ test.describe('addProductWithScope fan-out', () => {
     expect(own).toHaveLength(1);
   });
 
+  test('the copy takes its scalar columns from the post-sync primary, not from the form', async () => {
+    const b = await seed();
+    const extra = await addWarehouse(b.branchId);
+    const sku = newSku();
+    const levels = (await testQuery(
+      'SELECT id FROM price_levels ORDER BY is_default DESC, name ASC')) as Array<{ id: string }>;
+    expect(levels.length).toBeGreaterThanOrEqual(1);
+    const result: any = await addProductWithScope(
+      // Form values that the base selling unit deliberately contradicts.
+      form(sku, {
+        warehouse: b.warehouseId, stock: 4, price: 10, cost: 6, barcode: `FORM-${sku}`,
+        unitOfMeasure: 'pc',
+        sellingUnits: [{
+          unitName: 'box', qtyBase: 1, barcode: `SU-${sku}`, cost: 7, isBase: true,
+          prices: { [levels[0].id]: { price: 15 } },
+        }],
+      }), b.userUid, true, { scope: 'single', branchId: b.branchId });
+    expect(result.success).toBe(true);
+
+    const rows = (await testQuery(
+      `SELECT warehouse_id, price, cost, barcode, unit_of_measure FROM products
+       WHERE sku = ? ORDER BY stock DESC`, [sku])) as any[];
+    expect(rows).toHaveLength(2);
+    const [primary, copy] = rows;
+    expect(copy.warehouse_id).toBe(extra);
+    // The sync really did rewrite the primary (guards against a vacuous test)...
+    expect(Number(primary.price)).toBe(15);
+    expect(Number(primary.cost)).toBe(7);
+    expect(primary.barcode).toBe(`SU-${sku}`);
+    expect(primary.unit_of_measure).toBe('box');
+    // ...and the copy carries the synced values, not the form's 10 / 6 / FORM- / pc.
+    expect(Number(copy.price)).toBe(15);
+    expect(Number(copy.cost)).toBe(7);
+    expect(copy.barcode).toBe(`SU-${sku}`);
+    expect(copy.unit_of_measure).toBe('box');
+  });
+
+  test('product_price_levels rows are copied to the fanned-out copy under its own product id', async () => {
+    const b = await seed();
+    const extra = await addWarehouse(b.branchId);
+    const sku = newSku();
+    const levels = (await testQuery(
+      'SELECT id FROM price_levels ORDER BY is_default DESC, name ASC')) as Array<{ id: string }>;
+    expect(levels.length).toBeGreaterThanOrEqual(2);
+    const result: any = await addProductWithScope(
+      form(sku, {
+        warehouse: b.warehouseId, stock: 4,
+        sellingUnits: [{
+          unitName: 'pc', qtyBase: 1, barcode: `PL-${sku}`, cost: 6, isBase: true,
+          prices: {
+            [levels[0].id]: { price: 15 },
+            [levels[1].id]: { price: 12, minQuantity: 5 },
+          },
+        }],
+      }), b.userUid, true, { scope: 'single', branchId: b.branchId });
+    expect(result.success).toBe(true);
+
+    const ids = (await testQuery(
+      'SELECT id, warehouse_id FROM products WHERE sku = ?', [sku])) as any[];
+    const primaryId = ids.find((r) => r.warehouse_id === b.warehouseId).id;
+    const copyId = ids.find((r) => r.warehouse_id === extra).id;
+    expect(copyId).not.toBe(primaryId);
+
+    const shape = (rows: any[]) => rows
+      .map((r) => ({
+        price_level_id: r.price_level_id,
+        price: Number(r.price),
+        min_quantity: Number(r.min_quantity),
+      }))
+      .sort((x, y) => x.price_level_id.localeCompare(y.price_level_id));
+    const fetch = async (pid: string) => shape((await testQuery(
+      'SELECT price_level_id, price, min_quantity FROM product_price_levels WHERE product_id = ?',
+      [pid])) as any[]);
+    const primaryLevels = await fetch(primaryId);
+    const copyLevels = await fetch(copyId);
+    expect(primaryLevels).toHaveLength(2); // non-vacuous: there is something to copy
+    expect(copyLevels).toEqual(primaryLevels);
+    expect(copyLevels.find((r) => r.price_level_id === levels[1].id)).toMatchObject({
+      price: 12, min_quantity: 5,
+    });
+  });
+
   test('a NULL-warehouse product creates one row and does not fan out', async () => {
     const b = await seed();
     await addWarehouse(b.branchId);
