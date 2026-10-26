@@ -48,6 +48,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
+import { getSessionUid } from '@/lib/session-uid';
 import { SellingUnitsPanel, StockDot } from './components/selling-units-panel';
 
 // Expand, Name, Barcode, Unit, Stock, Cost, Retail Price, Warehouse, Shelf, Actions
@@ -401,10 +402,16 @@ function ProductsContent() {
     }
   });
 
+  // Captured once per mount so the query key is stable across renders.
+  const [sessionUid] = useState(() => getSessionUid());
+
   // The branch's default warehouse. Resolved server-side from the session so it is
   // always a warehouse of the user's own branch (never "first of every branch").
   const { data: defaultWarehouse, isError: defaultWarehouseFailed } = useQuery({
-    queryKey: ['defaultProductWarehouse'],
+    // The identity is part of the key: the QueryClient is a module-level singleton
+    // that survives sign-out -> sign-in as another user, so without the uid a user
+    // would inherit the previous user's (other branch's) cached default.
+    queryKey: ['defaultProductWarehouse', sessionUid],
     queryFn: () => getDefaultProductWarehouse(),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -442,7 +449,12 @@ function ProductsContent() {
     refetchOptions();
   }, [refetchOptions]);
 
-  useLiveRefresh(refetch);
+  // refetch() ignores `enabled`, so a stock-updated event before the default
+  // warehouse resolves would fetch the unfiltered list. Hold it until ready.
+  const refreshWhenReady = useCallback(() => {
+    if (warehouseDefaultReady) refetch();
+  }, [refetch, warehouseDefaultReady]);
+  useLiveRefresh(refreshWhenReady);
 
   // Reset to page 1 when structural filters or search term change
   useEffect(() => {

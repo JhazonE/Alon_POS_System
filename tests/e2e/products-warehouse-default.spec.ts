@@ -21,13 +21,16 @@ import { testQuery } from './helpers/db';
 
 const tag = `WHDEF-${Date.now()}`;
 
-function branchUser(uid: string): SessionUser {
+// Ang sidebar links mo-render lang kung naay tinuod nga permission names ('*' dili igo).
+const NAV_PERMISSIONS = ['view_dashboard', 'manage_products', 'manage_inventory', 'view_sales', 'manage_settings'];
+
+function branchUser(uid: string, permissions: string[] = ['*']): SessionUser {
   return {
     uid,
     username: `u_${uid.slice(0, 8)}`,
     userType: 'User',
     displayName: 'Branch User',
-    permissions: ['*'],
+    permissions,
   };
 }
 
@@ -130,6 +133,38 @@ test.describe('products table defaults to a single warehouse', () => {
     await expect(page.getByRole('row', { name: new RegExp(name) })).toHaveCount(2);
     await page.waitForTimeout(4500); // hatagan ug higayon ang default nga moabot
     await expect(page.getByRole('row', { name: new RegExp(name) })).toHaveCount(2);
+    await expect(page.getByText(`Warehouse: ${firstWhName}`)).toHaveCount(0);
+    // Dili mag-pass nga walay sulod kung ang route mohunong sa pag-match.
+    expect(delayed).toBe(2);
+  });
+
+  test('a cached default is not inherited by the next user to sign in', async ({ page }) => {
+    // Duha ka session uid sa USA ka page context: ang QueryClient kay module-level
+    // singleton nga mabuhi sa client-side navigation, mao nga mao ni ang tinuod nga
+    // sign-out -> sign-in nga walay full reload. Ang user B kinahanglan dili makabaton
+    // sa cached default ni A (laing branch).
+    const b = await seedSecondBranch();
+    otherBranches.push(b);
+    const bRows: any[] = await testQuery('SELECT name FROM warehouses WHERE id = ?', [b.warehouseId]);
+    const bWhName = bRows[0].name;
+
+    await openProducts(page, branchUser(seeded.userUid, NAV_PERMISSIONS));
+    await expect(page.getByText(`Warehouse: ${firstWhName}`)).toBeVisible();
+
+    // Ilisan ang identity (cookie + localStorage) nga walay reload.
+    const userB = branchUser(b.userUid, NAV_PERMISSIONS);
+    await seedSession(page, userB);
+    await page.evaluate((u) => {
+      window.localStorage.setItem('mock-user-session', JSON.stringify({ ...u, email: u.username }));
+    }, userB);
+
+    // Client-side navigation: layo, dayon balik sa Products.
+    await page.locator('a[href="/dashboard"]').first().click();
+    await page.waitForURL('**/dashboard');
+    await page.locator('a[href="/products"]').first().click();
+    await page.waitForURL('**/products');
+
+    await expect(page.getByText(`Warehouse: ${bWhName}`)).toBeVisible();
     await expect(page.getByText(`Warehouse: ${firstWhName}`)).toHaveCount(0);
   });
 

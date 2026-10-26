@@ -9,9 +9,10 @@ const WORKFLOW_ID = 'wf-priceupdate-e2e';
  * Pricing page (DB-backed) — drives the bulk price update form and its Excel
  * upload path on /inventory/pricing against the seeded alon_pos_test DB.
  *
- * Uses BULK_PRICE_PRODUCT, the only seeded product with a non-NULL warehouse_id
- * (see fixtures/test-data.ts) — the page's product picker filters by warehouse,
- * and every other seeded product has warehouse_id = NULL.
+ * Uses BULK_PRICE_PRODUCT, the only seeded product in "Test Warehouse"
+ * (see fixtures/test-data.ts) — the page's product picker filters by warehouse and
+ * these tests take the FIRST row, so it must stay alone there. Every other seeded
+ * product lives in TEST_MAIN_WAREHOUSE.
  *
  * Selectors were verified against the real rendered markup (not assumed from the
  * plan): the shadcn Checkbox renders `button[role="checkbox"]`, the "Value" input

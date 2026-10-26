@@ -52,7 +52,8 @@ export const TEST_PRODUCTS: TestProduct[] = [
  *
  * location MUST be '' (walay inventory location). Ang POS mo-filter sa products
  * pinaagi sa terminal.location → products.warehouse_id; ang atong test products
- * naa'y NULL warehouse_id, mao nga ang bisan unsang location mo-exclude nila. */
+ * naa sa TEST_MAIN_WAREHOUSE, mao nga ang location nga naay value mo-filter ug
+ * mo-exclude nila -- busa '' (walay filter) ang gamiton. */
 export const TEST_TERMINAL = {
   id: 'test-terminal-1',
   name: 'Test Counter 1',
@@ -361,8 +362,9 @@ export const TEST_MAIN_WAREHOUSE = { id: 'wh-main-test', name: 'Main Warehouse' 
 /**
  * Product nga naka-assign sa TEST_WAREHOUSE — gikinahanglan sa bulk-price-update
  * e2e test kay ang Pricing page's product picker mo-filter pinaagi
- * sa warehouse_id, ug ang TEST_PRODUCTS naa'y NULL warehouse_id (dili sila
- * motungha bisan unsang warehouse ang piliin).
+ * sa warehouse_id. Ang ubang seeded products naa sa TEST_MAIN_WAREHOUSE, mao nga
+ * kini ra ang product sa "Test Warehouse" -- gikinahanglan kana sa pricing.spec.ts,
+ * nga mokuha sa UNANG row sa maong warehouse.
  */
 export const BULK_PRICE_PRODUCT = {
   id: 'test-bulk-price-product-1',
