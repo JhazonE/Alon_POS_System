@@ -481,7 +481,9 @@ async function seedFixtures(): Promise<void> {
   await conn.query(
     `INSERT INTO pos_terminals (id, name, location, ip_address, is_active, x_counter, z_counter, or_next_reference, branch_id)
      VALUES (?, ?, ?, ?, 1, 0, 0, '000000', (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))`,
-    [TEST_TERMINAL.id, TEST_TERMINAL.name, TEST_TERMINAL.location, TEST_TERMINAL.ipAddress],
+    // location = the main warehouse: the POS lists products from its terminal's
+    // warehouse and (since Task 6) lists NOTHING when that is blank/unresolved.
+    [TEST_TERMINAL.id, TEST_TERMINAL.name, TEST_MAIN_WAREHOUSE.id, TEST_TERMINAL.ipAddress],
   );
 
   // --- payment_methods (Cash para sa tender) ---

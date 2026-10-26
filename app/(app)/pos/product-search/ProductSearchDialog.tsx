@@ -29,7 +29,7 @@ export function ProductSearchDialog({
   onSelectProduct, children, isOpen, onOpenChange,
   showQuantityInSearch = true,
   activeLevelId, defaultLevelId, activeLevelName = 'Retail',
-  warehouseId, allProducts,
+  warehouseId, allProducts, enabled,
 }: ProductSearchDialogProps) {
   const {
     searchTerm, setSearchTerm,
@@ -38,7 +38,7 @@ export function ProductSearchDialog({
     displayedProducts, loading, error,
     handleSelect, stockTone,
     brands, categories,
-  } = useProductSearch({ isOpen, onOpenChange, onSelectProduct, activeLevelId, warehouseId, allProducts });
+  } = useProductSearch({ isOpen, onOpenChange, onSelectProduct, activeLevelId, warehouseId, allProducts, enabled });
 
   const [showCategory, setShowCategory] = useState(true);
   const [showBrand, setShowBrand]       = useState(true);

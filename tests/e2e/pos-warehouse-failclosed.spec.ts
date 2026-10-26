@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page, type Request } from '@playwright/test';
 import { MySqlProductRepository } from '../../src/infrastructure/repositories/MySqlProductRepository';
 import {
   seedSecondBranch,
@@ -7,7 +7,8 @@ import {
   seedProductInWarehouse,
   type SeededBranch,
 } from './helpers/branches';
-import { testQuery } from './helpers/db';
+import { testQuery, resetPosState } from './helpers/db';
+import { TEST_TERMINAL, TEST_MAIN_WAREHOUSE, TEST_USERS, TEST_PRODUCTS } from './fixtures/test-data';
 
 /**
  * The POS filters its product list by the terminal's `location` column. A blank
@@ -95,5 +96,98 @@ test.describe('product repository warehouse filter fails closed', () => {
 
     const absent = await request.get(`/api/products?search=${sku}&limit=50`);
     expect((await absent.json()).data).toHaveLength(2);
+  });
+});
+
+/**
+ * The POS path. The repository only fails closed if the client actually SENDS the
+ * unresolved warehouse: useProducts used to drop a blank `warehouseId`, so a
+ * terminal with a blank/NULL location asked for "no filter" and got every
+ * warehouse's copy of every product.
+ */
+test.describe('POS terminal location reaches the product query', () => {
+  const sku = TEST_PRODUCTS[0].sku;
+
+  test.beforeEach(async () => {
+    await resetPosState();
+  });
+
+  test.afterEach(async () => {
+    await testQuery('UPDATE pos_terminals SET location = ? WHERE id = ?', [TEST_MAIN_WAREHOUSE.id, TEST_TERMINAL.id]);
+  });
+
+  function trackProductRequests(page: Page) {
+    const seen: { url: URL; request: Request }[] = [];
+    page.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.pathname === '/api/products' && r.method() === 'GET') seen.push({ url: u, request: r });
+    });
+    return seen;
+  }
+
+  async function openPos(page: Page) {
+    await page.goto('/pos');
+    await page.getByLabel('Username').fill(TEST_USERS.cashier.username);
+    await page.getByLabel('Password').fill(TEST_USERS.cashier.password);
+    await page.getByRole('button', { name: /login to pos/i }).click();
+    await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
+  }
+
+  test('a selected terminal with a blank location lists no products, not every copy', async ({ page }) => {
+    await testQuery("UPDATE pos_terminals SET location = '' WHERE id = ?", [TEST_TERMINAL.id]);
+    const seen = trackProductRequests(page);
+    const bodies: any[] = [];
+    page.on('response', async (res) => {
+      const u = new URL(res.url());
+      if (u.pathname === '/api/products') bodies.push(await res.json().catch(() => null));
+    });
+
+    await openPos(page);
+    await expect.poll(() => bodies.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    // The POS mounts several product queries (list, search, F9 dialog, price
+    // inquiry); the first response to land is not all of them. Let them settle.
+    await page.waitForTimeout(2000);
+
+    // Every product query carried the (blank) warehouseId explicitly...
+    for (const { url } of seen) expect(url.searchParams.has('warehouseId'), url.toString()).toBe(true);
+    // ...and the server answered each with nothing.
+    for (const b of bodies) {
+      expect(b?.success).toBe(true);
+      expect(b.data).toHaveLength(0);
+    }
+  });
+
+  test('control: a terminal with a real warehouse still lists its products', async ({ page }) => {
+    const seen = trackProductRequests(page);
+    const bodies: any[] = [];
+    page.on('response', async (res) => {
+      const u = new URL(res.url());
+      if (u.pathname === '/api/products') bodies.push(await res.json().catch(() => null));
+    });
+
+    await openPos(page);
+    await expect.poll(() => bodies.some((b) => b?.data?.some((p: any) => p.sku === sku)), { timeout: 15_000 }).toBe(true);
+    await page.waitForTimeout(2000);
+    for (const { url } of seen) expect(url.searchParams.get('warehouseId')).toBe(TEST_MAIN_WAREHOUSE.id);
+  });
+
+  test('before the terminals have loaded the POS sends no product query at all', async ({ page }) => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    await page.route(/\/api\/pos-terminals\?activeOnly=true/, async (route) => {
+      await gate;
+      await route.continue();
+    });
+    const seen = trackProductRequests(page);
+
+    await openPos(page);
+    // Give any (wrong) unfiltered startup query ample time to fire.
+    await page.waitForTimeout(2000);
+    expect(seen.map((s) => s.url.toString()), 'no product query while the terminal is unknown').toEqual([]);
+
+    release();
+    // Once the terminal resolves the real, warehouse-scoped query runs and the list fills.
+    await expect.poll(() => seen.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    for (const { url } of seen) expect(url.searchParams.get('warehouseId')).toBe(TEST_MAIN_WAREHOUSE.id);
   });
 });

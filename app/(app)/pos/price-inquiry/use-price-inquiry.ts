@@ -8,12 +8,14 @@ import { useLiveRefresh } from '@/hooks/use-live-refresh';
 type Options = {
   isOpen: boolean;
   activeLevelId?: string;
+  warehouseId?: string | null;
+  enabled?: boolean;
 };
 
-export function usePriceInquiry({ isOpen, activeLevelId }: Options) {
+export function usePriceInquiry({ isOpen, activeLevelId, warehouseId, enabled = true }: Options) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { products, loading, error, refetch: refetchPriceProducts } = useProducts(searchTerm);
+  const { products, loading, error, refetch: refetchPriceProducts } = useProducts(searchTerm, undefined, undefined, warehouseId, undefined, enabled);
 
   // Handle auto-refresh when stock is updated (e.g., after a sale)
   const stableRefresh = useCallback(() => { refetchPriceProducts(); }, [refetchPriceProducts]);

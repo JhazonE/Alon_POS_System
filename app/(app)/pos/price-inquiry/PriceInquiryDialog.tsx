@@ -27,11 +27,15 @@ export function PriceInquiryDialog({
   onOpenChange,
   activeLevelId,
   defaultLevelId,
-  activeLevelName = 'Retail'
+  activeLevelName = 'Retail',
+  warehouseId,
+  enabled = true,
 }: PriceInquiryDialogProps) {
   const { searchTerm, setSearchTerm, selectedProduct, products, loading, error, handleSelect } = usePriceInquiry({
     isOpen,
     activeLevelId,
+    warehouseId,
+    enabled,
   });
 
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);

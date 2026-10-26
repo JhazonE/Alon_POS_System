@@ -12,8 +12,9 @@ type Options = {
   onOpenChange: (open: boolean) => void;
   onSelectProduct: (product: Product) => void;
   activeLevelId?: string;
-  warehouseId?: string;
+  warehouseId?: string | null;
   allProducts?: Product[];
+  enabled?: boolean;
 };
 
 export function useProductSearch({
@@ -23,6 +24,7 @@ export function useProductSearch({
   activeLevelId,
   warehouseId,
   allProducts = [],
+  enabled = true,
 }: Options) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
@@ -34,7 +36,8 @@ export function useProductSearch({
     'Available',
     undefined,
     warehouseId,
-    true
+    true,
+    enabled
   );
 
   const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]);

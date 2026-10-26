@@ -9,6 +9,9 @@ export interface ProductSearchDialogProps {
   activeLevelId?: string;
   defaultLevelId?: string;
   activeLevelName?: string;
-  warehouseId?: string;
+  /** `null` = the terminal has no resolvable warehouse: list nothing (see useProducts). */
+  warehouseId?: string | null;
   allProducts?: Product[];
+  /** False until the terminal is known; holds the product query. */
+  enabled?: boolean;
 }

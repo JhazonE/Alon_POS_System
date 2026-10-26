@@ -50,13 +50,12 @@ export const TEST_PRODUCTS: TestProduct[] = [
 /** POS terminal — ip 127.0.0.1 aron auto-match sa local test client; fallback usab
  * isip terminalsData[0] kay kini ra ang terminal.
  *
- * location MUST be '' (walay inventory location). Nota: ang seeded products naa na
- * karon sa usa ka warehouse (TEST_MAIN_WAREHOUSE / TEST_WAREHOUSE), dili na NULL;
- * wala nako gi-verify kung unsaon sa POS paggamit ang terminal.location. */
+ * Ang location sa seeded terminal kay TEST_MAIN_WAREHOUSE.id (gi-set sa prepare-test-db).
+ * Ang POS mo-list ra ug products gikan sa warehouse sa terminal, ug WALAY ipakita kung
+ * blangko/dili ma-resolve ang location - mao nga dili na ni pwede nga ''. */
 export const TEST_TERMINAL = {
   id: 'test-terminal-1',
   name: 'Test Counter 1',
-  location: '',
   ipAddress: '127.0.0.1',
 };
 

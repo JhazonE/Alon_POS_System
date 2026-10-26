@@ -65,8 +65,20 @@ export function usePOS() {
     [terminals, selectedTerminalId]
   );
   const inventoryLocation = currentTerminal?.inventoryLocation || '';
+  // Which warehouse the POS lists products from. Three states, deliberately kept apart:
+  //  - no terminal yet (terminals still loading): `undefined` + queries held, so the
+  //    POS neither shows an unfiltered list nor flashes an empty one;
+  //  - a terminal whose location is blank/NULL: `null`, sent to the server as an
+  //    explicit blank so it answers with NOTHING rather than every warehouse's copy;
+  //  - otherwise the terminal's warehouse id.
+  const terminalResolved = currentTerminal !== null;
+  const productWarehouse: string | null | undefined = !terminalResolved
+    ? undefined
+    : (inventoryLocation.trim() ? inventoryLocation : null);
+  // For consumers that cannot hold: with no terminal they still must not widen.
+  const productWarehouseId: string | null = productWarehouse ?? null;
 
-  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, inventoryLocation, true);
+  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, productWarehouse, true, terminalResolved);
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -84,8 +96,9 @@ export function usePOS() {
     debouncedSearchQuery.trim(),
     'Available',
     undefined,
-    inventoryLocation,
-    true
+    productWarehouse,
+    true,
+    terminalResolved
   );
 
   const [isTenderDialogOpen, setIsTenderDialogOpen] = useState(false);
@@ -1375,7 +1388,7 @@ export function usePOS() {
     handleReadingDialogOpenChange,
     lastEndedShiftId,
     // cart
-    items, inputValue, setInputValue, inventoryLocation,
+    items, inputValue, setInputValue, inventoryLocation, productWarehouseId, productsReady: terminalResolved,
     selectedItemId, setSelectedItemId, selectedItem,
     editingNameItemId, setEditingNameItemId,
     editingQtyItemId, setEditingQtyItemId,

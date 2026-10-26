@@ -100,9 +100,9 @@ test.describe('Service product type', () => {
 
   test('selling a service leaves stock untouched but records cost_at_sale with no batch_source', async ({ page }) => {
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type)
-       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type, warehouse_id)
+       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service', ?)`,
+      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU, TEST_MAIN_WAREHOUSE.id]
     );
 
     await posLogin(page);
@@ -136,9 +136,9 @@ test.describe('Service product type', () => {
     await testQuery('UPDATE pos_settings SET batch_costing_oversell_block = 1');
 
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type)
-       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type, warehouse_id)
+       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service', ?)`,
+      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU, TEST_MAIN_WAREHOUSE.id]
     );
 
     try {

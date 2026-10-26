@@ -23,9 +23,30 @@ export interface UseSalesInvoicesResult {
   refetch: () => void;
 }
 
-export function useProducts(search?: string, availability?: string, supplierId?: string, warehouseId?: string, expandSellingUnits?: boolean): UseProductsResult {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['products', search, availability, supplierId, warehouseId, expandSellingUnits],
+/**
+ * `warehouseId` has three meanings, and only the first two existed before:
+ *  - `undefined` or `''` : no warehouse filter (every existing caller; the
+ *    sales-order/invoice selectors pass `''`/`undefined` until a warehouse is chosen).
+ *  - a non-empty id      : restrict to that warehouse.
+ *  - `null`              : "the caller needs a warehouse and has none that
+ *    resolves". Sends a blank `warehouseId=`, which the server answers with an
+ *    EMPTY result (see resolveWarehouseFilter). Without this the POS, whose
+ *    terminal `location` may be blank/NULL, degraded to "no filter" and listed
+ *    every warehouse's copy of every product.
+ * `null` was not part of the old `string | undefined` type, so no existing
+ * caller can be passing it.
+ *
+ * `enabled: false` holds the query (no request) and reports `loading: true`, so a
+ * caller that is not ready to know its warehouse (POS before its terminal has
+ * loaded) shows its loading state instead of an unfiltered or empty list.
+ */
+export function useProducts(search?: string, availability?: string, supplierId?: string, warehouseId?: string | null, expandSellingUnits?: boolean, enabled: boolean = true): UseProductsResult {
+  const { data, isLoading, error, refetch: queryRefetch } = useQuery({
+    // react-query hashes keys with JSON.stringify, which turns `undefined` into
+    // `null`: used raw, "no filter" and "unresolved warehouse" would share one
+    // cache entry, so one could be served the other's list. Keep them distinct.
+    queryKey: ['products', search, availability, supplierId, warehouseId === null ? '__unresolved__' : warehouseId, expandSellingUnits],
+    enabled,
     staleTime: 15 * 1000, // Consider data stale after 15 seconds
     refetchInterval: 30 * 1000, // Auto-refetch every 30 seconds
     queryFn: async () => {
@@ -33,7 +54,8 @@ export function useProducts(search?: string, availability?: string, supplierId?:
       if (search) params.append('search', search);
       if (availability) params.append('availability', availability);
       if (supplierId) params.append('supplierId', supplierId);
-      if (warehouseId) params.append('warehouseId', warehouseId);
+      if (warehouseId === null) params.append('warehouseId', '');
+      else if (warehouseId) params.append('warehouseId', warehouseId);
       if (expandSellingUnits) params.append('expandSellingUnits', 'true');
       params.append('limit', '100');
 
@@ -82,11 +104,15 @@ export function useProducts(search?: string, availability?: string, supplierId?:
     },
   });
 
+  // react-query's refetch() ignores `enabled`, and useLiveRefresh calls it, so a
+  // held query must not be woken by a live-refresh tick.
+  const refetch = useCallback(() => { if (enabled) queryRefetch(); }, [enabled, queryRefetch]);
+
   useLiveRefresh(refetch);
 
   return {
     products: data || EMPTY_PRODUCTS,
-    loading: isLoading,
+    loading: isLoading || !enabled,
     error: error instanceof Error ? error.message : null, 
     refetch 
   };
