@@ -112,16 +112,21 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
     const whereClauses: string[] = [];
     const params: any[] = [];
 
-    const hasActiveFilters = filters && (
+    // Row filters change WHICH rows match and flatten the family roll-up. The warehouse
+    // filter is deliberately absent: it only scopes row visibility, so it must not turn
+    // off the `parent_id IS NULL` root paging or the descendant CTE. getProducts and
+    // getProductsCount MUST keep this expression and `suppressRollup` identical, or the
+    // count and the page desynchronise.
+    const hasRowFilters = filters && (
       (filters.brand && filters.brand !== 'all') ||
       (filters.category && filters.category !== 'all') ||
       (filters.department && filters.department !== 'all') ||
       (filters.supplier && filters.supplier !== 'all') ||
-      (filters.warehouse && filters.warehouse !== 'all') ||
       (filters.shelfLocation && filters.shelfLocation !== 'all') ||
       (filters.status && filters.status !== 'all') ||
       filters.search
     );
+    const suppressRollup = hasRowFilters;
 
     if (filters) {
       if (filters.search) {
@@ -164,7 +169,7 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
       }
     }
 
-    if (!hasActiveFilters && limit !== undefined && offset !== undefined) {
+    if (!suppressRollup && limit !== undefined && offset !== undefined) {
       whereClauses.push(`p.parent_id IS NULL`);
     }
 
@@ -182,7 +187,7 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
     const pagedProducts = await query(sql, params.length > 0 ? params : undefined);
     
     let products = pagedProducts;
-    if (!hasActiveFilters && limit !== undefined && offset !== undefined && pagedProducts.length > 0) {
+    if (!suppressRollup && limit !== undefined && offset !== undefined && pagedProducts.length > 0) {
       const rootIds = pagedProducts.map((p: any) => p.id);
       
       try {
@@ -420,18 +425,23 @@ export async function getProductsCount(filters?: ProductFilters) {
       }
     }
 
-    const hasActiveFilters = filters && (
+    // Row filters change WHICH rows match and flatten the family roll-up. The warehouse
+    // filter is deliberately absent: it only scopes row visibility, so it must not turn
+    // off the `parent_id IS NULL` root paging or the descendant CTE. getProducts and
+    // getProductsCount MUST keep this expression and `suppressRollup` identical, or the
+    // count and the page desynchronise.
+    const hasRowFilters = filters && (
       (filters.brand && filters.brand !== 'all') ||
       (filters.category && filters.category !== 'all') ||
       (filters.department && filters.department !== 'all') ||
       (filters.supplier && filters.supplier !== 'all') ||
-      (filters.warehouse && filters.warehouse !== 'all') ||
       (filters.shelfLocation && filters.shelfLocation !== 'all') ||
       (filters.status && filters.status !== 'all') ||
       filters.search
     );
+    const suppressRollup = hasRowFilters;
 
-    if (!hasActiveFilters) {
+    if (!suppressRollup) {
       whereClauses.push(`p.parent_id IS NULL`);
     }
 
