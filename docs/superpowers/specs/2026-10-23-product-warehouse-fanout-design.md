@@ -458,6 +458,30 @@ Requirements:
 
 ---
 
+## Follow-ups recorded at completion
+
+Recorded when the feature landed (and mirrored in CLAUDE.md, under "Product
+warehouse fan-out"). None of these is fixed here, deliberately.
+
+1. **Branch filtering of the products list.** `getProducts` / `getProductsCount`
+   apply no branch filtering at all, so selecting "All warehouses" shows other
+   branches' products. Pre-existing; not widened by this work (the default
+   warehouse hides it, it does not close it). It belongs with the unauthenticated
+   `GET /api/branches` and the `approvals/queue` / `reports/soa` cross-branch
+   reads as a read-isolation item, and it changes what existing users see, so it
+   should be its own change.
+2. **Rollout check for other installs.** A POS terminal whose `location` is NULL
+   or blank now lists nothing (fail-closed). No migration sets one. Before
+   deploying elsewhere: `SELECT id, name, location FROM pos_terminals WHERE
+   location IS NULL OR TRIM(location) = '' OR location = 'Store'`. Zero rows on
+   the development install.
+3. **`warehouses.is_main` / `warehouses.active` are runtime-added**
+   (`app/api/warehouses/route.ts`), not migrated. This work depends on neither;
+   `is_active` is the source of truth.
+4. **The default warehouse is the branch's oldest active one by `created_at`.**
+   Deactivating or deleting it silently changes the default; an explicit
+   "default warehouse" setting is the real fix.
+
 ## Decision log
 
 | Decision | Who |
