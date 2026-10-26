@@ -161,6 +161,21 @@ export async function GET(request: NextRequest) {
         const lastMonthStartStr = toLocalYmd(lastMonth.start);
         const lastMonthEndStr = toLocalYmd(lastMonth.end);
 
+        // total_items and low_stock_items are business metrics ("how many
+        // products does this branch sell / need reordering"), not row counts.
+        // Product creation fans a product out into one zero-stock copy per
+        // active warehouse of its branch, and scoped_products spans every
+        // warehouse of the branch, so a plain COUNT(*) would count one product
+        // once per warehouse. Count its identity instead: the sku, falling back
+        // to the name -- the same identity TransferStockService and the fan-out
+        // backfill (migration 144) use to match a product across warehouses.
+        // products.sku is NULLable (and '' is falsy to those matchers), so
+        // COUNT(DISTINCT sku) alone would silently drop every sku-less product.
+        // The sku:/name: prefixes keep the two kinds of identity from colliding.
+        // reports/inventory is deliberately NOT changed: it lists one row per
+        // product-warehouse, so its pagination COUNT(*) must keep matching.
+        const productIdentity = "COALESCE(CONCAT('sku:', NULLIF(sku, '')), CONCAT('name:', name))";
+
         // Services are excluded: they have no stock, so they would otherwise appear
         // permanently out-of-stock and drag inventory valuation totals to zero.
         const summaryQuery = `
@@ -171,8 +186,8 @@ export async function GET(request: NextRequest) {
                 (SELECT COUNT(*) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ?) as total_sales_month,
                 (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si JOIN scoped_sales st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as products_sold_month,
                 (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as total_revenue_fiscal_ytd,
-                (SELECT COUNT(*) FROM scoped_products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
-                (SELECT COUNT(*) FROM scoped_products WHERE type = 'standard') as total_items,
+                (SELECT COUNT(DISTINCT ${productIdentity}) FROM scoped_products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
+                (SELECT COUNT(DISTINCT ${productIdentity}) FROM scoped_products WHERE type = 'standard') as total_items,
                 (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as today_revenue,
                 (SELECT COUNT(*) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as today_sales,
                 (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as yesterday_revenue,
