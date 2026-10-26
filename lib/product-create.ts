@@ -42,6 +42,48 @@ export async function assertWarehouseForWrite(
 }
 
 /**
+ * Ids of the ACTIVE warehouses that should receive a zero-stock copy of a
+ * product created in `selectedWarehouseId`: every other active warehouse of
+ * the SAME branch, never the selected one, never another branch's.
+ *
+ * Read-only. The branch is `scope.branchId` for a branch caller; for head
+ * office (`{ scope: 'all' }`) or a null scope (no trustworthy identity, which
+ * falls back to pre-guard behaviour) it is the branch the selected warehouse
+ * itself belongs to - head office fans out within that one branch, not across
+ * all of them. Returns [] when there is no branch to fan out within.
+ *
+ * `is_active` is the source of truth for activity (the runtime-added `active`
+ * column is stale), which is also why `warehouseIdsForBranch` is not used: it
+ * does not filter on `is_active`. Ids are runtime-checked as strings because
+ * `query` uses pool.query, which escapes an object parameter as a match-many
+ * predicate; a non-string id would otherwise widen the target set.
+ */
+export async function fanoutTargetWarehouses(
+  selectedWarehouseId: string | null,
+  scope: BranchScope | null,
+): Promise<string[]> {
+  if (typeof selectedWarehouseId !== 'string' || !selectedWarehouseId) return [];
+
+  let branchId: string | null | undefined;
+  if (scope && scope.scope === 'single') {
+    branchId = scope.branchId;
+  } else {
+    const rows = (await query(
+      'SELECT branch_id FROM warehouses WHERE id = ?',
+      [selectedWarehouseId],
+    )) as Array<{ branch_id: string | null }>;
+    branchId = rows[0]?.branch_id;
+  }
+  if (typeof branchId !== 'string' || !branchId) return [];
+
+  const targets = (await query(
+    'SELECT id FROM warehouses WHERE branch_id = ? AND is_active = 1 AND id <> ?',
+    [branchId, selectedWarehouseId],
+  )) as Array<{ id: string }>;
+  return targets.map((r) => r.id);
+}
+
+/**
  * Branch-guarded product creation - the TRUSTED entry point.
  *
  * This module deliberately has NO 'use server' directive: it is not an HTTP

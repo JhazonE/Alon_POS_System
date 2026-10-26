@@ -335,3 +335,26 @@ export async function cleanupRawSales(siNumber: string): Promise<void> {
     await conn.end();
   }
 }
+
+/**
+ * Mo-dugang ug usa pa ka warehouse sa branch. Ang `warehouses.name` kay UNIQUE,
+ * mao nga ang ngalan gikan sa uuid. Ibalik ang id; ang cleanup sa test mao ang
+ * mo-delete niini (ang `cleanupSecondBranch` usa ra ka warehouse ang ma-delete).
+ */
+export async function addWarehouseToBranch(
+  branchId: string,
+  opts: { active?: boolean } = {}
+): Promise<string> {
+  const conn = await getConn();
+  const id = uuidv4();
+  try {
+    await conn.query(
+      `INSERT INTO warehouses (id, name, is_active, branch_id)
+       VALUES (?, ?, ?, ?)`,
+      [id, `Test WH ${id}`, opts.active === false ? 0 : 1, branchId]
+    );
+  } finally {
+    await conn.end();
+  }
+  return id;
+}
