@@ -87,7 +87,34 @@ export type ProductFilters = {
   warehouse?: string;
   shelfLocation?: string;
   status?: 'in-stock' | 'low-stock' | 'out-of-stock' | 'all' | string;
+  /** Opt out of the family roll-up: return a flat row list (LIMIT counts rows, not roots). */
+  flat?: boolean;
 };
+
+/**
+ * The single source of truth for whether the family roll-up (root-only paging via
+ * `parent_id IS NULL`, plus the descendant CTE) is switched off. getProducts and
+ * getProductsCount both call this, so the page and its count cannot disagree.
+ *
+ * Row filters (search, brand, ...) flatten the list. The warehouse filter
+ * deliberately does NOT: it only scopes row visibility. A caller that needs a flat,
+ * warehouse-scoped row list (e.g. the bulk price tool, which writes prices from it)
+ * opts out explicitly with `flat: true`.
+ * Kept un-exported: a 'use server' file may only export async functions.
+ */
+function rollupSuppressed(filters?: ProductFilters): boolean {
+  if (!filters) return false;
+  return Boolean(
+    filters.flat ||
+    (filters.brand && filters.brand !== 'all') ||
+    (filters.category && filters.category !== 'all') ||
+    (filters.department && filters.department !== 'all') ||
+    (filters.supplier && filters.supplier !== 'all') ||
+    (filters.shelfLocation && filters.shelfLocation !== 'all') ||
+    (filters.status && filters.status !== 'all') ||
+    filters.search
+  );
+}
 
 export async function getProducts(limit?: number, offset?: number, filters?: ProductFilters) {
   try {
@@ -112,21 +139,7 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
     const whereClauses: string[] = [];
     const params: any[] = [];
 
-    // Row filters change WHICH rows match and flatten the family roll-up. The warehouse
-    // filter is deliberately absent: it only scopes row visibility, so it must not turn
-    // off the `parent_id IS NULL` root paging or the descendant CTE. getProducts and
-    // getProductsCount MUST keep this expression and `suppressRollup` identical, or the
-    // count and the page desynchronise.
-    const hasRowFilters = filters && (
-      (filters.brand && filters.brand !== 'all') ||
-      (filters.category && filters.category !== 'all') ||
-      (filters.department && filters.department !== 'all') ||
-      (filters.supplier && filters.supplier !== 'all') ||
-      (filters.shelfLocation && filters.shelfLocation !== 'all') ||
-      (filters.status && filters.status !== 'all') ||
-      filters.search
-    );
-    const suppressRollup = hasRowFilters;
+    const suppressRollup = rollupSuppressed(filters);
 
     if (filters) {
       if (filters.search) {
@@ -425,21 +438,7 @@ export async function getProductsCount(filters?: ProductFilters) {
       }
     }
 
-    // Row filters change WHICH rows match and flatten the family roll-up. The warehouse
-    // filter is deliberately absent: it only scopes row visibility, so it must not turn
-    // off the `parent_id IS NULL` root paging or the descendant CTE. getProducts and
-    // getProductsCount MUST keep this expression and `suppressRollup` identical, or the
-    // count and the page desynchronise.
-    const hasRowFilters = filters && (
-      (filters.brand && filters.brand !== 'all') ||
-      (filters.category && filters.category !== 'all') ||
-      (filters.department && filters.department !== 'all') ||
-      (filters.supplier && filters.supplier !== 'all') ||
-      (filters.shelfLocation && filters.shelfLocation !== 'all') ||
-      (filters.status && filters.status !== 'all') ||
-      filters.search
-    );
-    const suppressRollup = hasRowFilters;
+    const suppressRollup = rollupSuppressed(filters);
 
     if (!suppressRollup) {
       whereClauses.push(`p.parent_id IS NULL`);

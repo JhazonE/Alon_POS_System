@@ -32,7 +32,7 @@ export function useBulkPriceUpdate(onUpdated?: () => void) {
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['bulk-price-update-products', warehouseId, debouncedSearchTerm],
-    queryFn: () => getProducts(500, 0, { warehouse: warehouseId || undefined, search: debouncedSearchTerm || undefined }),
+    queryFn: () => getProducts(500, 0, { warehouse: warehouseId || undefined, search: debouncedSearchTerm || undefined, flat: true }),
     enabled: !!warehouseId,
   });
 
