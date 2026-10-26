@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery } from './helpers/db';
-import { EDITABLE_PRODUCT, DELETABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/test-data';
+import { EDITABLE_PRODUCT, DELETABLE_PRODUCT, TEST_SUPPLIER, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Edit / Delete product (DB-backed) — i-drive ang products table row actions batok
@@ -52,9 +52,9 @@ test.describe('Edit product', () => {
     const newName = 'No SKU Widget Renamed';
     await testQuery('DELETE FROM products WHERE id = ?', [id]);
     await testQuery(
-      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-       VALUES (?, ?, 40, 5, NULL, 'Product nga walay SKU.', ?, ?, ?, 'Available')`,
-      [id, name, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure],
+      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+       VALUES (?, ?, 40, 5, NULL, 'Product nga walay SKU.', ?, ?, ?, 'Available', ?)`,
+      [id, name, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure, TEST_MAIN_WAREHOUSE.id],
     );
     try {
       await seedSession(page, DEFAULT_ADMIN);
@@ -114,12 +114,13 @@ async function seedSupplierProduct(
   const name = `Supplier Map Widget ${id}`;
   await cleanupSupplierProduct(id);
   await testQuery(
-    `INSERT INTO products (id, name, price, cost, stock, sku, description, brand, category, unit_of_measure, availability, supplier_id, reorder_point)
-     VALUES (?, ?, 40, 20, 5, ?, 'Product para sa supplier-tab e2e.', ?, ?, ?, 'Available', ?, ?)`,
+    `INSERT INTO products (id, name, price, cost, stock, sku, description, brand, category, unit_of_measure, availability, supplier_id, reorder_point, warehouse_id)
+     VALUES (?, ?, 40, 20, 5, ?, 'Product para sa supplier-tab e2e.', ?, ?, ?, 'Available', ?, ?, ?)`,
     [
       id, name, sku, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure,
       opts.legacySupplierId ?? opts.mappings?.find((m) => m.isPrimary)?.supplierId ?? null,
       opts.reorderPoint ?? opts.mappings?.find((m) => m.isPrimary)?.rop ?? 0,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   for (const [i, m] of (opts.mappings ?? []).entries()) {

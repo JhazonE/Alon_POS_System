@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery } from './helpers/db';
-import { TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE, TEST_WAREHOUSE } from './fixtures/test-data';
+import { TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Products data table — stock color indicator (walay Status column na) ug ang
@@ -20,15 +20,13 @@ async function cleanup() {
 test.describe('Products table — stock indicator & selling units panel', () => {
   test.beforeEach(async () => {
     await cleanup();
-    // Ang products table mo-land sa default warehouse sa branch (ang pinakaluma nga
-    // active), mao nga ang produkto kinahanglan naa sa usa ka warehouse -- ang
-    // NULL warehouse_id dili na makita. I-pin ang TEST_WAREHOUSE isip pinakaluma.
-    await testQuery(`UPDATE warehouses SET created_at = '2000-01-01 00:00:00' WHERE id = ?`, [TEST_WAREHOUSE.id]);
+    // Ang products table mo-land sa default warehouse (TEST_MAIN_WAREHOUSE), mao nga
+    // ang produkto kinahanglan naa didto -- ang NULL warehouse_id dili na makita.
     // stock 24 sa base (Piece); reorder_point 0 → in-stock kung wala'y global threshold.
     await testQuery(
       `INSERT INTO products (id, name, description, category, brand, sku, barcode, stock, reorder_point, price, cost, unit_of_measure, availability, warehouse_id)
        VALUES (?, ?, 'E2E', 'General', 'Generic', ?, 'E2E-PTSU-BASE', 24, 0, 10, 5, 'Piece', 'in-stock', ?)`,
-      [PRODUCT_ID, PRODUCT_NAME, PRODUCT_SKU, TEST_WAREHOUSE.id],
+      [PRODUCT_ID, PRODUCT_NAME, PRODUCT_SKU, TEST_MAIN_WAREHOUSE.id],
     );
     await testQuery(
       `INSERT INTO product_selling_units (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)

@@ -19,6 +19,7 @@ import {
 } from '../../lib/branch-context';
 import { testQuery } from './helpers/db';
 import { seedSession } from './helpers/auth';
+import { showAllWarehouses } from './helpers/products-page';
 import { EDITABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/test-data';
 
 /**
@@ -108,6 +109,9 @@ async function rewriteNextServerAction(
 }
 
 async function openRowMenu(page: Page, sku: string, name: string) {
+  // Ang hostile-UI tests nagpangita ug produkto sa laing branch, mao nga ang
+  // default warehouse sa user kinahanglan i-override.
+  await showAllWarehouses(page);
   await page.getByPlaceholder('Search products...').fill(sku);
   const row = page.getByRole('row', { name: new RegExp(name) });
   await expect(row).toBeVisible();

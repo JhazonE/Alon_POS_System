@@ -352,6 +352,13 @@ export const TEST_SUPPLIER = { id: 'sup-test', name: 'Test Supplier Co.' };
 export const TEST_WAREHOUSE = { id: 'wh-test', name: 'Test Warehouse' };
 
 /**
+ * Ang default warehouse sa main branch (pinakaluma, gi-seed nga naay explicit
+ * created_at) -- ang products table mo-land dinhi. Gihuptan niya ang general
+ * catalogue; ang TEST_WAREHOUSE gitagana para sa BULK_PRICE_PRODUCT ra.
+ */
+export const TEST_MAIN_WAREHOUSE = { id: 'wh-main-test', name: 'Main Warehouse' };
+
+/**
  * Product nga naka-assign sa TEST_WAREHOUSE — gikinahanglan sa bulk-price-update
  * e2e test kay ang Pricing page's product picker mo-filter pinaagi
  * sa warehouse_id, ug ang TEST_PRODUCTS naa'y NULL warehouse_id (dili sila

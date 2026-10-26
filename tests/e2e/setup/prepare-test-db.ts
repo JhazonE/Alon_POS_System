@@ -52,6 +52,7 @@ import {
   SHELF_B,
   SHELF_XFER_PRODUCT,
   TEST_WAREHOUSE,
+  TEST_MAIN_WAREHOUSE,
   BULK_PRICE_PRODUCT,
   PO_PRODUCT,
   SO_CUSTOMER,
@@ -173,32 +174,66 @@ async function seedFixtures(): Promise<void> {
     [TEST_PRICE_LEVEL_WHOLESALE.id, TEST_PRICE_LEVEL_WHOLESALE.name],
   );
 
+  // --- main branch — ang schema-clone walay data, ug NOT NULL na ang
+  // warehouses.branch_id / pos_terminals.branch_id (migration 133). ---
+  await conn.query(
+    `INSERT INTO branches (id, code, name, is_main, is_active)
+     VALUES ('branch-main-test', 'MAIN', 'Main Branch', 1, 1)`,
+  );
+
+  // --- series sa main branch — ang counters mo-fail closed kung walay row,
+  // mao nga kinahanglan ni para sa checkout/returns. Default '000000' gamit,
+  // aron ang unang test nga invoice kay 000001. ---
+  await conn.query(
+    `INSERT INTO branch_number_series (branch_id) VALUES ('branch-main-test')`,
+  );
+
+  // --- main-branch warehouses ---
+  // Ang products table mo-land sa default warehouse sa branch (ang pinakaluma nga
+  // active), mao nga ang seeded products kinahanglan naa sa usa ka warehouse sa
+  // main branch -- ang NULL warehouse_id dili na makita didto. Gihimo dinhi, sa
+  // dili pa ang products, aron ma-assign sila kada INSERT.
+  //
+  // TEST_MAIN_WAREHOUSE (explicitly oldest) is the default and holds the general
+  // catalogue. TEST_WAREHOUSE is kept separate and holds ONLY BULK_PRICE_PRODUCT:
+  // pricing.spec.ts picks the first row of that warehouse's product table.
+  await conn.query(
+    `INSERT INTO warehouses (id, name, created_at, branch_id)
+     VALUES (?, ?, '2000-01-01 00:00:00', (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))`,
+    [TEST_MAIN_WAREHOUSE.id, TEST_MAIN_WAREHOUSE.name],
+  );
+  await conn.query(
+    'INSERT INTO warehouses (id, name, branch_id) VALUES (?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))',
+    [TEST_WAREHOUSE.id, TEST_WAREHOUSE.name],
+  );
+
   // --- products ---
   for (const p of TEST_PRODUCTS) {
     await conn.query(
-      'INSERT INTO products (id, name, price, stock, sku, barcode, availability) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [p.id, p.name, p.price, p.stock, p.sku, p.barcode, 'Available'],
+      'INSERT INTO products (id, name, price, stock, sku, barcode, availability, warehouse_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [p.id, p.name, p.price, p.stock, p.sku, p.barcode, 'Available', TEST_MAIN_WAREHOUSE.id],
     );
   }
 
   // --- dedicated products para sa edit/delete/inventory tests (kompleto ang fields) ---
   for (const p of [EDITABLE_PRODUCT, DELETABLE_PRODUCT, INVENTORY_PRODUCT]) {
     await conn.query(
-      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
-      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure],
+      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
+      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure, TEST_MAIN_WAREHOUSE.id],
     );
   }
 
   // --- product nga naa nay selling units (stand-in para sa Plan 1 migrated data) ---
   await conn.query(
-    `INSERT INTO products (id, name, price, cost, stock, sku, barcode, description, brand, category, unit_of_measure, availability)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
+    `INSERT INTO products (id, name, price, cost, stock, sku, barcode, description, brand, category, unit_of_measure, availability, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
     [
       SELLING_UNITS_PRODUCT.id, SELLING_UNITS_PRODUCT.name, SELLING_UNITS_PRODUCT.price,
       SELLING_UNITS_PRODUCT.cost, SELLING_UNITS_PRODUCT.stock, SELLING_UNITS_PRODUCT.sku,
       SELLING_UNITS_PRODUCT.barcode, SELLING_UNITS_PRODUCT.description,
       SELLING_UNITS_PRODUCT.brand, SELLING_UNITS_PRODUCT.category, SELLING_UNITS_PRODUCT.unitOfMeasure,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   for (const u of SELLING_UNITS_PRODUCT.units) {
@@ -234,28 +269,30 @@ async function seedFixtures(): Promise<void> {
 
   // Perishable product — managlahi ang insert kay kinahanglan niya ang is_perishable flag.
   await conn.query(
-    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, is_perishable)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', 1)`,
+    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, is_perishable, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', 1, ?)`,
     [
       PERISHABLE_PRODUCT.id, PERISHABLE_PRODUCT.name, PERISHABLE_PRODUCT.price,
       PERISHABLE_PRODUCT.stock, PERISHABLE_PRODUCT.sku, PERISHABLE_PRODUCT.description,
       PERISHABLE_PRODUCT.brand, PERISHABLE_PRODUCT.category, PERISHABLE_PRODUCT.unitOfMeasure,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
 
   // --- dedicated parent/child family para sa "expiry lands on wrong product" regression ---
   await conn.query(
-    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
+    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
     [
       PERISHABLE_FAMILY_PARENT.id, PERISHABLE_FAMILY_PARENT.name, PERISHABLE_FAMILY_PARENT.price,
       PERISHABLE_FAMILY_PARENT.stock, PERISHABLE_FAMILY_PARENT.sku, PERISHABLE_FAMILY_PARENT.description,
       PERISHABLE_FAMILY_PARENT.brand, PERISHABLE_FAMILY_PARENT.category, PERISHABLE_FAMILY_PARENT.unitOfMeasure,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   await conn.query(
-    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, parent_id, availability, is_perishable)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', 1)`,
+    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, parent_id, availability, is_perishable, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', 1, ?)`,
     [
       PERISHABLE_FAMILY_CHILD.id,
       PERISHABLE_FAMILY_CHILD.name,
@@ -267,6 +304,7 @@ async function seedFixtures(): Promise<void> {
       PERISHABLE_FAMILY_CHILD.category,
       PERISHABLE_FAMILY_CHILD.unitOfMeasure,
       PERISHABLE_FAMILY_PARENT.id,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   await conn.query(
@@ -279,14 +317,14 @@ async function seedFixtures(): Promise<void> {
   // --- dedicated parent/child family para sa child-reassignment test ---
   for (const p of [REASSIGN_PARENT_A, REASSIGN_PARENT_B]) {
     await conn.query(
-      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
-      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure],
+      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
+      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure, TEST_MAIN_WAREHOUSE.id],
     );
   }
   await conn.query(
-    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, parent_id, availability)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
+    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, parent_id, availability, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
     [
       REASSIGN_CHILD.id,
       REASSIGN_CHILD.name,
@@ -298,6 +336,7 @@ async function seedFixtures(): Promise<void> {
       REASSIGN_CHILD.category,
       REASSIGN_CHILD.unitOfMeasure,
       REASSIGN_PARENT_A.id,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   await conn.query(
@@ -310,14 +349,14 @@ async function seedFixtures(): Promise<void> {
   // --- dedicated top-level mover family para sa top-level-reassignment test ---
   for (const p of [REASSIGN_TOP_MOVER, REASSIGN_TOP_TARGET]) {
     await conn.query(
-      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
-      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure],
+      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
+      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure, TEST_MAIN_WAREHOUSE.id],
     );
   }
   await conn.query(
-    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, parent_id, availability)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
+    `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, parent_id, availability, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
     [
       REASSIGN_TOP_MOVER_CHILD.id,
       REASSIGN_TOP_MOVER_CHILD.name,
@@ -329,6 +368,7 @@ async function seedFixtures(): Promise<void> {
       REASSIGN_TOP_MOVER_CHILD.category,
       REASSIGN_TOP_MOVER_CHILD.unitOfMeasure,
       REASSIGN_TOP_MOVER.id,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   await conn.query(
@@ -343,9 +383,9 @@ async function seedFixtures(): Promise<void> {
   // walay factor bisan unsa pa ang order sa pag-execute sa spec file. ---
   for (const p of [REASSIGN_AUTO_MOVER, REASSIGN_AUTO_MATCH, REASSIGN_AUTO_NOMATCH]) {
     await conn.query(
-      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
-      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure],
+      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
+      [p.id, p.name, p.price, p.stock, p.sku, p.description, p.brand, p.category, p.unitOfMeasure, TEST_MAIN_WAREHOUSE.id],
     );
   }
   await conn.query(
@@ -355,20 +395,6 @@ async function seedFixtures(): Promise<void> {
     ['rsn-auto-cf-box', REASSIGN_AUTO_MATCH.id, REASSIGN_AUTO_MOVER.unitOfMeasure, 4],
   );
   // REASSIGN_AUTO_NOMATCH intentionally gets NO conversion_factors row.
-
-  // --- main branch — ang schema-clone walay data, ug NOT NULL na ang
-  // warehouses.branch_id / pos_terminals.branch_id (migration 133). ---
-  await conn.query(
-    `INSERT INTO branches (id, code, name, is_main, is_active)
-     VALUES ('branch-main-test', 'MAIN', 'Main Branch', 1, 1)`,
-  );
-
-  // --- series sa main branch — ang counters mo-fail closed kung walay row,
-  // mao nga kinahanglan ni para sa checkout/returns. Default '000000' gamit,
-  // aron ang unang test nga invoice kay 000001. ---
-  await conn.query(
-    `INSERT INTO branch_number_series (branch_id) VALUES ('branch-main-test')`,
-  );
 
   // --- branch access model: ang admin kay head office (branch_id NULL + permiso
   // nga all_branches), ang cashier kay gi-assign sa main branch. Kinahanglan
@@ -384,13 +410,10 @@ async function seedFixtures(): Promise<void> {
 
   // --- supplier + warehouse (para sa purchase-order test) ---
   await conn.query('INSERT INTO suppliers (id, name) VALUES (?, ?)', [TEST_SUPPLIER.id, TEST_SUPPLIER.name]);
-  await conn.query(
-    'INSERT INTO warehouses (id, name, branch_id) VALUES (?, ?, (SELECT id FROM branches WHERE is_main = 1 LIMIT 1))',
-    [TEST_WAREHOUSE.id, TEST_WAREHOUSE.name],
-  );
 
   // Product assigned to TEST_WAREHOUSE — the Pricing page's product
-  // picker filters by warehouse_id, and TEST_PRODUCTS all have NULL warehouse_id.
+  // picker filters by warehouse_id. (The other seeded products live in
+  // TEST_MAIN_WAREHOUSE; see the main-branch warehouse seed above.)
   await conn.query(
     `INSERT INTO products (id, name, price, cost, stock, sku, barcode, warehouse_id, availability)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Available')`,
@@ -421,9 +444,9 @@ async function seedFixtures(): Promise<void> {
 
   // Product nga naka-link sa supplier (ang PO product selector mo-filter by supplier).
   await conn.query(
-    `INSERT INTO products (id, name, price, cost, stock, sku, supplier_id, availability)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')`,
-    [PO_PRODUCT.id, PO_PRODUCT.name, PO_PRODUCT.price, PO_PRODUCT.cost, PO_PRODUCT.stock, PO_PRODUCT.sku, PO_PRODUCT.supplierId],
+    `INSERT INTO products (id, name, price, cost, stock, sku, supplier_id, availability, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'Available', ?)`,
+    [PO_PRODUCT.id, PO_PRODUCT.name, PO_PRODUCT.price, PO_PRODUCT.cost, PO_PRODUCT.stock, PO_PRODUCT.sku, PO_PRODUCT.supplierId, TEST_MAIN_WAREHOUSE.id],
   );
 
   // --- shelf-transfer fixtures: duha ka shelf + produkto nga partial ang assignment ---
@@ -431,10 +454,10 @@ async function seedFixtures(): Promise<void> {
     await conn.query('INSERT INTO shelf_locations (id, name, is_active) VALUES (?, ?, 1)', [s.id, s.name]);
   }
   await conn.query(
-    `INSERT INTO products (id, name, price, cost, stock, sku, availability)
-     VALUES (?, ?, ?, ?, ?, ?, 'Available')`,
+    `INSERT INTO products (id, name, price, cost, stock, sku, availability, warehouse_id)
+     VALUES (?, ?, ?, ?, ?, ?, 'Available', ?)`,
     [SHELF_XFER_PRODUCT.id, SHELF_XFER_PRODUCT.name, SHELF_XFER_PRODUCT.price,
-     SHELF_XFER_PRODUCT.cost, SHELF_XFER_PRODUCT.stock, SHELF_XFER_PRODUCT.sku],
+     SHELF_XFER_PRODUCT.cost, SHELF_XFER_PRODUCT.stock, SHELF_XFER_PRODUCT.sku, TEST_MAIN_WAREHOUSE.id],
   );
   // Partial ra ang assignment: 4 sa A, 6 sa B, 20 ang nahabilin nga unassigned.
   await conn.query('INSERT INTO product_shelves (product_id, shelf_id, quantity) VALUES (?, ?, ?)',
@@ -447,9 +470,9 @@ async function seedFixtures(): Promise<void> {
 
   for (const p of [SO_PRODUCT, SO_SERVICE]) {
     await conn.query(
-      `INSERT INTO products (id, name, price, cost, stock, sku, availability, type)
-       VALUES (?, ?, ?, ?, ?, ?, 'Available', ?)`,
-      [p.id, p.name, p.price, p.cost, p.stock, p.sku, p === SO_SERVICE ? 'service' : 'standard'],
+      `INSERT INTO products (id, name, price, cost, stock, sku, availability, type, warehouse_id)
+       VALUES (?, ?, ?, ?, ?, ?, 'Available', ?, ?)`,
+      [p.id, p.name, p.price, p.cost, p.stock, p.sku, p === SO_SERVICE ? 'service' : 'standard', TEST_MAIN_WAREHOUSE.id],
     );
   }
 

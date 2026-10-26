@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery, resetPosState } from './helpers/db';
-import { TEST_USERS } from './fixtures/test-data';
+import { TEST_USERS, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Service product type (DB-backed) — mga services (labor, delivery fee, repair)
@@ -194,9 +194,9 @@ test.describe('Service product type', () => {
 
   test('type is read-only in Edit Product', async ({ page }) => {
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type)
-       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type, warehouse_id)
+       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service', ?)`,
+      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU, TEST_MAIN_WAREHOUSE.id]
     );
 
     await seedSession(page, DEFAULT_ADMIN);
