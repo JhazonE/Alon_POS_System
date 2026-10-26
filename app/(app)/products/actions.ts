@@ -4,6 +4,7 @@ import { query, withTransaction } from '@/lib/mysql';
 import {
   mainBranchId,
   resolveScopeForAction,
+  resolveScopeFromSession,
   assertProductInScope,
   BranchResolutionError,
 } from '@/lib/branch-context';
@@ -1123,6 +1124,42 @@ export async function getWarehouses(): Promise<Warehouse[]> {
   } catch (error) {
     console.error('Error fetching warehouses:', error);
     return [];
+  }
+}
+
+/**
+ * The warehouse the products table should open on, so a product fanned out to
+ * every warehouse of a branch is listed once instead of once per warehouse.
+ *
+ * Resolves the branch from the SESSION (same rule as every other read of the
+ * caller's identity): a branch user gets a warehouse of its own branch; head
+ * office (or no usable cookie) gets the main branch's. It deliberately does NOT
+ * use `warehouses.is_main` -- that column is only added at runtime by
+ * app/api/warehouses/route.ts and has no migration -- but the oldest active
+ * warehouse of the branch, which is the original one in a single-store install.
+ *
+ * Returns `{ warehouseId: null }` when the branch has no active warehouse or the
+ * identity cannot be resolved to a branch. The caller must treat that as "show
+ * nothing", never as "show everything".
+ */
+export async function getDefaultProductWarehouse(): Promise<{ warehouseId: string | null }> {
+  try {
+    const scope = await resolveScopeFromSession();
+    const branchId = scope && scope.scope === 'single' ? scope.branchId : await mainBranchId();
+    if (!branchId) return { warehouseId: null };
+    const rows = (await query(
+      `SELECT id FROM warehouses
+        WHERE branch_id = ? AND is_active = 1
+        ORDER BY created_at ASC, name ASC, id ASC
+        LIMIT 1`,
+      [branchId]
+    )) as any[];
+    return { warehouseId: rows.length > 0 ? (rows[0].id as string) : null };
+  } catch (error) {
+    if (!(error instanceof BranchResolutionError)) {
+      console.error('Error resolving default product warehouse:', error);
+    }
+    return { warehouseId: null };
   }
 }
 

@@ -40,7 +40,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from '@/components/ui/input';
 import { cn, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ViewProductDialog } from './view-product/view-product-dialog';
-import { getProducts, getProductsCount, deleteProduct, getDepartments } from './actions';
+import { getProducts, getProductsCount, deleteProduct, getDepartments, getDefaultProductWarehouse } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -301,6 +301,10 @@ function ProductSkeleton() {
   );
 }
 
+// Warehouse filter value that matches no row: used when the user's branch has no
+// warehouse, so the table is empty instead of unfiltered.
+const NO_WAREHOUSE = '__no-warehouse__';
+
 interface ProductWithChildren extends Product {
   children?: Product[];
 }
@@ -323,7 +327,11 @@ function ProductsContent() {
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
+  // Starts at 'all' only until the user's default warehouse resolves (see the
+  // effect below); the products query is held back until then, so 'all' is never
+  // fetched on first load.
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all');
+  const [warehouseDefaultReady, setWarehouseDefaultReady] = useState(false);
   const [selectedShelfLocation, setSelectedShelfLocation] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>(filter === 'low-stock' ? 'low-stock' : 'all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
@@ -351,6 +359,14 @@ function ProductsContent() {
   const [isUnitOfMeasureOpen, setIsUnitOfMeasureOpen] = useState(false);
   const [isWarehousesOpen, setIsWarehousesOpen] = useState(false);
 
+  // Every user-initiated warehouse change goes through here. Marking the default as
+  // settled is what stops the async default from overwriting a choice the user
+  // made first: the effect below does nothing once warehouseDefaultReady is set.
+  const chooseWarehouse = useCallback((value: string) => {
+    setSelectedWarehouse(value);
+    setWarehouseDefaultReady(true);
+  }, []);
+
   const filters = {
     search: debouncedSearchTerm || undefined,
     brand: selectedBrand !== 'all' ? selectedBrand : undefined,
@@ -364,6 +380,7 @@ function ProductsContent() {
 
   const { data: productsDataResult, isLoading: isLoadingProducts, refetch } = useQuery({
     queryKey: ['products', currentPage, pageSize, filters],
+    enabled: warehouseDefaultReady,
     queryFn: async () => {
       const [productsData, totalCount] = await Promise.all([
         getProducts(pageSize, (currentPage - 1) * pageSize, filters),
@@ -383,6 +400,29 @@ function ProductsContent() {
       return getProductOptions();
     }
   });
+
+  // The branch's default warehouse. Resolved server-side from the session so it is
+  // always a warehouse of the user's own branch (never "first of every branch").
+  const { data: defaultWarehouse, isError: defaultWarehouseFailed } = useQuery({
+    queryKey: ['defaultProductWarehouse'],
+    queryFn: () => getDefaultProductWarehouse(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  // Apply the default exactly once, and only if the user has not already chosen
+  // (chooseWarehouse sets warehouseDefaultReady, which short-circuits this).
+  // No warehouse in the branch => a sentinel that matches nothing, so the list is
+  // empty rather than unfiltered.
+  useEffect(() => {
+    if (warehouseDefaultReady) return;
+    if (defaultWarehouse) {
+      setSelectedWarehouse(defaultWarehouse.warehouseId ?? NO_WAREHOUSE);
+      setWarehouseDefaultReady(true);
+    } else if (defaultWarehouseFailed) {
+      setWarehouseDefaultReady(true); // fall back to 'all' rather than a blank page
+    }
+  }, [defaultWarehouse, defaultWarehouseFailed, warehouseDefaultReady]);
 
   const { data: posSettings } = useQuery({
     queryKey: ['posSettings'],
@@ -409,9 +449,14 @@ function ProductsContent() {
     setCurrentPage(1);
   }, [selectedBrand, selectedCategory, selectedSupplier, selectedWarehouse, selectedShelfLocation, selectedStatus, selectedDepartment, debouncedSearchTerm]);
 
-  const filtersActive = useMemo(() => {
-    return selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedWarehouse !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all' || !!debouncedSearchTerm;
-  }, [selectedBrand, selectedCategory, selectedSupplier, selectedWarehouse, selectedShelfLocation, selectedStatus, selectedDepartment, debouncedSearchTerm]);
+  // Mirrors `rollupSuppressed` in ./actions.ts: row filters (and search) flatten the
+  // family tree; the warehouse filter does NOT -- it only scopes which rows are
+  // visible, so a family stays nested under its default warehouse. Deliberately
+  // separate from the chip/badge checks below, which DO count a warehouse selection
+  // as an active filter. Keep this list in step with the server's.
+  const suppressRollup = useMemo(() => {
+    return selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all' || !!debouncedSearchTerm;
+  }, [selectedBrand, selectedCategory, selectedSupplier, selectedShelfLocation, selectedStatus, selectedDepartment, debouncedSearchTerm]);
 
   // Server-side results are already filtered
   const products = useMemo(() => {
@@ -421,8 +466,8 @@ function ProductsContent() {
   const productTree = useMemo(() => {
     if (!products) return [];
 
-    // If filters are active, show flat list
-    if (filtersActive) {
+    // If a row filter or search is active, show flat list (a warehouse alone does not)
+    if (suppressRollup) {
         return products.map((p: Product) => ({ ...p, children: [] }));
     }
 
@@ -442,7 +487,7 @@ function ProductsContent() {
     };
 
     return buildTree();
-  }, [products, filtersActive]);
+  }, [products, suppressRollup]);
 
   const filteredProducts = useMemo(() => {
     return productTree;
@@ -719,7 +764,7 @@ function ProductsContent() {
                        setSelectedBrand(tempBrand);
                        setSelectedCategory(tempCategory);
                        setSelectedSupplier(tempSupplier);
-                       setSelectedWarehouse(tempWarehouse);
+                       chooseWarehouse(tempWarehouse);
                        setSelectedShelfLocation(tempShelfLocation);
                        setSelectedStatus(tempStatus);
                        setSelectedDepartment(tempDepartment);
@@ -770,8 +815,8 @@ function ProductsContent() {
                  )}
                  {selectedWarehouse !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
-                         Warehouse: {productOptions?.warehouses?.find((w:any) => w.id === selectedWarehouse)?.name || 'Unknown'}
-                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedWarehouse('all')}>
+                         Warehouse: {productOptions?.warehouses?.find((w:any) => w.id === selectedWarehouse)?.name || (selectedWarehouse === NO_WAREHOUSE ? 'None in your branch' : 'Unknown')}
+                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => chooseWarehouse('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
                          </button>
@@ -810,7 +855,7 @@ function ProductsContent() {
                         setSelectedBrand('all');
                         setSelectedCategory('all');
                         setSelectedSupplier('all');
-                        setSelectedWarehouse('all');
+                        chooseWarehouse('all');
                         setSelectedShelfLocation('all');
                         setSelectedStatus('all');
                         setSelectedDepartment('all');
@@ -849,7 +894,7 @@ function ProductsContent() {
 
             </TableHeader>
             <TableBody>
-              {isLoadingProducts ? (
+              {isLoadingProducts || !warehouseDefaultReady ? (
                 Array.from({ length: 5 }).map((_, i) => <ProductSkeleton key={i} />)
               ) : (
                 filteredProducts.map((product: ProductWithChildren) => (
@@ -865,7 +910,7 @@ function ProductsContent() {
                   />
                 ))
               )}
-              {!isLoadingProducts && filteredProducts.length === 0 && (
+              {!isLoadingProducts && warehouseDefaultReady && filteredProducts.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={PRODUCT_TABLE_COLUMN_COUNT} className="h-24 text-center">
                     No products found.
