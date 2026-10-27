@@ -1176,6 +1176,56 @@ export async function getDefaultProductWarehouse(): Promise<{ warehouseId: strin
   }
 }
 
+/**
+ * The active warehouses the products UI may offer: the tab strip on the products
+ * table and the warehouse picker in the create form share this one source.
+ *
+ * Scope is resolved from the SESSION, never from an argument (a `'use server'`
+ * export must not take a `scope` parameter). A branch user gets the active
+ * warehouses of exactly that branch; head office gets every branch's. With no
+ * valid cookie (`scope === null`) it falls back to the unfiltered active list --
+ * the pre-guard behaviour -- and reports `isHeadOffice: true` so callers do not
+ * impose a "keep at least one warehouse" rule the old path never had.
+ *
+ * `is_active` is the source of truth; the runtime-added `active` column is stale
+ * and deliberately not read. `getWarehouses()` stays unfiltered for its other
+ * callers; this is a separate action beside it.
+ *
+ * Error discipline mirrors getDefaultProductWarehouse(): a 4xx
+ * BranchResolutionError (unassigned, inactive branch, unknown uid) is genuinely
+ * "none" and returns an empty list; anything else is RE-THROWN so react-query's
+ * isError fires instead of caching an empty list as the answer.
+ */
+export async function getBranchWarehouses(): Promise<{ warehouses: Warehouse[]; isHeadOffice: boolean }> {
+  try {
+    const scope = await resolveScopeFromSession();
+    const isHeadOffice = !scope || scope.scope === 'all';
+    const rows = (scope && scope.scope === 'single'
+      ? await query(
+          'SELECT * FROM warehouses WHERE branch_id = ? AND is_active = 1 ORDER BY name',
+          [scope.branchId]
+        )
+      : await query('SELECT * FROM warehouses WHERE is_active = 1 ORDER BY name')) as any[];
+    return {
+      warehouses: rows.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        location: w.location,
+        isActive: w.is_active === 1,
+        createdAt: w.created_at,
+      })),
+      isHeadOffice,
+    };
+  } catch (error) {
+    // 4xx: the identity has no usable branch -> genuinely "none".
+    if (error instanceof BranchResolutionError && error.status < 500) {
+      return { warehouses: [], isHeadOffice: false };
+    }
+    console.error('Error fetching branch warehouses:', error);
+    throw error;
+  }
+}
+
 export async function addWarehouse(name: string, location?: string) {
   try {
     const id = `wh_${Date.now()}`;
