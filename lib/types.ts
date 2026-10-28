@@ -290,6 +290,13 @@ export interface Warehouse {
   location?: string;
   isActive?: boolean;
   createdAt?: string;
+  /**
+   * The owning branch's name. Populated ONLY by `getBranchWarehouses()` and only
+   * for a head-office / unguarded caller, who can see several branches' warehouses
+   * and must tell them apart; a branch-scoped caller leaves it undefined. Every
+   * other producer of `Warehouse` (e.g. `getWarehouses()`) omits it.
+   */
+  branchName?: string;
 }
 
 export interface ShelfLocation {

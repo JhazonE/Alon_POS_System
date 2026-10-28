@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -10,6 +11,7 @@ import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { getSessionUid } from '@/lib/session-uid';
 import { generateSku } from '@/lib/sku';
 import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings } from '@/lib/types';
 import type { ProductType } from '@/lib/product-type';
@@ -21,7 +23,7 @@ import {
   getUnitsOfMeasure,
   addProduct,
   getSuppliers,
-  getWarehouses,
+  getBranchWarehouses,
   getShelfLocations,
   getDepartments,
 } from '../actions';
@@ -101,8 +103,33 @@ export function useAddProductForm({
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
-  const [warehouses, setWarehouses] = useState<any[]>([]); // Using any for now to avoid cross-file type issues
-  const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(false);
+  // The warehouses the picker offers: the active ones of the user's own branch
+  // (head office, and an unguarded null cookie, get every branch's). Same action
+  // and same uid-keyed cache entry as the products-table tab strip: the QueryClient
+  // is a module-level singleton that survives sign-out -> sign-in, so an unkeyed
+  // query would let the next user on this terminal inherit the previous user's
+  // branch's list. Held until the dialog opens; `staleTime` is left at its default
+  // (0) so each open refetches and a warehouse added elsewhere shows up.
+  const queryClient = useQueryClient();
+  const [sessionUid] = useState(() => getSessionUid());
+  const branchWarehousesKey = ['branchWarehouses', sessionUid] as const;
+  const {
+    data: branchWarehouses,
+    isLoading: isLoadingWarehouses,
+  } = useQuery({
+    queryKey: branchWarehousesKey,
+    queryFn: () => getBranchWarehouses(),
+    enabled: isOpen,
+    refetchOnWindowFocus: false,
+  });
+  const warehouses = branchWarehouses?.warehouses ?? [];
+  // `true` only once the server says head office (or an unguarded null cookie).
+  // While the list is loading or failed this is false, which is the safe side:
+  // a branch caller must not be able to submit with no warehouse, because the
+  // server refuses it with a message the user could not otherwise explain.
+  const isHeadOffice = branchWarehouses?.isHeadOffice === true;
+  const isHeadOfficeRef = useRef(isHeadOffice);
+  isHeadOfficeRef.current = isHeadOffice;
   const [shelfLocations, setShelfLocations] = useState<any[]>([]);
   const [isLoadingShelfLocations, setIsLoadingShelfLocations] = useState(false);
   const [priceLevels, setPriceLevels] = useState<any[]>([]);
@@ -134,7 +161,28 @@ export function useAddProductForm({
   }, []);
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+    resolver: async (values, context, options) => {
+      const result = await zodResolver(productSchema)(values, context, options);
+      // A branch user must pick at least one warehouse: the server refuses a
+      // NULL warehouse for a branch caller ("A product must stay in a warehouse
+      // of your branch"), which the user could not otherwise trace to this tab.
+      // The schema deliberately accepts an empty list (head office may create a
+      // warehouse-less product), so the rule lives here, where isHeadOffice is
+      // known. A Service carries no warehouse, so it is exempt.
+      const v = values as { itemType?: string; warehouses?: unknown[] };
+      const needsWarehouse =
+        v.itemType === 'standard' &&
+        !isHeadOfficeRef.current &&
+        (!Array.isArray(v.warehouses) || v.warehouses.length === 0);
+      if (!needsWarehouse) return result;
+      return {
+        values: {},
+        errors: {
+          ...(result.errors ?? {}),
+          warehouses: { type: 'required', message: 'Select at least one warehouse for this product.' },
+        },
+      } as typeof result;
+    },
     defaultValues: {
       itemType: 'standard',
       name: '',
@@ -145,10 +193,9 @@ export function useAddProductForm({
       category: '',
       subcategory: '',
       supplier: '',
-      warehouse: '',
+      warehouses: [],
       shelfLocationIds: [],
       unitOfMeasure: '',
-      stock: 0,
       reorderPoint: 0,
       price: 0,
       cost: 0,
@@ -204,7 +251,7 @@ export function useAddProductForm({
   const tabErrors = {
     basic: !!(formErrors.name || formErrors.brand || formErrors.description || formErrors.category),
     // unitOfMeasure can still error here — a Service edits it on this tab.
-    inventory: !!(formErrors.unitOfMeasure || formErrors.stock),
+    inventory: !!(formErrors.unitOfMeasure || formErrors.warehouses),
     sellingUnits: !!formErrors.sellingUnits,
     suppliers: !!formErrors.supplierMappings,
   };
@@ -220,7 +267,6 @@ export function useAddProductForm({
       setBrands(externalProductOptions.brands || []);
       setUnitsOfMeasure(externalProductOptions.units || []);
       setSuppliers(externalProductOptions.suppliers || []);
-      setWarehouses(externalProductOptions.warehouses || []);
       setShelfLocations(externalProductOptions.shelfLocations || []);
       setDepartments(externalProductOptions.departments || []);
       setPriceLevels(externalProductOptions.priceLevels || []);
@@ -271,6 +317,7 @@ export function useAddProductForm({
       form.setValue('department', undefined);
       form.setValue('supplier', undefined);
       form.setValue('warehouse', undefined);
+      form.setValue('warehouses', []);
       form.setValue('shelfLocationIds', undefined);
       form.setValue('sellingUnits' as any, undefined);
       form.setValue('isPerishable', undefined);
@@ -534,7 +581,13 @@ export function useAddProductForm({
   const refreshCategories = () => getCategories().then(setCategories);
   const refreshSubcategories = () => getSubcategories().then(setSubcategories);
   const refreshSuppliers = () => getSuppliers().then(setSuppliers);
-  const refreshWarehouses = () => getWarehouses().then(setWarehouses);
+  // Refetch the branch-scoped list, publish it to the shared cache (so the tab
+  // strip sees it too) and hand it back so a caller can look a new warehouse up.
+  const refreshWarehouses = async () => {
+    const fresh = await getBranchWarehouses();
+    queryClient.setQueryData(branchWarehousesKey, fresh);
+    return fresh.warehouses;
+  };
   const refreshShelfLocations = () => getShelfLocations().then(setShelfLocations);
   const refreshUnits = () => getUnitsOfMeasure().then(setUnitsOfMeasure);
 
@@ -552,7 +605,7 @@ export function useAddProductForm({
     departments, isLoadingDepartments,
     unitsOfMeasure, isLoadingUnits,
     suppliers, isLoadingSuppliers,
-    warehouses, isLoadingWarehouses,
+    warehouses, isLoadingWarehouses, isHeadOffice,
     shelfLocations, isLoadingShelfLocations,
     priceLevels, isLoadingPriceLevels,
     taxRates,

@@ -1210,12 +1210,23 @@ export async function getBranchWarehouses(): Promise<{ warehouses: Warehouse[]; 
   try {
     const scope = await resolveScopeFromSession();
     const isHeadOffice = !scope || scope.scope === 'all';
+    // Head office / unguarded: join the branch name so a caller choosing across
+    // branches can tell the warehouses apart (`location` is free text, can be
+    // blank or identical across branches). LEFT JOIN so a warehouse with no
+    // branch row is still listed, exactly as the unjoined query listed it. A
+    // branch-scoped caller needs no disambiguation and gets no branchName.
     const rows = (scope && scope.scope === 'single'
       ? await query(
           'SELECT * FROM warehouses WHERE branch_id = ? AND is_active = 1 ORDER BY name',
           [scope.branchId]
         )
-      : await query('SELECT * FROM warehouses WHERE is_active = 1 ORDER BY name')) as any[];
+      : await query(
+          `SELECT w.*, b.name AS branch_name
+             FROM warehouses w
+             LEFT JOIN branches b ON b.id = w.branch_id
+            WHERE w.is_active = 1
+            ORDER BY w.name`
+        )) as any[];
     return {
       warehouses: rows.map((w: any) => ({
         id: w.id,
@@ -1223,6 +1234,7 @@ export async function getBranchWarehouses(): Promise<{ warehouses: Warehouse[]; 
         location: w.location,
         isActive: w.is_active === 1,
         createdAt: w.created_at,
+        ...(w.branch_name ? { branchName: w.branch_name as string } : {}),
       })),
       isHeadOffice,
     };

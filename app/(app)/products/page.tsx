@@ -379,9 +379,9 @@ function WarehouseTabs({
           {warehouses.map((w) => (
             <TabsTrigger key={w.id} value={w.id} className="flex-shrink-0 py-1.5">
               <span className="truncate max-w-[14rem]">{w.name}</span>
-              {showLocation && w.location ? (
+              {showLocation && (w.branchName || w.location) ? (
                 <span className="ml-1.5 text-[0.7rem] font-normal text-muted-foreground truncate max-w-[10rem]">
-                  {w.location}
+                  {w.branchName || w.location}
                 </span>
               ) : null}
             </TabsTrigger>

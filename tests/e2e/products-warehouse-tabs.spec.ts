@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seedSession, type SessionUser } from './helpers/auth';
+import { seedSession, DEFAULT_ADMIN, type SessionUser } from './helpers/auth';
 import {
   seedSecondBranch,
   cleanupSecondBranch,
@@ -306,5 +306,20 @@ test.describe('products warehouse tab strip', () => {
     await expect(all).toHaveAttribute('aria-selected', 'true');
     // Ayaw pagbilin og in-flight route callback sa pagtapos sa test.
     await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
+  test('head office tells branches apart by branch name, not by location', async ({ page }) => {
+    // `location` is free text and may be blank or shared between branches; the
+    // branch name is what actually disambiguates, so it wins when both exist.
+    await testQuery('UPDATE warehouses SET location = ? WHERE id = ?', ['Aisle 9 (free text)', firstWh]);
+    const branch: any[] = await testQuery('SELECT name FROM branches WHERE id = ?', [seeded.branchId]);
+
+    await openProducts(page, DEFAULT_ADMIN);
+
+    const strip = tabs(page);
+    const t = strip.getByRole('tab', { name: new RegExp(firstWhName) });
+    await expect(t).toBeVisible({ timeout: 15000 });
+    await expect(t).toContainText(branch[0].name);
+    await expect(t).not.toContainText('Aisle 9');
   });
 });

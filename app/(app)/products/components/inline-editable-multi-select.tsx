@@ -20,6 +20,12 @@ export interface InlineEditableMultiSelectProps<T> {
   searchPlaceholder: string;
   getId: (item: T) => string;
   getName: (item: T) => string;
+  /**
+   * How an item is DISPLAYED (badge and option row). Defaults to `getName`.
+   * `getName` stays the bare, editable name: it seeds the rename draft, so a
+   * display-only suffix (e.g. a branch name) must not go through it.
+   */
+  getOptionLabel?: (item: T) => string;
   /** Returns the id of the newly created item, or undefined on failure. */
   onAdd: (name: string) => Promise<string | undefined>;
   /** Returns the renamed id on success, or undefined on failure. */
@@ -36,9 +42,11 @@ export function InlineEditableMultiSelect<T>({
   searchPlaceholder,
   getId,
   getName,
+  getOptionLabel,
   onAdd,
   onRename,
 }: InlineEditableMultiSelectProps<T>) {
+  const label = getOptionLabel ?? getName;
   const [adding, setAdding] = useState(false);
   const [addDraft, setAddDraft] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -109,7 +117,7 @@ export function InlineEditableMultiSelect<T>({
                   const item = items.find((i) => getId(i) === id);
                   return (
                     <Badge variant="secondary" key={id} className="mr-1 mb-1">
-                      {item ? getName(item) : id}
+                      {item ? label(item) : id}
                     </Badge>
                   );
                 })
@@ -173,7 +181,7 @@ export function InlineEditableMultiSelect<T>({
                 return (
                   <CommandItem
                     key={id}
-                    value={getName(item)}
+                    value={label(item)}
                     className="relative pr-9"
                     onSelect={() => toggle(id)}
                   >
@@ -183,7 +191,7 @@ export function InlineEditableMultiSelect<T>({
                         value?.includes(id) ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    {getName(item)}
+                    {label(item)}
                     <button
                       type="button"
                       aria-label={`Rename ${getName(item)}`}
