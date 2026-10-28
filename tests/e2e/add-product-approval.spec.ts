@@ -38,7 +38,7 @@ async function fillAndSubmitProduct(
   await page.goto('/products');
   await page.getByRole('button', { name: 'Add Product' }).first().click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByText('Add New Product')).toBeVisible();
+  await expect(dialog.getByText('Add New Product')).toBeVisible({ timeout: 20000 });
 
   // --- Basic Info ---
   await dialog.getByLabel('Product Name').fill(opts.name);
@@ -76,6 +76,14 @@ async function setRequireProductConfirmation(request: import('@playwright/test')
 }
 
 test.describe('Add Product Approval', () => {
+  // This file sorts FIRST in the suite, so its first test pays the cold
+  // Turbopack compile of /products on top of its own work. Three dialog
+  // round-trips plus an approval finalization do not fit the default 30s once
+  // that compile is included, and the symptom is a timeout waiting for the
+  // Brand select's options — not a failed assertion. The isolated run of this
+  // file passes well inside 30s; this budget is for suite order.
+  test.setTimeout(90_000);
+
   test.beforeEach(async () => {
     await resetPosState();
     await testQuery("DELETE FROM approval_queue WHERE transaction_type='PRODUCT_CREATE'");
