@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Product } from '@/lib/types';
+import { Product, Warehouse } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddProductDialog } from './add-product/add-product-dialog';
 import { ManageBrandsDialog } from './brands/ManageBrandsDialog';
@@ -32,7 +32,7 @@ import { ManageWarehousesDialog } from '../sales/manage-warehouses/ManageWarehou
 
 import { Search, ChevronRight, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
 import { PrintBarcodeDialog } from './print-barcode/print-barcode-dialog';
-import { useState, useMemo, Fragment, useEffect, useCallback, Suspense } from 'react';
+import { useState, useMemo, Fragment, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -40,12 +40,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from '@/components/ui/input';
 import { cn, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ViewProductDialog } from './view-product/view-product-dialog';
-import { getProducts, getProductsCount, deleteProduct, getDepartments, getDefaultProductWarehouse } from './actions';
+import { getProducts, getProductsCount, deleteProduct, getDepartments, getDefaultProductWarehouse, getBranchWarehouses } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { getSessionUid } from '@/lib/session-uid';
@@ -310,6 +311,83 @@ interface ProductWithChildren extends Product {
   children?: Product[];
 }
 
+const ALL_WAREHOUSES = 'all';
+
+/**
+ * Ang warehouse strip sa ibabaw sa products table. Usa ka tab kada active
+ * warehouse sa branch sa user (head office: tanan), dugang ang "All warehouses".
+ *
+ * Nganong tab ug dili filter: ang warehouse mao ang LUGAR nga naa ka, dili usa
+ * ka narrowing sa list. Mao nga wala siya sa filter dialog, walay chip, ug dili
+ * siya mo-count sa active-filter badge.
+ *
+ * Fail-closed: kon ang branch sa user walay warehouse, WALAY warehouse tab ug
+ * ang `value` kay ang NO_WAREHOUSE sentinel -- walay trigger nga mo-match niini,
+ * mao nga walay tab nga selected ug ang table walay sulod (dili unfiltered).
+ * Mao nga kini nga component WALA mag-normalize sa sentinel ngadto sa 'all'.
+ *
+ * Ang overflow kay horizontal scroll (never wraps): ang strip usa ka row nga
+ * `flex-nowrap` sulod sa `overflow-x-auto` nga wrapper, ug ang selected tab
+ * gi-scroll ngadto sa view pag-mount ug kada kausaban.
+ */
+function WarehouseTabs({
+  warehouses,
+  value,
+  onChange,
+  isLoading,
+  showLocation,
+}: {
+  warehouses: Warehouse[];
+  value: string;
+  onChange: (value: string) => void;
+  isLoading: boolean;
+  showLocation: boolean;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // I-scroll ang selected tab ngadto sa view pag-mount ug kada kausaban, aron
+  // ang usa ka tab nga naa sa gawas sa viewport makita gihapon.
+  useEffect(() => {
+    const el = listRef.current?.querySelector<HTMLElement>('[data-state="active"]');
+    el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [value, warehouses.length]);
+
+  if (isLoading) {
+    // Skeleton samtang wala pa ma-resolve ang default: aron dili makita ang
+    // "All warehouses" nga selected dayon molukso sa tinuod nga default.
+    return (
+      <div className="flex items-center gap-1 flex-shrink-0" aria-hidden="true">
+        <Skeleton className="h-9 w-32 rounded-md" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+      </div>
+    );
+  }
+
+  return (
+    <Tabs value={value} onValueChange={onChange} className="flex-shrink-0 min-w-0">
+      {/* Ang wrapper ang mo-scroll; ang list mismo `w-max` aron dili mo-wrap. */}
+      <div ref={listRef} className="overflow-x-auto overscroll-x-contain max-w-full">
+        <TabsList aria-label="Warehouse" className="w-max flex-nowrap justify-start h-auto gap-1">
+          {warehouses.map((w) => (
+            <TabsTrigger key={w.id} value={w.id} className="flex-shrink-0 py-1.5">
+              <span className="truncate max-w-[14rem]">{w.name}</span>
+              {showLocation && w.location ? (
+                <span className="ml-1.5 text-[0.7rem] font-normal text-muted-foreground truncate max-w-[10rem]">
+                  {w.location}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          ))}
+          <TabsTrigger value={ALL_WAREHOUSES} className="flex-shrink-0 py-1.5">
+            All warehouses
+          </TabsTrigger>
+        </TabsList>
+      </div>
+    </Tabs>
+  );
+}
+
 export default function ProductsPage() {
   return (
     <Suspense fallback={<Card><CardHeader><CardTitle>Loading...</CardTitle></CardHeader></Card>}>
@@ -341,7 +419,6 @@ function ProductsContent() {
   const [tempBrand, setTempBrand] = useState('all');
   const [tempCategory, setTempCategory] = useState('all');
   const [tempSupplier, setTempSupplier] = useState('all');
-  const [tempWarehouse, setTempWarehouse] = useState('all');
   const [tempShelfLocation, setTempShelfLocation] = useState('all');
   const [tempStatus, setTempStatus] = useState(filter === 'low-stock' ? 'low-stock' : 'all');
   const [tempDepartment, setTempDepartment] = useState('all');
@@ -413,6 +490,18 @@ function ProductsContent() {
     // would inherit the previous user's (other branch's) cached default.
     queryKey: ['defaultProductWarehouse', sessionUid],
     queryFn: () => getDefaultProductWarehouse(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  // The tab strip's warehouses: the active warehouses of the user's own branch
+  // (head office, and a null cookie, get every branch's). Keyed by the session uid
+  // for the same reason the default is -- the QueryClient outlives a sign-out.
+  // `getWarehouses()` stays unfiltered for its other callers; only this page's
+  // list is branch-scoped.
+  const { data: branchWarehouses } = useQuery({
+    queryKey: ['branchWarehouses', sessionUid],
+    queryFn: () => getBranchWarehouses(),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
@@ -621,7 +710,6 @@ function ProductsContent() {
                    setTempBrand(selectedBrand);
                    setTempCategory(selectedCategory);
                    setTempSupplier(selectedSupplier);
-                   setTempWarehouse(selectedWarehouse);
                    setTempShelfLocation(selectedShelfLocation);
                    setTempStatus(selectedStatus);
                    setTempDepartment(selectedDepartment);
@@ -629,10 +717,10 @@ function ProductsContent() {
                    <span className="sr-only">Open filters</span>
                    <Settings className="h-4 w-4 mr-2" />
                    Filter Products
-                   {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedWarehouse !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
+                   {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
                        <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center">
                            {
-                               [selectedBrand, selectedCategory, selectedSupplier, selectedWarehouse, selectedShelfLocation, selectedStatus, selectedDepartment].filter(v => v !== 'all').length
+                               [selectedBrand, selectedCategory, selectedSupplier, selectedShelfLocation, selectedStatus, selectedDepartment].filter(v => v !== 'all').length
                            }
                        </Badge>
                    )}
@@ -698,23 +786,6 @@ function ProductsContent() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="warehouse-filter">Warehouse</Label>
-                    <Select value={tempWarehouse} onValueChange={setTempWarehouse}>
-                      <SelectTrigger id="warehouse-filter">
-                        <SelectValue placeholder="All Warehouses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Warehouses</SelectItem>
-                        {productOptions?.warehouses?.map((warehouse: any) => (
-                          <SelectItem key={warehouse.id} value={warehouse.id}>
-                            {warehouse.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
                     <Label htmlFor="shelf-filter">Shelf Location</Label>
                     <Select value={tempShelfLocation} onValueChange={setTempShelfLocation}>
                       <SelectTrigger id="shelf-filter">
@@ -767,7 +838,6 @@ function ProductsContent() {
                        setTempBrand('all');
                        setTempCategory('all');
                        setTempSupplier('all');
-                       setTempWarehouse('all');
                        setTempShelfLocation('all');
                        setTempStatus('all');
                        setTempDepartment('all');
@@ -776,7 +846,6 @@ function ProductsContent() {
                        setSelectedBrand(tempBrand);
                        setSelectedCategory(tempCategory);
                        setSelectedSupplier(tempSupplier);
-                       chooseWarehouse(tempWarehouse);
                        setSelectedShelfLocation(tempShelfLocation);
                        setSelectedStatus(tempStatus);
                        setSelectedDepartment(tempDepartment);
@@ -792,11 +861,18 @@ function ProductsContent() {
             />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-3 flex-shrink-0 min-w-0">
 
-        
+        <WarehouseTabs
+          warehouses={branchWarehouses?.warehouses ?? []}
+          value={selectedWarehouse}
+          onChange={chooseWarehouse}
+          isLoading={!warehouseDefaultReady || !branchWarehouses}
+          showLocation={branchWarehouses?.isHeadOffice ?? false}
+        />
+
         {/* Active Filters Badges */}
-        {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedWarehouse !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
+        {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
             <div className="flex flex-wrap items-center gap-2">
                  {selectedBrand !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
@@ -820,15 +896,6 @@ function ProductsContent() {
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Supplier: {productOptions?.suppliers?.find((s:any) => s.id === selectedSupplier)?.name || 'Unknown'}
                          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedSupplier('all')}>
-                             <span className="sr-only">Remove</span>
-                             <span className="text-xs">×</span>
-                         </button>
-                     </Badge>
-                 )}
-                 {selectedWarehouse !== 'all' && (
-                     <Badge variant="secondary" className="gap-1 pl-2">
-                         Warehouse: {productOptions?.warehouses?.find((w:any) => w.id === selectedWarehouse)?.name || (selectedWarehouse === NO_WAREHOUSE ? 'None in your branch' : 'Unknown')}
-                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => chooseWarehouse('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
                          </button>
@@ -867,7 +934,8 @@ function ProductsContent() {
                         setSelectedBrand('all');
                         setSelectedCategory('all');
                         setSelectedSupplier('all');
-                        chooseWarehouse('all');
+                        // Ang warehouse DILI usa ka filter -- ang tab strip ang
+                        // nagdumala niini, mao nga ang "Clear All" wala motandog.
                         setSelectedShelfLocation('all');
                         setSelectedStatus('all');
                         setSelectedDepartment('all');
