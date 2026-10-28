@@ -68,19 +68,6 @@ export async function setWarehouseStock(
  * be seeded in.
  */
 export function priceInput(row: Locator, levelName: string): Locator {
-  // Matched on the level-NAME cell, not on the whole table row's text: a level
-  // name that is a prefix of another ("Retail" vs "Retail Plus") would match
-  // both rows, and the row's own text also contains the entered price.
-  //
-  // The regex allows the marker to follow with no space because the default
-  // level renders it in a nested span separated only by a CSS margin — the DOM
-  // text is "Retail(default)", NOT "Retail (default)", so a `:text-is()` or a
-  // `(₱)`-style label match on it never succeeds.
-  //
-  // The `has:` locator is built from `row.page()`, deliberately NOT from `row`:
-  // Playwright re-roots a `has:` locator onto each element being filtered only
-  // when it is page-rooted. One anchored at `row` stays anchored there, matches
-  // nothing inside the child rows, and the filter silently yields zero.
   return priceLevelRow(row, levelName).getByLabel('Price (₱)');
 }
 
@@ -96,7 +83,24 @@ export function minQtyInput(row: Locator, levelName: string): Locator {
   return priceLevelRow(row, levelName).getByLabel('Min Qty');
 }
 
-/** The table row of one price level inside a selling-unit row. */
+/**
+ * The table row of one price level inside a selling-unit row.
+ *
+ * Matched on the level-NAME cell, not on the whole row's text: a level name that
+ * is a prefix of another ("Retail" vs "Retail Plus") would match both rows, and
+ * a row's own text also contains the entered price.
+ *
+ * Two traps, both of which fail SILENTLY (an empty match, not an error):
+ *
+ * 1. The regex allows the marker to follow with no space, because the default
+ *    level renders it in a nested span separated only by a CSS margin — the DOM
+ *    text is "Retail(default)", NOT "Retail (default)", so a
+ *    `:text-is("Retail (default)")` never matches.
+ * 2. The `has:` locator is built from `row.page()`, deliberately NOT from `row`:
+ *    Playwright re-roots a `has:` locator onto each element being filtered only
+ *    when that locator is page-rooted. One anchored at `row` stays anchored
+ *    there, matches nothing inside the child rows, and the filter yields zero.
+ */
 function priceLevelRow(row: Locator, levelName: string): Locator {
   const cell = new RegExp(`^${levelName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\(default\\))?$`);
   return row.locator('div.rounded-md.border.p-3').filter({
