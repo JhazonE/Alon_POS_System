@@ -21,6 +21,7 @@ import {
   resolveDefaultPriceLevelId,
 } from '@/lib/product-selling-unit-writes';
 import { addProductWithScope, assertWarehouseForWrite } from '@/lib/product-create';
+import type { WarehouseEntry } from './add-product/product-schema';
 
 
 export type ProductFormData = {
@@ -34,7 +35,16 @@ export type ProductFormData = {
   department?: string;
   subcategory?: string;
   supplier?: string;
+  /**
+   * Legacy single-warehouse pair. `warehouse` and `stock` are what
+   * `updateProduct` reads (Edit Product stays single-warehouse: a product row
+   * IS per-warehouse), and what a pre-multi-warehouse queued approval item
+   * carries. On create, prefer `warehouses`; the write path normalises this
+   * pair into it via `normalizeLegacyWarehouseInput`.
+   */
   warehouse?: string;
+  /** Create-only: every warehouse the product is created in, each with its own opening stock. */
+  warehouses?: WarehouseEntry[];
   shelfLocationIds?: string[];
   image?: string;
   imageFile?: File;

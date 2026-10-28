@@ -141,6 +141,101 @@ export function supplierMappingsSuperRefine(
 }
 
 /**
+ * One warehouse a new product is created in, with its own opening stock.
+ *
+ * `warehouseId` is validated per entry and is NEVER coerced: lib/mysql.ts uses
+ * pool.query, which escapes an OBJECT parameter as `key` = value, so a
+ * `WHERE id = ?` fed `{ foo: 0 }` becomes a match-many predicate that could
+ * touch every row in every branch. A non-string must be rejected here, not
+ * stringified. (`.trim()` runs before `.min(1)`, so '  ' is blank, and the
+ * duplicate check below compares the trimmed values.)
+ *
+ * `stock` is coerced because it arrives from a text input, but it must still
+ * land on a non-negative integer.
+ */
+export const warehouseEntrySchema = z.object({
+  warehouseId: z.string().trim().min(1, 'Warehouse is required'),
+  stock: z.coerce.number().int('Initial stock must be a whole number')
+    .nonnegative('Initial stock must be a non-negative integer'),
+  isPrimary: z.boolean().optional(),
+});
+
+export type WarehouseEntry = z.infer<typeof warehouseEntrySchema>;
+
+/**
+ * Structural rules the per-entry schema cannot express: no warehouse chosen
+ * twice, and at most one entry flagged primary.
+ *
+ * The primary is the entry with `isPrimary: true`, defaulting to the FIRST
+ * entry when none is flagged, so "none flagged" is valid. With an empty array
+ * there is no primary at all: products.warehouse_id is NULL, a legitimate
+ * head-office state, so a primary is not required there either.
+ */
+export function warehouseEntriesSuperRefine(
+  entries: WarehouseEntry[] | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  if (!entries || entries.length === 0) return;
+
+  const seen = new Set<string>();
+  entries.forEach((e, i) => {
+    if (seen.has(e.warehouseId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['warehouses', i, 'warehouseId'],
+        message: 'This warehouse is already selected for this product.',
+      });
+    } else {
+      seen.add(e.warehouseId);
+    }
+  });
+
+  const primaryIndexes = entries
+    .map((e, i) => (e.isPrimary ? i : -1))
+    .filter((i) => i >= 0);
+  for (const i of primaryIndexes.slice(1)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['warehouses', i, 'isPrimary'],
+      message: 'Only one warehouse can be marked primary.',
+    });
+  }
+}
+
+/**
+ * Maps the pre-multi-warehouse payload shape, a single `warehouse` id plus a
+ * single `stock`, to the `warehouses` collection.
+ *
+ * PURPOSE: an approval item queued BEFORE the multi-warehouse change holds a
+ * `formData` serialised under the old shape, and it is replayed after the code
+ * has moved on. The write path (addProductWithScope) calls this on entry so
+ * such an item still replays correctly. It is also the one place the legacy
+ * pair is interpreted; `ProductFormData` keeps `warehouse` and `stock` because
+ * `updateProduct` is single-warehouse by design.
+ *
+ *  - `warehouses` present (an array): returned as-is. The new shape wins.
+ *  - else a `warehouse` present: `[{ warehouseId: warehouse, stock, isPrimary: true }]`,
+ *    with a missing `stock` opening at 0.
+ *  - else (no warehouse, or ''): `[]`, the head-office NULL-warehouse case.
+ *    A legacy `stock` with no warehouse has nowhere to land and is dropped.
+ *
+ * It does NOT validate. A malformed legacy id (an object, say) is carried
+ * through untouched rather than silently dropped, so the id validation
+ * downstream refuses it instead of the write quietly losing the warehouse.
+ */
+export function normalizeLegacyWarehouseInput(input: {
+  warehouses?: WarehouseEntry[];
+  warehouse?: string;
+  stock?: number;
+}): WarehouseEntry[] {
+  if (Array.isArray(input.warehouses)) return input.warehouses;
+  if (input.warehouse === undefined || input.warehouse === null || input.warehouse === '') {
+    return [];
+  }
+  return [{ warehouseId: input.warehouse, stock: input.stock ?? 0, isPrimary: true }];
+}
+
+/**
  * Fields shared by every product type.
  *
  * Note the field is `itemType`. The old `productType` parent/child family
@@ -174,9 +269,12 @@ const baseProductSchema = z.object({
 const standardProductSchema = baseProductSchema.extend({
   itemType: z.literal('standard'),
   supplier: z.string().optional(),
-  warehouse: z.string().optional(),
+  // The create input is the `warehouses` collection. The legacy single
+  // `warehouse` / `stock` pair is gone from THIS schema, but stays on
+  // ProductFormData for updateProduct (Edit Product is single-warehouse).
+  // May be empty: no warehouse means products.warehouse_id is NULL (head office).
+  warehouses: z.array(warehouseEntrySchema),
   shelfLocationIds: z.array(z.string()).optional(),
-  stock: z.coerce.number().int().nonnegative('Initial stock must be a non-negative integer'),
   reorderPoint: z.coerce.number().int().nonnegative().optional().default(0),
   cost: z.coerce.number().nonnegative('Cost must be non-negative').optional(),
   sellingUnits: z.array(sellingUnitSchema)
@@ -198,9 +296,12 @@ const standardProductSchema = baseProductSchema.extend({
  * a service has no base selling-unit row to derive them from, so its own
  * Inventory-tab inputs are the only source and must be filled in.
  *
- * Stock and selling-unit fields are pinned to constants rather than omitted so
- * a service with stock (or with sellable units) is unrepresentable even if the
- * UI is bypassed.
+ * Stock, warehouse and selling-unit fields are pinned to constants rather than
+ * omitted so a service with stock, a warehouse or sellable units is
+ * unrepresentable even if the UI is bypassed. `warehouse` and `stock` are the
+ * legacy single-warehouse pair (still on ProductFormData for updateProduct);
+ * `warehouses` is the multi-warehouse collection that replaced them on create.
+ * All three stay pinned.
  */
 const serviceProductSchema = baseProductSchema.extend({
   itemType: z.literal('service'),
@@ -211,6 +312,10 @@ const serviceProductSchema = baseProductSchema.extend({
   reorderPoint: z.literal(0).default(0),
   supplier: z.undefined(),
   warehouse: z.undefined(),
+  // Pinned to an empty collection (never() has no valid element), so a
+  // service cannot carry a warehouse entry, and therefore no per-warehouse
+  // stock either, even if the UI is bypassed.
+  warehouses: z.array(z.never()).max(0, 'A service cannot belong to a warehouse').default([]),
   shelfLocationIds: z.undefined(),
   sellingUnits: z.undefined(),
   isPerishable: z.undefined(),
@@ -223,6 +328,7 @@ export const productSchema = z
     if (values.itemType !== 'standard') return;
     sellingUnitsSuperRefine(values.sellingUnits, ctx);
     supplierMappingsSuperRefine(values.supplierMappings, ctx);
+    warehouseEntriesSuperRefine(values.warehouses, ctx);
   });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
