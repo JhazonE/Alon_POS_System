@@ -32,6 +32,14 @@ async function selectOption(
 }
 
 test.describe('Add product', () => {
+  // Kini nga file naa sa sinugdanan sa suite, mao nga nagbayad sa cold compile
+  // sa /products ug sa dev-server nga busy pa. Ang 30s nga default mahurot sa
+  // usa ka click o sa pag-ablihi sa dialog — usa ka timeout, DILI usa ka
+  // assertion nga napakyas (bisan ang category-picker test, nga walay labot sa
+  // warehouse o presyo, nahurot). Mag-isa, kini nga file mo-pass sulod sa 30s,
+  // mao nga kini nga budget para sa suite order lang.
+  test.setTimeout(90_000);
+
   test('admin makahimo ug bag-ong product pinaagi sa dialog', async ({ page, request }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
