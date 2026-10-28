@@ -365,7 +365,14 @@ function WarehouseTabs({
   }
 
   return (
-    <Tabs value={value} onValueChange={onChange} className="flex-shrink-0 min-w-0">
+    // activationMode="manual": Radix otherwise activates a tab on FOCUS, so merely
+    // tabbing into the strip would select "All warehouses" -- and in a branch with
+    // no warehouses (value is the NO_WAREHOUSE sentinel, "All" is the only tab) that
+    // would silently turn the fail-closed empty table into the cross-branch
+    // catalogue. Manual mode needs an explicit click / Enter / Space. No
+    // `flex-shrink-0` here: `min-w-0` must be allowed to shrink the Tabs below its
+    // content width, or the inner `overflow-x-auto` never engages.
+    <Tabs value={value} onValueChange={onChange} activationMode="manual" className="min-w-0 max-w-full">
       {/* Ang wrapper ang mo-scroll; ang list mismo `w-max` aron dili mo-wrap. */}
       <div ref={listRef} className="overflow-x-auto overscroll-x-contain max-w-full">
         <TabsList aria-label="Warehouse" className="w-max flex-nowrap justify-start h-auto gap-1">
@@ -499,7 +506,7 @@ function ProductsContent() {
   // for the same reason the default is -- the QueryClient outlives a sign-out.
   // `getWarehouses()` stays unfiltered for its other callers; only this page's
   // list is branch-scoped.
-  const { data: branchWarehouses } = useQuery({
+  const { data: branchWarehouses, isError: branchWarehousesFailed } = useQuery({
     queryKey: ['branchWarehouses', sessionUid],
     queryFn: () => getBranchWarehouses(),
     staleTime: Infinity,
@@ -867,7 +874,11 @@ function ProductsContent() {
           warehouses={branchWarehouses?.warehouses ?? []}
           value={selectedWarehouse}
           onChange={chooseWarehouse}
-          isLoading={!warehouseDefaultReady || !branchWarehouses}
+          // On a failed list fetch still render the strip (just "All warehouses"),
+          // mirroring the default-warehouse fallback: otherwise the skeleton would
+          // sit there forever and, with the old <Select> gone, the user could not
+          // change warehouse at all.
+          isLoading={!warehouseDefaultReady || (!branchWarehouses && !branchWarehousesFailed)}
           showLocation={branchWarehouses?.isHeadOffice ?? false}
         />
 

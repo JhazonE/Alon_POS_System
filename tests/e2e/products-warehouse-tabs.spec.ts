@@ -87,7 +87,9 @@ test.describe('products warehouse tab strip', () => {
   test('the resolved default warehouse tab is selected on load', async ({ page }) => {
     await openProducts(page, branchUser(seeded.userUid));
 
-    await expect(tab(page, firstWhName)).toHaveAttribute('aria-selected', 'true');
+    // Ang unang test sa file nagbayad sa cold compile sa /products: hatagan og
+    // dakong margin ang unang assertion.
+    await expect(tab(page, firstWhName)).toHaveAttribute('aria-selected', 'true', { timeout: 15000 });
     await expect(tab(page, secondWhName)).toHaveAttribute('aria-selected', 'false');
     await expect(tab(page, 'All warehouses')).toHaveAttribute('aria-selected', 'false');
   });
@@ -165,5 +167,144 @@ test.describe('products warehouse tab strip', () => {
     // selected — ang sentinel ang naka-pili.
     await expect(tabs(page).getByRole('tab')).toHaveCount(1);
     await expect(tab(page, 'All warehouses')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('focusing the only tab of an empty branch does not select it (fail-closed under keyboard)', async ({ page }) => {
+    // Radix activates a tab on FOCUS unless activationMode="manual". In an empty
+    // branch "All warehouses" is the only tab and is unselected, so merely tabbing
+    // into the strip would otherwise fire chooseWarehouse('all') and show the
+    // cross-branch catalogue -- with no click at all.
+    const other = await seedSecondBranch();
+    otherBranches.push(other);
+    await seedNamed(other.warehouseId, `${tag}-OTHERF`, `ElsewhereF ${tag}`);
+
+    await testQuery('DELETE FROM products WHERE warehouse_id IN (?, ?)', [firstWh, secondWh]);
+    await testQuery('DELETE FROM warehouses WHERE id IN (?, ?)', [firstWh, secondWh]);
+
+    await openProducts(page, branchUser(seeded.userUid));
+    await expect(page.getByText('No products found.')).toBeVisible();
+
+    const all = tab(page, 'All warehouses');
+    await all.focus();
+    await expect(all).toBeFocused();
+    // Hatagan og higayon ang bisan unsang (sayop) state update ug refetch.
+    await page.waitForTimeout(1500);
+
+    await expect(all).toHaveAttribute('aria-selected', 'false');
+    await expect(page.getByText('No products found.')).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(`ElsewhereF ${tag}`) })).toHaveCount(0);
+
+    // Ang explicit nga aksyon (Enter) mo-activate gihapon, aron dili mamatay ang keyboard.
+    await page.keyboard.press('Enter');
+    await expect(all).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('arrow keys move focus between tabs without selecting; Enter / Space select', async ({ page }) => {
+    const bName = `TabKb ${tag}`;
+    await seedNamed(secondWh, `${tag}-KB`, bName);
+    await openProducts(page, branchUser(seeded.userUid));
+    await expect(tab(page, firstWhName)).toHaveAttribute('aria-selected', 'true');
+
+    await tab(page, firstWhName).focus();
+    await page.keyboard.press('ArrowRight');
+    // Radix roving focus: ang sunod nga tab ang focused, apan wala pa selected.
+    // Async ang Radix roving focus (setTimeout), busa mag-poll, dili isa ka basa.
+    await expect(tab(page, firstWhName)).not.toBeFocused();
+    await expect(tabs(page).locator('[role="tab"]:focus')).toHaveCount(1);
+    await expect(tab(page, firstWhName)).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1);
+    await expect(tab(page, firstWhName)).toHaveAttribute('aria-selected', 'false');
+
+    await tab(page, secondWhName).focus();
+    await page.keyboard.press(' ');
+    await expect(tab(page, secondWhName)).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('row', { name: new RegExp(bName) })).toHaveCount(1);
+  });
+
+  test('a long strip scrolls inside itself: one row, no page-level horizontal scroll, selected tab in view', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    // Ibutang sa kataposan sa han-ay ang default, busa gawas sa view dayon.
+    // Ug paka-oldest siya aron siya gihapon ang resolved default (ang extras
+    // gi-seed human sa beforeEach, busa mas bag-o).
+    await testQuery(
+      'UPDATE warehouses SET name = ?, created_at = NOW() - INTERVAL 2 DAY WHERE id = ?',
+      [`ZZ-Default ${tag}`, firstWh],
+    );
+    // Baseline: ang page-level scrollWidth sa phone width WALA pa ang dugang nga
+    // tabs. Naay laing elemento sa layout (breadcrumb/toolbar) nga pre-existing
+    // modagan lapas sa 390px, busa ang assertion kay "ang strip wala nagdugang".
+    await openProducts(page, branchUser(seeded.userUid));
+    await expect(tab(page, `ZZ-Default ${tag}`)).toHaveAttribute('aria-selected', 'true');
+    const baselineDocW = await page.evaluate(() => document.documentElement.scrollWidth);
+
+    const extra: string[] = [];
+    try {
+      for (let i = 0; i < 12; i++) {
+        const id = await addWarehouseToBranch(seeded.branchId, { active: true });
+        await testQuery('UPDATE warehouses SET name = ? WHERE id = ?', [`AA-Long warehouse name ${i} ${tag}`, id]);
+        extra.push(id);
+      }
+      await page.reload();
+      await expect(tab(page, `ZZ-Default ${tag}`)).toHaveAttribute('aria-selected', 'true');
+      await expect(tabs(page).getByRole('tab')).toHaveCount(15); // 14 warehouses + All
+
+      const m = await page.evaluate(() => {
+        const list = document.querySelector('[role="tablist"]') as HTMLElement;
+        const wrap = list.parentElement as HTMLElement;
+        const tabEls = Array.from(list.querySelectorAll('[role="tab"]')) as HTMLElement[];
+        const sel = list.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
+        const w = wrap.getBoundingClientRect();
+        const s = sel.getBoundingClientRect();
+        return {
+          docScrollW: document.documentElement.scrollWidth,
+          docClientW: document.documentElement.clientWidth,
+          wrapScrollW: wrap.scrollWidth,
+          wrapClientW: wrap.clientWidth,
+          wrapOverflowX: getComputedStyle(wrap).overflowX,
+          tops: Array.from(new Set(tabEls.map((t) => Math.round(t.getBoundingClientRect().top)))),
+          // Sa phone width ang app shell (sidebar) mismo ang mokaon sa lapad, busa ang
+          // wrapper mahimong mas pig-ot kay sa usa ka tab: ang gipangayo kay nga ang
+          // selected tab MOSUGOD sulod sa view (wala ma-scroll = ~3000px sa gawas).
+          selInView: s.left >= w.left - 1 && s.left < w.right,
+        };
+      });
+      expect(m.wrapOverflowX).toBe('auto');
+      expect(m.wrapScrollW).toBeGreaterThan(m.wrapClientW); // ang strip mismo ang mo-scroll
+      expect(m.docScrollW).toBe(baselineDocW); // dili ang page ang nidako
+      expect(m.tops).toHaveLength(1); // usa ra ka row
+      expect(m.selInView).toBe(true); // ang selected tab gi-scroll sa view
+    } finally {
+      for (const id of extra) await testQuery('DELETE FROM warehouses WHERE id = ?', [id]);
+    }
+  });
+
+  test('a failed warehouse-list fetch still renders "All warehouses" instead of a dead skeleton', async ({ page }) => {
+    // I-fail ang getBranchWarehouses (ang response nga naay `isHeadOffice`) apan
+    // dili ang default-warehouse o products actions.
+    await page.route('**/products*', async (route) => {
+      const req = route.request();
+      if (req.method() !== 'POST' || !req.headers()['next-action']) return route.continue();
+      try {
+        const res = await route.fetch();
+        const body = await res.text();
+        if (body.includes('isHeadOffice')) return await route.abort();
+        return await route.fulfill({ response: res, body });
+      } catch {
+        // Ang page/context nagsira na (katapusan sa test) -- walay mabuhat.
+      }
+    });
+
+    await openProducts(page, branchUser(seeded.userUid));
+
+    const all = tab(page, 'All warehouses');
+    await expect(all).toBeVisible({ timeout: 20000 });
+    // Ang default nag-resolve sa tinuod nga warehouse apan wala na siya'y tab:
+    // ang user makahimo pa'g ilis ngadto sa "All warehouses".
+    await all.click();
+    await expect(all).toHaveAttribute('aria-selected', 'true');
+    // Ayaw pagbilin og in-flight route callback sa pagtapos sa test.
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
   });
 });
