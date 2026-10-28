@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, setWarehouseStock, priceInput } from './helpers/product-form';
 import { testQuery } from './helpers/db';
 import {
   TEST_BRAND,
@@ -10,6 +10,7 @@ import {
   TEST_PRICE_LEVEL_WHOLESALE,
   SELLING_UNITS_NEW_PRODUCT,
   SELLING_UNITS_PRODUCT,
+  TEST_MAIN_WAREHOUSE,
 } from './fixtures/test-data';
 
 /**
@@ -72,9 +73,9 @@ test.describe('Selling Units — add', () => {
     await selectOption(page, dialog, 'Brand', TEST_BRAND.name);
     await selectCategory(page, dialog, TEST_CATEGORY.name);
 
-    // --- Inventory (initial stock ra — ang unit of measure naa na sa base row) ---
+    // --- Inventory (per-warehouse na ang opening stock: pili-a una ang warehouse) ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await dialog.getByLabel('Initial Stock').fill(String(P.stock));
+    await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, P.stock);
 
     // --- Selling Units ---
     await dialog.getByRole('tab', { name: 'Selling Units' }).click();
@@ -85,8 +86,8 @@ test.describe('Selling Units — add', () => {
     await selectUnitName(page, base, P.baseUnitName);
     await base.getByLabel('Barcode').fill(P.baseBarcode);
     await base.getByLabel('Cost (₱)').fill(String(P.baseCost));
-    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(P.baseRetail));
-    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(P.baseWholesale));
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill(String(P.baseRetail));
+    await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(P.baseWholesale));
 
     // Row 2 — a new row starts with an EMPTY Qty Base (no silent default).
     await dialog.getByRole('button', { name: 'Add Selling Unit' }).click();
@@ -96,8 +97,8 @@ test.describe('Selling Units — add', () => {
     await box.getByLabel('Qty Base').fill(String(P.boxQtyBase));
     await box.getByLabel('Barcode').fill(P.boxBarcode);
     await box.getByLabel('Cost (₱)').fill(String(P.boxCost));
-    await box.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(P.boxRetail));
-    await box.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(P.boxWholesale));
+    await priceInput(box, TEST_PRICE_LEVEL.name).fill(String(P.boxRetail));
+    await priceInput(box, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(P.boxWholesale));
 
     // --- Submit ---
     await dialog.getByRole('button', { name: 'Add Product' }).click();
@@ -164,31 +165,29 @@ test.describe('Selling Units — add', () => {
       await dialog.getByRole('tab', { name: 'Selling Units' }).click();
 
       const base = unitRows(dialog).nth(0);
-      const retailLabel = `${TEST_PRICE_LEVEL.name} (₱)`;
-      const wholesaleLabel = `${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`;
       await base.getByLabel('Cost (₱)').fill('20');
-      await base.getByLabel(retailLabel).fill('50');
+      await priceInput(base, TEST_PRICE_LEVEL.name).fill('50');
 
       await dialog.getByRole('button', { name: 'Add Selling Unit' }).click();
       const box = unitRows(dialog).nth(1);
       await box.getByLabel('Qty Base').fill('12');
-      await expect(box.getByLabel(retailLabel)).toHaveValue('600');
-      await expect(box.getByLabel(wholesaleLabel)).toHaveValue(String(+(600 * 1.9).toFixed(2)));
+      await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('600');
+      await expect(priceInput(box, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(+(600 * 1.9).toFixed(2)));
 
       // Ang pag-usab sa Qty Base mo-follow samtang ang Retail suggestion pa gihapon.
       await box.getByLabel('Qty Base').fill('10');
-      await expect(box.getByLabel(retailLabel)).toHaveValue('500');
+      await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('500');
 
       // Ang base Retail nga gi-usab mo-follow sab.
-      await base.getByLabel(retailLabel).fill('60');
-      await expect(box.getByLabel(retailLabel)).toHaveValue('600');
+      await priceInput(base, TEST_PRICE_LEVEL.name).fill('60');
+      await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('600');
 
       // Ang hand-typed Retail dili na ma-overwrite.
-      await box.getByLabel(retailLabel).fill('999');
+      await priceInput(box, TEST_PRICE_LEVEL.name).fill('999');
       await box.getByLabel('Qty Base').fill('5');
-      await expect(box.getByLabel(retailLabel)).toHaveValue('999');
-      await base.getByLabel(retailLabel).fill('70');
-      await expect(box.getByLabel(retailLabel)).toHaveValue('999');
+      await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('999');
+      await priceInput(base, TEST_PRICE_LEVEL.name).fill('70');
+      await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('999');
 
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
@@ -237,13 +236,13 @@ test.describe('Selling Units — edit', () => {
     // value, so assert the stored unit name is contained within it.
     await expect(base.getByLabel('Unit Name')).toContainText(P.units[0].unitName);
     await expect(base.getByLabel('Barcode')).toHaveValue(P.units[0].barcode);
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`)).toHaveValue(String(P.units[0].retail));
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`)).toHaveValue(String(P.units[0].wholesale));
+    await expect(priceInput(base, TEST_PRICE_LEVEL.name)).toHaveValue(String(P.units[0].retail));
+    await expect(priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(P.units[0].wholesale));
     await expect(caseRow.getByLabel('Unit Name')).toContainText(P.units[1].unitName);
     await expect(caseRow.getByLabel('Qty Base')).toHaveValue(String(P.units[1].qtyBase));
 
     // Change the Case row's Retail price and save.
-    await caseRow.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(newCaseRetail));
+    await priceInput(caseRow, TEST_PRICE_LEVEL.name).fill(String(newCaseRetail));
     await dialog.getByRole('button', { name: 'Save Changes' }).click();
     await expect(dialog).toBeHidden();
 
@@ -299,14 +298,14 @@ test.describe('Selling Units — edit', () => {
     // Wala na ang manual auto-fill button — ang Retail input na ang trigger.
     await expect(dialog.getByRole('button', { name: /auto-fill prices/i })).toHaveCount(0);
 
-    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(baseRetail));
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`)).toHaveValue(String(baseRetail));
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`)).toHaveValue(String(baseWholesale));
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill(String(baseRetail));
+    await expect(priceInput(base, TEST_PRICE_LEVEL.name)).toHaveValue(String(baseRetail));
+    await expect(priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(baseWholesale));
 
     // Ang non-base row nag-type sa iyang kaugalingong Retail — dili ma-overwrite kini.
-    await caseRow.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(caseRetail));
-    await expect(caseRow.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`)).toHaveValue(String(caseRetail));
-    await expect(caseRow.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`)).toHaveValue(String(caseWholesale));
+    await priceInput(caseRow, TEST_PRICE_LEVEL.name).fill(String(caseRetail));
+    await expect(priceInput(caseRow, TEST_PRICE_LEVEL.name)).toHaveValue(String(caseRetail));
+    await expect(priceInput(caseRow, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(caseWholesale));
 
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -386,9 +385,6 @@ test.describe('Selling Units — Cost auto-suggestion and cost-based levels', ()
     await setEnableAutomaticMarkup(request, true);
   });
 
-  const retailLabel = `${TEST_PRICE_LEVEL.name} (₱)`;
-  const wholesaleLabel = `${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`;
-  const costTierLabel = `${COST_LEVEL.name} (₱)`;
 
   // Wala mag-save.
   test('add: Qty Base mo-fill sa row Cost (base Cost x qty) ug cost-based level, bisan walay base Retail', async ({ page }) => {
@@ -401,23 +397,23 @@ test.describe('Selling Units — Cost auto-suggestion and cost-based levels', ()
 
     const base = unitRows(dialog).nth(0);
     // The price-level columns load asynchronously — wait for them before typing.
-    await expect(base.getByLabel(costTierLabel)).toBeVisible();
+    await expect(priceInput(base, COST_LEVEL.name)).toBeVisible();
     await base.getByLabel('Cost (₱)').fill('10');
-    await expect(base.getByLabel(retailLabel)).toHaveValue(''); // NO base Retail typed
-    await expect(base.getByLabel(costTierLabel)).toHaveValue(costTier(10));
+    await expect(priceInput(base, TEST_PRICE_LEVEL.name)).toHaveValue(''); // NO base Retail typed
+    await expect(priceInput(base, COST_LEVEL.name)).toHaveValue(costTier(10));
 
     // (a) Qty Base -> Cost 120 and the cost-based level, with no Retail anywhere.
     await dialog.getByRole('button', { name: 'Add Selling Unit' }).click();
     const box = unitRows(dialog).nth(1);
     await box.getByLabel('Qty Base').fill('12');
     await expect(box.getByLabel('Cost (₱)')).toHaveValue('120');
-    await expect(box.getByLabel(costTierLabel)).toHaveValue(costTier(120));
-    await expect(box.getByLabel(retailLabel)).toHaveValue('');
+    await expect(priceInput(box, COST_LEVEL.name)).toHaveValue(costTier(120));
+    await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('');
 
     // The auto Cost follows a later Qty Base change.
     await box.getByLabel('Qty Base').fill('6');
     await expect(box.getByLabel('Cost (₱)')).toHaveValue('60');
-    await expect(box.getByLabel(costTierLabel)).toHaveValue(costTier(60));
+    await expect(priceInput(box, COST_LEVEL.name)).toHaveValue(costTier(60));
     await box.getByLabel('Qty Base').fill('12');
     await expect(box.getByLabel('Cost (₱)')).toHaveValue('120');
 
@@ -428,23 +424,23 @@ test.describe('Selling Units — Cost auto-suggestion and cost-based levels', ()
     await expect(pack.getByLabel('Cost (₱)')).toHaveValue('60');
 
     await box.getByLabel('Cost (₱)').fill('500');
-    await expect(box.getByLabel(costTierLabel)).toHaveValue(costTier(500));
+    await expect(priceInput(box, COST_LEVEL.name)).toHaveValue(costTier(500));
 
     await base.getByLabel('Cost (₱)').fill('12');
     await expect(pack.getByLabel('Cost (₱)')).toHaveValue('72'); // auto Cost followed
-    await expect(pack.getByLabel(costTierLabel)).toHaveValue(costTier(72));
+    await expect(priceInput(pack, COST_LEVEL.name)).toHaveValue(costTier(72));
     await expect(box.getByLabel('Cost (₱)')).toHaveValue('500'); // hand-typed Cost kept
-    await expect(box.getByLabel(costTierLabel)).toHaveValue(costTier(500));
+    await expect(priceInput(box, COST_LEVEL.name)).toHaveValue(costTier(500));
 
     // A hand-typed Cost is not overwritten by a later Qty Base change either.
     await box.getByLabel('Qty Base').fill('24');
     await expect(box.getByLabel('Cost (₱)')).toHaveValue('500');
 
     // (c) Retail-based levels still follow the base Retail (Retail = base x qty).
-    await base.getByLabel(retailLabel).fill('50');
-    await expect(pack.getByLabel(retailLabel)).toHaveValue('300');
-    await expect(pack.getByLabel(wholesaleLabel)).toHaveValue(String(+(300 * 1.9).toFixed(2)));
-    await expect(box.getByLabel(retailLabel)).toHaveValue('1200');
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill('50');
+    await expect(priceInput(pack, TEST_PRICE_LEVEL.name)).toHaveValue('300');
+    await expect(priceInput(pack, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(+(300 * 1.9).toFixed(2)));
+    await expect(priceInput(box, TEST_PRICE_LEVEL.name)).toHaveValue('1200');
     await expect(box.getByLabel('Cost (₱)')).toHaveValue('500');
 
     await page.keyboard.press('Escape');
@@ -465,7 +461,7 @@ test.describe('Selling Units — Cost auto-suggestion and cost-based levels', ()
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('tab', { name: 'Selling Units' }).click();
     const base = unitRows(dialog).nth(0);
-    await expect(base.getByLabel(costTierLabel)).toBeVisible();
+    await expect(priceInput(base, COST_LEVEL.name)).toBeVisible();
 
     // Nothing runs on load: the stored base Cost is untouched.
     await expect(base.getByLabel('Cost (₱)')).toHaveValue(String(baseCost));
@@ -480,27 +476,27 @@ test.describe('Selling Units — Cost auto-suggestion and cost-based levels', ()
     // (a) Qty Base -> Cost = base Cost x qty, plus the cost-based level.
     await auto.getByLabel('Qty Base').fill('6');
     await expect(auto.getByLabel('Cost (₱)')).toHaveValue(String(baseCost * 6)); // 108
-    await expect(auto.getByLabel(costTierLabel)).toHaveValue(costTier(baseCost * 6));
+    await expect(priceInput(auto, COST_LEVEL.name)).toHaveValue(costTier(baseCost * 6));
     // (c) Retail-based: base Retail x 6.
-    await expect(auto.getByLabel(retailLabel)).toHaveValue(String(baseRetail * 6));
-    await expect(auto.getByLabel(wholesaleLabel)).toHaveValue(String(+(baseRetail * 6 * 1.9).toFixed(2)));
+    await expect(priceInput(auto, TEST_PRICE_LEVEL.name)).toHaveValue(String(baseRetail * 6));
+    await expect(priceInput(auto, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(+(baseRetail * 6 * 1.9).toFixed(2)));
 
     // (b) A hand-typed Cost on the other row.
     await manual.getByLabel('Qty Base').fill('12');
     await expect(manual.getByLabel('Cost (₱)')).toHaveValue(String(baseCost * 12));
     await manual.getByLabel('Cost (₱)').fill('200');
-    await expect(manual.getByLabel(costTierLabel)).toHaveValue(costTier(200));
+    await expect(priceInput(manual, COST_LEVEL.name)).toHaveValue(costTier(200));
 
     // Base Cost changes: the untouched auto Cost follows, the hand-typed one stays.
     await base.getByLabel('Cost (₱)').fill('20');
     await expect(auto.getByLabel('Cost (₱)')).toHaveValue('120');
-    await expect(auto.getByLabel(costTierLabel)).toHaveValue(costTier(120));
+    await expect(priceInput(auto, COST_LEVEL.name)).toHaveValue(costTier(120));
     await expect(manual.getByLabel('Cost (₱)')).toHaveValue('200');
-    await expect(manual.getByLabel(costTierLabel)).toHaveValue(costTier(200));
+    await expect(priceInput(manual, COST_LEVEL.name)).toHaveValue(costTier(200));
 
     // Base Retail change: the auto Retail follows.
-    await base.getByLabel(retailLabel).fill('30');
-    await expect(auto.getByLabel(retailLabel)).toHaveValue('180');
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill('30');
+    await expect(priceInput(auto, TEST_PRICE_LEVEL.name)).toHaveValue('180');
     await expect(manual.getByLabel('Cost (₱)')).toHaveValue('200');
 
     await page.keyboard.press('Escape');

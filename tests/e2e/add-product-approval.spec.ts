@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, setWarehouseStock, priceInput } from './helpers/product-form';
 import { resetPosState, testQuery } from './helpers/db';
-import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE } from './fixtures/test-data';
+import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Add Product Approval (DB-backed) — verifies the require_product_confirmation
@@ -48,7 +48,10 @@ async function fillAndSubmitProduct(
 
   // --- Inventory ---
   await dialog.getByRole('tab', { name: 'Inventory' }).click();
-  await dialog.getByLabel('Initial Stock').fill(String(opts.stock));
+  // Stock is per warehouse now: the warehouse is picked first, then its own
+  // opening stock. The queued/finalized item therefore carries a warehouse
+  // entry, which is what the approval path has to round-trip.
+  await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, opts.stock);
 
   // --- Selling Units (base row owns unit name, barcode, cost ug price) ---
   await dialog.getByRole('tab', { name: 'Selling Units' }).click();
@@ -58,9 +61,9 @@ async function fillAndSubmitProduct(
   // Unique kada tawag — product_selling_units.barcode kay globally UNIQUE.
   await base.getByLabel('Barcode').fill(String(Date.now()).slice(-8));
   await base.getByLabel('Cost (₱)').fill(opts.cost);
-  await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(Number(opts.cost) * 1.25));
+  await priceInput(base, TEST_PRICE_LEVEL.name).fill(String(Number(opts.cost) * 1.25));
   // Every active price level's column is required.
-  await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(Number(opts.cost) * 1.25));
+  await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(Number(opts.cost) * 1.25));
 
   // --- Submit ---
   await dialog.getByRole('button', { name: 'Add Product' }).click();

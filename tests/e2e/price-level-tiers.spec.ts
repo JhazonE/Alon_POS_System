@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, setWarehouseStock, priceInput, minQtyInput } from './helpers/product-form';
 import { testQuery, resetPosState } from './helpers/db';
 import {
   TEST_USERS,
@@ -9,6 +9,7 @@ import {
   TEST_CATEGORY,
   TEST_PRICE_LEVEL,
   TEST_PRICE_LEVEL_WHOLESALE,
+  TEST_MAIN_WAREHOUSE,
 } from './fixtures/test-data';
 
 /**
@@ -178,7 +179,7 @@ test.describe('Price level tiers — admin setup', () => {
     await selectCategory(page, dialog, TEST_CATEGORY.name);
 
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await dialog.getByLabel('Initial Stock').fill(String(P.stock));
+    await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, P.stock);
 
     await dialog.getByRole('tab', { name: 'Selling Units' }).click();
     const base = unitRows(dialog).nth(0);
@@ -186,12 +187,12 @@ test.describe('Price level tiers — admin setup', () => {
     await base.getByLabel('Barcode').fill(P.barcode);
     await base.getByLabel('Cost (₱)').fill(String(P.cost));
     // Retail first: typing the default level's price auto-suggests the other levels.
-    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(P.retail));
-    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(P.wholesale));
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill(String(P.retail));
+    await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(P.wholesale));
     // Min Qty is a base-row-only column, one per level. Retail's is left blank.
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL.name} Min Qty`, { exact: true })).toBeVisible();
-    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} Min Qty`, { exact: true }).fill(String(P.wholesaleMinQty));
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} Min Qty`, { exact: true })).toHaveValue(String(P.wholesaleMinQty));
+    await expect(minQtyInput(base, TEST_PRICE_LEVEL.name)).toBeVisible();
+    await minQtyInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(P.wholesaleMinQty));
+    await expect(minQtyInput(base, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(P.wholesaleMinQty));
 
     await dialog.getByRole('button', { name: 'Add Product' }).click();
     await expect(dialog).toBeHidden();
@@ -245,10 +246,10 @@ test.describe('Price level tiers — admin setup', () => {
 
     const base = unitRows(dialog).nth(0);
     // Wait on a value that only appears once the stored row has loaded.
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`)).toHaveValue(String(P.wholesale));
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} Min Qty`, { exact: true })).toHaveValue(String(P.wholesaleMinQty));
+    await expect(priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(P.wholesale));
+    await expect(minQtyInput(base, TEST_PRICE_LEVEL_WHOLESALE.name)).toHaveValue(String(P.wholesaleMinQty));
     // Retail has no minimum: the field shows nothing or 0, never the Wholesale value.
-    await expect(base.getByLabel(`${TEST_PRICE_LEVEL.name} Min Qty`, { exact: true })).toHaveValue(/^(0)?$/);
+    await expect(minQtyInput(base, TEST_PRICE_LEVEL.name)).toHaveValue(/^(0)?$/);
 
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();

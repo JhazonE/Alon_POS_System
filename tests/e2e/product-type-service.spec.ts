@@ -79,10 +79,15 @@ test.describe('Service product type', () => {
     await expect(dialog.getByRole('tab', { name: 'Selling Units' })).toBeHidden();
 
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await expect(dialog.getByLabel('Initial Stock')).toBeHidden();
-    await expect(dialog.getByLabel('Reorder Point')).toBeHidden();
-    await expect(dialog.getByLabel('Supplier (Optional)')).toBeHidden();
-    await expect(dialog.getByLabel('Warehouse (Optional)')).toBeHidden();
+    // The warehouse picker and its per-warehouse opening-stock rows are the
+    // stock surface now (there is no single "Initial Stock" field any more), so
+    // a service must show NEITHER. Asserted by COUNT, not by `toBeHidden()`:
+    // `toBeHidden` on a name that does not exist at all passes vacuously and
+    // would keep passing if the section were later rendered under a new label.
+    await expect(dialog.getByLabel(/^Warehouses/)).toHaveCount(0);
+    await expect(dialog.getByTestId('warehouse-row')).toHaveCount(0);
+    await expect(dialog.getByLabel(/^Initial stock for /)).toHaveCount(0);
+    await expect(dialog.getByText('Initial stock', { exact: true })).toHaveCount(0);
     await expect(dialog.getByLabel('Shelf Locations (Optional)')).toBeHidden();
     // Ang Department nag-grupo sa mga stocked nga produkto para sa markup ug
     // reporting — walay kalabotan sa serbisyo, mao nga tago sad.
