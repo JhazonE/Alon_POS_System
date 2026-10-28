@@ -217,7 +217,11 @@ export function warehouseEntriesSuperRefine(
  *  - else a `warehouse` present: `[{ warehouseId: warehouse, stock, isPrimary: true }]`,
  *    with a missing `stock` opening at 0.
  *  - else (no warehouse, or ''): `[]`, the head-office NULL-warehouse case.
- *    A legacy `stock` with no warehouse has nowhere to land and is dropped.
+ *    A legacy `stock` with no warehouse is NOT dropped — it has no collection
+ *    entry to live in, so the write path keeps it as the scalar opening stock of
+ *    the NULL-warehouse product row (and opens a batch for it), exactly as the
+ *    pre-multi-warehouse code did. See the `primaryStock` comment in
+ *    lib/product-create.ts; do not read an empty collection here as "no stock".
  *
  * It does NOT validate. A malformed legacy id (an object, say) is carried
  * through untouched rather than silently dropped, so the id validation

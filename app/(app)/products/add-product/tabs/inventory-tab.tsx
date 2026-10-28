@@ -25,6 +25,7 @@ export function InventoryTab() {
     departments, isLoadingDepartments,
     taxRates,
     warehouses, isLoadingWarehouses, isHeadOffice,
+    isWarehousesError, retryWarehouses,
     shelfLocations,
     unitsOfMeasure, isLoadingUnits,
     selects, setSelects,
@@ -273,7 +274,13 @@ export function InventoryTab() {
                     placeholder="Select warehouses..."
                     searchPlaceholder="Search warehouse..."
                     addLabel="Add Warehouse"
-                    emptyLabel={isLoadingWarehouses ? 'Loading warehouses...' : 'No warehouses found'}
+                    emptyLabel={
+                      isLoadingWarehouses
+                        ? 'Loading warehouses...'
+                        : isWarehousesError
+                          ? 'Could not load warehouses'
+                          : 'No warehouses found'
+                    }
                     getId={(w: Warehouse) => w.id}
                     getName={(w: Warehouse) => w.name}
                     getOptionLabel={labelOf}
@@ -304,6 +311,25 @@ export function InventoryTab() {
                   <FormDescription>
                     Cost, prices, reorder point and suppliers are shared by every warehouse. Only the opening stock is set per warehouse.
                   </FormDescription>
+
+                  {/* A failed list leaves the picker empty with nothing to pick,
+                      so the user needs to be told why and given a retry rather
+                      than a silent empty state. */}
+                  {isWarehousesError && (
+                    <div
+                      data-testid="warehouse-list-error"
+                      className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive"
+                    >
+                      <span>The warehouse list could not be loaded.</span>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 items-center justify-center rounded-md border border-input bg-background px-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        onClick={() => { void retryWarehouses(); }}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
 
                   {entries.length > 0 && (
                     <RadioGroup

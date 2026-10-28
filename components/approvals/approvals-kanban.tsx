@@ -458,6 +458,10 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
           items={d.items}
           cols={[
             { key: 'productName', label: 'Item' },
+            // PRODUCT_CREATE emits one row per selected warehouse, each with
+            // that warehouse's own opening stock, so the rows are
+            // indistinguishable without this column.
+            { key: 'warehouseName', label: 'Warehouse' },
             { key: 'quantity', label: 'Qty', right: true },
           ]}
         />

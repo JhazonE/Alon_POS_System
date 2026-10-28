@@ -116,6 +116,8 @@ export function useAddProductForm({
   const {
     data: branchWarehouses,
     isLoading: isLoadingWarehouses,
+    isError: isWarehousesError,
+    refetch: refetchBranchWarehouses,
   } = useQuery({
     queryKey: branchWarehousesKey,
     queryFn: () => getBranchWarehouses(),
@@ -124,12 +126,20 @@ export function useAddProductForm({
   });
   const warehouses = branchWarehouses?.warehouses ?? [];
   // `true` only once the server says head office (or an unguarded null cookie).
-  // While the list is loading or failed this is false, which is the safe side:
-  // a branch caller must not be able to submit with no warehouse, because the
-  // server refuses it with a message the user could not otherwise explain.
   const isHeadOffice = branchWarehouses?.isHeadOffice === true;
-  const isHeadOfficeRef = useRef(isHeadOffice);
-  isHeadOfficeRef.current = isHeadOffice;
+  /**
+   * Whether the warehouse list actually RESOLVED. The min-one-warehouse rule is
+   * gated on this, not on the falsy `isHeadOffice` default: while the list is
+   * loading, and especially when the fetch FAILED, `isHeadOffice` is false and
+   * the picker is empty, so gating on it alone dead-ends a head-office user —
+   * the rule blocks submission, there is no warehouse to pick and no way out.
+   * With no resolved list the rule is not applied; the server still refuses a
+   * branch caller's warehouse-less write, so nothing is let through unguarded,
+   * and `warehousesError` below gives the user a retry instead of a dead form.
+   */
+  const warehousesResolved = branchWarehouses !== undefined;
+  const warehouseGateRef = useRef({ isHeadOffice, warehousesResolved });
+  warehouseGateRef.current = { isHeadOffice, warehousesResolved };
   const [shelfLocations, setShelfLocations] = useState<any[]>([]);
   const [isLoadingShelfLocations, setIsLoadingShelfLocations] = useState(false);
   const [priceLevels, setPriceLevels] = useState<any[]>([]);
@@ -170,9 +180,14 @@ export function useAddProductForm({
       // warehouse-less product), so the rule lives here, where isHeadOffice is
       // known. A Service carries no warehouse, so it is exempt.
       const v = values as { itemType?: string; warehouses?: unknown[] };
+      const gate = warehouseGateRef.current;
       const needsWarehouse =
         v.itemType === 'standard' &&
-        !isHeadOfficeRef.current &&
+        // Only once the list has resolved: a loading or failed list leaves
+        // isHeadOffice false with an empty picker, which would dead-end a head
+        // office user with a rule they cannot satisfy.
+        gate.warehousesResolved &&
+        !gate.isHeadOffice &&
         (!Array.isArray(v.warehouses) || v.warehouses.length === 0);
       if (!needsWarehouse) return result;
       return {
@@ -606,6 +621,9 @@ export function useAddProductForm({
     unitsOfMeasure, isLoadingUnits,
     suppliers, isLoadingSuppliers,
     warehouses, isLoadingWarehouses, isHeadOffice,
+    // The picker needs to tell "no warehouses" apart from "the list failed":
+    // the second needs a retry, not an empty state the user cannot act on.
+    isWarehousesError, retryWarehouses: refetchBranchWarehouses,
     shelfLocations, isLoadingShelfLocations,
     priceLevels, isLoadingPriceLevels,
     taxRates,
