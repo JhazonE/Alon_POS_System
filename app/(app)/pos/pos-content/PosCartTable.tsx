@@ -7,6 +7,7 @@ import { Search, ShoppingCart } from 'lucide-react';
 import { formatStockQuantity } from '@/lib/utils';
 import { buildLineId } from '@/lib/selling-unit-qty';
 import type { SaleItem } from './pos-types';
+import { displayDiscountPercent } from '@/lib/tax-utils';
 
 type Props = {
   inputRef: RefObject<HTMLInputElement>;
@@ -227,7 +228,7 @@ export function PosCartTable({
                             {item.name}
                           </button>
                           {item.priceLevelLabel && <span className="text-[10px] text-muted-foreground">{item.priceLevelLabel}</span>}
-                          {item.discount > 0 && <span className="text-[10px] text-green-600 font-medium">Discount: {item.discount}%</span>}
+                          {item.discount > 0 && <span className="text-[10px] text-green-600 font-medium">Discount: {displayDiscountPercent(item.discount, item.discountType)}%</span>}
                         </div>
                       )}
                     </TableCell>

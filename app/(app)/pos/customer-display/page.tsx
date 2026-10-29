@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api-config';
 import { CustomerDisplayEvent } from '@/hooks/use-customer-display';
+import { displayDiscountPercent } from '@/lib/tax-utils';
 
 const CHANNEL_NAME = 'pos-customer-display';
 const IDLE_TIMEOUT_MS = 60_000;
@@ -409,7 +410,7 @@ function CartScreen({ screen, tk }: { screen: Extract<Screen, { kind: 'cart' }>;
                             color: tk.discountText,
                           }}
                         >
-                          -{item.discount}%
+                          -{displayDiscountPercent(item.discount, item.discountType)}%
                         </span>
                       )}
                     </div>

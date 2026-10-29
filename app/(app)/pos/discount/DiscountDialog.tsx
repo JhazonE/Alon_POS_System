@@ -21,6 +21,7 @@ import { Percent, Banknote, UserRound, Accessibility, CreditCard, User, ShieldCh
 import { useDiscount } from './use-discount';
 import type { DiscountDialogProps, DiscountType } from './discount-types';
 import { cn } from "@/lib/utils";
+import { isStatutoryDiscount, statutoryRate } from '@/lib/tax-utils';
 
 export type { DiscountDetails } from './discount-types';
 
@@ -82,11 +83,14 @@ export function DiscountDialog({ isOpen, onOpenChange, item, onApplyDiscount, ha
                 value={discountType}
                 onValueChange={(val: DiscountType) => {
                   setDiscountType(val);
-                  if (val === 'pwd' || val === 'senior' || val === 'naac') {
-                    setValue('20');
-                  } else if (val === 'solo_parent') {
-                    setValue('10');
-                  } else if (val === 'percent' && item && (discountType === 'pwd' || discountType === 'senior' || discountType === 'naac' || discountType === 'solo_parent')) {
+                  if (isStatutoryDiscount(val)) {
+                    // The headline statutory rate (20% / 10%), which is what the
+                    // cashier and the customer should see. The percentage actually
+                    // stored against the VAT-inclusive shelf price is higher, so
+                    // the deduction lands on the VAT-exclusive price as the law
+                    // requires — see statutoryDiscountPercentOfGross.
+                    setValue(String(statutoryRate(val)));
+                  } else if (val === 'percent' && item && isStatutoryDiscount(discountType)) {
                     setValue(item.discount.toString());
                   }
                 }}
