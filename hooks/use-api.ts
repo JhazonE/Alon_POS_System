@@ -77,7 +77,11 @@ export function useProducts(search?: string, availability?: string, supplierId?:
         category: item.category || '',
         brand: item.brand || '',
         subcategory: '',
-        supplier: '',
+        // The product's primary supplier id. This was hard-coded to '' while
+        // the API did not select it, so every consumer saw a product with no
+        // supplier: the Restock flow's prefill reads this and silently did
+        // nothing rather than failing visibly.
+        supplier: item.supplier || '',
         stock: item.stock || 0,
         type: item.type,
         reorderPoint: item.reorderPoint || 0,

@@ -37,6 +37,12 @@ function resolveWarehouseFilter(warehouseId: unknown): WarehouseFilter {
 
 export class MySqlProductRepository implements ProductRepository {
   async findAll(limit: number, offset: number, filters: GetProductsFilters): Promise<ProductEntity[]> {
+    // `supplier` is the PRIMARY mapping's supplier, falling back to the legacy
+    // products.supplier_id — the same identity getProducts() uses in
+    // app/(app)/products/actions.ts. Without it Product.supplier is always
+    // undefined for every caller of /api/products, and a consumer that reads
+    // it (the Restock flow's supplier prefill) silently does nothing rather
+    // than failing visibly.
     let sql = `
       SELECT
         products.id,
@@ -62,9 +68,12 @@ export class MySqlProductRepository implements ProductRepository {
         (SELECT GROUP_CONCAT(CONCAT(shelf_id, ':', quantity)) FROM product_shelves WHERE product_id = products.id) as shelfQuantitiesRaw,
         products.updated_at as updatedAt,
         products.parent_id as parentId,
-        products.conversion_factor as conversionFactor
+        products.conversion_factor as conversionFactor,
+        COALESCE(spm_primary.supplier_id, products.supplier_id) as supplier
       FROM products
       LEFT JOIN units_of_measure uom ON products.unit_of_measure = uom.name
+      LEFT JOIN supplier_product_mapping spm_primary
+        ON spm_primary.product_id = products.id AND spm_primary.is_primary = 1
       WHERE 1=1
     `;
     const params: any[] = [];
