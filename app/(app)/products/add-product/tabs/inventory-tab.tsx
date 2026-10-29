@@ -3,12 +3,11 @@
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { UnitOfMeasure, Warehouse } from '@/lib/types';
 
 import { useAddProductFormContext } from '../add-product-form-context';
-import type { WarehouseEntry } from '../product-schema';
+import { withFirstPrimary, type WarehouseEntry } from '../product-schema';
 import { InlineEditableSelect } from '../../components/inline-editable-select';
 import { InlineEditableMultiSelect } from '../../components/inline-editable-multi-select';
 import {
@@ -228,6 +227,46 @@ export function InventoryTab() {
           )}
         />
 
+        {itemType === 'standard' && (
+          <FormField
+            control={form.control}
+            name="shelfLocationIds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shelf Locations (Optional)</FormLabel>
+                <InlineEditableMultiSelect
+                  items={shelfLocations || []}
+                  value={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Select locations..."
+                  searchPlaceholder="Search location..."
+                  addLabel="Add Shelf Location"
+                  emptyLabel="No location found."
+                  getId={(loc: any) => loc.id}
+                  getName={(loc: any) => loc.name}
+                  onAdd={async (name) => {
+                    const r = await addShelfLocation(name);
+                    if (r.success) {
+                      await refreshShelfLocations();
+                      const fresh = await getShelfLocations();
+                      const created = fresh.find((l: any) => l.name === name);
+                      return created?.id;
+                    }
+                    return undefined;
+                  }}
+                  onRename={async (id, name) => {
+                    const existing = (shelfLocations || []).find((l: any) => l.id === id);
+                    const r = await updateShelfLocation(id, name, existing?.description);
+                    if (r.success) { await refreshShelfLocations(); return id; }
+                    return undefined;
+                  }}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
       {/* Unit of measure now lives on the base selling-unit row — one source of
           truth, same treatment as barcode and cost. */}
       {itemType === 'standard' && (
@@ -243,24 +282,29 @@ export function InventoryTab() {
               const entries: WarehouseEntry[] = field.value ?? [];
               const warehouseById = (id: string): Warehouse | undefined => warehouses.find((w: Warehouse) => w.id === id);
               const labelOf = (w: Warehouse) => (w.branchName ? `${w.name} · ${w.branchName}` : w.name);
-              const primaryId = entries.find((e) => e.isPrimary)?.warehouseId ?? entries[0]?.warehouseId ?? '';
               const rowErrors = (form.formState.errors as any).warehouses as any;
+              // A row cannot show its own error while the popover is shut, so
+              // they are collected and listed under the field, each naming its
+              // warehouse.
+              const stockErrorMessages: string[] = entries.flatMap((e, i) => {
+                const m = rowErrors?.[i]?.stock?.message as string | undefined;
+                if (!m) return [];
+                const w = warehouseById(e.warehouseId);
+                return [`${w?.name ?? e.warehouseId}: ${m}`];
+              });
 
               // Rebuild the entries from the picked ids, keeping each kept row's
-              // stock and primary flag. The FIRST selected warehouse is the
-              // primary by default; if the primary is unselected, the first
-              // remaining one takes over, so a non-empty list always has one.
+              // stock. There is NO primary control: the FIRST entry is the
+              // primary, always. An unticked warehouse is dropped entirely, so
+              // unticking the first one promotes the next — a non-empty list
+              // therefore always has exactly one primary, and re-ticking starts
+              // that warehouse at 0 rather than restoring a hidden old value.
               const setSelected = (ids: string[]) => {
                 const next: WarehouseEntry[] = ids.map(
                   (id) => entries.find((e) => e.warehouseId === id) ?? { warehouseId: id, stock: 0, isPrimary: false },
                 );
-                if (next.length > 0 && !next.some((e) => e.isPrimary)) {
-                  next[0] = { ...next[0], isPrimary: true };
-                }
-                field.onChange(next);
+                field.onChange(withFirstPrimary(next));
               };
-              const setPrimary = (id: string) =>
-                field.onChange(entries.map((e) => ({ ...e, isPrimary: e.warehouseId === id })));
               const setStock = (id: string, stock: number) =>
                 field.onChange(entries.map((e) => (e.warehouseId === id ? { ...e, stock } : e)));
 
@@ -307,9 +351,30 @@ export function InventoryTab() {
                       if (r.success) { await refreshWarehouses(); return id; }
                       return undefined;
                     }}
+                    renderSelectedAccessory={(w: Warehouse) => {
+                      const entry = entries.find((e) => e.warehouseId === w.id);
+                      if (!entry) return null;
+                      const i = entries.indexOf(entry);
+                      const stockError = rowErrors?.[i]?.stock?.message as string | undefined;
+                      return (
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          placeholder="0"
+                          aria-label={`Initial stock for ${w.name}`}
+                          aria-invalid={stockError ? true : undefined}
+                          className={`h-7 w-20 rounded-full text-center ${stockError ? 'border-destructive' : ''}`}
+                          value={entry.stock}
+                          onChange={(ev) => setStock(w.id, parseInt(ev.target.value) || 0)}
+                        />
+                      );
+                    }}
                   />
                   <FormDescription>
-                    Cost, prices, reorder point and suppliers are shared by every warehouse. Only the opening stock is set per warehouse.
+                    All warehouses in your branch are selected by default. Open the list and type each one&apos;s opening
+                    stock beside its name. Cost, prices, reorder point and suppliers are shared by every warehouse —
+                    only the opening stock is set per warehouse, and the first one picked is the primary.
                   </FormDescription>
 
                   {/* A failed list leaves the picker empty with nothing to pick,
@@ -331,98 +396,25 @@ export function InventoryTab() {
                     </div>
                   )}
 
-                  {entries.length > 0 && (
-                    <RadioGroup
-                      value={primaryId}
-                      onValueChange={setPrimary}
-                      aria-label="Primary warehouse"
-                      className="gap-2 pt-1"
-                    >
-                      <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_7rem_5rem] sm:gap-x-3 px-3 text-xs font-medium text-muted-foreground">
-                        <span>Warehouse</span>
-                        <span>Initial stock</span>
-                        <span>Primary</span>
-                      </div>
-                      {entries.map((e, i) => {
-                        const w = warehouseById(e.warehouseId);
-                        const name = w?.name ?? e.warehouseId;
-                        const stockError = rowErrors?.[i]?.stock?.message as string | undefined;
-                        return (
-                          <div
-                            key={e.warehouseId}
-                            data-testid="warehouse-row"
-                            className="rounded-md border p-3 grid grid-cols-[minmax(0,1fr)_7rem_auto] items-start gap-x-3 sm:grid-cols-[minmax(0,1fr)_7rem_5rem]"
-                          >
-                            <div className="min-w-0 sm:self-center">
-                              <div className="truncate text-sm font-medium" title={name}>{name}</div>
-                              {w?.branchName && (
-                                <div className="truncate text-xs text-muted-foreground">{w.branchName}</div>
-                              )}
-                            </div>
-                            <div>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={1}
-                                placeholder="0"
-                                aria-label={`Initial stock for ${name}`}
-                                value={e.stock}
-                                onChange={(ev) => setStock(e.warehouseId, parseInt(ev.target.value) || 0)}
-                              />
-                              {stockError && <p className="mt-1 text-xs text-destructive">{stockError}</p>}
-                            </div>
-                            <div className="flex items-center gap-1.5 self-center text-xs sm:justify-start">
-                              <RadioGroupItem value={e.warehouseId} aria-label={`Primary warehouse: ${name}`} />
-                              <span className="sm:sr-only">Primary</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </RadioGroup>
+                  {/* The opening-stock inputs live INSIDE the picker rows
+                      (renderSelectedAccessory above), so there is no table
+                      here. What a row cannot show is its own validation
+                      message while the popover is closed — those are listed
+                      here instead, naming the warehouse. */}
+                  {stockErrorMessages.length > 0 && (
+                    <ul data-testid="warehouse-stock-errors" className="mt-1 space-y-1">
+                      {stockErrorMessages.map((m) => (
+                        <li key={m} className="text-xs text-destructive">{m}</li>
+                      ))}
+                    </ul>
                   )}
+
                   <FormMessage />
                 </FormItem>
               );
             }}
           />
 
-          <FormField
-            control={form.control}
-            name="shelfLocationIds"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Shelf Locations (Optional)</FormLabel>
-                <InlineEditableMultiSelect
-                  items={shelfLocations || []}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Select locations..."
-                  searchPlaceholder="Search location..."
-                  addLabel="Add Shelf Location"
-                  emptyLabel="No location found."
-                  getId={(loc: any) => loc.id}
-                  getName={(loc: any) => loc.name}
-                  onAdd={async (name) => {
-                    const r = await addShelfLocation(name);
-                    if (r.success) {
-                      await refreshShelfLocations();
-                      const fresh = await getShelfLocations();
-                      const created = fresh.find((l: any) => l.name === name);
-                      return created?.id;
-                    }
-                    return undefined;
-                  }}
-                  onRename={async (id, name) => {
-                    const existing = (shelfLocations || []).find((l: any) => l.id === id);
-                    const r = await updateShelfLocation(id, name, existing?.description);
-                    if (r.success) { await refreshShelfLocations(); return id; }
-                    return undefined;
-                  }}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </>
       )}
 

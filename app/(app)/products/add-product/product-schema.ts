@@ -163,6 +163,27 @@ export const warehouseEntrySchema = z.object({
 export type WarehouseEntry = z.infer<typeof warehouseEntrySchema>;
 
 /**
+ * Flag the FIRST entry primary and clear the flag on every other.
+ *
+ * The Add Product form has no primary control: whichever warehouse is ticked
+ * first carries the shelves, selling units and supplier mappings. Unticking it
+ * drops its entry, so the next one becomes first and inherits the role — which
+ * is why this is applied on EVERY selection change, not just the first.
+ *
+ * `warehouseEntriesSuperRefine` already reads an unflagged collection as
+ * "the first entry is primary", so this does not change what a payload means;
+ * it makes the stored shape say plainly what the form intends, so a consumer
+ * reading `isPrimary` directly (the create path's primary row, a queued
+ * approval item replayed later) sees the same answer as the validator.
+ *
+ * An empty collection stays empty: no warehouse means `products.warehouse_id`
+ * is NULL, a legitimate head-office state with no primary at all.
+ */
+export function withFirstPrimary(entries: WarehouseEntry[]): WarehouseEntry[] {
+  return entries.map((e, i) => ({ ...e, isPrimary: i === 0 }));
+}
+
+/**
  * Structural rules the per-entry schema cannot express: no warehouse chosen
  * twice, and at most one entry flagged primary.
  *

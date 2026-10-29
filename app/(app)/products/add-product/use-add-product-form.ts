@@ -28,7 +28,7 @@ import {
   getDepartments,
 } from '../actions';
 import { useSupplierMappings } from '../components/use-supplier-mappings';
-import { productSchema, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
+import { productSchema, withFirstPrimary, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
 
 function getCurrentUid(): string {
   if (typeof window === 'undefined') return 'system';
@@ -125,6 +125,9 @@ export function useAddProductForm({
     refetchOnWindowFocus: false,
   });
   const warehouses = branchWarehouses?.warehouses ?? [];
+  // A stable dependency for the default-selection effect below: the array
+  // itself is a new identity each render.
+  const warehouseIdsKey = warehouses.map((w: { id: string }) => w.id).join(',');
   // `true` only once the server says head office (or an unguarded null cookie).
   const isHeadOffice = branchWarehouses?.isHeadOffice === true;
   /**
@@ -140,6 +143,7 @@ export function useAddProductForm({
   const warehousesResolved = branchWarehouses !== undefined;
   const warehouseGateRef = useRef({ isHeadOffice, warehousesResolved });
   warehouseGateRef.current = { isHeadOffice, warehousesResolved };
+
   const [shelfLocations, setShelfLocations] = useState<any[]>([]);
   const [isLoadingShelfLocations, setIsLoadingShelfLocations] = useState(false);
   const [priceLevels, setPriceLevels] = useState<any[]>([]);
@@ -318,6 +322,52 @@ export function useAddProductForm({
   // Switching to Service clears every stock-side field. Without this, values
   // typed while Standard was selected stay in form state and fail the service
   // branch's z.undefined() checks on submit, with no visible field to fix.
+
+  /**
+   * Every warehouse the picker offers starts SELECTED, each at 0.
+   *
+   * Creating a product in all of the branch's warehouses is the common case;
+   * picking a subset is the exception, so the form opens on the common case and
+   * the user unticks rather than ticks. Opening stock is still typed per
+   * warehouse — the default is the SELECTION, never a quantity.
+   *
+   * Applied when the list RESOLVES, not at reset, because the list is fetched:
+   * at reset time there is nothing to select. It must therefore not clobber a
+   * choice the user has already made, so it runs once per dialog opening and
+   * only while the collection is still untouched (`isDirty` is false and the
+   * collection is empty). `appliedForOpenRef` holds the open it ran for, so a
+   * refetch mid-edit — adding a warehouse inline refetches — does not re-select
+   * warehouses the user has just unticked.
+   *
+   * A service carries no warehouse at all; the itemType effect below clears the
+   * collection, and the `itemType` guard here keeps this from putting it back.
+   */
+  const warehouseDefaultAppliedRef = useRef(false);
+  useEffect(() => {
+    // Reset on CLOSE so the next opening defaults again. Doing this in the same
+    // effect that applies the default (rather than during render) keeps the
+    // flag's lifetime tied to the dialog's, including the very first mount,
+    // which already has isOpen true.
+    if (!isOpen) {
+      warehouseDefaultAppliedRef.current = false;
+      return;
+    }
+    if (warehouseDefaultAppliedRef.current) return;
+    if (!warehousesResolved || warehouses.length === 0) return;
+    if (itemType === 'service') return;
+    const current = form.getValues('warehouses');
+    if (Array.isArray(current) && current.length > 0) return;
+    warehouseDefaultAppliedRef.current = true;
+    form.setValue(
+      'warehouses',
+      withFirstPrimary(warehouses.map((w: { id: string }) => ({ warehouseId: w.id, stock: 0 }))),
+      { shouldDirty: false },
+    );
+    // `warehouses` is a fresh array identity on every render (it is derived from
+    // the query data), so the effect is keyed on the warehouse IDS instead —
+    // otherwise it re-runs constantly and the ref is the only thing stopping it.
+  }, [isOpen, warehousesResolved, warehouseIdsKey, itemType, form]);
+
   useEffect(() => {
     // Must run for BOTH branches: this is the only place that writes the
     // discriminator into react-hook-form state. `itemType` otherwise lives
