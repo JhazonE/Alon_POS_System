@@ -56,7 +56,11 @@ async function ensureZReadingsSchema() {
             { name: 'min_return_or_id', type: 'VARCHAR(50)' },
             { name: 'max_return_or_id', type: 'VARCHAR(50)' },
             { name: 'actual_cash', type: 'DECIMAL(15,2) DEFAULT 0.00' },
-            { name: 'cash_difference', type: 'DECIMAL(15,2) DEFAULT 0.00' }
+            { name: 'cash_difference', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+            // Cash membership fees are not sales, but they sit in the drawer and
+            // are therefore part of cash_in_drawer. Persisted separately so a
+            // saved reading can be reconciled back to its components.
+            { name: 'membership_cash', type: 'DECIMAL(15,2) DEFAULT 0.00' }
         ];
 
         for (const col of columnsToAdd) {
@@ -264,7 +268,7 @@ export async function GET(request: NextRequest) {
             AND pt.is_training = 0
             ${dateCondition.replace(/st\.created_at/g, 'pt.created_at')}
             ${terminalCondition}
-            GROUP BY pti.tax_type
+            GROUP BY COALESCE(pti.tax_type, 'VAT')
         `;
         const vatAdjustmentResults = await query(vatAdjustmentSql, dateParams) as any[];
 
@@ -558,6 +562,9 @@ export async function GET(request: NextRequest) {
                 startingCash: safeParseFloat(row.starting_cash),
                 cashSales: safeParseFloat(row.cash_sales),
                 cashInDrawer: safeParseFloat(row.cash_in_drawer),
+                // Readings saved before membership_cash existed report 0 here, which
+                // is also the correct value for any reading with no membership fees.
+                membershipCash: safeParseFloat(row.membership_cash),
                 cashierName: row.cashier_name,
                 terminalId: row.terminal_id,
                 terminalMin: row.terminal_min || '',
@@ -725,12 +732,12 @@ export async function POST(request: NextRequest) {
         const discountSummaryResults = await query(discountSummarySql, [...dateParams, terminalId]) as any[];
 
         const vatAdjustmentSql = `
-            SELECT 
-                pti.tax_type,
+            SELECT
+                COALESCE(pti.tax_type, 'VAT') as tax_type,
                 SUM(pti.line_total) as total_amount,
-                SUM(CASE 
-                    WHEN pti.tax_type = 'VAT' THEN pti.line_total - (pti.line_total / 1.12)
-                    ELSE 0 
+                SUM(CASE
+                    WHEN COALESCE(pti.tax_type, 'VAT') = 'VAT' THEN pti.line_total - (pti.line_total / 1.12)
+                    ELSE 0
                 END) as vat_amount
             FROM pos_transaction_items pti
             JOIN pos_transactions pt ON pti.pos_transaction_id = pt.id
@@ -739,7 +746,7 @@ export async function POST(request: NextRequest) {
             AND pt.is_training = 0
             ${dateCondition.replace(/st\.created_at/g, 'pt.created_at')}
             AND pt.terminal_id = ?
-            GROUP BY pti.tax_type
+            GROUP BY COALESCE(pti.tax_type, 'VAT')
         `;
         const vatAdjustmentResults = await query(vatAdjustmentSql, [...dateParams, terminalId]) as any[];
 
@@ -807,7 +814,29 @@ export async function POST(request: NextRequest) {
         const cashVariance = parseFloat(shiftResult?.total_cash_difference || 0);
         const cashSalesObj = paymentResults.find((p: any) => p.payment_method?.toUpperCase() === 'CASH');
         const cashSales = parseFloat(cashSalesObj?.amount || 0);
-        const cashInDrawer = startingCash + cashSales; 
+
+        // Cash membership fees over the same date/terminal scope as this Z-reading.
+        // Must stay identical to the GET (preview) handler's equivalent block: the
+        // preview and the committed reading are the same report, and a drawer total
+        // that differs between them reports a false over/short to the cashier.
+        // Unlike GET, terminalId is always a specific terminal here.
+        let membershipWhere = "WHERE payment_method = 'cash' AND terminal_id = ?";
+        const membershipParams: any[] = [];
+        if (startDate) { membershipWhere += ' AND created_at > ?'; membershipParams.push(startDate); }
+        if (endDate) { membershipWhere += ' AND created_at <= ?'; membershipParams.push(endDate); }
+        const membershipCashRows: any[] = await query(
+            `SELECT
+                COALESCE(SUM(amount), 0) AS membership_cash,
+                COALESCE(SUM(is_new_card = 1), 0) AS activation_count,
+                COALESCE(SUM(is_new_card = 0), 0) AS renewal_count
+             FROM membership_payments ${membershipWhere}`,
+            [terminalId, ...membershipParams]
+        );
+        const membershipCash = parseFloat(membershipCashRows[0]?.membership_cash || 0);
+        const membershipActivationCount = safeInt(membershipCashRows[0]?.activation_count);
+        const membershipRenewalCount = safeInt(membershipCashRows[0]?.renewal_count);
+
+        const cashInDrawer = startingCash + cashSales + membershipCash;
 
         const paymentMethods = paymentResults.map((p: any) => ({ name: p.payment_method || 'Unknown', amount: parseFloat(p.amount) }));
         const [termResult] = await query(`SELECT min_number, serial_number, permit_no, accreditation_no, permit_date_issued, z_counter, reset_counter FROM pos_terminals WHERE id = ?`, [terminalId]) as any[];
@@ -843,8 +872,9 @@ export async function POST(request: NextRequest) {
                 vatable_sales, vat_exempt, zero_rated, non_vat,
                 discount_summary, sales_adjustment, vat_adjustment, void_amount,
                 actual_cash, cash_difference,
-                min_sale_or_id, max_sale_or_id, min_void_or_id, max_void_or_id, min_return_or_id, max_return_or_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                min_sale_or_id, max_sale_or_id, min_void_or_id, max_void_or_id, min_return_or_id, max_return_or_id,
+                membership_cash
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         await query(insertSql, [
@@ -858,7 +888,8 @@ export async function POST(request: NextRequest) {
             actualCash, cashVariance,
             salesResult?.min_sale_or_id || 'OR-000000', salesResult?.max_sale_or_id || 'OR-000000',
             voidSeqResult?.min_void_or_id || 'OR-000000', voidSeqResult?.max_void_or_id || 'OR-000000',
-            returnSeqResult?.min_return_or_id || 'OR-000000', returnSeqResult?.max_return_or_id || 'OR-000000'
+            returnSeqResult?.min_return_or_id || 'OR-000000', returnSeqResult?.max_return_or_id || 'OR-000000',
+            membershipCash
         ]);
 
         // BIR Annex F checklist item #29: a Z-reading closes out this
@@ -881,6 +912,9 @@ export async function POST(request: NextRequest) {
             returns: parseFloat(returnsResult?.total_returns || 0), discounts: parseFloat(salesResult?.total_discounts || 0),
             netSales: finalNetSales, vatSales: vatableSales, vatAmount, paymentMethods,
             transactionCount: parseInt(salesResult?.transaction_count || 0), startingCash, cashSales, cashInDrawer, cashierName, terminalId,
+            membershipCash: safeParseFloat(membershipCash),
+            membershipActivationCount: membershipActivationCount,
+            membershipRenewalCount: membershipRenewalCount,
             terminalMin: termResult?.min_number || '', terminalSerialNumber: termResult?.serial_number || '',
             terminalPermitNo: termResult?.permit_no || '', terminalAccreditationNo: termResult?.accreditation_no || '',
             terminalPermitDateIssued: termResult?.permit_date_issued || '',
