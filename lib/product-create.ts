@@ -129,6 +129,67 @@ async function resolveWarehouseNames(ids: string[]): Promise<Map<string, string>
   return names;
 }
 
+/**
+ * Every warehouse of a submission must belong to ONE branch.
+ *
+ * `assertWarehouseForWrite` returns early for head office (`scope === 'all'`),
+ * so without this a head-office caller could create a single product holding
+ * stock in two BIR establishments at once. A branch caller never could: each
+ * entry is already asserted against their own branch.
+ *
+ * Enforced HERE rather than only in the picker because a server action's
+ * arguments arrive off the wire — a replayed approval item, or a direct call,
+ * never passes through the UI. The branch is read from the warehouse rows
+ * themselves, not from anything the caller supplied.
+ *
+ * A warehouse with a NULL `branch_id` belongs to no branch; it may only be
+ * combined with other branchless warehouses, never mixed with a branch's, for
+ * the same reason two branches may not be mixed. An id that matches no row is
+ * left to `assertWarehouseInBranch` (head office does not run that, so an
+ * unknown id simply contributes no branch here and fails later on the insert's
+ * own foreign key).
+ */
+async function assertEntriesShareOneBranch(entries: WarehouseEntry[]): Promise<void> {
+  if (entries.length < 2) return;
+  const ids = entries.map((e) => e.warehouseId);
+  const rows = (await query(
+    `SELECT id, name, branch_id FROM warehouses WHERE id IN (${ids.map(() => '?').join(', ')})`,
+    ids,
+  )) as Array<{ id: string; name: string | null; branch_id: string | null }>;
+  if (rows.length === 0) return;
+
+  const byBranch = new Map<string, string[]>();
+  for (const row of rows) {
+    const key = row.branch_id ?? '__none__';
+    const names = byBranch.get(key) ?? [];
+    names.push(row.name ?? row.id);
+    byBranch.set(key, names);
+  }
+  if (byBranch.size < 2) return;
+
+  const branchIds = [...byBranch.keys()].filter((k) => k !== '__none__');
+  const branchNames = new Map<string, string>();
+  if (branchIds.length > 0) {
+    const branchRows = (await query(
+      `SELECT id, name FROM branches WHERE id IN (${branchIds.map(() => '?').join(', ')})`,
+      branchIds,
+    )) as Array<{ id: string; name: string | null }>;
+    for (const b of branchRows) if (b.name) branchNames.set(b.id, b.name);
+  }
+  // Name the branches AND their warehouses: "two branches" alone leaves the
+  // user to work out which of their picks is the odd one.
+  const detail = [...byBranch.entries()]
+    .map(([key, names]) => {
+      const label = key === '__none__' ? 'no branch' : branchNames.get(key) ?? key;
+      return `${label} (${names.join(', ')})`;
+    })
+    .join(' and ');
+  throw new BranchResolutionError(
+    `A product belongs to one branch, but these warehouses span ${byBranch.size}: ${detail}. ` +
+      'Create it separately for each branch.',
+  );
+}
+
 /** The 23 descriptive and commercial scalar columns a non-primary row carries. */
 const COPIED_SCALAR_COLUMNS = `name, description, additional_description, category, brand, department,
         subcategory, supplier_id, reorder_point, price, cost, sku, barcode,
@@ -190,6 +251,13 @@ export async function addProductWithScope(
       for (const entry of warehouseEntries) {
         await assertWarehouseForWrite(entry.warehouseId, scope);
       }
+    }
+    // Runs for EVERY caller, guarded or not: the per-entry assert above is a
+    // no-op for head office, and an unguarded (null-scope) call skips it
+    // entirely, so this is the only thing standing between either of them and
+    // a product spanning two BIR establishments.
+    if (!isService) {
+      await assertEntriesShareOneBranch(warehouseEntries);
     }
 
     // --- Check if approval is required ---

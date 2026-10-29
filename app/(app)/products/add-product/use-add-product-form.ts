@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
 import { getSessionUid } from '@/lib/session-uid';
 import { generateSku } from '@/lib/sku';
-import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings } from '@/lib/types';
+import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings, Warehouse } from '@/lib/types';
 import type { ProductType } from '@/lib/product-type';
 
 import {
@@ -128,6 +128,74 @@ export function useAddProductForm({
   // A stable dependency for the default-selection effect below: the array
   // itself is a new identity each render.
   const warehouseIdsKey = warehouses.map((w: { id: string }) => w.id).join(',');
+
+  /**
+   * The branches the picker may offer, derived from the warehouse list the
+   * server already scoped — never fetched separately, so it cannot widen what
+   * the caller is allowed to see.
+   *
+   * A branch user gets exactly one (their own, unnamed: `branchName` is only
+   * populated for head office), so the Branch field is not shown to them at
+   * all. Head office gets one entry per branch that actually has an active
+   * warehouse; a warehouse with no branch is grouped under a single
+   * `__none__` key rather than dropped, because head office can legitimately
+   * create a branchless product.
+   */
+  const branchOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const w of warehouses as Warehouse[]) {
+      const name = w.branchName;
+      if (name) byId.set(name, name);
+      else byId.set('__none__', 'No branch');
+    }
+    return [...byId.entries()].map(([id, name]) => ({ id, name }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouseIdsKey]);
+
+  /**
+   * The branch the warehouse picker is scoped to. A product belongs to ONE
+   * branch (lib/product-create.ts refuses a submission spanning two), so this
+   * is a single selection, not a filter that can be cleared.
+   *
+   * Local UI state, NOT a form field: the submission still carries only
+   * warehouse ids, and the server derives the branch from those rows rather
+   * than trusting anything sent. Changing it clears the warehouse selection,
+   * because keeping another branch's picks would build exactly the cross-branch
+   * payload the server refuses.
+   */
+  const [selectedBranch, setSelectedBranchState] = useState<string | null>(null);
+
+  /**
+   * The warehouses the picker actually offers: those of `selectedBranch`.
+   *
+   * With one branch (every branch user, and head office in a single-branch
+   * install) this is the whole list and the Branch field is hidden, so the
+   * behaviour is unchanged for them. The fallback to the full list while no
+   * branch is chosen yet matters only for the instant before the default
+   * effect below picks one.
+   */
+  const branchWarehouseList = useMemo(() => {
+    if (branchOptions.length < 2 || selectedBranch === null) return warehouses;
+    return (warehouses as Warehouse[]).filter(
+      (w) => (w.branchName ?? '__none__') === selectedBranch,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouseIdsKey, branchOptions.length, selectedBranch]);
+
+  /**
+   * Switching branch CLEARS the warehouse selection and re-defaults to the new
+   * branch's warehouses. Carrying the old picks across would build the exact
+   * cross-branch payload `assertEntriesShareOneBranch` refuses, and silently
+   * dropping only the out-of-branch ones would lose stock the user had typed
+   * without saying so.
+   */
+  const setSelectedBranch = (branchId: string) => {
+    setSelectedBranchState(branchId);
+    const next = (warehouses as Warehouse[])
+      .filter((w) => (w.branchName ?? '__none__') === branchId)
+      .map((w) => ({ warehouseId: w.id, stock: 0 }));
+    form.setValue('warehouses', withFirstPrimary(next), { shouldDirty: true });
+  };
   // `true` only once the server says head office (or an unguarded null cookie).
   const isHeadOffice = branchWarehouses?.isHeadOffice === true;
   /**
@@ -350,6 +418,7 @@ export function useAddProductForm({
     // which already has isOpen true.
     if (!isOpen) {
       warehouseDefaultAppliedRef.current = false;
+      setSelectedBranchState(null);
       return;
     }
     if (warehouseDefaultAppliedRef.current) return;
@@ -358,9 +427,20 @@ export function useAddProductForm({
     const current = form.getValues('warehouses');
     if (Array.isArray(current) && current.length > 0) return;
     warehouseDefaultAppliedRef.current = true;
+    // Default the BRANCH first (the first one offered — for a branch user the
+    // only one), then select that branch's warehouses. Defaulting the
+    // selection to every branch's would be a payload the server refuses.
+    const defaultBranch = branchOptions[0]?.id ?? null;
+    setSelectedBranchState(defaultBranch);
+    const inBranch =
+      branchOptions.length < 2 || defaultBranch === null
+        ? warehouses
+        : (warehouses as Warehouse[]).filter(
+            (w) => (w.branchName ?? '__none__') === defaultBranch,
+          );
     form.setValue(
       'warehouses',
-      withFirstPrimary(warehouses.map((w: { id: string }) => ({ warehouseId: w.id, stock: 0 }))),
+      withFirstPrimary(inBranch.map((w: Warehouse) => ({ warehouseId: w.id, stock: 0 }))),
       { shouldDirty: false },
     );
     // `warehouses` is a fresh array identity on every render (it is derived from
@@ -670,7 +750,12 @@ export function useAddProductForm({
     departments, isLoadingDepartments,
     unitsOfMeasure, isLoadingUnits,
     suppliers, isLoadingSuppliers,
-    warehouses, isLoadingWarehouses, isHeadOffice,
+    // The picker is scoped to the selected branch; `warehouses` stays the full
+    // (already branch-scoped by the server) list for anything that needs it.
+    warehouses: branchWarehouseList,
+    allWarehouses: warehouses,
+    branchOptions, selectedBranch, setSelectedBranch,
+    isLoadingWarehouses, isHeadOffice,
     // The picker needs to tell "no warehouses" apart from "the list failed":
     // the second needs a retry, not an empty state the user cannot act on.
     isWarehousesError, retryWarehouses: refetchBranchWarehouses,

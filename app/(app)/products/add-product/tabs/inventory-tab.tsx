@@ -24,6 +24,7 @@ export function InventoryTab() {
     departments, isLoadingDepartments,
     taxRates,
     warehouses, isLoadingWarehouses, isHeadOffice,
+    branchOptions, selectedBranch, setSelectedBranch,
     isWarehousesError, retryWarehouses,
     shelfLocations,
     unitsOfMeasure, isLoadingUnits,
@@ -271,6 +272,38 @@ export function InventoryTab() {
           truth, same treatment as barcode and cost. */}
       {itemType === 'standard' && (
         <>
+          {/* A product belongs to ONE branch, so the branch is chosen first and
+              the warehouse picker below offers only that branch's warehouses.
+              Hidden when there is only one branch to choose — every branch
+              user, and a single-branch install — because a field with one
+              option is a question with no answer to give. The server derives
+              the branch from the warehouse rows themselves and refuses a
+              submission spanning two, so this field is a convenience, not the
+              guard. */}
+          {branchOptions.length > 1 && (
+            <FormItem className="sm:col-span-2">
+              <FormLabel htmlFor="product-branch">Branch</FormLabel>
+              <Select
+                value={selectedBranch ?? undefined}
+                onValueChange={setSelectedBranch}
+              >
+                <FormControl>
+                  <SelectTrigger id="product-branch" className="sm:max-w-sm">
+                    <SelectValue placeholder="Select a branch" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {branchOptions.map((b: { id: string; name: string }) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Changing the branch clears the warehouses picked below.
+              </FormDescription>
+            </FormItem>
+          )}
+
           {/* The warehouses this product is created in, each with its OWN opening
               stock. Everything else on the form (cost, prices, reorder point,
               suppliers) is shared by every warehouse: it is entered once, in the

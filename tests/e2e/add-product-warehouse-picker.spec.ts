@@ -116,3 +116,27 @@ test.describe('Add product — warehouse picker', () => {
     await expect(page.getByLabel(/^Primary warehouse/)).toHaveCount(0);
   });
 });
+
+/**
+ * Head office makakita ug daghang branch, mao nga ang Branch field mopakita ug
+ * ang picker mo-scope niini. Ang branch user usa ra ug branch, mao nga walay
+ * Branch field — usa ka field nga usa ra ang option kay pangutana nga walay
+ * ikatubag.
+ */
+test.describe('Add product — branch scoping', () => {
+  test.setTimeout(120_000);
+
+  test('walay Branch field kung usa ra ka branch', async ({ page }) => {
+    await seedSession(page, DEFAULT_ADMIN);
+    await page.goto('/products');
+    await page.getByRole('button', { name: 'Add Product' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Add New Product')).toBeVisible();
+    await dialog.getByRole('tab', { name: 'Inventory' }).click();
+
+    // Ang seeded install usa ra ka branch (Main Branch), mao nga ang tanang
+    // warehouse parehas ug branch ug walay mapilian.
+    await expect(dialog.getByLabel(/^Warehouses/)).toBeVisible();
+    await expect(dialog.getByLabel('Branch', { exact: true })).toHaveCount(0);
+  });
+});
