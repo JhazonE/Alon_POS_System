@@ -45,7 +45,7 @@ export function PrintLayout({
         <thead>
           <tr className="border-b-2 border-black">
             <th className="py-3 px-2 font-bold uppercase tracking-wider">Product Name</th>
-            <th className="py-3 px-2 font-bold uppercase tracking-wider">SKU / Barcode</th>
+            <th className="py-3 px-2 font-bold uppercase tracking-wider">Barcode</th>
             <th className="py-3 px-2 font-bold uppercase tracking-wider text-right">
               Expected
             </th>
@@ -82,7 +82,7 @@ export function PrintLayout({
               >
                 <td className="py-3 px-2 border-b border-gray-200">{item.product_name}</td>
                 <td className="py-3 px-2 border-b border-gray-200 text-gray-600">
-                  {item.product_sku || item.product_barcode || '-'}
+                  {item.product_barcode || '-'}
                 </td>
                 <td className="py-3 px-2 border-b border-gray-200 text-right">
                   {item.snapshot_quantity}

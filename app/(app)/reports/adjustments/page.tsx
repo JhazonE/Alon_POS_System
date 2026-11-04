@@ -25,7 +25,6 @@ import { Spinner } from '@/components/ui/spinner';
 interface Adjustment {
   id: string;
   product_name: string;
-  sku: string;
   quantity: number;
   reason: string;
   new_stock: number;

@@ -88,7 +88,6 @@ export function useProducts(search?: string, availability?: string, supplierId?:
         avgDailySales: item.avgDailySales || 0,
         price: parseFloat(item.price) || 0,
         cost: item.cost ? parseFloat(item.cost) : undefined,
-        sku: item.sku || '',
         barcode: item.barcode || '',
         imageUrl: '',
         imageHint: '',

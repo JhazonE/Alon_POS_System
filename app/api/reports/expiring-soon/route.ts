@@ -60,7 +60,6 @@ export async function GET(request: NextRequest) {
         b.id                  AS batchId,
         b.product_id          AS productId,
         p.name                AS productName,
-        p.sku                 AS sku,
         b.quantity_remaining  AS quantityRemaining,
         DATE_FORMAT(b.expiration_date, '%Y-%m-%d') AS expirationDate,
         DATEDIFF(b.expiration_date, CURDATE())     AS daysUntilExpiry

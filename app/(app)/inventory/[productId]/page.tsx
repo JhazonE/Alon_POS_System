@@ -122,7 +122,7 @@ export default function ProductDetailPage() {
                         <DetailItem label="Brand" value={product.brand} />
                         <DetailItem label="Category" value={product.category} />
                          {product.subcategory && <DetailItem label="Subcategory" value={product.subcategory} />}
-                         <DetailItem label="Base SKU" value={<Badge variant="outline">{product.sku}</Badge>} />
+                         <DetailItem label="Barcode" value={<Badge variant="outline">{product.barcode || '—'}</Badge>} />
                     </div>
                      <Separator />
                      <div className="grid grid-cols-3 gap-6">
@@ -139,7 +139,7 @@ export default function ProductDetailPage() {
                                     <TableHead>Unit Name</TableHead>
                                     <TableHead>Price</TableHead>
                                     <TableHead>Conversion</TableHead>
-                                    <TableHead>SKU</TableHead>
+                                    <TableHead>Barcode</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -148,7 +148,7 @@ export default function ProductDetailPage() {
                                         <TableCell className='font-medium'>{unit.name}</TableCell>
                                         <TableCell>₱{unit.price.toFixed(2)}</TableCell>
                                         <TableCell>1 {unit.name} = {unit.conversionFactor} {product.unitOfMeasure}(s)</TableCell>
-                                        <TableCell><Badge variant="secondary">{unit.sku}</Badge></TableCell>
+                                        <TableCell><Badge variant="secondary">{unit.barcode || '—'}</Badge></TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>

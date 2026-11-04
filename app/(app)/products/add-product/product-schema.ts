@@ -274,7 +274,6 @@ export function normalizeLegacyWarehouseInput(input: {
 const baseProductSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   brand: z.string().min(1, 'Brand is required'),
-  sku: z.string().optional(),
   barcode: z.string().optional(),
   department: z.string().optional(),
   description: z.string().min(1, 'Description is required'),

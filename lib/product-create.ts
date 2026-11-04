@@ -190,9 +190,9 @@ async function assertEntriesShareOneBranch(entries: WarehouseEntry[]): Promise<v
   );
 }
 
-/** The 23 descriptive and commercial scalar columns a non-primary row carries. */
+/** The 22 descriptive and commercial scalar columns a non-primary row carries. */
 const COPIED_SCALAR_COLUMNS = `name, description, additional_description, category, brand, department,
-        subcategory, supplier_id, reorder_point, price, cost, sku, barcode,
+        subcategory, supplier_id, reorder_point, price, cost, barcode,
         image_url, image_hint, unit_of_measure, income_account, expense_account,
         vat_status, availability, earns_points, is_perishable, type`;
 
@@ -274,7 +274,6 @@ export async function addProductWithScope(
         const baseItem = {
           productId: 'NEW',
           productName: formData.name,
-          sku: formData.sku || '',
           barcode: formData.barcode || '',
           price: formData.price,
           cost: formData.cost || 0,
@@ -376,7 +375,6 @@ export async function addProductWithScope(
         // services: cost is required at creation precisely so cost_at_sale is
         // never NULL, and 0 is a legitimate answer for a pure-margin service.
         cost: formData.cost ?? null,
-        sku: formData.sku || null,
         barcode: formData.barcode || null,
         image_url: formData.image || null,
         image_hint: formData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -394,10 +392,10 @@ export async function addProductWithScope(
         INSERT INTO products (
           id, name, description, additional_description, category, brand, department,
           subcategory, supplier_id, warehouse_id, stock, reorder_point, avg_daily_sales, price, cost,
-          sku, barcode, image_url, image_hint,
+          barcode, image_url, image_hint,
           unit_of_measure, income_account, expense_account,
           vat_status, availability, earns_points, shelf_location_id, is_perishable, type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const legacyShelfId = formData.shelfLocationIds && formData.shelfLocationIds.length > 0 ? formData.shelfLocationIds[0] : null;
@@ -406,7 +404,7 @@ export async function addProductWithScope(
         productData.id, productData.name, productData.description, productData.additional_description,
         productData.category, productData.brand, productData.department, productData.subcategory,
         productData.supplier_id, productData.warehouse_id, productData.stock, productData.reorder_point,
-        productData.avg_daily_sales, productData.price, productData.cost, productData.sku,
+        productData.avg_daily_sales, productData.price, productData.cost,
         productData.barcode, productData.image_url, productData.image_hint, productData.unit_of_measure,
         productData.income_account,
         productData.expense_account, productData.vat_status, productData.availability, productData.earns_points,
@@ -535,15 +533,15 @@ export async function addProductWithScope(
             `INSERT INTO products (
                id, name, description, additional_description, category, brand, department,
                subcategory, supplier_id, warehouse_id, stock, reorder_point, avg_daily_sales,
-               price, cost, sku, barcode, image_url, image_hint, unit_of_measure,
+               price, cost, barcode, image_url, image_hint, unit_of_measure,
                income_account, expense_account, vat_status, availability, earns_points,
                is_perishable, type
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               rowId, primary.name, primary.description, primary.additional_description,
               primary.category, primary.brand, primary.department, primary.subcategory,
               primary.supplier_id, entry.warehouseId, entry.stock, primary.reorder_point,
-              primary.price, primary.cost, primary.sku, primary.barcode, primary.image_url,
+              primary.price, primary.cost, primary.barcode, primary.image_url,
               primary.image_hint, primary.unit_of_measure, primary.income_account,
               primary.expense_account, primary.vat_status, primary.availability,
               primary.earns_points, primary.is_perishable, primary.type,

@@ -60,7 +60,7 @@ test.describe('POS sale flow', () => {
     await posLogin(page);
     await startShift(page);
 
-    await addProductBySku(page, product.sku, product.name);
+    await addProductBySku(page, product.barcode, product.name);
     await expect(page.getByText(product.name).first()).toBeVisible();
   });
 
@@ -71,8 +71,8 @@ test.describe('POS sale flow', () => {
     const p1 = TEST_PRODUCTS[0]; // 12.50
     const p2 = TEST_PRODUCTS[1]; // 20.00
 
-    await addProductBySku(page, p1.sku, p1.name);
-    await addProductBySku(page, p2.sku, p2.name);
+    await addProductBySku(page, p1.barcode, p1.name);
+    await addProductBySku(page, p2.barcode, p2.name);
 
     // Total = 12.50 + 20.00 = 32.50. Magpakita ni bisan asa sa POS total area.
     const expectedTotal = (p1.price + p2.price).toFixed(2);
@@ -82,7 +82,7 @@ test.describe('POS sale flow', () => {
   test('kompleto nga cash sale → na-save → cart mo-clear', async ({ page }) => {
     await posLogin(page);
     await startShift(page);
-    await addProductBySku(page, product.sku, product.name);
+    await addProductBySku(page, product.barcode, product.name);
 
     // Empty barcode + Enter → default tender (Cash) → ablihi ang TenderDialog.
     const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);

@@ -25,12 +25,12 @@ const CLONE_EXCLUDED_COLUMNS = new Set([
  * Pangitaa (o himoa) ang katugbang sa `product` sulod sa `targetWarehouseId`.
  *
  * Gi-mirror ang kinaiya sa canonical nga TransferStockService: resolve pinaagi
- * sa SKU → barcode → name, ug kung wala gyud, i-clone ang source row paingon sa
+ * sa barcode → name, ug kung wala gyud, i-clone ang source row paingon sa
  * target warehouse nga 0 ang stock imbes mo-throw.
  *
- * Ang SKU ug barcode lookups gi-guard batok sa NULL: pareho sila optional sa
- * product form, ug sa SQL ang `col = NULL` dili gyud mo-match — mao nga kung
- * i-pass ang NULL, mo-fall through siya sa name (dili mo-match ug sayop nga row).
+ * Ang barcode lookup gi-guard batok sa NULL: optional siya sa product form,
+ * ug sa SQL ang `col = NULL` dili gyud mo-match — mao nga kung i-pass ang NULL,
+ * mo-fall through siya sa name (dili mo-match ug sayop nga row).
  */
 async function resolveTransferTarget(
   product: any,
@@ -38,7 +38,6 @@ async function resolveTransferTarget(
   connection: any
 ): Promise<string> {
   const lookups: Array<[string, any]> = [
-    ['sku', product.sku],
     ['barcode', product.barcode],
     ['name', product.name],
   ];
@@ -168,7 +167,6 @@ export async function POST(request: NextRequest) {
             quantity: finalQuantity, // Correctly signed quantity
             reason: finalReason,
             productName: product.name,
-            productSku: product.sku,
             productBarcode: product.barcode,
             currentStock: currentStock,
             warehouseId,
@@ -225,11 +223,10 @@ export async function POST(request: NextRequest) {
         // For transfers, we need to find the target product.
         //
         // Ang resolution order parehas sa canonical nga TransferStockService:
-        // SKU → barcode → name, dayon auto-create. Ang SKU guard importante kay
-        // ang SKU optional sa product form (`sku: formData.sku || null`) ug ang
-        // SQL `sku = NULL` dili gyud mo-match — kung wala ang guard, ang matag
-        // transfer sa produkto nga walay SKU mo-fail bisan tuod naa na siya sa
-        // target warehouse.
+        // barcode → name, dayon auto-create. Ang barcode guard importante kay
+        // optional siya sa product form ug ang SQL `barcode = NULL` dili gyud
+        // mo-match — kung wala ang guard, ang matag transfer sa produkto nga
+        // walay barcode mo-fail bisan tuod naa na siya sa target warehouse.
         let destId = itemTargetProductId;
         if (isTransfer && !destId && targetWarehouseId) {
           destId = await resolveTransferTarget(product, targetWarehouseId, connection);

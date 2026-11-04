@@ -45,9 +45,9 @@ test.describe('DB-backed: seeded data', () => {
     const body = await res.json();
     expect(body.success).toBeTruthy();
 
-    const skus: string[] = (body.data ?? []).map((p: any) => p.sku);
+    const skus: string[] = (body.data ?? []).map((p: any) => p.barcode);
     for (const product of TEST_PRODUCTS) {
-      expect(skus).toContain(product.sku);
+      expect(skus).toContain(product.barcode);
     }
   });
 });

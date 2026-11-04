@@ -52,7 +52,7 @@ export async function getDefaultWarehouseId(scope: BranchScope): Promise<string 
 
 /**
  * A SQL fragment limiting an existing-product match to the importer's branch,
- * so a row whose barcode, name or SKU happens to match another branch's product
+ * so a row whose barcode or name happens to match another branch's product
  * cannot overwrite it. Empty for head office. Append it to a `WHERE ...` that
  * already has a condition.
  */

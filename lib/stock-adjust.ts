@@ -56,13 +56,13 @@ export async function adjustStockWithScope(
     if (isApprovalRequired) {
       // Get product info for enrichment
       const productInfoRes: any = await query(`
-        SELECT p.name, p.stock, p.sku, p.barcode, w.name as warehouse_name, s.name as shelf_name
+        SELECT p.name, p.stock, p.barcode, w.name as warehouse_name, s.name as shelf_name
         FROM products p
         LEFT JOIN warehouses w ON p.warehouse_id = w.id
         LEFT JOIN shelf_locations s ON p.shelf_location_id = s.id
         WHERE p.id = ?
       `, [productId]);
-      const productInfo = productInfoRes[0] || { name: 'Unknown', stock: 0, sku: '', barcode: '', warehouse_name: null, shelf_name: null };
+      const productInfo = productInfoRes[0] || { name: 'Unknown', stock: 0, barcode: '', warehouse_name: null, shelf_name: null };
 
       // Submit to approval queue instead of executing
       console.log('Stock adjustment submitted for approval:', { productId, quantity, reason });
@@ -71,7 +71,6 @@ export async function adjustStockWithScope(
         quantity,
         reason,
         productName: productInfo.name,
-        productSku: productInfo.sku,
         productBarcode: productInfo.barcode,
         warehouseName: productInfo.warehouse_name,
         shelfName: productInfo.shelf_name,

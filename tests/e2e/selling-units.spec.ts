@@ -220,7 +220,7 @@ test.describe('Selling Units — edit', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
 
-    await openRowMenu(page, P.sku, P.name);
+    await openRowMenu(page, P.barcode, P.name);
     await page.getByRole('menuitem', { name: 'Edit Product' }).click();
 
     const dialog = page.getByRole('dialog');
@@ -286,7 +286,7 @@ test.describe('Selling Units — edit', () => {
 
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await openRowMenu(page, P.sku, P.name);
+    await openRowMenu(page, P.barcode, P.name);
     await page.getByRole('menuitem', { name: 'Edit Product' }).click();
 
     const dialog = page.getByRole('dialog');
@@ -317,7 +317,7 @@ test.describe('Selling Units — edit', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
 
-    await openRowMenu(page, P.sku, P.name);
+    await openRowMenu(page, P.barcode, P.name);
     await page.getByRole('menuitem', { name: 'Edit Product' }).click();
 
     const dialog = page.getByRole('dialog');
@@ -455,7 +455,7 @@ test.describe('Selling Units — Cost auto-suggestion and cost-based levels', ()
 
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await openRowMenu(page, P.sku, P.name);
+    await openRowMenu(page, P.barcode, P.name);
     await page.getByRole('menuitem', { name: 'Edit Product' }).click();
 
     const dialog = page.getByRole('dialog');

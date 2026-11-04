@@ -38,20 +38,20 @@ test.describe('reports counts after product fan-out', () => {
     await cleanupSecondBranch(branch);
   });
 
-  /** Direktang insert sa products row; ang sku `null` mao ang tinuod nga NULL. */
+  /** Direktang insert sa products row; ang barcode `null` mao ang tinuod nga NULL. */
   async function insertProduct(opts: {
     warehouseId: string;
     name: string;
-    sku: string | null;
+    barcode: string | null;
     stock?: number;
     reorderPoint?: number;
   }): Promise<string> {
     const id = uuidv4();
     productIds.push(id);
     await testQuery(
-      `INSERT INTO products (id, name, price, sku, stock, reorder_point, warehouse_id)
+      `INSERT INTO products (id, name, price, barcode, stock, reorder_point, warehouse_id)
        VALUES (?, ?, 1.00, ?, ?, ?, ?)`,
-      [id, opts.name, opts.sku, opts.stock ?? 0, opts.reorderPoint ?? 0, opts.warehouseId]
+      [id, opts.name, opts.barcode, opts.stock ?? 0, opts.reorderPoint ?? 0, opts.warehouseId]
     );
     return id;
   }
@@ -64,43 +64,44 @@ test.describe('reports counts after product fan-out', () => {
   }
 
   test('total_items counts a fanned-out product once', async ({ request }) => {
-    const sku = `DST-${uuidv4().slice(0, 8)}`;
-    await insertProduct({ warehouseId: branch.warehouseId, name: `Distinct ${sku}`, sku, stock: 10 });
-    await insertProduct({ warehouseId: secondWarehouse, name: `Distinct ${sku}`, sku, stock: 0 });
+    const barcode = `DST-${uuidv4().slice(0, 8)}`;
+    await insertProduct({ warehouseId: branch.warehouseId, name: `Distinct ${barcode}`, barcode, stock: 10 });
+    await insertProduct({ warehouseId: secondWarehouse, name: `Distinct ${barcode}`, barcode, stock: 0 });
 
     const { totalItems } = await stats(request);
     expect(totalItems).toBe(1); // not 2
   });
 
-  test('total_items counts a NULL-sku product', async ({ request }) => {
-    const sku = `DST-${uuidv4().slice(0, 8)}`;
-    const nullName = `Null sku ${sku}`;
-    // Usa ka NULL-sku nga product nga naay kopya sa duha ka warehouse...
-    await insertProduct({ warehouseId: branch.warehouseId, name: nullName, sku: null, stock: 4 });
-    await insertProduct({ warehouseId: secondWarehouse, name: nullName, sku: null, stock: 0 });
-    // ...ug usa ka normal nga product nga naay sku.
-    await insertProduct({ warehouseId: branch.warehouseId, name: `Normal ${sku}`, sku, stock: 4 });
+  test('total_items counts a NULL-barcode product', async ({ request }) => {
+    const barcode = `DST-${uuidv4().slice(0, 8)}`;
+    const nullName = `Null barcode ${barcode}`;
+    // Usa ka NULL-barcode nga product nga naay kopya sa duha ka warehouse...
+    await insertProduct({ warehouseId: branch.warehouseId, name: nullName, barcode: null, stock: 4 });
+    await insertProduct({ warehouseId: secondWarehouse, name: nullName, barcode: null, stock: 0 });
+    // ...ug usa ka normal nga product nga naay barcode.
+    await insertProduct({ warehouseId: branch.warehouseId, name: `Normal ${barcode}`, barcode, stock: 4 });
 
     const { totalItems } = await stats(request);
-    // COUNT(*) = 3, COUNT(DISTINCT sku) = 1 (gi-drop ang NULL-sku). Husto = 2.
+    // COUNT(*) = 3, COUNT(DISTINCT barcode) = 1 (gi-drop ang NULL). Husto = 2.
     expect(totalItems).toBe(2);
   });
 
-  test('total_items keeps blank-sku products with different names apart', async ({ request }) => {
+  test('total_items keeps blank-barcode products with different names apart', async ({ request }) => {
     const tag = uuidv4().slice(0, 8);
-    await insertProduct({ warehouseId: branch.warehouseId, name: `Blank A ${tag}`, sku: '', stock: 1 });
-    // (sku, warehouse_id) kay unique, mao nga ang ikaduha naa sa lain nga warehouse.
-    await insertProduct({ warehouseId: secondWarehouse, name: `Blank B ${tag}`, sku: '', stock: 1 });
+    // Duha ka warehouse, sama sa fan-out; walay unique index sa products.barcode,
+    // mao nga ang '' dili mapugngan -- ang ngalan ra ang mag-bulag kanila.
+    await insertProduct({ warehouseId: branch.warehouseId, name: `Blank A ${tag}`, barcode: '', stock: 1 });
+    await insertProduct({ warehouseId: secondWarehouse, name: `Blank B ${tag}`, barcode: '', stock: 1 });
 
     const { totalItems } = await stats(request);
-    expect(totalItems).toBe(2); // dili ma-collapse sa usa ra ang '' sku
+    expect(totalItems).toBe(2); // dili ma-collapse sa usa ra ang '' barcode
   });
 
   test('low_stock_items counts a product once even when several copies are low', async ({ request }) => {
-    const sku = `DST-${uuidv4().slice(0, 8)}`;
+    const barcode = `DST-${uuidv4().slice(0, 8)}`;
     // Parehong copy ubos sa reorder_point ug naay stock (> 0).
-    await insertProduct({ warehouseId: branch.warehouseId, name: `Low ${sku}`, sku, stock: 2, reorderPoint: 50 });
-    await insertProduct({ warehouseId: secondWarehouse, name: `Low ${sku}`, sku, stock: 3, reorderPoint: 50 });
+    await insertProduct({ warehouseId: branch.warehouseId, name: `Low ${barcode}`, barcode, stock: 2, reorderPoint: 50 });
+    await insertProduct({ warehouseId: secondWarehouse, name: `Low ${barcode}`, barcode, stock: 3, reorderPoint: 50 });
 
     const { lowStockItems, totalItems } = await stats(request);
     expect(lowStockItems).toBe(1); // not 2
@@ -108,11 +109,11 @@ test.describe('reports counts after product fan-out', () => {
   });
 
   test('reports/inventory pagination count still matches the rows listed', async ({ request }) => {
-    const sku = `DST-${uuidv4().slice(0, 8)}`;
+    const barcode = `DST-${uuidv4().slice(0, 8)}`;
     // 3 ka row sa listing: usa ka product sa duha ka warehouse + usa ka lain.
-    await insertProduct({ warehouseId: branch.warehouseId, name: `Inv A ${sku}`, sku, stock: 5 });
-    await insertProduct({ warehouseId: secondWarehouse, name: `Inv A ${sku}`, sku, stock: 0 });
-    await insertProduct({ warehouseId: branch.warehouseId, name: `Inv B ${sku}`, sku: `${sku}-B`, stock: 5 });
+    await insertProduct({ warehouseId: branch.warehouseId, name: `Inv A ${barcode}`, barcode, stock: 5 });
+    await insertProduct({ warehouseId: secondWarehouse, name: `Inv A ${barcode}`, barcode, stock: 0 });
+    await insertProduct({ warehouseId: branch.warehouseId, name: `Inv B ${barcode}`, barcode: `${barcode}-B`, stock: 5 });
 
     const base = `/api/reports/inventory?uid=${branch.userUid}`;
 
@@ -147,32 +148,32 @@ test.describe('reports counts after product fan-out', () => {
       }
 
       test('summary.totalItems counts a fanned-out product once', async ({ request }) => {
-        const sku = `DST-${uuidv4().slice(0, 8)}`;
-        await insertProduct({ warehouseId: branch.warehouseId, name: `Sum ${sku}`, sku, stock: 10 });
-        await insertProduct({ warehouseId: secondWarehouse, name: `Sum ${sku}`, sku, stock: 0 });
+        const barcode = `DST-${uuidv4().slice(0, 8)}`;
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Sum ${barcode}`, barcode, stock: 10 });
+        await insertProduct({ warehouseId: secondWarehouse, name: `Sum ${barcode}`, barcode, stock: 0 });
 
         const body = await fetchReport(request, '&limit=1000');
         expect(body.summary.totalItems).toBe(1); // not 2
         expect(body.data).toHaveLength(2); // the listing still shows both copies
       });
 
-      test('summary.totalItems still counts a NULL-sku product', async ({ request }) => {
-        const sku = `DST-${uuidv4().slice(0, 8)}`;
-        const nullName = `Null sku ${sku}`;
-        await insertProduct({ warehouseId: branch.warehouseId, name: nullName, sku: null, stock: 4 });
-        await insertProduct({ warehouseId: secondWarehouse, name: nullName, sku: null, stock: 0 });
-        await insertProduct({ warehouseId: branch.warehouseId, name: `Normal ${sku}`, sku, stock: 4 });
+      test('summary.totalItems still counts a NULL-barcode product', async ({ request }) => {
+        const barcode = `DST-${uuidv4().slice(0, 8)}`;
+        const nullName = `Null barcode ${barcode}`;
+        await insertProduct({ warehouseId: branch.warehouseId, name: nullName, barcode: null, stock: 4 });
+        await insertProduct({ warehouseId: secondWarehouse, name: nullName, barcode: null, stock: 0 });
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Normal ${barcode}`, barcode, stock: 4 });
 
         const body = await fetchReport(request, '&limit=1000');
-        // COUNT(*) = 3, plain COUNT(DISTINCT sku) = 1 (drops NULL). Correct = 2.
+        // COUNT(*) = 3, plain COUNT(DISTINCT barcode) = 1 (drops NULL). Correct = 2.
         expect(body.summary.totalItems).toBe(2);
       });
 
       test('pagination.totalItems stays equal to the rows listed (not DISTINCT)', async ({ request }) => {
-        const sku = `DST-${uuidv4().slice(0, 8)}`;
-        await insertProduct({ warehouseId: branch.warehouseId, name: `Pg A ${sku}`, sku, stock: 5 });
-        await insertProduct({ warehouseId: secondWarehouse, name: `Pg A ${sku}`, sku, stock: 0 });
-        await insertProduct({ warehouseId: branch.warehouseId, name: `Pg B ${sku}`, sku: `${sku}-B`, stock: 5 });
+        const barcode = `DST-${uuidv4().slice(0, 8)}`;
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Pg A ${barcode}`, barcode, stock: 5 });
+        await insertProduct({ warehouseId: secondWarehouse, name: `Pg A ${barcode}`, barcode, stock: 0 });
+        await insertProduct({ warehouseId: branch.warehouseId, name: `Pg B ${barcode}`, barcode: `${barcode}-B`, stock: 5 });
 
         const all = await fetchReport(request, '&limit=1000');
         expect(all.data).toHaveLength(3);

@@ -27,15 +27,6 @@ export function BasicInfoTab() {
 
   return (
     <>
-      {/* Legacy products only: SKU is retired for new products, but keep showing an existing one. */}
-      {product.sku ? (
-        <div className="space-y-2">
-          <Label htmlFor="legacy-sku">SKU</Label>
-          <Input id="legacy-sku" value={product.sku} readOnly className="bg-muted" />
-          <p className="text-sm text-muted-foreground">SKU cannot be changed after creation.</p>
-        </div>
-      ) : null}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Name (full width) */}
         <FormField

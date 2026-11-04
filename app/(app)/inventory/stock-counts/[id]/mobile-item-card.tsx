@@ -77,11 +77,11 @@ export function MobileItemCard({
           />
         </div>
 
-        {/* Name + SKU */}
+        {/* Name + barcode */}
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm leading-tight truncate">{item.product_name}</p>
           <p className="text-xs text-muted-foreground truncate">
-            {item.product_sku || item.product_barcode || 'No SKU'}
+            {item.product_barcode || 'No barcode'}
           </p>
         </div>
 

@@ -54,7 +54,7 @@ export async function updateProductShelfLocationsWithScope(
       if (isApprovalRequired) {
           // Enrich data for approval
           const enrichedUpdates = await Promise.all(updates.map(async u => {
-              const pRows: any = await query('SELECT name, sku, barcode, stock FROM products WHERE id = ?', [u.productId]);
+              const pRows: any = await query('SELECT name, barcode, stock FROM products WHERE id = ?', [u.productId]);
               const p = pRows[0];
               
               let sourceName = 'Unassigned';
@@ -72,7 +72,6 @@ export async function updateProductShelfLocationsWithScope(
               return {
                   ...u,
                   productName: p?.name || 'Unknown',
-                  productSku: p?.sku || '',
                   productBarcode: p?.barcode || '',
                   sourceShelfName: sourceName,
                   targetShelfName: targetName,
@@ -84,7 +83,6 @@ export async function updateProductShelfLocationsWithScope(
               items: enrichedUpdates.map(u => ({
                   productId: u.productId,
                   productName: u.productName,
-                  sku: u.productSku,
                   barcode: u.productBarcode,
                   quantity: u.quantity,
                   sourceShelfName: u.sourceShelfName,

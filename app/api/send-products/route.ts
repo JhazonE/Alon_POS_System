@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
         stock,
         price,
         cost,
-        sku,
         barcode,
         created_at,
         updated_at

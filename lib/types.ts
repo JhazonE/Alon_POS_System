@@ -14,7 +14,6 @@ export interface Product {
   avgDailySales: number;
   price: number;
   cost?: number;
-  sku: string;
   barcode?: string;
   imageUrl: string;
   imageHint: string;
@@ -205,8 +204,6 @@ export interface PurchaseOrder {
     expirationDate?: string;
     barcode?: string;
     productBarcode?: string;
-    sku?: string;
-    productSku?: string;
     name?: string;
     currentStock?: number;
     // Landed cost fields (calculated, not stored)

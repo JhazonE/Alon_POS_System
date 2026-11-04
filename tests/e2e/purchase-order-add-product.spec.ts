@@ -134,7 +134,7 @@ test.describe('Purchase order: Add New Product', () => {
     test.setTimeout(90_000);
     const poDialog = await openPurchaseOrder(page);
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
-    const search = poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name');
+    const search = poDialog.getByPlaceholder('Scan barcode or type product name');
 
     // Partial name -> inline suggestion; clicking it adds the row and clears the input.
     await search.fill('PO Line');
@@ -144,7 +144,7 @@ test.describe('Purchase order: Add New Product', () => {
     await expect(search).toHaveValue('');
 
     // Exact SKU + Enter adds again (bumps the qty of the same product).
-    await search.fill(PO_PRODUCT.sku);
+    await search.fill(PO_PRODUCT.barcode);
     await page.keyboard.press('Enter');
     await expect(row.locator('input[name="items.0.quantity"]')).toHaveValue('2');
   });
@@ -155,7 +155,7 @@ test.describe('Purchase order: Add New Product', () => {
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
 
     // Add an item so the form is dirty.
-    await poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name').fill(PO_PRODUCT.sku);
+    await poDialog.getByPlaceholder('Scan barcode or type product name').fill(PO_PRODUCT.barcode);
     await page.keyboard.press('Enter');
     await expect(poDialog.getByRole('row', { name: new RegExp(PO_PRODUCT.name) })).toBeVisible();
 
@@ -178,7 +178,7 @@ test.describe('Purchase order: Add New Product', () => {
     const poDialog = await openPurchaseOrder(page);
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
 
-    await poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name').fill(typed);
+    await poDialog.getByPlaceholder('Scan barcode or type product name').fill(typed);
 
     // The suggestions open inline under the input (no separate search dialog).
     await expect(poDialog.getByText('No products found.')).toBeVisible();

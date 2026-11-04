@@ -6,7 +6,7 @@ import { ENTITY_SCHEMAS } from '../../lib/import/entity-schemas';
 const tpl = buildTemplateCsv(ENTITY_SCHEMAS.products);
 const tplParsed = Papa.parse<Record<string, string>>(tpl, { header: true, skipEmptyLines: true });
 assert.ok((tplParsed.meta.fields ?? []).includes('name'), 'template has name column');
-assert.ok(!(tplParsed.meta.fields ?? []).includes('sku'), 'template excludes sku');
+assert.ok(!(tplParsed.meta.fields ?? []).includes('sku'), 'template excludes sku (products.sku is retired)');
 assert.equal(tplParsed.data.length, 1, 'template has one sample row');
 
 const skipped = buildSkippedCsv([
@@ -19,13 +19,14 @@ assert.ok((sp.meta.fields ?? []).includes('_error'), 'has _error column');
 assert.equal(sp.data[0]._error, 'Missing required "Product Name"');
 
 // exportColumns: export uses the same field order as the import template.
-const prodCols = exportColumns(ENTITY_SCHEMAS.products, ['sku']);
+// `extra` appends reference-only columns the import itself ignores.
+const prodCols = exportColumns(ENTITY_SCHEMAS.products, ['warehouse_id']);
 assert.deepEqual(
   prodCols.slice(0, ENTITY_SCHEMAS.products.fields.length),
   ENTITY_SCHEMAS.products.fields.map((f) => f.key),
   'product export columns match template order',
 );
-assert.equal(prodCols[prodCols.length - 1], 'sku', 'sku is a trailing extra column');
+assert.equal(prodCols[prodCols.length - 1], 'warehouse_id', 'an extra column is appended last');
 assert.deepEqual(exportColumns(ENTITY_SCHEMAS.suppliers), ENTITY_SCHEMAS.suppliers.fields.map((f) => f.key));
 
 // buildEntityExportCsv: header order fixed by schema; missing keys emit blanks (round-trippable).

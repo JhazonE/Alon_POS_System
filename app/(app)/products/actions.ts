@@ -27,7 +27,6 @@ import type { WarehouseEntry } from './add-product/product-schema';
 export type ProductFormData = {
   name: string;
   brand: string;
-  sku?: string;
   barcode?: string;
   description: string;
   additionalDescription?: string;
@@ -154,9 +153,9 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
 
     if (filters) {
       if (filters.search) {
-        whereClauses.push(`(p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`);
+        whereClauses.push(`(p.name LIKE ? OR p.barcode LIKE ?)`);
         const searchParam = `%${filters.search}%`;
-        params.push(searchParam, searchParam, searchParam);
+        params.push(searchParam, searchParam);
       }
       if (filters.brand && filters.brand !== 'all') {
         whereClauses.push(`p.brand = ?`);
@@ -410,9 +409,9 @@ export async function getProductsCount(filters?: ProductFilters) {
 
     if (filters) {
        if (filters.search) {
-        whereClauses.push(`(p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`);
+        whereClauses.push(`(p.name LIKE ? OR p.barcode LIKE ?)`);
         const searchParam = `%${filters.search}%`;
-        params.push(searchParam, searchParam, searchParam);
+        params.push(searchParam, searchParam);
       }
       if (filters.brand && filters.brand !== 'all') {
         whereClauses.push(`p.brand = ?`);
@@ -566,10 +565,6 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         reorder_point: formData.reorderPoint !== undefined ? formData.reorderPoint : existing.reorder_point,
         price: formData.price !== undefined ? formData.price : existing.price,
         cost: (formData.cost !== undefined ? formData.cost : existing.cost) || null,
-        // '' or null from the form (SKU-less products, or forms that no longer
-        // collect a SKU) must not overwrite what is stored — and '' must never
-        // be written (the (sku, warehouse_id) unique index treats '' as a value).
-        sku: formData.sku || existing.sku || null,
         barcode: (formData.barcode !== undefined ? formData.barcode : existing.barcode) || null,
         image_url: (formData.image !== undefined ? formData.image : existing.image_url) || null,
         image_hint: formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : existing.image_hint,
@@ -586,7 +581,7 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         UPDATE products SET
           name = ?, description = ?, additional_description = ?, category = ?, brand = ?,
           department = ?, subcategory = ?, supplier_id = ?, warehouse_id = ?, stock = ?,
-          reorder_point = ?, price = ?, cost = ?, sku = ?, barcode = ?,
+          reorder_point = ?, price = ?, cost = ?, barcode = ?,
           image_url = ?, image_hint = ?, unit_of_measure = ?,
           income_account = ?, expense_account = ?, vat_status = ?,
           availability = ?, earns_points = ?, shelf_location_id = ?, is_perishable = ?
@@ -617,7 +612,7 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         productData.name, productData.description, productData.additional_description,
         productData.category, productData.brand, productData.department, productData.subcategory,
         productData.supplier_id, productData.warehouse_id, productData.stock, productData.reorder_point,
-        productData.price, productData.cost, productData.sku, productData.barcode,
+        productData.price, productData.cost, productData.barcode,
         productData.image_url, productData.image_hint, productData.unit_of_measure,
         productData.income_account, productData.expense_account, productData.vat_status,
         productData.availability, productData.earns_points, legacyShelfId, productData.is_perishable, id

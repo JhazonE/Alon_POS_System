@@ -59,7 +59,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
       await testQuery('DELETE FROM products WHERE name = ?', [name]);
     }
     for (const sku of skus.splice(0)) {
-      await testQuery('DELETE FROM products WHERE sku = ?', [sku]);
+      await testQuery('DELETE FROM products WHERE barcode = ?', [sku]);
     }
     for (const [id, createdAt] of backdated.splice(0)) {
       await testQuery('UPDATE products SET created_at = ? WHERE id = ?', [createdAt, id]);
@@ -110,15 +110,15 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     id: string;
     name: string;
     warehouseId: string | null;
-    sku?: string | null;
+    barcode?: string | null;
     type?: 'standard' | 'service';
     parentId?: string | null;
     stock?: number;
   }): Promise<void> {
     await testQuery(
-      `INSERT INTO products (id, name, price, sku, stock, warehouse_id, type, parent_id)
+      `INSERT INTO products (id, name, price, barcode, stock, warehouse_id, type, parent_id)
        VALUES (?, ?, 1.00, ?, ?, ?, ?, ?)`,
-      [f.id, f.name, f.sku ?? null, f.stock ?? 0, f.warehouseId, f.type ?? 'standard', f.parentId ?? null]
+      [f.id, f.name, f.barcode ?? null, f.stock ?? 0, f.warehouseId, f.type ?? 'standard', f.parentId ?? null]
     );
   }
 
@@ -152,7 +152,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await runBackfill();
 
-    const rows = await testQuery('SELECT warehouse_id, stock, avg_daily_sales FROM products WHERE sku = ?', [sku]);
+    const rows = await testQuery('SELECT warehouse_id, stock, avg_daily_sales FROM products WHERE barcode = ?', [sku]);
     expect(rows).toHaveLength(2);
     const copy = rows.find((r: any) => r.warehouse_id === extra);
     expect(copy).toBeTruthy();
@@ -171,7 +171,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     await runBackfill();
     await runBackfill();
 
-    const rows = await testQuery('SELECT id FROM products WHERE sku = ?', [sku]);
+    const rows = await testQuery('SELECT id FROM products WHERE barcode = ?', [sku]);
     expect(rows).toHaveLength(2);
   });
 
@@ -193,7 +193,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
       expect(rows, n).toHaveLength(1);
     }
     // The root parent in the same warehouse IS still fanned out.
-    expect(await testQuery('SELECT id FROM products WHERE sku = ?', [parentSku])).toHaveLength(2);
+    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [parentSku])).toHaveLength(2);
   });
 
   test('backfill creates no inventory batches and no stock', async () => {
@@ -207,7 +207,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     const movesBefore = await testQuery('SELECT COUNT(*) n FROM stock_movements');
     await runBackfill();
     // Guard against a do-nothing migration: the copy must really exist.
-    expect(await testQuery('SELECT id FROM products WHERE sku = ?', [sku])).toHaveLength(2);
+    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])).toHaveLength(2);
     const batchesAfter = await testQuery('SELECT COUNT(*) n FROM inventory_batches');
     const stockAfter = await testQuery('SELECT COALESCE(SUM(stock), 0) s FROM products');
     const movesAfter = await testQuery('SELECT COUNT(*) n FROM stock_movements');
@@ -227,7 +227,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     await runBackfill();
 
     // Branch A has one active warehouse (the source) and one inactive: nowhere to fan out to.
-    const rows = await testQuery('SELECT warehouse_id FROM products WHERE sku = ?', [sku]);
+    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku]);
     expect(rows.map((r: any) => r.warehouse_id)).toEqual([a.warehouseId]);
     expect(rows.map((r: any) => r.warehouse_id)).not.toContain(inactive);
     expect(rows.map((r: any) => r.warehouse_id)).not.toContain(other.warehouseId);
@@ -238,8 +238,8 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     const extra = await addWarehouse(b.branchId);
     const sku = newSku();
     await seedProductInWarehouse(b.warehouseId, sku);
-    // Same sku already in the target, under a different name: sku match wins.
-    await insertProduct({ id: `bf-sku-${Date.now()}`, name: `Renamed ${sku}`, warehouseId: extra, sku });
+    // Same barcode already in the target, under a different name: barcode match wins.
+    await insertProduct({ id: `bf-bc-${Date.now()}`, name: `Renamed ${sku}`, warehouseId: extra, barcode: sku });
     // No sku anywhere: only the name can identify it.
     const noSkuName = `BFNOSKU-${Date.now()}`;
     names.push(noSkuName);
@@ -248,7 +248,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await runBackfill();
 
-    expect(await testQuery('SELECT id FROM products WHERE sku = ?', [sku])).toHaveLength(2);
+    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])).toHaveLength(2);
     expect(await testQuery('SELECT id FROM products WHERE name = ?', [noSkuName])).toHaveLength(2);
   });
 
@@ -278,7 +278,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await runBackfill();
 
-    const copy = await testQuery('SELECT id FROM products WHERE sku = ? AND warehouse_id = ?', [sku, extra]);
+    const copy = await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, extra]);
     const copied = await testQuery(
       'SELECT price_level_id, price, min_quantity FROM product_price_levels WHERE product_id = ?',
       [copy[0].id]
@@ -299,7 +299,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await migration.down();
 
-    const rows = await testQuery('SELECT warehouse_id FROM products WHERE sku = ?', [sku]);
+    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku]);
     expect(rows.map((r: any) => r.warehouse_id)).toEqual([b.warehouseId]);
     expect(rows.map((r: any) => r.warehouse_id)).not.toContain(extra);
   });
@@ -314,7 +314,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     await runBackfill();
 
     const idIn = async (w: string) =>
-      (await testQuery('SELECT id FROM products WHERE sku = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
+      (await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
     await testQuery('UPDATE products SET stock = 4 WHERE id = ?', [await idIn(wStock)]);
     await testQuery(
       `INSERT INTO stock_movements (id, product_id, product_name, movement_type, quantity_change, previous_stock, new_stock)
@@ -330,7 +330,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await migration.down();
 
-    const rows = await testQuery('SELECT warehouse_id FROM products WHERE sku = ?', [sku]);
+    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku]);
     const left = rows.map((r: any) => r.warehouse_id);
     expect(left).toContain(wStock); // received stock
     expect(left).toContain(wMove); // has a stock_movements row
@@ -346,14 +346,14 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     await seedProductInWarehouse(b.warehouseId, sku);
     await runBackfill();
     const idIn = async (w: string) =>
-      (await testQuery('SELECT id FROM products WHERE sku = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
+      (await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
     // Same shape as the other copy - stock 0, nothing referencing it - but old.
     await testQuery("UPDATE products SET created_at = '2001-01-01 00:00:00' WHERE id = ?", [await idIn(wOld)]);
     await recordMigrationInWindow();
 
     await migration.down();
 
-    const left = (await testQuery('SELECT warehouse_id FROM products WHERE sku = ?', [sku])).map((r: any) => r.warehouse_id);
+    const left = (await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku])).map((r: any) => r.warehouse_id);
     expect(left).toContain(wOld); // outside the window: not attributable to the backfill
     expect(left).not.toContain(wNew); // inside the window: removed, proving down() did run
     expect(left).toContain(b.warehouseId);
@@ -372,7 +372,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     await migration.down();
 
     // Deleting either would leave no surviving sibling: the product would vanish from the branch.
-    const left = (await testQuery('SELECT warehouse_id FROM products WHERE sku = ?', [sku])).map((r: any) => r.warehouse_id);
+    const left = (await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku])).map((r: any) => r.warehouse_id);
     expect(left.sort()).toEqual([b.warehouseId, extra].sort());
   });
 
@@ -384,7 +384,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     await seedProductInWarehouse(b.warehouseId, sku);
     await runBackfill();
     const idIn = async (w: string) =>
-      (await testQuery('SELECT id FROM products WHERE sku = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
+      (await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
     const soldCopyId = await idIn(wSold);
     expect(Number((await testQuery('SELECT stock FROM products WHERE id = ?', [soldCopyId]))[0].stock)).toBe(0);
 
@@ -400,7 +400,7 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await migration.down();
 
-    const left = (await testQuery('SELECT warehouse_id FROM products WHERE sku = ?', [sku])).map((r: any) => r.warehouse_id);
+    const left = (await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku])).map((r: any) => r.warehouse_id);
     expect(left).toContain(wSold);
     expect(left).not.toContain(wUnused); // the unreferenced sibling WAS removed, so the scan discriminates
     expect(await testQuery('SELECT id FROM sale_items WHERE id = ?', [lineId])).toHaveLength(1);
@@ -416,6 +416,6 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await expect(migration.down()).rejects.toThrow(/Cannot roll back/);
 
-    expect(await testQuery('SELECT id FROM products WHERE sku = ?', [sku])).toHaveLength(2);
+    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])).toHaveLength(2);
   });
 });

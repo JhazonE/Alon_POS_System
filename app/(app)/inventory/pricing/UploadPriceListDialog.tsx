@@ -90,7 +90,6 @@ export function UploadPriceListDialog({ open, onOpenChange, warehouseId, onUpdat
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>SKU</TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="text-right">Price</TableHead>
@@ -98,9 +97,8 @@ export function UploadPriceListDialog({ open, onOpenChange, warehouseId, onUpdat
                     </TableHeader>
                     <TableBody>
                       {up.preview.toCreate.map((row, i) => (
-                        <TableRow key={`${row.sku}-${i}`}>
+                        <TableRow key={`${row.barcode}-${i}`}>
                           <TableCell>{row.name}</TableCell>
-                          <TableCell>{row.sku}</TableCell>
                           <TableCell>{row.brand}</TableCell>
                           <TableCell>{row.category}</TableCell>
                           <TableCell className="text-right">₱{row.price.toFixed(2)}</TableCell>
@@ -123,7 +121,7 @@ export function UploadPriceListDialog({ open, onOpenChange, warehouseId, onUpdat
                 <summary className="cursor-pointer text-muted-foreground">{up.preview.skipped.length} row(s) skipped</summary>
                 <ul className="mt-2 space-y-1 list-disc pl-5">
                   {up.preview.skipped.map((s, i) => (
-                    <li key={i}>{s.row.sku || s.row.barcode || `Row ${i + 1}`}: {s.reason}</li>
+                    <li key={i}>{s.row.barcode || `Row ${i + 1}`}: {s.reason}</li>
                   ))}
                 </ul>
               </details>

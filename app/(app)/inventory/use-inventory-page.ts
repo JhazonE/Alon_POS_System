@@ -11,7 +11,7 @@ import type { ProductWithChildren } from './product-list-types';
 
 export function useInventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'stock' | 'sku'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'stock' | 'barcode'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [typeFilter, setTypeFilter] = useState<'all' | 'standard' | 'service'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,7 +43,6 @@ export function useInventoryPage() {
     const searched = lower
       ? allLoadedProducts.filter((p: Product) =>
           (p.name?.toLowerCase() ?? '').includes(lower) ||
-          (p.sku?.toLowerCase() ?? '').includes(lower) ||
           (p.barcode?.toLowerCase() ?? '').includes(lower)
         )
       : allLoadedProducts;
@@ -77,7 +76,7 @@ export function useInventoryPage() {
     grouped.sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'stock') return b.stock - a.stock;
-      if (sortBy === 'sku') return (a.sku ?? '').localeCompare(b.sku ?? '');
+      if (sortBy === 'barcode') return (a.barcode ?? '').localeCompare(b.barcode ?? '');
       return 0;
     });
 

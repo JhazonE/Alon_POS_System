@@ -42,17 +42,17 @@ const POS_SETUPS: Record<string, (page: Page) => Promise<void>> = {
   async posShiftStarted(page) {
     await POS_SETUPS.posStartShiftDialog(page);
     await page.getByRole('button', { name: /start shift/i }).click();
-    await page.getByPlaceholder(/scan barcode or enter product sku/i).waitFor();
+    await page.getByPlaceholder(/scan barcode or search product/i).waitFor();
   },
 
   async posWithCart(page) {
     await POS_SETUPS.posShiftStarted(page);
-    const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+    const barcode = page.getByPlaceholder(/scan barcode or search product/i);
     const deadline = Date.now() + 15_000;
     let lastErr: unknown;
     while (Date.now() < deadline) {
       try {
-        await barcode.fill(product.sku);
+        await barcode.fill(product.barcode);
         await barcode.press('Enter');
         await page.getByText(product.name).first().waitFor({ timeout: 2_000 });
         return;
@@ -74,7 +74,7 @@ const POS_SETUPS: Record<string, (page: Page) => Promise<void>> = {
   async posWithCompletedSale(page) {
     await POS_SETUPS.posWithCart(page);
 
-    const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+    const barcode = page.getByPlaceholder(/scan barcode or search product/i);
     await barcode.click();
     await barcode.press('Enter');
 

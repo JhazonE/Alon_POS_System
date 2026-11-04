@@ -42,7 +42,6 @@ interface BatchAnalysisRecord {
   saleReference: string;
   productId: string;
   productName: string;
-  sku: string;
   barcode: string;
   category: string;
   batchId: string;
@@ -123,7 +122,6 @@ export default function BatchProfitPage() {
     const search = searchTerm.toLowerCase();
     return (
       record.productName?.toLowerCase().includes(search) ||
-      record.sku?.toLowerCase().includes(search) ||
       record.barcode?.toLowerCase().includes(search) ||
       record.category?.toLowerCase().includes(search) ||
       record.saleReference?.toLowerCase().includes(search)

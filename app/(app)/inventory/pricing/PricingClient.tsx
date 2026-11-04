@@ -160,7 +160,7 @@ export function PricingClient({ onUpdated }: Props) {
                     type="button"
                     onClick={() => downloadPriceListTemplate(
                       bp.products.slice(0, 3).map((p: any) => ({
-                        sku: p.sku, barcode: p.barcode || '', name: p.name,
+                        barcode: p.barcode || '', name: p.name,
                         brand: p.brand || '', category: p.category || '', unitOfMeasure: p.unitOfMeasure || '',
                         price: Number(p.price), cost: Number(p.cost || 0),
                       })),
@@ -208,7 +208,7 @@ export function PricingClient({ onUpdated }: Props) {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search products by SKU, barcode, or name..."
+                  placeholder="Search products by barcode or name..."
                   className="pl-9 h-9"
                   value={bp.searchTerm}
                   onChange={(e) => bp.setSearchTerm(e.target.value)}

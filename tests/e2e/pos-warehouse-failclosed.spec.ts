@@ -26,24 +26,24 @@ test.describe('product repository warehouse filter fails closed', () => {
   let branch: SeededBranch;
   let whA: string;
   let whB: string;
-  let sku: string;
+  let tag: string;
 
   const listSkuRows = async (warehouseId: any) =>
-    (await repo.findAll(50, 0, { search: sku, warehouseId })).filter((p: any) => p.sku === sku);
-  const countSku = (warehouseId: any) => repo.countAll({ search: sku, warehouseId });
+    (await repo.findAll(50, 0, { search: tag, warehouseId })).filter((p: any) => p.barcode === tag);
+  const countSku = (warehouseId: any) => repo.countAll({ search: tag, warehouseId });
 
   test.beforeEach(async () => {
     branch = await seedSecondBranch();
     whA = branch.warehouseId;
     whB = await addWarehouseToBranch(branch.branchId, { active: true });
-    sku = `FC-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    // Same sku in two warehouses of one branch: exactly what fan-out produces.
-    await seedProductInWarehouse(whA, sku);
-    await seedProductInWarehouse(whB, sku);
+    tag = `FC-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    // Same barcode in two warehouses of one branch: exactly what fan-out produces.
+    await seedProductInWarehouse(whA, tag);
+    await seedProductInWarehouse(whB, tag);
   });
 
   test.afterEach(async () => {
-    await testQuery('DELETE FROM products WHERE sku = ?', [sku]);
+    await testQuery('DELETE FROM products WHERE barcode = ?', [tag]);
     await testQuery('DELETE FROM warehouses WHERE id = ?', [whB]);
     await cleanupSecondBranch(branch);
   });
@@ -88,13 +88,13 @@ test.describe('product repository warehouse filter fails closed', () => {
   });
 
   test('over HTTP, an explicit blank warehouseId returns nothing', async ({ request }) => {
-    const blank = await request.get(`/api/products?warehouseId=&search=${sku}&limit=50`);
+    const blank = await request.get(`/api/products?warehouseId=&search=${tag}&limit=50`);
     const body = await blank.json();
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(0);
     expect(body.pagination.total).toBe(0);
 
-    const absent = await request.get(`/api/products?search=${sku}&limit=50`);
+    const absent = await request.get(`/api/products?search=${tag}&limit=50`);
     expect((await absent.json()).data).toHaveLength(2);
   });
 });
@@ -106,7 +106,7 @@ test.describe('product repository warehouse filter fails closed', () => {
  * warehouse's copy of every product.
  */
 test.describe('POS terminal location reaches the product query', () => {
-  const sku = TEST_PRODUCTS[0].sku;
+  const barcode = TEST_PRODUCTS[0].barcode;
 
   test.beforeEach(async () => {
     await resetPosState();
@@ -166,7 +166,7 @@ test.describe('POS terminal location reaches the product query', () => {
     });
 
     await openPos(page);
-    await expect.poll(() => bodies.some((b) => b?.data?.some((p: any) => p.sku === sku)), { timeout: 15_000 }).toBe(true);
+    await expect.poll(() => bodies.some((b) => b?.data?.some((p: any) => p.barcode === barcode)), { timeout: 15_000 }).toBe(true);
     await page.waitForTimeout(2000);
     for (const { url } of seen) expect(url.searchParams.get('warehouseId')).toBe(TEST_MAIN_WAREHOUSE.id);
   });

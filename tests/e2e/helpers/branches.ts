@@ -146,17 +146,22 @@ export async function setUserBranch(
   }
 }
 
+/**
+ * Seeds one product row. `tag` is an opaque unique handle written to BOTH the
+ * name and the barcode, so a spec can find the row by either. products.sku is
+ * retired, so the barcode is the only product identity a test can search on.
+ */
 export async function seedProductInWarehouse(
   warehouseId: string,
-  sku: string
+  tag: string
 ): Promise<string> {
   const conn = await getConn();
   const id = uuidv4();
   try {
     await conn.query(
-      `INSERT INTO products (id, name, price, sku, stock, warehouse_id)
+      `INSERT INTO products (id, name, price, barcode, stock, warehouse_id)
        VALUES (?, ?, 1.00, ?, 10, ?)`,
-      [id, `Test Product ${sku}`, sku, warehouseId]
+      [id, `Test Product ${tag}`, tag, warehouseId]
     );
   } finally {
     await conn.end();

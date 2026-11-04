@@ -18,14 +18,14 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
     const a = await seedSecondBranch();
     const b = await seedSecondBranch();
     try {
-      const skuB = `ISO-B-${Date.now()}`;
-      await seedProductInWarehouse(b.warehouseId, skuB);
+      const tagB = `ISO-B-${Date.now()}`;
+      await seedProductInWarehouse(b.warehouseId, tagB);
 
       const res = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
       expect(res.ok()).toBeTruthy();
       const body = await res.json();
-      const skus = (body.data ?? []).map((p: any) => p.sku);
-      expect(skus).not.toContain(skuB);
+      const barcodes = (body.data ?? []).map((p: any) => p.barcode);
+      expect(barcodes).not.toContain(tagB);
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
@@ -35,13 +35,13 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
   test('makakita ang user sa branch A sa kaugalingon niyang produkto', async ({ request }) => {
     const a = await seedSecondBranch();
     try {
-      const skuA = `ISO-A-${Date.now()}`;
-      await seedProductInWarehouse(a.warehouseId, skuA);
+      const tagA = `ISO-A-${Date.now()}`;
+      await seedProductInWarehouse(a.warehouseId, tagA);
 
       const res = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
       const body = await res.json();
-      const skus = (body.data ?? []).map((p: any) => p.sku);
-      expect(skus).toContain(skuA);
+      const barcodes = (body.data ?? []).map((p: any) => p.barcode);
+      expect(barcodes).toContain(tagA);
     } finally {
       await cleanupSecondBranch(a);
     }
@@ -78,14 +78,14 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
   test('mo-uli ug data ang tinuod nga uid, ug gi-403 kung walay uid', async ({ request }) => {
     const a = await seedSecondBranch();
     try {
-      const skuA = `ISO-UID-${Date.now()}`;
-      await seedProductInWarehouse(a.warehouseId, skuA);
+      const tagA = `ISO-UID-${Date.now()}`;
+      await seedProductInWarehouse(a.warehouseId, tagA);
 
       const withUid = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
       expect(withUid.status()).toBe(200);
       const body = await withUid.json();
       expect(body.success).toBe(true);
-      expect((body.data ?? []).map((p: any) => p.sku)).toContain(skuA);
+      expect((body.data ?? []).map((p: any) => p.barcode)).toContain(tagA);
 
       // Ang server kinahanglan mo-reject sa wala'y uid — dili mo-fallback.
       const noUid = await request.get('/api/reports/inventory?limit=200');

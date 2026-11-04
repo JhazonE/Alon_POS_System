@@ -60,7 +60,7 @@ test.describe('Adjustment expiration dates', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/inventory');
 
-    await page.getByPlaceholder(/search products by name or sku/i).fill(PERISHABLE_PRODUCT.sku);
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(PERISHABLE_PRODUCT.barcode);
 
     await page.getByRole('button', { name: 'Actions' }).first().click();
     await page.getByRole('menuitem', { name: 'Adjust Stock' }).click();
@@ -92,7 +92,7 @@ test.describe('Adjustment expiration dates', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/inventory');
 
-    await page.getByPlaceholder(/search products by name or sku/i).fill(INVENTORY_PRODUCT.sku);
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(INVENTORY_PRODUCT.barcode);
 
     await page.getByRole('button', { name: 'Actions' }).first().click();
     await page.getByRole('menuitem', { name: 'Adjust Stock' }).click();
@@ -108,7 +108,7 @@ test.describe('Adjustment expiration dates', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/inventory');
 
-    await page.getByPlaceholder(/search products by name or sku/i).fill(PERISHABLE_PRODUCT.sku);
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(PERISHABLE_PRODUCT.barcode);
 
     await page.getByRole('button', { name: 'Actions' }).first().click();
     await page.getByRole('menuitem', { name: 'Adjust Stock' }).click();

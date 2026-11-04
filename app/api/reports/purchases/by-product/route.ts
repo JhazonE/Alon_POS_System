@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
       SELECT 
         poi.product_id as productId,
         poi.product_name as productName,
-        p.sku,
         p.barcode,
         p.category,
         p.brand,
@@ -39,11 +38,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      sql += ' AND (poi.product_name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      sql += ' AND (poi.product_name LIKE ? OR p.barcode LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
     }
 
-    sql += ' GROUP BY poi.product_id, poi.product_name, p.sku, p.barcode, p.category, p.brand, p.unit_of_measure';
+    sql += ' GROUP BY poi.product_id, poi.product_name, p.barcode, p.category, p.brand, p.unit_of_measure';
     sql += ' ORDER BY totalQuantity DESC';
 
     const results = await query(sql, params);

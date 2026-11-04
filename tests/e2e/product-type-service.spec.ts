@@ -60,7 +60,7 @@ test.describe('Service product type', () => {
 
   test.beforeEach(async ({ page }) => {
     await testQuery('DELETE FROM sale_items WHERE product_name = ?', [SERVICE_NAME]);
-    await testQuery('DELETE FROM products WHERE sku = ?', [SERVICE_SKU]);
+    await testQuery('DELETE FROM products WHERE barcode = ?', [SERVICE_SKU]);
     await resetPosState();
   });
 
@@ -117,7 +117,7 @@ test.describe('Service product type', () => {
 
     await expect(page.getByText(/saved successfully/i)).toBeVisible({ timeout: 15000 });
 
-    const stock: any = await testQuery('SELECT stock FROM products WHERE sku = ?', [SERVICE_SKU]);
+    const stock: any = await testQuery('SELECT stock FROM products WHERE barcode = ?', [SERVICE_SKU]);
     expect(Number(stock[0].stock)).toBe(0);
 
     const movements: any = await testQuery(

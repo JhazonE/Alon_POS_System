@@ -34,7 +34,7 @@ interface ProductAutocompleteProps {
 
 /**
  * Type-ahead product search for the New / Edit order pages. Suggestions open
- * under the input as you type; Enter on an exact barcode or SKU adds that
+ * under the input as you type; Enter on an exact barcode adds that
  * product straight away (scanner flow), otherwise on the highlighted row.
  */
 export function ProductAutocomplete({
@@ -42,7 +42,7 @@ export function ProductAutocomplete({
   loading,
   error,
   onSelectProduct,
-  placeholder = 'Scan barcode, enter SKU, or type product name',
+  placeholder = 'Scan barcode or type product name',
   formatStock = formatQuantity,
   addNew,
 }: ProductAutocompleteProps) {
@@ -57,7 +57,6 @@ export function ProductAutocomplete({
       .filter(
         (p) =>
           p.name.toLowerCase().includes(term) ||
-          p.sku?.toLowerCase().includes(term) ||
           p.barcode?.toLowerCase().includes(term),
       )
       .slice(0, MAX_SUGGESTIONS);
@@ -77,7 +76,7 @@ export function ProductAutocomplete({
     }
     if (e.key !== 'Enter' || !term) return;
     const exact = products.find(
-      (p) => p.barcode?.toLowerCase() === term || p.sku?.toLowerCase() === term,
+      (p) => p.barcode?.toLowerCase() === term,
     );
     if (exact) {
       e.preventDefault(); // keep cmdk from also selecting the highlighted row
@@ -153,7 +152,7 @@ export function ProductAutocomplete({
                       <div className="flex flex-col">
                         <span className="font-bold text-foreground">{product.name}</span>
                         <span className="text-sm text-muted-foreground font-medium">
-                          SKU: {product.sku || 'N/A'} | Barcode: {product.barcode || 'N/A'} | Stock:{' '}
+                          Barcode: {product.barcode || 'N/A'} | Stock:{' '}
                           {formatStock(product.stock)}
                         </span>
                       </div>

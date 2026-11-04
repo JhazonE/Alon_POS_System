@@ -41,7 +41,6 @@ interface ProductSale {
   product: {
     id: string;
     name: string;
-    sku: string;
     barcode: string;
     category: string;
     brand: string;
@@ -126,7 +125,6 @@ export default function SalesByProductPage() {
     const search = searchTerm.toLowerCase();
     return (
       record.product.name?.toLowerCase().includes(search) ||
-      record.product.sku?.toLowerCase().includes(search) ||
       record.product.barcode?.toLowerCase().includes(search) ||
       record.product.category?.toLowerCase().includes(search) ||
       record.product.brand?.toLowerCase().includes(search)

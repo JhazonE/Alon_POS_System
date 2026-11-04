@@ -706,12 +706,11 @@ export function usePOS() {
       const lineKey = buildLineId(p.id, p.sellingUnitId);
       if (seen.has(lineKey)) continue;
       seen.add(lineKey);
-      const sku = (p.sku || '').toLowerCase();
       const barcode = (p.barcode || '').toLowerCase();
       const name = (p.name || '').toLowerCase();
-      if (sku === q || barcode === q) exactCode.push(p);
+      if (barcode === q) exactCode.push(p);
       else if (name === q) exactName.push(p);
-      else if (sku.includes(q) || barcode.includes(q) || name.includes(q)) partial.push(p);
+      else if (barcode.includes(q) || name.includes(q)) partial.push(p);
     }
     return [...exactCode, ...exactName, ...partial].slice(0, limit);
   };
@@ -728,24 +727,26 @@ export function usePOS() {
     return rankMatches(source || [], q, limit);
   }, [products, serverSearchResults, searchLoading, debouncedSearchQuery]);
 
-  // Scanners submit a barcode/SKU that exactly matches one product. Check the
+  // Scanners submit a barcode that exactly matches one product. Check the
   // instant local cache first (covers the common case with zero lag), then
   // the debounced server results so products outside the cached page still
   // auto-add once their search response lands.
   const findExactCodeMatch = useCallback((query: string): any | undefined => {
     const q = query.trim().toLowerCase();
     if (!q) return undefined;
-    const inLocal = (products || []).find(p => (p.sku || '').toLowerCase() === q || (p.barcode || '').toLowerCase() === q);
+    const inLocal = (products || []).find(p => (p.barcode || '').toLowerCase() === q);
     if (inLocal) return inLocal;
     if (debouncedSearchQuery.trim().toLowerCase() === q) {
-      return (serverSearchResults || []).find(p => (p.sku || '').toLowerCase() === q || (p.barcode || '').toLowerCase() === q);
+      return (serverSearchResults || []).find(p => (p.barcode || '').toLowerCase() === q);
     }
     return undefined;
   }, [products, serverSearchResults, debouncedSearchQuery]);
 
-  const handleAddItemBySKU = (sku: string) => {
-    if (!sku) return;
-    const product = findExactCodeMatch(sku) || getSearchSuggestions(sku, 1)[0];
+  // Named for the scanner-entry box, not products.sku: the code it receives is
+  // a barcode (or free text that falls through to the suggestion ranking).
+  const handleAddItemBySKU = (code: string) => {
+    if (!code) return;
+    const product = findExactCodeMatch(code) || getSearchSuggestions(code, 1)[0];
     handleAddItem(product);
   };
 

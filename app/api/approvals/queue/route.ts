@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-    // ── Enrich missing barcode / SKU in item arrays ───────────────────────
+    // ── Enrich missing barcode in item arrays ─────────────────────────────
     const itemProductIdSet = new Set<string>();
 
     for (const item of enrichedItems) {
@@ -178,24 +178,23 @@ export async function GET(request: NextRequest) {
         if (!Array.isArray(arr)) continue;
         for (const it of arr) {
           if (!it || typeof it !== 'object') continue;
-          // Normalise legacy field names first (barcode → productBarcode, sku → productSku)
+          // Normalise the legacy field name first (barcode → productBarcode)
           if (!it.productBarcode && it.barcode) it.productBarcode = it.barcode;
-          if (!it.productSku    && it.sku)     it.productSku    = it.sku;
           // Queue for DB lookup if still missing
-          if (it.productId && (!it.productBarcode || !it.productSku)) {
+          if (it.productId && !it.productBarcode) {
             itemProductIdSet.add(it.productId);
           }
         }
       }
     }
 
-    const productInfoMap: Record<string, { barcode: string | null; sku: string | null }> = {};
+    const productInfoMap: Record<string, { barcode: string | null }> = {};
     if (itemProductIdSet.size > 0) {
       const piRows: any[] = await query(
-        'SELECT id, barcode, sku FROM products WHERE id IN (?)',
+        'SELECT id, barcode FROM products WHERE id IN (?)',
         [[...itemProductIdSet]]
       );
-      for (const r of piRows) productInfoMap[r.id] = { barcode: r.barcode || null, sku: r.sku || null };
+      for (const r of piRows) productInfoMap[r.id] = { barcode: r.barcode || null };
     }
 
     for (const item of enrichedItems) {
@@ -207,7 +206,6 @@ export async function GET(request: NextRequest) {
           if (!it?.productId || !productInfoMap[it.productId]) continue;
           const pi = productInfoMap[it.productId];
           if (!it.productBarcode && pi.barcode) it.productBarcode = pi.barcode;
-          if (!it.productSku    && pi.sku)     it.productSku    = pi.sku;
         }
       }
     }

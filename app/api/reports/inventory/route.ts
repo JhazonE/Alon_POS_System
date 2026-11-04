@@ -74,9 +74,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      conditions.push('(p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)');
+      conditions.push('(p.name LIKE ? OR p.barcode LIKE ?)');
       const searchVal = `%${search}%`;
-      params.push(searchVal, searchVal, searchVal);
+      params.push(searchVal, searchVal);
     }
 
     if (conditions.length > 0) {
@@ -94,7 +94,6 @@ export async function GET(request: NextRequest) {
       SELECT 
         p.id,
         p.name,
-        p.sku,
         p.barcode,
         p.category,
         p.brand,
@@ -120,7 +119,7 @@ export async function GET(request: NextRequest) {
     
     let sumSql = `
       SELECT 
-        COUNT(DISTINCT COALESCE(CONCAT('sku:', NULLIF(p.sku, '')), CONCAT('name:', p.name))) as totalItems,
+        COUNT(DISTINCT COALESCE(CONCAT('barcode:', NULLIF(p.barcode, '')), CONCAT('name:', p.name))) as totalItems,
         SUM(p.stock) as totalStock,
         SUM(
           COALESCE(

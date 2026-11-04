@@ -64,7 +64,6 @@ export function useReceivePurchaseOrder() {
         return {
           ...item,
           productName: originalItem?.productName || (originalItem as any)?.name || 'Unknown Product',
-          sku: originalItem?.productSku || (originalItem as any)?.sku || '',
           barcode: (originalItem as any)?.barcode || (originalItem as any)?.productBarcode || '',
           cost,
           subtotal: cost * toSafeNumber(item.quantity),

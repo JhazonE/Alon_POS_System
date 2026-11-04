@@ -59,7 +59,7 @@ export function useByProductUtils({
       'Sales Discount', 'Sales Amount', 'Cost', 'Profit', 'Avg Price/Unit', 'No. of Sales',
     ];
     const csvRows = data.map((item) => [
-      item.product.sku || '', item.product.name || '', item.product.category || '',
+      item.product.barcode || '', item.product.name || '', item.product.category || '',
       item.product.brand || '', item.product.unitOfMeasure || '', item.unitsSold || 0,
       item.totalDiscount || 0, item.totalRevenue || 0, item.totalCost || 0,
       item.totalProfit || 0, item.avgPricePerUnit || 0, item.numberOfSales || 0,
@@ -109,7 +109,7 @@ export function useByProductUtils({
             <tbody>
               ${data.map((item) => `
                 <tr>
-                  <td>${item.product.sku || ''}</td>
+                  <td>${item.product.barcode || ''}</td>
                   <td>${item.product.name || ''}</td>
                   <td>${item.product.category || ''} / ${item.product.brand || ''}</td>
                   <td class="text-right">${item.unitsSold.toLocaleString()}</td>

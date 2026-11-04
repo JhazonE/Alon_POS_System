@@ -65,7 +65,6 @@ export async function GET(request: NextRequest) {
            SELECT
              p.id as product_id,
              p.name as product_name,
-             p.sku,
              p.barcode,
              p.category,
              p.brand,
@@ -111,8 +110,8 @@ export async function GET(request: NextRequest) {
              params.push(`%${reference}%`);
         }
         if (search) {
-          whereClause += ` AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`;
-          params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+          whereClause += ` AND (p.name LIKE ? OR p.barcode LIKE ?)`;
+          params.push(`%${search}%`, `%${search}%`);
         }
         if (branchWarehouseIds !== null) {
           whereClause += ` AND p.warehouse_id IN (${branchPlaceholders})`;
@@ -174,7 +173,6 @@ export async function GET(request: NextRequest) {
           SELECT
             p.id as product_id,
             p.name as product_name,
-            p.sku,
             p.barcode,
             p.category,
             p.brand,
@@ -216,8 +214,8 @@ export async function GET(request: NextRequest) {
             params.push(`%${reference}%`);
         }
         if (search) {
-            baseQueryStr += ` AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`;
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            baseQueryStr += ` AND (p.name LIKE ? OR p.barcode LIKE ?)`;
+            params.push(`%${search}%`, `%${search}%`);
         }
         if (branchWarehouseIds !== null) {
             baseQueryStr += ` AND p.warehouse_id IN (${branchPlaceholders})`;
@@ -227,7 +225,7 @@ export async function GET(request: NextRequest) {
 
     // Combine base query with where clause
     const fullQueryWithoutLimit = baseQueryStr + whereClause + `
-      GROUP BY p.id, p.name, p.sku, p.barcode, p.category, p.brand, p.unit_of_measure
+      GROUP BY p.id, p.name, p.barcode, p.category, p.brand, p.unit_of_measure
     `;
 
     // 1. Get Total Count
@@ -280,7 +278,6 @@ export async function GET(request: NextRequest) {
       product: {
         id: row.product_id,
         name: row.product_name,
-        sku: row.sku,
         barcode: row.barcode,
         category: row.category,
         brand: row.brand,

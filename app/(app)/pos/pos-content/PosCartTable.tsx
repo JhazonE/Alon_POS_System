@@ -13,7 +13,7 @@ type Props = {
   inputRef: RefObject<HTMLInputElement>;
   inputValue: string;
   setInputValue: (v: string) => void;
-  handleAddItemBySKU: (sku: string) => void;
+  handleAddItemBySKU: (code: string) => void;
   getSearchSuggestions: (query: string, limit?: number) => any[];
   findExactCodeMatch: (query: string) => any | undefined;
   handleAddItem: (product: any) => void;
@@ -57,7 +57,7 @@ export function PosCartTable({
   // to the "empty input" branch and opens the tender dialog unintentionally.
   const justAutoAddedRef = useRef(false);
 
-  // A scanned barcode (or a typed exact SKU) lands as an exact code match —
+  // A scanned barcode lands as an exact code match —
   // skip the dropdown entirely and drop it straight into the cart.
   useEffect(() => {
     const exactMatch = findExactCodeMatch(inputValue);
@@ -94,7 +94,7 @@ export function PosCartTable({
           <Input
             ref={inputRef}
             type="text"
-            placeholder="Scan Barcode or Enter Product SKU (Enter)"
+            placeholder="Scan Barcode or Search Product (Enter)"
             className="pl-9 h-12 text-lg bg-background shadow-sm border-muted-foreground/20 focus-visible:ring-primary/20"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -155,7 +155,7 @@ export function PosCartTable({
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">{product.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {product.sku}{product.barcode ? ` · ${product.barcode}` : ''}
+                      {product.barcode || ''}
                     </div>
                   </div>
                   <div className="shrink-0 text-sm font-medium text-muted-foreground">

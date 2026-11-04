@@ -78,7 +78,7 @@ export function ViewProductDialog({
                             </div>
                             <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="px-3 py-1 font-mono text-sm shadow-sm">
-                                    {product.sku}
+                                    {product.barcode || '—'}
                                 </Badge>
                                 <Badge
                                     className={cn(

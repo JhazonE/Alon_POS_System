@@ -86,7 +86,6 @@ test.describe('Add product', () => {
     const body = await res.json();
     const match = (body.data ?? []).find((p: any) => p.name === NEW_PRODUCT.name);
     expect(match, 'bag-ong product makita sa /api/products').toBeTruthy();
-    expect(match.sku ?? null).toBeNull();
     expect(Number(match.stock)).toBe(NEW_PRODUCT.stock);
     expect(Number(match.price)).toBe(NEW_PRODUCT.retail);
   });

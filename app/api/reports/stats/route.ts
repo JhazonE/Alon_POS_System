@@ -166,15 +166,16 @@ export async function GET(request: NextRequest) {
         // Product creation fans a product out into one zero-stock copy per
         // active warehouse of its branch, and scoped_products spans every
         // warehouse of the branch, so a plain COUNT(*) would count one product
-        // once per warehouse. Count its identity instead: the sku, falling back
-        // to the name -- the same identity TransferStockService and the fan-out
-        // backfill (migration 144) use to match a product across warehouses.
-        // products.sku is NULLable (and '' is falsy to those matchers), so
-        // COUNT(DISTINCT sku) alone would silently drop every sku-less product.
-        // The sku:/name: prefixes keep the two kinds of identity from colliding.
+        // once per warehouse. Count its identity instead: the barcode, falling
+        // back to the name -- the same identity TransferStockService and the
+        // fan-out backfill (migration 144) use to match a product across
+        // warehouses. products.barcode is NULLable (and '' is falsy to those
+        // matchers), so COUNT(DISTINCT barcode) alone would silently drop every
+        // barcode-less product. The barcode:/name: prefixes keep the two kinds
+        // of identity from colliding.
         // reports/inventory is deliberately NOT changed: it lists one row per
         // product-warehouse, so its pagination COUNT(*) must keep matching.
-        const productIdentity = "COALESCE(CONCAT('sku:', NULLIF(sku, '')), CONCAT('name:', name))";
+        const productIdentity = "COALESCE(CONCAT('barcode:', NULLIF(barcode, '')), CONCAT('name:', name))";
 
         // Services are excluded: they have no stock, so they would otherwise appear
         // permanently out-of-stock and drag inventory valuation totals to zero.

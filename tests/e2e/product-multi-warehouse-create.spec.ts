@@ -43,7 +43,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     return {
       name: `MultiWH ${sku}`,
       brand: 'TestBrand',
-      sku,
+      barcode: sku,
       description: 'multi-warehouse create test',
       category: 'TestCategory',
       unitOfMeasure: 'pc',
@@ -58,7 +58,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
   async function rowsBySku(sku: string): Promise<any[]> {
     return (await testQuery(
       `SELECT id, warehouse_id, stock, avg_daily_sales FROM products
-       WHERE sku = ? ORDER BY stock DESC`,
+       WHERE barcode = ? ORDER BY stock DESC`,
       [sku],
     )) as any[];
   }
@@ -68,7 +68,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       `SELECT b.id, b.quantity_in, b.quantity_remaining, b.unit_cost, b.selling_price,
               b.source_type, b.notes, p.warehouse_id
          FROM inventory_batches b JOIN products p ON b.product_id = p.id
-        WHERE p.sku = ?`,
+        WHERE p.barcode = ?`,
       [sku],
     )) as any[];
   }
@@ -78,14 +78,14 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       `SELECT m.id, m.quantity_change, m.previous_stock, m.new_stock, m.movement_type,
               m.notes, p.warehouse_id
          FROM stock_movements m JOIN products p ON m.product_id = p.id
-        WHERE p.sku = ?`,
+        WHERE p.barcode = ?`,
       [sku],
     )) as any[];
   }
 
   test.afterEach(async () => {
     for (const sku of skus.splice(0)) {
-      const ids = (await testQuery('SELECT id FROM products WHERE sku = ?', [sku])) as Array<{ id: string }>;
+      const ids = (await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])) as Array<{ id: string }>;
       for (const { id } of ids) {
         await testQuery('DELETE FROM inventory_batches WHERE product_id = ?', [id]);
         await testQuery('DELETE FROM stock_movements WHERE product_id = ?', [id]);
@@ -326,7 +326,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     // The selling unit belongs to the PRIMARY row, which is the first entry.
     const owner = (await testQuery(
       `SELECT p.warehouse_id FROM product_selling_units u JOIN products p ON u.product_id = p.id
-       WHERE p.sku = ?`, [sku])) as any[];
+       WHERE p.barcode = ?`, [sku])) as any[];
     expect(owner).toHaveLength(1);
     expect(owner[0].warehouse_id).toBe(b.warehouseId);
   });
@@ -346,10 +346,10 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       b.userUid, true, { scope: 'single', branchId: b.branchId },
     );
     const rows = (await testQuery(
-      `SELECT name, category, brand, price, cost, sku, barcode, unit_of_measure, type, shelf_location_id
-       FROM products WHERE sku = ? ORDER BY stock DESC`, [sku])) as any[];
+      `SELECT name, category, brand, price, cost, barcode, unit_of_measure, type, shelf_location_id
+       FROM products WHERE barcode = ? ORDER BY stock DESC`, [sku])) as any[];
     expect(rows).toHaveLength(2);
-    for (const k of ['name', 'category', 'brand', 'sku', 'barcode', 'unit_of_measure', 'type']) {
+    for (const k of ['name', 'category', 'brand', 'barcode', 'unit_of_measure', 'type']) {
       expect(rows[1][k]).toBe(rows[0][k]);
     }
     expect(Number(rows[1].price)).toBe(Number(rows[0].price));
@@ -382,7 +382,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
 
     const rows = (await testQuery(
       `SELECT warehouse_id, price, cost, barcode, unit_of_measure FROM products
-       WHERE sku = ? ORDER BY stock DESC`, [sku])) as any[];
+       WHERE barcode = ? ORDER BY stock DESC`, [sku])) as any[];
     expect(rows).toHaveLength(2);
     const [primary, copy] = rows;
     expect(copy.warehouse_id).toBe(extra);
@@ -422,7 +422,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     expect(result.success).toBe(true);
 
     const ids = (await testQuery(
-      'SELECT id, warehouse_id FROM products WHERE sku = ?', [sku])) as any[];
+      'SELECT id, warehouse_id FROM products WHERE barcode = ?', [sku])) as any[];
     const primaryId = ids.find((r) => r.warehouse_id === b.warehouseId).id;
     const copyId = ids.find((r) => r.warehouse_id === extra).id;
     expect(copyId).not.toBe(primaryId);
@@ -466,11 +466,11 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     // NOT NULL, so a second copy of the same barcode cannot exist.
     const units = await testQuery(
       `SELECT u.id FROM product_selling_units u JOIN products p ON u.product_id = p.id
-       WHERE p.sku = ? AND p.warehouse_id = ?`, [sku, extra]);
+       WHERE p.barcode = ? AND p.warehouse_id = ?`, [sku, extra]);
     expect(units).toHaveLength(0);
     const own = await testQuery(
       `SELECT u.id FROM product_selling_units u JOIN products p ON u.product_id = p.id
-       WHERE p.sku = ? AND p.warehouse_id = ?`, [sku, b.warehouseId]);
+       WHERE p.barcode = ? AND p.warehouse_id = ?`, [sku, b.warehouseId]);
     expect(own).toHaveLength(1);
   });
 
@@ -591,7 +591,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     expect(result.success).toBe(false);
 
     const selected = await testQuery(
-      'SELECT id FROM products WHERE sku = ? AND warehouse_id = ?', [sku, b.warehouseId]);
+      'SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, b.warehouseId]);
     expect(selected).toHaveLength(0);
     expect(await batchesBySku(sku)).toHaveLength(0);
     // The movement joined the transaction, so it rolled back too.
@@ -645,7 +645,7 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       expect(byWarehouse(nameOf(extra)).quantity).toBe(7);
       for (const item of data.items) {
         expect(item.productName).toBe(`MultiWH ${sku}`);
-        expect(item.sku).toBe(sku);
+        expect(item.barcode).toBe(sku);
       }
       // Nothing was written yet.
       expect(await rowsBySku(sku)).toHaveLength(0);
