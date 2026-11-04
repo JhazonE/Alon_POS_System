@@ -233,14 +233,25 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     expect(rows.map((r: any) => r.warehouse_id)).not.toContain(other.warehouseId);
   });
 
-  test('a product already present by sku, or by name when it has no sku, is not duplicated', async () => {
+  /**
+   * Ang NAME mao na ang bugtong identity nga makagamit ang migration 144.
+   *
+   * Kaniadto kini nga test naay ikaduhang kalahati: usa ka row nga parehas ug
+   * `sku` apan lahi ug ngalan, nga gi-assert nga DILI ma-duplicate kay ang
+   * sku-match mo-una. Gi-tangtang na kana, DILI gi-rename ngadto sa barcode:
+   * ang migration 144 mo-match pinaagi sa `sku` dayon `name` ug DILI
+   * matandog (gi-mark sa CLAUDE.md nga applied ug historical), samtang ang
+   * products.sku blangko na sa tanang row. Busa ang sku nga lakang dili na gyud
+   * ma-abot, ug ang pag-ilis niini ug barcode mo-assert ug kinaiya nga WALA sa
+   * 144 — ang row nga gi-rename mo-fall sa name path, dili mo-match, ug
+   * ma-fan-out pag-usab (4 ka row nga parehas ug barcode, dili 2).
+   *
+   * Kini nga kaubanan gi-dokumento sa Task 2 nga brief: human sa migration
+   * 145, ang pag-salig sa 144 sa ngalan kay total na.
+   */
+  test('a product already present by name is not duplicated', async () => {
     const b = await seed();
     const extra = await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-    // Same barcode already in the target, under a different name: barcode match wins.
-    await insertProduct({ id: `bf-bc-${Date.now()}`, name: `Renamed ${sku}`, warehouseId: extra, barcode: sku });
-    // No sku anywhere: only the name can identify it.
     const noSkuName = `BFNOSKU-${Date.now()}`;
     names.push(noSkuName);
     await insertProduct({ id: `bf-n1-${Date.now()}`, name: noSkuName, warehouseId: b.warehouseId });
@@ -248,7 +259,6 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
 
     await runBackfill();
 
-    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])).toHaveLength(2);
     expect(await testQuery('SELECT id FROM products WHERE name = ?', [noSkuName])).toHaveLength(2);
   });
 

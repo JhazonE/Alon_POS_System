@@ -27,16 +27,19 @@ async function startShift(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
   await page.getByRole('button', { name: /start shift/i }).click();
   // Human ma-start ang shift, mawala ang overlay ug mogawas ang barcode input.
-  await expect(page.getByPlaceholder(/scan barcode or enter product sku/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/scan barcode or search product/i)).toBeVisible();
 }
 
 /**
- * I-add ang product pinaagi sa SKU. Gi-retry kay ang `products` state mag-load ug
+ * I-add ang product pinaagi sa barcode (gi-retire na ang products.sku; ang
+ * ngalan sa function ug ang titulo sa test sa ubos nagpabilin nga "BySku" /
+ * "by SKU" aron dili mausab ang test IDs nga gigamit sa pagtandi batok sa
+ * baseline nga E2E run). Gi-retry kay ang `products` state mag-load ug
  * asynchronous — posible nga wala pa ma-load sa pag-type (race), busa i-retry
  * hangtod motungha ang item sa cart.
  */
 async function addProductBySku(page: import('@playwright/test').Page, sku: string, name: string) {
-  const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+  const barcode = page.getByPlaceholder(/scan barcode or search product/i);
   await expect(async () => {
     await barcode.fill(sku);
     await barcode.press('Enter');
@@ -85,7 +88,7 @@ test.describe('POS sale flow', () => {
     await addProductBySku(page, product.barcode, product.name);
 
     // Empty barcode + Enter → default tender (Cash) → ablihi ang TenderDialog.
-    const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+    const barcode = page.getByPlaceholder(/scan barcode or search product/i);
     await barcode.click();
     await barcode.press('Enter');
 

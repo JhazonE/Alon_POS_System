@@ -9,14 +9,14 @@ async function verifySalesOrderSync() {
         console.log('--- Sales Order Verification Started ---');
 
         // 1. Setup Data
-        await query(`INSERT INTO products (id, name, description, category, brand, stock, price, sku, unit_of_measure, conversion_factor)
+        await query(`INSERT INTO products (id, name, description, category, brand, stock, price, barcode, unit_of_measure, conversion_factor)
                  VALUES (?, 'SO Parent', 'Desc', 'Cat', 'Brand', 10, 1000, 'SOP1', 'CASE', 1.0)
                  ON DUPLICATE KEY UPDATE stock = 10`, [PARENT_ID]);
 
         await query(`DELETE FROM conversion_factors WHERE product_id = ?`, [PARENT_ID]);
         await query(`INSERT INTO conversion_factors (id, product_id, unit, factor) VALUES (?, ?, 'Piece', 12.0)`, ['cf-sop-1', PARENT_ID]);
 
-        await query(`INSERT INTO products (id, name, description, category, brand, stock, price, sku, unit_of_measure, parent_id, conversion_factor)
+        await query(`INSERT INTO products (id, name, description, category, brand, stock, price, barcode, unit_of_measure, parent_id, conversion_factor)
                  VALUES (?, 'SO Child', 'Desc', 'Cat', 'Brand', 120, 100, 'SOC1', 'Piece', ?, 1.0)
                  ON DUPLICATE KEY UPDATE stock = 120`, [CHILD_ID, PARENT_ID]);
 

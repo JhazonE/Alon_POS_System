@@ -102,7 +102,7 @@ export async function getStockAdjustmentsByProduct(productId: string, limit?: nu
     let sql = `
       SELECT
         sa.*,
-        p.name as product_name,
+        p.name as product_name
       FROM stock_adjustments sa
       LEFT JOIN products p ON sa.product_id = p.id
       WHERE sa.product_id = ?

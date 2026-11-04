@@ -15,7 +15,7 @@ import { expandProductSellingUnits } from './product-selling-unit-expansion';
  * This used to be `if (filters.warehouseId)`, which treated a blank id the same
  * as an absent one and so DROPPED the restriction: a POS terminal whose
  * `location` was '' returned every warehouse's copy of every product. Fan-out
- * makes those copies same-sku duplicates, so that is a correctness problem.
+ * makes those copies same-barcode duplicates, so that is a correctness problem.
  *
  * A non-string is "unresolved", not "absent": TypeScript types are erased at
  * the HTTP boundary and `pool.query` escapes an OBJECT parameter as
@@ -55,7 +55,6 @@ export class MySqlProductRepository implements ProductRepository {
         products.type,
         products.price,
         products.cost,
-        products.sku,
         products.barcode,
         products.vat_status as vatStatus,
         products.availability,
@@ -93,13 +92,13 @@ export class MySqlProductRepository implements ProductRepository {
       // the hook hard-codes limit=100, so joining would make that limit count
       // unit rows and silently drop whole products off the end of the page.
       if (filters.expandSellingUnits) {
-        sql += ` AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?
+        sql += ` AND (products.name LIKE ? OR products.barcode LIKE ?
                  OR EXISTS (SELECT 1 FROM product_selling_units psu
                              WHERE psu.product_id = products.id AND psu.barcode LIKE ?))`;
-        params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-      } else {
-        sql += ' AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?)';
         params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      } else {
+        sql += ' AND (products.name LIKE ? OR products.barcode LIKE ?)';
+        params.push(`%${filters.search}%`, `%${filters.search}%`);
       }
     }
 
@@ -226,13 +225,13 @@ export class MySqlProductRepository implements ProductRepository {
       // Mirrors findAll: when expanding, a unit-barcode-only match counts too, so
       // `total` agrees with the rows findAll can return.
       if (filters.expandSellingUnits) {
-        countSql += ` AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?
+        countSql += ` AND (name LIKE ? OR barcode LIKE ?
                  OR EXISTS (SELECT 1 FROM product_selling_units psu
                              WHERE psu.product_id = products.id AND psu.barcode LIKE ?))`;
-        countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-      } else {
-        countSql += ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)';
         countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      } else {
+        countSql += ' AND (name LIKE ? OR barcode LIKE ?)';
+        countParams.push(`%${filters.search}%`, `%${filters.search}%`);
       }
     }
 
@@ -273,9 +272,19 @@ export class MySqlProductRepository implements ProductRepository {
     const rows = await query(productSql, [id]);
     if (rows.length === 0) return null;
     
-    // We would also need price levels for a single product... 
+    // We would also need price levels for a single product...
     // For brevity, let's reuse a more specific method or implement properly later.
-    const products = await this.findAll(1, 0, { search: rows[0].sku }); // Hacky
+    //
+    // Ang search term kay `sku` kaniadto. Sa dihang gi-retire ang products.sku,
+    // ang barcode mao ang pinakaduol nga gipuli — apan timan-i nga DILI kini
+    // like-for-like: ang kada products.sku blangko na man kaniadto, mao nga ang
+    // search mo-match sa bisan unsa (o sa wala), samtang ang barcode usa ka
+    // tinuod nga identity. Mas husto ang bag-o, dili mas sayop. Ang method wala
+    // gyud nay caller (ang IProductRepository ra ang nag-declare niya), mao nga
+    // ang kausaban dili makaabot sa production path — gipabilin ra siya nga
+    // compilable instead sa gi-tangtang, ug ang "Hacky" nga design wala
+    // gihilabti dinhi kay laing trabaho na kana.
+    const products = await this.findAll(1, 0, { search: rows[0].barcode }); // Hacky
     return products[0] || null;
   }
 
@@ -283,13 +292,13 @@ export class MySqlProductRepository implements ProductRepository {
     const id = product.id || `prod_${Date.now()}`;
     const sql = `
       INSERT INTO products (
-        id, name, description, category, brand, department, stock, price, cost, sku, barcode, reorder_point, avg_daily_sales
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, name, description, category, brand, department, stock, price, cost, barcode, reorder_point, avg_daily_sales
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await query(sql, [
       id, product.name, product.description, product.category, product.brand, product.department,
-      product.stock || 0, product.price, product.cost, product.sku, product.barcode, 0, 0
+      product.stock || 0, product.price, product.cost, product.barcode, 0, 0
     ]);
 
     if (product.priceLevels && product.priceLevels.length > 0) {

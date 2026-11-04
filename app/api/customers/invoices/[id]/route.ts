@@ -109,7 +109,7 @@ export async function GET(
         sii.product_name,
         sii.quantity,
         sii.price,
-        p.unit_of_measure as uom,
+        p.unit_of_measure as uom
       FROM sales_invoice_items sii
       LEFT JOIN products p ON sii.product_id = p.id
       WHERE sii.sales_invoice_id = ?

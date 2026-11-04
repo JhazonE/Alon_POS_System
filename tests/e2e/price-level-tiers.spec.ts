@@ -98,11 +98,11 @@ async function posLogin(page: Page) {
 async function startShift(page: Page) {
   await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
   await page.getByRole('button', { name: /start shift/i }).click();
-  await expect(page.getByPlaceholder(/scan barcode or enter product sku/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/scan barcode or search product/i)).toBeVisible();
 }
 
 async function addProductByCode(page: Page, code: string, name: string) {
-  const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+  const barcode = page.getByPlaceholder(/scan barcode or search product/i);
   await expect(async () => {
     await barcode.fill(code);
     await barcode.press('Enter');

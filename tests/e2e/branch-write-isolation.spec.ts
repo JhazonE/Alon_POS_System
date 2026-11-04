@@ -966,21 +966,23 @@ test.describe('POST /api/pos-transactions — sale branch wins over terminal (D7
 });
 
 // Ang multipart (legacy) nga importer — kini ang dalan nga gigamit sa Settings
-// uploader. Parehas nga SKU mahimong naa sa daghang branch (unique key kay
-// (sku, warehouse_id)), mao nga ang UPDATE dili pwede mag-target sa sku ra.
+// uploader. Parehas nga barcode mahimong naa sa daghang branch (walay unique
+// key sa products.barcode), mao nga ang UPDATE dili pwede mag-target sa
+// barcode ra — kinahanglan i-scope siya sa branch sa importer.
 test.describe('POST /api/data-management/import/products (multipart) — branch isolation', () => {
-  test('dili ma-usab ang produkto sa laing branch nga parehas ug SKU', async ({ request }) => {
+  test('dili ma-usab ang produkto sa laing branch nga parehas ug barcode', async ({ request }) => {
     const a = await seedSecondBranch();
     const b = await seedSecondBranch();
-    const sku = `IMP-LEG-${Date.now()}`;
+    // seedProductInWarehouse mo-sulat sa tag ngadto sa products.barcode.
+    const barcode = `IMP-LEG-${Date.now()}`;
     try {
-      const aId = await seedProductInWarehouse(a.warehouseId, sku);
-      const bId = await seedProductInWarehouse(b.warehouseId, sku);
+      const aId = await seedProductInWarehouse(a.warehouseId, barcode);
+      const bId = await seedProductInWarehouse(b.warehouseId, barcode);
       await testQuery('UPDATE products SET name = ?, cost = 2.00, price = 3.00, stock = 10 WHERE id = ?', ['Legacy B Original', bId]);
 
       const csv =
-        'name,sku,cost_price,selling_price,stock_quantity\n' +
-        `Legacy A Updated,${sku},40,50,77\n`;
+        'name,barcode,cost_price,selling_price,stock_quantity\n' +
+        `Legacy A Updated,${barcode},40,50,77\n`;
       const res = await request.post(`/api/data-management/import/products?uid=${a.userUid}`, {
         multipart: { file: { name: 'products.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) } },
       });

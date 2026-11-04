@@ -19,9 +19,9 @@ async function setupIntegrationTest() {
         // 3. Create Test Product
         const productId = "TEST-PROD-" + Date.now();
         await query(`
-            INSERT INTO products (id, name, description, category, brand, stock, price, cost, sku, barcode, unit_of_measure)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [productId, "ANTIGRAVITY TEST PRODUCT", "Test description", "Test Category", "Test Brand", 100, 100.00, 50.00, "TEST-SKU-" + Date.now(), "TEST-BARCODE-" + Date.now(), "Piece"]);
+            INSERT INTO products (id, name, description, category, brand, stock, price, cost, barcode, unit_of_measure)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [productId, "ANTIGRAVITY TEST PRODUCT", "Test description", "Test Category", "Test Brand", 100, 100.00, 50.00, "TEST-BARCODE-" + Date.now(), "Piece"]);
 
         // 4. Create Price Level Overrides
         await query(`INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, ?, ?)`, [productId, retailId, 100.00, 0]);

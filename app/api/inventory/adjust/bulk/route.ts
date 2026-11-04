@@ -24,9 +24,16 @@ const CLONE_EXCLUDED_COLUMNS = new Set([
 /**
  * Pangitaa (o himoa) ang katugbang sa `product` sulod sa `targetWarehouseId`.
  *
- * Gi-mirror ang kinaiya sa canonical nga TransferStockService: resolve pinaagi
- * sa barcode → name, ug kung wala gyud, i-clone ang source row paingon sa
- * target warehouse nga 0 ang stock imbes mo-throw.
+ * Ang "wala makit-an" nga kinaiya gi-mirror gikan sa canonical nga
+ * TransferStockService: i-clone ang source row paingon sa target warehouse nga
+ * 0 ang stock imbes mo-throw.
+ *
+ * ANG RESOLUTION ORDER DILI PAREHAS, UG TINUYO: dinhi barcode → name, samtang
+ * ang TransferStockService (ug ang lib/family-sync.ts) name RA. Kaniadto ang
+ * duha parehas sku → name; sa dihang gi-retire ang products.sku, ang sku nga
+ * lakang didto nawala (walay gi-ilisan kay walay laing identity ang family
+ * member), samtang dinhi ang barcode usa ka tinuod nga user-facing nga code nga
+ * mas piho pa kay sa ngalan, mao nga gipabilin siya nga unang lakang.
  *
  * Ang barcode lookup gi-guard batok sa NULL: optional siya sa product form,
  * ug sa SQL ang `col = NULL` dili gyud mo-match — mao nga kung i-pass ang NULL,
@@ -222,8 +229,10 @@ export async function POST(request: NextRequest) {
 
         // For transfers, we need to find the target product.
         //
-        // Ang resolution order parehas sa canonical nga TransferStockService:
-        // barcode → name, dayon auto-create. Ang barcode guard importante kay
+        // Barcode → name, dayon auto-create. Ang auto-create parehas sa
+        // canonical nga TransferStockService; ang barcode nga lakang DILI —
+        // tan-awa ang resolveTransferTarget sa taas para sa ngano. Ang barcode
+        // guard importante kay
         // optional siya sa product form ug ang SQL `barcode = NULL` dili gyud
         // mo-match — kung wala ang guard, ang matag transfer sa produkto nga
         // walay barcode mo-fail bisan tuod naa na siya sa target warehouse.

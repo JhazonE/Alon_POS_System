@@ -85,7 +85,17 @@ test.describe('addProductWithScope multi-warehouse create', () => {
 
   test.afterEach(async () => {
     for (const sku of skus.splice(0)) {
-      const ids = (await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])) as Array<{ id: string }>;
+      // Resolved by NAME, not by barcode. `form()` always sets the name to
+      // `MultiWH ${sku}` and nothing rewrites it, whereas products.barcode is
+      // not a stable handle here: a submission may override it (`BC-${sku}`),
+      // and a base selling unit's barcode is synced back onto the product row
+      // (lib/product-create.ts), so a barcode-keyed cleanup silently leaves
+      // rows behind for exactly the tests that exercise those paths. The name
+      // covers every row this spec creates, under any of its barcodes.
+      const ids = (await testQuery(
+        'SELECT id FROM products WHERE name = ? OR barcode = ?',
+        [`MultiWH ${sku}`, sku],
+      )) as Array<{ id: string }>;
       for (const { id } of ids) {
         await testQuery('DELETE FROM inventory_batches WHERE product_id = ?', [id]);
         await testQuery('DELETE FROM stock_movements WHERE product_id = ?', [id]);
@@ -324,9 +334,14 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     );
     expect(result.success).toBe(true);
     // The selling unit belongs to the PRIMARY row, which is the first entry.
+    // Keyed on `DP-${sku}`, not on the bare `sku`: the base selling unit's
+    // barcode is written back onto products.barcode by the selling-unit sync
+    // (lib/product-create.ts `UPDATE products SET ... barcode = ?`), so the
+    // row no longer carries the form's barcode at all. This used to key on
+    // products.sku, a separate column the sync never touched.
     const owner = (await testQuery(
       `SELECT p.warehouse_id FROM product_selling_units u JOIN products p ON u.product_id = p.id
-       WHERE p.barcode = ?`, [sku])) as any[];
+       WHERE p.barcode = ?`, [`DP-${sku}`])) as any[];
     expect(owner).toHaveLength(1);
     expect(owner[0].warehouse_id).toBe(b.warehouseId);
   });
@@ -346,8 +361,10 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       b.userUid, true, { scope: 'single', branchId: b.branchId },
     );
     const rows = (await testQuery(
+      // `BC-${sku}`, not `sku`: this submission overrides the form barcode, and
+      // with products.sku retired the barcode is the only handle on the rows.
       `SELECT name, category, brand, price, cost, barcode, unit_of_measure, type, shelf_location_id
-       FROM products WHERE barcode = ? ORDER BY stock DESC`, [sku])) as any[];
+       FROM products WHERE barcode = ? ORDER BY stock DESC`, [`BC-${sku}`])) as any[];
     expect(rows).toHaveLength(2);
     for (const k of ['name', 'category', 'brand', 'barcode', 'unit_of_measure', 'type']) {
       expect(rows[1][k]).toBe(rows[0][k]);
@@ -380,9 +397,12 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       }), b.userUid, true, { scope: 'single', branchId: b.branchId });
     expect(result.success).toBe(true);
 
+    // Keyed on `SU-${sku}` — the BASE SELLING UNIT's barcode, which is exactly
+    // what this test asserts below that the sync writes onto both rows. Neither
+    // the bare `sku` nor the form's `FORM-${sku}` survives on the product rows.
     const rows = (await testQuery(
       `SELECT warehouse_id, price, cost, barcode, unit_of_measure FROM products
-       WHERE barcode = ? ORDER BY stock DESC`, [sku])) as any[];
+       WHERE barcode = ? ORDER BY stock DESC`, [`SU-${sku}`])) as any[];
     expect(rows).toHaveLength(2);
     const [primary, copy] = rows;
     expect(copy.warehouse_id).toBe(extra);
@@ -422,7 +442,8 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     expect(result.success).toBe(true);
 
     const ids = (await testQuery(
-      'SELECT id, warehouse_id FROM products WHERE barcode = ?', [sku])) as any[];
+      // `PL-${sku}`: the base selling unit's barcode is synced onto the product.
+      'SELECT id, warehouse_id FROM products WHERE barcode = ?', [`PL-${sku}`])) as any[];
     const primaryId = ids.find((r) => r.warehouse_id === b.warehouseId).id;
     const copyId = ids.find((r) => r.warehouse_id === extra).id;
     expect(copyId).not.toBe(primaryId);
@@ -466,11 +487,11 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     // NOT NULL, so a second copy of the same barcode cannot exist.
     const units = await testQuery(
       `SELECT u.id FROM product_selling_units u JOIN products p ON u.product_id = p.id
-       WHERE p.barcode = ? AND p.warehouse_id = ?`, [sku, extra]);
+       WHERE p.barcode = ? AND p.warehouse_id = ?`, [`SU-${sku}`, extra]);
     expect(units).toHaveLength(0);
     const own = await testQuery(
       `SELECT u.id FROM product_selling_units u JOIN products p ON u.product_id = p.id
-       WHERE p.barcode = ? AND p.warehouse_id = ?`, [sku, b.warehouseId]);
+       WHERE p.barcode = ? AND p.warehouse_id = ?`, [`SU-${sku}`, b.warehouseId]);
     expect(own).toHaveLength(1);
   });
 
@@ -574,28 +595,68 @@ test.describe('addProductWithScope multi-warehouse create', () => {
 
   // --- all-or-nothing ------------------------------------------------------
 
-  test('a failure on one warehouse row rolls the whole multi-insert back', async () => {
+  /**
+   * Usa ka pakyas SULOD sa transaction mo-rollback sa tanan: product row,
+   * batch ug stock_movements.
+   *
+   * Ang gamit nga collision kay `product_selling_units.unique_selling_unit_barcode`
+   * — usa ka GLOBAL UNIQUE (migration 115) nga magpabilin human sa migration 145.
+   *
+   * KANIADTO kini nag-seed ug row nga parehas ug `(sku, warehouse_id)` sa
+   * ikaduhang warehouse, nga mo-violate sa unique index `sku_warehouse`
+   * (migration 056). Dili na mahimo: blangko na ang tanang products.sku, ug ang
+   * migration 145 mo-drop na sa kolum UG sa index. Ang products.barcode WALAY
+   * unique index (ug tinuyo nga dili dugangan — daghang spec ang legitimong
+   * mo-seed sa parehas nga barcode sa duha ka warehouse), mao nga walay
+   * constraint nga ma-violate sa products mismo gawas sa PRIMARY, nga
+   * generated ang id ug dili ma-kontrol gikan sa gawas.
+   *
+   * SAKOP NGA NAWALA, gi-record imbes gi-tabonan: ang selling-unit insert
+   * mo-una sa secondary-warehouse rows sa lib/product-create.ts, mao nga kini
+   * nga test mo-prube nga ang primary row + batch + movement mo-rollback, APAN
+   * DILI na niya ma-prube nga ang pakyas sa IKADUHANG warehouse row mismo
+   * mo-rollback sa primary. Ang maong path kay walay reachable nga failure
+   * mode karon; ang pag-test niini kinahanglan ug bag-ong constraint o fault
+   * injection, nga labaw sa trabaho sa pagtangtang sa patay nga kolum.
+   */
+  test('a failure inside the transaction rolls the whole multi-insert back', async () => {
     const b = await seed();
     const extra = await addWarehouse(b.branchId);
     const sku = newSku();
-    // Same (sku, warehouse_id) already in the second warehouse -> that row collides.
-    await seedProductInWarehouse(extra, sku);
-    const result: any = await addProductWithScope(
-      form(sku, {
-        warehouses: [
-          { warehouseId: b.warehouseId, stock: 9, isPrimary: true },
-          { warehouseId: extra, stock: 4 },
-        ],
-      }),
-      b.userUid, true, { scope: 'single', branchId: b.branchId });
-    expect(result.success).toBe(false);
+    const clashBarcode = `SUCLASH-${sku}`;
+    // I-angkon ang selling-unit barcode pinaagi sa laing produkto. Ang INSERT
+    // sa selling unit sa sulod sa transaction mao ang mo-pakyas.
+    const holderId = await seedProductInWarehouse(b.warehouseId, `holder-${sku}`);
+    await testQuery(
+      `INSERT INTO product_selling_units (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
+       VALUES (?, ?, 'pc', 1, ?, 1, 2, 1, 0)`,
+      [`su-holder-${sku}`, holderId, clashBarcode],
+    );
+    try {
+      const result: any = await addProductWithScope(
+        form(sku, {
+          warehouses: [
+            { warehouseId: b.warehouseId, stock: 9, isPrimary: true },
+            { warehouseId: extra, stock: 4 },
+          ],
+          sellingUnits: [{
+            unitName: 'pc', qtyBase: 1, barcode: clashBarcode, cost: 6, isBase: true, prices: {},
+          }],
+        }),
+        b.userUid, true, { scope: 'single', branchId: b.branchId });
+      expect(result.success).toBe(false);
 
-    const selected = await testQuery(
-      'SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, b.warehouseId]);
-    expect(selected).toHaveLength(0);
-    expect(await batchesBySku(sku)).toHaveLength(0);
-    // The movement joined the transaction, so it rolled back too.
-    expect(await movementsBySku(sku)).toHaveLength(0);
+      // Walay product row sa BISAN ASA sa duha ka warehouse.
+      const left = await testQuery(
+        'SELECT id FROM products WHERE name = ?', [`MultiWH ${sku}`]);
+      expect(left).toHaveLength(0);
+      expect(await batchesBySku(sku)).toHaveLength(0);
+      // The movement joined the transaction, so it rolled back too.
+      expect(await movementsBySku(sku)).toHaveLength(0);
+    } finally {
+      await testQuery('DELETE FROM product_selling_units WHERE product_id = ?', [holderId]);
+      await testQuery('DELETE FROM products WHERE id = ?', [holderId]);
+    }
   });
 
   // --- queue summary -------------------------------------------------------

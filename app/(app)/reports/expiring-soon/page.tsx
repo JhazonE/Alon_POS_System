@@ -45,9 +45,7 @@ export default function ExpiringSoonPage() {
   const filteredItems = items.filter((item) => {
     if (!searchTerm.trim()) return true;
     const search = searchTerm.toLowerCase();
-    return (
-      item.productName?.toLowerCase().includes(search)
-    );
+    return item.productName?.toLowerCase().includes(search);
   });
   const filteredExpired = filteredItems.filter((i) => i.isExpired);
   const filteredUpcoming = filteredItems.filter((i) => !i.isExpired);

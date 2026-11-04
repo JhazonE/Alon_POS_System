@@ -67,15 +67,15 @@ test.describe('Purchase order', () => {
   test('Receive PO: "highest wins" rule sa cost ug retail price', async ({ request }) => {
     // Dedicated product para dili ma-coupled sa laing test nga mo-mutate sa PO_PRODUCT.
     const productId = `hw-prod-${Date.now()}`;
-    const sku = `HW-${Date.now()}`;
+    // Ang ngalan mao ang searchable handle (gi-retire ang products.sku).
+    const productName = `Highest-Wins Item ${Date.now()}`;
     const startCost = 50;
     const startPrice = 100;
 
     const createRes = await request.post('/api/products', {
       data: {
         id: productId,
-        name: `Highest-Wins Item ${Date.now()}`,
-        sku,
+        name: productName,
         price: startPrice,
         cost: startCost,
         stock: 0,
@@ -117,7 +117,7 @@ test.describe('Purchase order', () => {
       expect(res.ok(), 'PO received').toBeTruthy();
       expect((await res.json()).success).toBeTruthy();
 
-      const listRes = await request.get(`/api/products?search=${sku}&limit=5`);
+      const listRes = await request.get(`/api/products?search=${encodeURIComponent(productName)}&limit=5`);
       const listBody = await listRes.json();
       const prod = (listBody.data ?? []).find((p: any) => p.id === productId);
       expect(prod, 'product makita sa list').toBeTruthy();

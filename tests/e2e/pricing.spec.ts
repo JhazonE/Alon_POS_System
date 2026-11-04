@@ -73,7 +73,11 @@ test.describe('Pricing', () => {
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
-    await expect(page.getByText('Prices updated')).toBeVisible();
+    // `exact: true` scopes this to the toast's own title element. Without it the
+    // locator also matches the aria-live announcement ("Notification Prices
+    // updatedUpdated 1 product(s)."), which populates a beat after the toast and
+    // trips Playwright's strict mode intermittently.
+    await expect(page.getByText('Prices updated', { exact: true })).toBeVisible();
 
     const expectedPrice = Math.round(priceBefore * 1.1 * 100) / 100;
     await expect(async () => {

@@ -40,7 +40,6 @@ test.describe('addProduct — usa ka branch kada produkto', () => {
       description: 'Produkto para sa single-branch rule test.',
       price: 100,
       cost: 50,
-      sku: null,
       brand: EDITABLE_PRODUCT.brand,
       category: EDITABLE_PRODUCT.category,
       unitOfMeasure: EDITABLE_PRODUCT.unitOfMeasure,

@@ -734,7 +734,6 @@ const shelfUpdate = (page: Page, args: unknown[]) =>
 function priceItem(productId: string, field: 'price' | 'cost', newValue: number) {
   return {
     productId,
-    sku: 'x',
     barcode: '',
     productName: 'Batch item',
     field,

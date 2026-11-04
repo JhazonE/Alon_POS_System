@@ -84,7 +84,6 @@ export async function previewPriceListUpload(
       skipped.push({ row, reason: `Duplicate barcode "${barcode}" (earlier row in this file superseded)` });
       continue;
     }
-    seenBarcodes.add(barcode);
 
     const byBarcode: any = await query(
       'SELECT id, name, barcode, price, cost FROM products WHERE barcode = ? AND warehouse_id = ? LIMIT 1',
@@ -115,12 +114,19 @@ export async function previewPriceListUpload(
         skipped.push({ row, reason: 'new_cost must be a non-negative number' });
         continue;
       }
+      // Claimed only once this row is actually going to be acted on. A row
+      // skipped above for a bad price must NOT consume its barcode: a later
+      // row carrying the same barcode with a valid price still has to be
+      // processed. Hence this `.add` is duplicated rather than hoisted to the
+      // dedup check — the two call sites are the two "this row counts" points.
+      seenBarcodes.add(barcode);
       toCreate.push({
         barcode, name: row.name!, brand: row.brand!, category: row.category!, unitOfMeasure: row.unitOfMeasure!,
         price: row.newPrice!, cost: row.newCost,
       });
       continue;
     }
+    seenBarcodes.add(barcode);
 
     if (row.newPrice != null) {
       if (!isValidPriceValue(row.newPrice)) {

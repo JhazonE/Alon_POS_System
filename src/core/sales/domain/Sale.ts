@@ -24,7 +24,6 @@ export interface SaleItemEntity {
   productName: string;
   quantity: number;
   price: number;
-  sku?: string;
   barcode?: string;
   createdAt?: string;
 }

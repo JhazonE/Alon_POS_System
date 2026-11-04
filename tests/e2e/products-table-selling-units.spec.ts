@@ -11,7 +11,7 @@ import { TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE, TEST_MAIN_WAREHOUSE } fro
 
 const PRODUCT_ID = 'e2e-ptsu-product';
 const PRODUCT_NAME = 'E2E Table Selling Units';
-const PRODUCT_SKU = 'E2E-PTSU-001';
+const PRODUCT_BARCODE = 'E2E-PTSU-BASE';
 
 async function cleanup() {
   await testQuery('DELETE FROM products WHERE id = ?', [PRODUCT_ID]);
@@ -24,9 +24,9 @@ test.describe('Products table — stock indicator & selling units panel', () => 
     // ang produkto kinahanglan naa didto -- ang NULL warehouse_id dili na makita.
     // stock 24 sa base (Piece); reorder_point 0 → in-stock kung wala'y global threshold.
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, barcode, stock, reorder_point, price, cost, unit_of_measure, availability, warehouse_id)
-       VALUES (?, ?, 'E2E', 'General', 'Generic', ?, 'E2E-PTSU-BASE', 24, 0, 10, 5, 'Piece', 'in-stock', ?)`,
-      [PRODUCT_ID, PRODUCT_NAME, PRODUCT_SKU, TEST_MAIN_WAREHOUSE.id],
+      `INSERT INTO products (id, name, description, category, brand, barcode, stock, reorder_point, price, cost, unit_of_measure, availability, warehouse_id)
+       VALUES (?, ?, 'E2E', 'General', 'Generic', 'E2E-PTSU-BASE', 24, 0, 10, 5, 'Piece', 'in-stock', ?)`,
+      [PRODUCT_ID, PRODUCT_NAME, TEST_MAIN_WAREHOUSE.id],
     );
     await testQuery(
       `INSERT INTO product_selling_units (id, product_id, unit_name, qty_base, barcode, cost, price, is_base, sort_order)
@@ -46,7 +46,7 @@ test.describe('Products table — stock indicator & selling units panel', () => 
   test('shows a stock dot instead of a Status column', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_BARCODE);
 
     await expect(page.getByRole('columnheader', { name: 'Status' })).toHaveCount(0);
     const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
@@ -58,7 +58,7 @@ test.describe('Products table — stock indicator & selling units panel', () => 
     await testQuery('UPDATE products SET stock = 0 WHERE id = ?', [PRODUCT_ID]);
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_BARCODE);
 
     const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
     await expect(row.getByTestId('stock-indicator')).toHaveAttribute('data-status', 'out-of-stock');
@@ -67,7 +67,7 @@ test.describe('Products table — stock indicator & selling units panel', () => 
   test('a product with selling units advertises the count before it is expanded', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_BARCODE);
 
     const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
     await expect(row).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('Products table — stock indicator & selling units panel', () => 
   test('expanding a row lists selling units with barcode, derived stock and price levels', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_BARCODE);
 
     const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
     await expect(row).toBeVisible();
@@ -107,7 +107,7 @@ test.describe('Products table — stock indicator & selling units panel', () => 
   test('selling-unit rows share the products table columns', async ({ page }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await page.getByPlaceholder('Search products...').fill(PRODUCT_SKU);
+    await page.getByPlaceholder('Search products...').fill(PRODUCT_BARCODE);
 
     const row = page.getByRole('row', { name: new RegExp(PRODUCT_NAME) });
     await row.getByRole('button', { name: `Expand ${PRODUCT_NAME}` }).click();
