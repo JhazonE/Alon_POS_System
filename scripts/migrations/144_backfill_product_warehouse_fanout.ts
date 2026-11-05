@@ -84,6 +84,55 @@ const COPIED_COLUMNS = [
   'vat_status', 'availability', 'earns_points', 'is_perishable', 'type',
 ] as const;
 
+/**
+ * ---------------------------------------------------------------------------
+ * COMPATIBILITY GUARD - this is NOT a behaviour change.
+ * ---------------------------------------------------------------------------
+ * Everything below this block is the original migration, untouched. CLAUDE.md
+ * records migration 144 as "applied and historical - do not modify it", because
+ * it documents what the system USED to do (a branch-wide zero-stock fan-out,
+ * since replaced by the per-warehouse create path in lib/product-create.ts).
+ * That stance still holds: on any database where this migration can legitimately
+ * run, the guard is a no-op and 144 does exactly what it always did - the same
+ * COPIED_COLUMNS list, the same sku-first-then-name identity match, the same
+ * inserts, the same narrow down().
+ *
+ * The guard exists for ONE reason: migration 145 DROPPED products.sku (and its
+ * sku_warehouse unique index). 144 reads that column in three places - it is in
+ * COPIED_COLUMNS (so it is interpolated into up()'s source SELECT and named in
+ * the INSERT), it is the first leg of the identity match, and down() selects and
+ * compares it. On a schema where 145 has run, every one of those fails with
+ * ER_BAD_FIELD_ERROR (1054) Unknown column 'sku'. So a fresh install that
+ * replays the whole migration history, or any `migrate` / `migrate:down` run
+ * after 145, would abort on a migration that has nothing left to do.
+ *
+ * Fail-inert rather than fail-closed is correct here specifically because 144 is
+ * historical: its work is already recorded on every database that needed it, and
+ * a post-145 database by definition has no sku column for it to key off. There
+ * is nothing it could do correctly, so doing nothing loudly is the only safe
+ * outcome. Do NOT read this as licence to strip 'sku' out of COPIED_COLUMNS or
+ * to "simplify" the identity match onto name or barcode - that WOULD change what
+ * 144 does on a pre-145 database, which is the thing CLAUDE.md forbids.
+ */
+const INERT_MESSAGE =
+  `⏭️  ${MIGRATION_NAME} is inert: it keys on products.sku, which migration ` +
+  '145 dropped. Nothing was read and nothing was changed. This migration is ' +
+  'historical (see CLAUDE.md); its backfill already ran on every database that ' +
+  'had the column.';
+
+/** Does products.sku still exist? Checked per call; DDL is not cached. */
+async function hasProductsSku(): Promise<boolean> {
+  const rows = (await query(
+    `SELECT 1 AS present
+       FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'products'
+        AND COLUMN_NAME = 'sku'
+      LIMIT 1`
+  )) as Array<{ present: number }>;
+  return rows.length > 0;
+}
+
 function newProductId(): string {
   // A random suffix rather than Date.now() alone: a whole catalogue is inserted
   // inside one millisecond-scale loop.
@@ -96,6 +145,11 @@ export const migration: Migration = {
 
   async up() {
     console.log(`Running migration: ${MIGRATION_NAME}`);
+
+    if (!(await hasProductsSku())) {
+      console.log(INERT_MESSAGE);
+      return;
+    }
 
     const warehouses = (await query(
       'SELECT id, branch_id FROM warehouses WHERE is_active = 1 AND branch_id IS NOT NULL'
@@ -183,6 +237,17 @@ export const migration: Migration = {
 
   async down() {
     console.log(`Rolling back migration: ${MIGRATION_NAME}`);
+
+    // Same guard, same reason: the candidate SELECT below reads p.sku and the
+    // sibling match compares it, so down() throws on a post-145 schema exactly
+    // as up() does. Returning here leaves every row in place, which is also the
+    // honest outcome: with the column gone there is no way to tell a backfill
+    // copy apart from a real row by identity, and this down() has always
+    // preferred keeping a row it cannot prove is its own (see the doc comment).
+    if (!(await hasProductsSku())) {
+      console.log(INERT_MESSAGE);
+      return;
+    }
 
     const rec = (await query(
       'SELECT executed_at FROM migrations WHERE name = ?',

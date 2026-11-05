@@ -13,16 +13,63 @@ import {
 import { testQuery } from './helpers/db';
 
 /**
- * Migration 144 backfills EVERY product in the database, not just the ones a
- * test seeded, so each test snapshots the product ids first and removes whatever
- * the backfill added to the shared seed catalogue afterwards.
+ * Migration 144 is INERT on this schema, and that is all this spec can still
+ * assert.
+ *
+ * WHAT THIS SPEC USED TO COVER (14 tests) AND WHY IT CANNOT ANY MORE.
+ * Migration 144 backfilled every existing product with a zero-stock copy in the
+ * other active warehouses of its branch. The old tests executed migration.up()
+ * and migration.down() live against alon_pos_test and asserted:
+ *   - the fan-out itself: a copy appears in each sibling active warehouse, at
+ *     stock = 0 and avg_daily_sales = 0, with the source keeping its quantity;
+ *   - idempotency across two runs (both with and without a sku);
+ *   - that services, non-root family members (parent_id NOT NULL) and
+ *     NULL-warehouse products are skipped;
+ *   - that no inventory_batches, no stock and no stock_movements rows are
+ *     created;
+ *   - that the fan-out never crosses branches and ignores inactive warehouses;
+ *   - that a product already present by name in the target is not duplicated;
+ *   - that product_price_levels rows are copied under the copy's id;
+ *   - and five down() properties: untouched copies removed but the source kept;
+ *     a copy that has since received stock, a stock_movements row or an
+ *     inventory_batches row is kept; a copy created outside the 10-minute window
+ *     is kept; nothing is deleted when every copy of a product is itself a
+ *     candidate; and down() throws without changing anything when the migrations
+ *     row is absent.
+ *
+ * Migration 145 dropped products.sku. Migration 144 keys on that column in three
+ * places (it is in COPIED_COLUMNS and so in up()'s source SELECT and INSERT; it
+ * is the first leg of the identity match; down() selects and compares it), so on
+ * this schema both up() and down() now early-return via the compatibility guard
+ * in that file WITHOUT reading or writing anything. None of the behaviour listed
+ * above is reachable, so none of it is testable. That coverage is lost to the
+ * schema change, not dropped by choice - it is recorded here deliberately.
+ *
+ * SPECIFICALLY LOST, and worth naming because it protects filed BIR documents:
+ * down() refuses to delete a copy referenced by sale_items,
+ * sales_invoice_items, pos_transaction_items or purchase_order_items, because
+ * those FKs are ON DELETE CASCADE and deleting the copy would destroy filed sale
+ * lines. That protection is NOT reachable now: down() returns before it builds
+ * its INFORMATION_SCHEMA reference scan, before it reads the migrations row, and
+ * before it deletes anything. It is covered transitively instead - down() now
+ * deletes NOTHING AT ALL, which the "down deletes nothing" test below asserts
+ * with a real sale_items line pointing at a real product, so the cascade would
+ * fire if down() ever regained the ability to delete. A test that re-created the
+ * old assertion exactly would have to restore products.sku to do it, which is
+ * the thing CLAUDE.md forbids.
+ *
+ * What remains genuinely reachable, and is covered below: both up() and down()
+ * must complete without throwing (the defect this replaces was
+ * ER_BAD_FIELD_ERROR 1054 Unknown column 'sku'), must leave every row untouched,
+ * and down() must NOT throw its "no migrations row" error - the guard returns
+ * before that check, so an absent migrations row is no longer an error path.
  *
  * runBackfill() calls the migration's own up(). That goes through lib/mysql's
  * pool, whose database comes from DB_NAME; playwright.config.ts sets
  * DB_NAME=alon_pos_test before the workers start (the same reason the other
  * specs that import lib/* hit the test DB). The helper asserts it rather than
- * trusting it: if this ever ran against the dev `alon_pos` it would backfill the
- * real catalogue.
+ * trusting it: if a future change ever made 144 non-inert again, this must not
+ * run against the dev `alon_pos` catalogue.
  */
 async function runBackfill(): Promise<void> {
   const rows = (await query('SELECT DATABASE() AS db')) as Array<{ db: string }>;
@@ -32,41 +79,44 @@ async function runBackfill(): Promise<void> {
   await migration.up();
 }
 
-test.describe('migration 144 - backfill product warehouse fan-out', () => {
+/** Row counts across every table 144 would have written to, plus the FK-cascade targets. */
+async function snapshot(): Promise<Record<string, number>> {
+  const tables = [
+    'products',
+    'product_price_levels',
+    'inventory_batches',
+    'stock_movements',
+    'sale_items',
+    'sales_invoice_items',
+    'pos_transaction_items',
+    'purchase_order_items',
+  ];
+  const out: Record<string, number> = {};
+  for (const t of tables) {
+    const rows = await testQuery(`SELECT COUNT(*) AS n FROM \`${t}\``);
+    out[t] = Number(rows[0].n);
+  }
+  const stock = await testQuery('SELECT COALESCE(SUM(stock), 0) AS s FROM products');
+  out['SUM(products.stock)'] = Number(stock[0].s);
+  return out;
+}
+
+test.describe('migration 144 - inert after products.sku was dropped', () => {
   const seededBranches: SeededBranch[] = [];
   const extraWarehouses: string[] = [];
-  const skus: string[] = [];
+  const barcodes: string[] = [];
   const sales: string[] = [];
-  const names: string[] = [];
-  let preexisting = new Set<string>();
-  const backdated: Array<[string, Date]> = [];
-  let migrationRow: { existed: boolean; executed_at: Date | null } | null = null;
-
-  test.beforeEach(async () => {
-    const rows = await testQuery('SELECT id FROM products');
-    preexisting = new Set(rows.map((r: any) => r.id));
-  });
 
   test.afterEach(async () => {
-    // Children first: products.parent_id is a FK to products.id.
-    const now = await testQuery('SELECT id FROM products ORDER BY (parent_id IS NULL), id');
-    for (const r of now) {
-      if (preexisting.has(r.id)) continue;
-      await testQuery('DELETE FROM product_price_levels WHERE product_id = ?', [r.id]);
-      await testQuery('DELETE FROM products WHERE id = ?', [r.id]);
-    }
-    for (const name of names.splice(0)) {
-      await testQuery('DELETE FROM products WHERE name = ?', [name]);
-    }
-    for (const sku of skus.splice(0)) {
-      await testQuery('DELETE FROM products WHERE barcode = ?', [sku]);
-    }
-    for (const [id, createdAt] of backdated.splice(0)) {
-      await testQuery('UPDATE products SET created_at = ? WHERE id = ?', [createdAt, id]);
-    }
+    // Sale lines first: sale_items.product_id FKs to products.id, so the
+    // barcode cleanup below cannot run while a line still points at the row.
     for (const saleId of sales.splice(0)) {
       await testQuery('DELETE FROM sale_items WHERE sale_id = ?', [saleId]);
       await cleanupSale(saleId);
+    }
+    for (const barcode of barcodes.splice(0)) {
+      await testQuery('DELETE FROM product_price_levels WHERE product_id IN (SELECT id FROM products WHERE barcode = ?)', [barcode]);
+      await testQuery('DELETE FROM products WHERE barcode = ?', [barcode]);
     }
     for (const id of extraWarehouses.splice(0)) {
       await testQuery('DELETE FROM warehouses WHERE id = ?', [id]);
@@ -74,358 +124,106 @@ test.describe('migration 144 - backfill product warehouse fan-out', () => {
     for (const b of seededBranches.splice(0)) {
       await cleanupSecondBranch(b);
     }
-    if (migrationRow) {
-      if (migrationRow.existed) {
-        await testQuery('UPDATE migrations SET executed_at = ? WHERE name = ?', [
-          migrationRow.executed_at,
-          migration.name,
-        ]);
-      } else {
-        await testQuery('DELETE FROM migrations WHERE name = ?', [migration.name]);
-      }
-      migrationRow = null;
-    }
-  });
-
-  async function seed(): Promise<SeededBranch> {
-    const b = await seedSecondBranch();
-    seededBranches.push(b);
-    return b;
-  }
-
-  async function addWarehouse(branchId: string, active = true): Promise<string> {
-    const id = await addWarehouseToBranch(branchId, { active });
-    extraWarehouses.push(id);
-    return id;
-  }
-
-  function newSku(): string {
-    const sku = `BF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    skus.push(sku);
-    return sku;
-  }
-
-  /** Raw product insert for the shapes seedProductInWarehouse cannot make. */
-  async function insertProduct(f: {
-    id: string;
-    name: string;
-    warehouseId: string | null;
-    barcode?: string | null;
-    type?: 'standard' | 'service';
-    parentId?: string | null;
-    stock?: number;
-  }): Promise<void> {
-    await testQuery(
-      `INSERT INTO products (id, name, price, barcode, stock, warehouse_id, type, parent_id)
-       VALUES (?, ?, 1.00, ?, ?, ?, ?, ?)`,
-      [f.id, f.name, f.barcode ?? null, f.stock ?? 0, f.warehouseId, f.type ?? 'standard', f.parentId ?? null]
-    );
-  }
-
-  /** Pretend migration 144 was recorded one minute from now, so copies made now fall in down()'s window. */
-  async function recordMigrationInWindow(): Promise<void> {
-    // down() looks at products created in the ten minutes before executed_at. The
-    // seed catalogue was created minutes ago, so push it out of that window
-    // (restored in afterEach) - otherwise down() would delete seed rows too.
-    const seedRows = await testQuery('SELECT id, created_at FROM products WHERE id IN (?)', [[...preexisting, '']]);
-    for (const r of seedRows) backdated.push([r.id, r.created_at]);
-    await testQuery("UPDATE products SET created_at = '2000-01-01 00:00:00' WHERE id IN (?)", [[...preexisting, '']]);
-    const existing = await testQuery('SELECT executed_at FROM migrations WHERE name = ?', [migration.name]);
-    migrationRow = { existed: existing.length > 0, executed_at: existing[0]?.executed_at ?? null };
-    if (existing.length > 0) {
-      await testQuery('UPDATE migrations SET executed_at = DATE_ADD(NOW(), INTERVAL 1 MINUTE) WHERE name = ?', [
-        migration.name,
-      ]);
-    } else {
-      await testQuery(
-        'INSERT INTO migrations (name, timestamp, executed_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))',
-        [migration.name, migration.timestamp]
-      );
-    }
-  }
-
-  test('backfill fans existing products into their branch warehouses at zero stock', async () => {
-    const b = await seed();
-    const extra = await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-
-    await runBackfill();
-
-    const rows = await testQuery('SELECT warehouse_id, stock, avg_daily_sales FROM products WHERE barcode = ?', [sku]);
-    expect(rows).toHaveLength(2);
-    const copy = rows.find((r: any) => r.warehouse_id === extra);
-    expect(copy).toBeTruthy();
-    expect(Number(copy.stock)).toBe(0);
-    expect(Number(copy.avg_daily_sales)).toBe(0);
-    // The source keeps its quantity.
-    expect(Number(rows.find((r: any) => r.warehouse_id === b.warehouseId).stock)).toBe(10);
-  });
-
-  test('backfill is idempotent across two runs', async () => {
-    const b = await seed();
-    await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-
-    await runBackfill();
-    await runBackfill();
-
-    const rows = await testQuery('SELECT id FROM products WHERE barcode = ?', [sku]);
-    expect(rows).toHaveLength(2);
-  });
-
-  test('backfill skips services, non-root products and NULL-warehouse products', async () => {
-    const b = await seed();
-    await addWarehouse(b.branchId);
-    const tag = `BFSKIP-${Date.now()}`;
-    const parentSku = newSku();
-    const parentId = await seedProductInWarehouse(b.warehouseId, parentSku);
-    names.push(`${tag}-service`, `${tag}-child`, `${tag}-nowh`);
-    await insertProduct({ id: `${tag}-svc`, name: `${tag}-service`, warehouseId: b.warehouseId, type: 'service' });
-    await insertProduct({ id: `${tag}-chd`, name: `${tag}-child`, warehouseId: b.warehouseId, parentId });
-    await insertProduct({ id: `${tag}-nwh`, name: `${tag}-nowh`, warehouseId: null });
-
-    await runBackfill();
-
-    for (const n of [`${tag}-service`, `${tag}-child`, `${tag}-nowh`]) {
-      const rows = await testQuery('SELECT id FROM products WHERE name = ?', [n]);
-      expect(rows, n).toHaveLength(1);
-    }
-    // The root parent in the same warehouse IS still fanned out.
-    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [parentSku])).toHaveLength(2);
-  });
-
-  test('backfill creates no inventory batches and no stock', async () => {
-    const b = await seed();
-    await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-
-    const batchesBefore = await testQuery('SELECT COUNT(*) n FROM inventory_batches');
-    const stockBefore = await testQuery('SELECT COALESCE(SUM(stock), 0) s FROM products');
-    const movesBefore = await testQuery('SELECT COUNT(*) n FROM stock_movements');
-    await runBackfill();
-    // Guard against a do-nothing migration: the copy must really exist.
-    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])).toHaveLength(2);
-    const batchesAfter = await testQuery('SELECT COUNT(*) n FROM inventory_batches');
-    const stockAfter = await testQuery('SELECT COALESCE(SUM(stock), 0) s FROM products');
-    const movesAfter = await testQuery('SELECT COUNT(*) n FROM stock_movements');
-
-    expect(Number(batchesAfter[0].n)).toBe(Number(batchesBefore[0].n));
-    expect(Number(stockAfter[0].s)).toBe(Number(stockBefore[0].s));
-    expect(Number(movesAfter[0].n)).toBe(Number(movesBefore[0].n));
-  });
-
-  test('backfill never crosses branches and ignores inactive warehouses', async () => {
-    const a = await seed();
-    const other = await seed();
-    const inactive = await addWarehouse(a.branchId, false);
-    const sku = newSku();
-    await seedProductInWarehouse(a.warehouseId, sku);
-
-    await runBackfill();
-
-    // Branch A has one active warehouse (the source) and one inactive: nowhere to fan out to.
-    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku]);
-    expect(rows.map((r: any) => r.warehouse_id)).toEqual([a.warehouseId]);
-    expect(rows.map((r: any) => r.warehouse_id)).not.toContain(inactive);
-    expect(rows.map((r: any) => r.warehouse_id)).not.toContain(other.warehouseId);
   });
 
   /**
-   * Ang NAME mao na ang bugtong identity nga makagamit ang migration 144.
-   *
-   * Kaniadto kini nga test naay ikaduhang kalahati: usa ka row nga parehas ug
-   * `sku` apan lahi ug ngalan, nga gi-assert nga DILI ma-duplicate kay ang
-   * sku-match mo-una. Gi-tangtang na kana, DILI gi-rename ngadto sa barcode:
-   * ang migration 144 mo-match pinaagi sa `sku` dayon `name` ug DILI
-   * matandog (gi-mark sa CLAUDE.md nga applied ug historical), samtang ang
-   * products.sku blangko na sa tanang row. Busa ang sku nga lakang dili na gyud
-   * ma-abot, ug ang pag-ilis niini ug barcode mo-assert ug kinaiya nga WALA sa
-   * 144 — ang row nga gi-rename mo-fall sa name path, dili mo-match, ug
-   * ma-fan-out pag-usab (4 ka row nga parehas ug barcode, dili 2).
-   *
-   * Kini nga kaubanan gi-dokumento sa Task 2 nga brief: human sa migration
-   * 145, ang pag-salig sa 144 sa ngalan kay total na.
+   * The exact arrangement the fan-out used to act on: a branch with a product in
+   * one active warehouse and a second active warehouse beside it. Pre-145 this
+   * produced one copy; it must now produce none.
    */
-  test('a product already present by name is not duplicated', async () => {
-    const b = await seed();
-    const extra = await addWarehouse(b.branchId);
-    const noSkuName = `BFNOSKU-${Date.now()}`;
-    names.push(noSkuName);
-    await insertProduct({ id: `bf-n1-${Date.now()}`, name: noSkuName, warehouseId: b.warehouseId });
-    await insertProduct({ id: `bf-n2-${Date.now()}`, name: noSkuName, warehouseId: extra });
+  async function seedFanoutCandidate(): Promise<{ branch: SeededBranch; extra: string; barcode: string }> {
+    const branch = await seedSecondBranch();
+    seededBranches.push(branch);
+    const extra = await addWarehouseToBranch(branch.branchId, { active: true });
+    extraWarehouses.push(extra);
+    const barcode = `BF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    barcodes.push(barcode);
+    await seedProductInWarehouse(branch.warehouseId, barcode);
+    return { branch, extra, barcode };
+  }
 
-    await runBackfill();
-
-    expect(await testQuery('SELECT id FROM products WHERE name = ?', [noSkuName])).toHaveLength(2);
-  });
-
-  test('a product with no sku is fanned out once and not again on a second run', async () => {
-    const b = await seed();
-    await addWarehouse(b.branchId);
-    const name = `BFNOSKU2-${Date.now()}`;
-    names.push(name);
-    await insertProduct({ id: `bf-ns-${Date.now()}`, name, warehouseId: b.warehouseId });
-
-    await runBackfill();
-    await runBackfill();
-
-    expect(await testQuery('SELECT id FROM products WHERE name = ?', [name])).toHaveLength(2);
-  });
-
-  test('price levels are copied under the copy id', async () => {
-    const b = await seed();
-    const extra = await addWarehouse(b.branchId);
-    const sku = newSku();
-    const sourceId = await seedProductInWarehouse(b.warehouseId, sku);
-    const levels = (await testQuery('SELECT id FROM price_levels LIMIT 1')) as Array<{ id: string }>;
-    await testQuery(
-      'INSERT INTO product_price_levels (product_id, price_level_id, price, min_quantity) VALUES (?, ?, 7.50, 3)',
-      [sourceId, levels[0].id]
+  test('the schema this spec assumes really has no products.sku', async () => {
+    // If this fails, 144 is NOT inert and the rest of this spec asserts the
+    // wrong thing - the old fan-out assertions (see the docblock) would be the
+    // correct coverage again.
+    const rows = await testQuery(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'sku'`
     );
-
-    await runBackfill();
-
-    const copy = await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, extra]);
-    const copied = await testQuery(
-      'SELECT price_level_id, price, min_quantity FROM product_price_levels WHERE product_id = ?',
-      [copy[0].id]
-    );
-    expect(copied).toHaveLength(1);
-    expect(copied[0].price_level_id).toBe(levels[0].id);
-    expect(Number(copied[0].price)).toBe(7.5);
-    expect(Number(copied[0].min_quantity)).toBe(3);
+    expect(rows).toHaveLength(0);
   });
 
-  test('down removes untouched copies but keeps the source', async () => {
-    const b = await seed();
-    const extra = await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
+  test('up does not throw and fans nothing out', async () => {
+    const { branch, extra, barcode } = await seedFanoutCandidate();
+    const before = await snapshot();
+
     await runBackfill();
-    await recordMigrationInWindow();
 
-    await migration.down();
-
-    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku]);
-    expect(rows.map((r: any) => r.warehouse_id)).toEqual([b.warehouseId]);
+    // No ER_BAD_FIELD_ERROR, and no copy in the sibling warehouse.
+    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [barcode]);
+    expect(rows.map((r: any) => r.warehouse_id)).toEqual([branch.warehouseId]);
     expect(rows.map((r: any) => r.warehouse_id)).not.toContain(extra);
+    expect(await snapshot()).toEqual(before);
   });
 
-  test('down keeps a copy that has since received stock, history or a document', async () => {
-    const b = await seed();
-    const wStock = await addWarehouse(b.branchId);
-    const wMove = await addWarehouse(b.branchId);
-    const wBatch = await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
+  test('up is inert when run twice', async () => {
+    await seedFanoutCandidate();
+    const before = await snapshot();
+
+    await runBackfill();
     await runBackfill();
 
-    const idIn = async (w: string) =>
-      (await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
-    await testQuery('UPDATE products SET stock = 4 WHERE id = ?', [await idIn(wStock)]);
-    await testQuery(
-      `INSERT INTO stock_movements (id, product_id, product_name, movement_type, quantity_change, previous_stock, new_stock)
-       VALUES (?, ?, 'x', 'adjustment', 0, 0, 0)`,
-      [`bf-mv-${Date.now()}`, await idIn(wMove)]
-    );
-    await testQuery(
-      `INSERT INTO inventory_batches (id, product_id, quantity_in, quantity_remaining, received_date, selling_price, unit_cost)
-       VALUES (?, ?, 0, 0, CURDATE(), 1, 1)`,
-      [`bf-ib-${Date.now()}`, await idIn(wBatch)]
-    );
-    await recordMigrationInWindow();
-
-    await migration.down();
-
-    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku]);
-    const left = rows.map((r: any) => r.warehouse_id);
-    expect(left).toContain(wStock); // received stock
-    expect(left).toContain(wMove); // has a stock_movements row
-    expect(left).toContain(wBatch); // has an inventory_batches row
-    expect(left).toContain(b.warehouseId);
+    expect(await snapshot()).toEqual(before);
   });
 
-  test('down KEEPS a zero-stock, unreferenced copy created outside the 10-minute window', async () => {
-    const b = await seed();
-    const wOld = await addWarehouse(b.branchId);
-    const wNew = await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-    await runBackfill();
-    const idIn = async (w: string) =>
-      (await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
-    // Same shape as the other copy - stock 0, nothing referencing it - but old.
-    await testQuery("UPDATE products SET created_at = '2001-01-01 00:00:00' WHERE id = ?", [await idIn(wOld)]);
-    await recordMigrationInWindow();
-
-    await migration.down();
-
-    const left = (await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku])).map((r: any) => r.warehouse_id);
-    expect(left).toContain(wOld); // outside the window: not attributable to the backfill
-    expect(left).not.toContain(wNew); // inside the window: removed, proving down() did run
-    expect(left).toContain(b.warehouseId);
-  });
-
-  test('down deletes nothing when every copy of a product is itself a candidate', async () => {
-    const b = await seed();
-    const extra = await addWarehouse(b.branchId);
-    const sku = newSku();
-    const sourceId = await seedProductInWarehouse(b.warehouseId, sku);
-    // The source also has zero stock, no references and is created now: a candidate too.
-    await testQuery('UPDATE products SET stock = 0 WHERE id = ?', [sourceId]);
-    await runBackfill();
-    await recordMigrationInWindow();
-
-    await migration.down();
-
-    // Deleting either would leave no surviving sibling: the product would vanish from the branch.
-    const left = (await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku])).map((r: any) => r.warehouse_id);
-    expect(left.sort()).toEqual([b.warehouseId, extra].sort());
-  });
-
-  test('down KEEPS a zero-stock copy referenced by sale_items (the FK cascade would destroy the sale line)', async () => {
-    const b = await seed();
-    const wSold = await addWarehouse(b.branchId);
-    const wUnused = await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-    await runBackfill();
-    const idIn = async (w: string) =>
-      (await testQuery('SELECT id FROM products WHERE barcode = ? AND warehouse_id = ?', [sku, w]))[0].id as string;
-    const soldCopyId = await idIn(wSold);
-    expect(Number((await testQuery('SELECT stock FROM products WHERE id = ?', [soldCopyId]))[0].stock)).toBe(0);
-
-    const saleId = await seedSaleOnTerminal(b.terminalId, b.userUid);
+  test('down does not throw and deletes nothing, including a product with a sale line', async () => {
+    const { branch, extra, barcode } = await seedFanoutCandidate();
+    // The seeded test DB has no sale_items rows, so one is created here: the
+    // protection down() used to enforce explicitly was "never delete a product a
+    // filed sale line points at", and sale_items.product_id is ON DELETE
+    // CASCADE. With a real line in place, "down() deleted nothing" covers it.
+    const productId = (await testQuery('SELECT id FROM products WHERE barcode = ?', [barcode]))[0].id;
+    const saleId = await seedSaleOnTerminal(branch.terminalId, branch.userUid);
     sales.push(saleId);
     const lineId = `bf-si-${Date.now()}`;
     await testQuery(
       `INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, price)
-       VALUES (?, ?, ?, 'sold copy', 1, 1.00)`,
-      [lineId, saleId, soldCopyId]
+       VALUES (?, ?, ?, 'inert spec line', 1, 1.00)`,
+      [lineId, saleId, productId]
     );
-    await recordMigrationInWindow();
+
+    const before = await snapshot();
+    expect(before['sale_items']).toBeGreaterThan(0);
 
     await migration.down();
 
-    const left = (await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [sku])).map((r: any) => r.warehouse_id);
-    expect(left).toContain(wSold);
-    expect(left).not.toContain(wUnused); // the unreferenced sibling WAS removed, so the scan discriminates
+    expect(await snapshot()).toEqual(before);
+    const rows = await testQuery('SELECT warehouse_id FROM products WHERE barcode = ?', [barcode]);
+    expect(rows.map((r: any) => r.warehouse_id)).toEqual([branch.warehouseId]);
+    expect(extraWarehouses).toContain(extra);
     expect(await testQuery('SELECT id FROM sale_items WHERE id = ?', [lineId])).toHaveLength(1);
   });
 
-  test('down throws, changing nothing, when the migration was never recorded', async () => {
-    const b = await seed();
-    await addWarehouse(b.branchId);
-    const sku = newSku();
-    await seedProductInWarehouse(b.warehouseId, sku);
-    await runBackfill();
+  test('down no longer throws when the migrations row is absent', async () => {
+    // Pre-145 this was down()'s loudest guarantee: with no migrations row the
+    // 10-minute window cannot be established, so it threw "Cannot roll back"
+    // rather than guess. The compatibility guard returns before that check, so
+    // the error is unreachable - asserted here so the change is explicit rather
+    // than discovered later.
+    const existing = await testQuery('SELECT executed_at FROM migrations WHERE name = ?', [migration.name]);
     await testQuery('DELETE FROM migrations WHERE name = ?', [migration.name]);
-
-    await expect(migration.down()).rejects.toThrow(/Cannot roll back/);
-
-    expect(await testQuery('SELECT id FROM products WHERE barcode = ?', [sku])).toHaveLength(2);
+    try {
+      const before = await snapshot();
+      await expect(migration.down()).resolves.toBeUndefined();
+      expect(await snapshot()).toEqual(before);
+    } finally {
+      if (existing.length > 0) {
+        await testQuery('INSERT INTO migrations (name, timestamp, executed_at) VALUES (?, ?, ?)', [
+          migration.name,
+          migration.timestamp,
+          existing[0].executed_at,
+        ]);
+      }
+    }
   });
 });
