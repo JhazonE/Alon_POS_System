@@ -31,7 +31,6 @@ async function createTables() {
         avg_daily_sales DECIMAL(10,2) DEFAULT 0,
         price DECIMAL(10,2) NOT NULL,
         cost DECIMAL(10,2),
-        sku VARCHAR(100) UNIQUE,
         barcode VARCHAR(100),
         image_url VARCHAR(500),
         image_hint VARCHAR(255),
