@@ -314,7 +314,12 @@ export function InventoryTab() {
             render={({ field }) => {
               const entries: WarehouseEntry[] = field.value ?? [];
               const warehouseById = (id: string): Warehouse | undefined => warehouses.find((w: Warehouse) => w.id === id);
-              const labelOf = (w: Warehouse) => (w.branchName ? `${w.name} · ${w.branchName}` : w.name);
+              // The picker is already filtered to the branch selected above, so
+              // every warehouse here belongs to that one branch — appending its
+              // name to each option and chip would repeat what the Branch field
+              // already says. `branchName` stays on the type for the products
+              // page's own disambiguation.
+              const labelOf = (w: Warehouse) => w.name;
               const rowErrors = (form.formState.errors as any).warehouses as any;
               // A row cannot show its own error while the popover is shut, so
               // they are collected and listed under the field, each naming its
