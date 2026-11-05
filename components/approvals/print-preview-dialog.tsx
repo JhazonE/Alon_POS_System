@@ -215,7 +215,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                             <div className="text-[8pt] text-zinc-500 italic">{it.unitOfMeasure || ''}</div>
                           </td>
                           <td className="p-2">
-                            <div className="font-mono text-[8pt] text-zinc-600">{it.productBarcode || it.barcode || '-'}</div>
                             <div className="font-mono font-bold text-[10pt]">{it.productBarcode || it.barcode || '-'}</div>
                           </td>
                           <td className="p-2 text-[11pt] font-black text-right text-red-600">{it.quantity}</td>
@@ -230,7 +229,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                           <div className="text-[8pt] text-zinc-500 italic">{item.transaction_data.unitOfMeasure || ''}</div>
                         </td>
                         <td className="p-2">
-                          <div className="font-mono text-[8pt] text-zinc-600">{item.transaction_data.productBarcode || '-'}</div>
                           <div className="font-mono font-bold text-[10pt]">{item.transaction_data.productBarcode || '-'}</div>
                         </td>
                         <td className="p-2 text-[11pt] font-black text-right text-red-600">{item.transaction_data.quantity}</td>
@@ -271,9 +269,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                     <tr className="border-b border-zinc-100">
                       <td className="p-2 text-[10pt] font-medium">{item.transaction_data.productName || item.transaction_data.name || 'Unknown Product'}</td>
                       <td className="p-2 text-[10pt]">
-                        <div className="font-mono font-bold text-slate-600 text-[9pt]">
-                          {item.transaction_data.productBarcode || item.transaction_data.barcode || '-'}
-                        </div>
                         <div className="barcode-value font-mono font-bold text-black text-[12pt] mt-1">
                           {item.transaction_data.productBarcode || item.transaction_data.barcode || '-'}
                         </div>
@@ -329,7 +324,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                             <div className="text-[8pt] text-zinc-500 italic">{it.unitOfMeasure || it.uom || ''}</div>
                           </td>
                           <td className="p-2">
-                            <div className="font-mono text-[8pt] text-zinc-600">{it.productBarcode || it.barcode || '-'}</div>
                             <div className="font-mono font-bold text-[10pt]">{it.barcode || it.productBarcode || '-'}</div>
                           </td>
                           <td className="p-2 text-[11pt] font-black text-right">{it.quantity}</td>
@@ -342,7 +336,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                           <div className="text-[8pt] text-zinc-500 italic">{item.transaction_data.unitOfMeasure || ''}</div>
                         </td>
                         <td className="p-2">
-                          <div className="font-mono text-[8pt] text-zinc-600">{item.transaction_data.productBarcode || item.transaction_data.barcode || '-'}</div>
                           <div className="font-mono font-bold text-[10pt]">{item.transaction_data.productBarcode || item.transaction_data.barcode || '-'}</div>
                         </td>
                         <td className="p-2 text-[11pt] font-black text-right">{item.transaction_data.quantity}</td>
@@ -391,7 +384,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                         <tr key={idx} className="border-b border-zinc-100">
                           <td className="p-2 text-[10pt] font-medium">{it.productName || it.name}</td>
                           <td className="p-2 text-[10pt]">
-                            <div className="font-mono font-bold text-slate-600 text-[8pt]">{it.productBarcode || it.barcode || '-'}</div>
                             <div className="barcode-value font-mono font-bold text-black text-[11pt] mt-0.5">{it.productBarcode || it.barcode || '-'}</div>
                           </td>
                           <td className="p-2 text-[10pt] text-right">{it.snapshot_quantity}</td>
@@ -463,7 +455,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                       <tr key={idx} className="border-b border-zinc-100">
                         <td className="p-2 text-[10pt] font-medium">{it.productName || it.name || it.productId}</td>
                         <td className="p-2 text-[10pt]">
-                          <div className="font-mono font-bold text-slate-600 text-[8pt]">{it.productBarcode || it.barcode || '-'}</div>
                           <div className="barcode-value font-mono font-bold text-black text-[11pt] mt-0.5">{it.productBarcode || it.barcode || '-'}</div>
                         </td>
                         <td className="p-2 text-[10pt] font-mono text-right font-bold text-blue-700">{it.quantity}</td>
@@ -516,8 +507,7 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                       <tr key={idx} className="border-b border-zinc-100">
                         <td className="p-2 text-[10pt] font-medium">{it.productName || it.name || it.productId}</td>
                         <td className="p-2 text-[10pt]">
-                          <div className="font-mono font-bold text-slate-600 text-[8pt]">{it.productBarcode || it.barcode || '-'}</div>
-                          <div className="barcode-value font-mono font-bold text-black text-[11pt] mt-0.5">{it.productBarcode || it.barcode || it.barcode || '-'}</div>
+                          <div className="barcode-value font-mono font-bold text-black text-[11pt] mt-0.5">{it.productBarcode || it.barcode || '-'}</div>
                         </td>
                         <td className="p-2 text-[10pt] font-mono text-right font-bold text-blue-700">{it.quantity}</td>
                         <td className="p-2 text-[10pt] font-mono text-right">₱{(it.cost || 0).toLocaleString()}</td>
@@ -609,7 +599,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                       <tr key={idx} className="border-b border-zinc-100">
                         <td className="p-2 text-[10pt] font-medium">{it.productName || it.name}</td>
                         <td className="p-2 text-[10pt]">
-                           <div className="font-mono font-bold text-slate-600 text-[8pt]">{it.productBarcode || it.barcode || '-'}</div>
                            <div className="barcode-value font-mono font-bold text-black text-[11pt] mt-0.5">{it.productBarcode || it.barcode || '-'}</div>
                         </td>
                         <td className="p-2 text-[10pt] font-mono text-right">{it.quantity}</td>
@@ -645,7 +634,6 @@ export function PrintPreviewDialog({ item, open, onOpenChange }: PrintPreviewDia
                       <tr key={idx} className="border-b border-zinc-100">
                         <td className="p-2 text-[10pt] font-medium">{it.productName || it.name}</td>
                         <td className="p-2 text-[10pt]">
-                           <div className="font-mono font-bold text-slate-600 text-[8pt]">{it.productBarcode || it.barcode || '-'}</div>
                            <div className="barcode-value font-mono font-bold text-black text-[11pt] mt-0.5">{it.productBarcode || it.barcode || '-'}</div>
                         </td>
                         <td className="p-2 text-[10pt] font-mono text-right">{it.quantity}</td>

@@ -167,12 +167,27 @@ export async function GET(request: NextRequest) {
         // active warehouse of its branch, and scoped_products spans every
         // warehouse of the branch, so a plain COUNT(*) would count one product
         // once per warehouse. Count its identity instead: the barcode, falling
-        // back to the name -- the same identity TransferStockService and the
-        // fan-out backfill (migration 144) use to match a product across
-        // warehouses. products.barcode is NULLable (and '' is falsy to those
-        // matchers), so COUNT(DISTINCT barcode) alone would silently drop every
-        // barcode-less product. The barcode:/name: prefixes keep the two kinds
-        // of identity from colliding.
+        // back to the name.
+        //
+        // THIS IDENTITY DELIBERATELY MIRRORS NO CROSS-WAREHOUSE MATCHER, and it
+        // used to. Before products.sku was retired this count keyed on sku ->
+        // name and so did both matchers. Today they have all diverged:
+        // TransferStockService (and lib/family-sync.ts) match on the NAME ONLY,
+        // the bulk-adjust transfer path matches barcode -> name (see
+        // resolveTransferTarget in app/api/inventory/adjust/bulk/route.ts for
+        // why it keeps the barcode step), and migration 144's fan-out backfill
+        // still matches sku -> name but is inert now that migration 145 dropped
+        // the column. No matcher keys on barcode first. That is fine here
+        // because this is a REPORTING count, not a write target: it only has to
+        // collapse the fan-out copies of one product into one, and barcode is
+        // the most specific user-facing code for that. Nothing reconciles this
+        // number against a matcher's grouping, so do not "restore parity" by
+        // changing either side to match the other.
+        //
+        // products.barcode is NULLable (and '' is falsy), so
+        // COUNT(DISTINCT barcode) alone would silently drop every barcode-less
+        // product. The barcode:/name: prefixes keep the two kinds of identity
+        // from colliding.
         // reports/inventory is deliberately NOT changed: it lists one row per
         // product-warehouse, so its pagination COUNT(*) must keep matching.
         const productIdentity = "COALESCE(CONCAT('barcode:', NULLIF(barcode, '')), CONCAT('name:', name))";

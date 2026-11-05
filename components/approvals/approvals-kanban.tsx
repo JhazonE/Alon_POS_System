@@ -267,7 +267,6 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
             cols={[
               { key: 'productName', label: 'Product' },
               { key: 'productBarcode', label: 'Barcode' },
-              { key: 'productBarcode', label: 'Barcode' },
               { key: 'quantity', label: 'Qty', right: true },
               { key: 'cost', label: 'Unit Cost', right: true },
             ]}
@@ -288,7 +287,6 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
             items={d.receivedItems || d.items || []}
             cols={[
               { key: 'productName', label: 'Product' },
-              { key: 'productBarcode', label: 'Barcode' },
               { key: 'productBarcode', label: 'Barcode' },
               { key: 'quantity', label: 'Qty', right: true },
               { key: 'cost', label: 'Unit Cost', right: true },
@@ -319,7 +317,6 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
             <Row label="To" value={d.toWarehouseName || d.targetWarehouseId} />
             {!d.items && <Row label="Product" value={d.productName} />}
             {!d.items && <Row label="Barcode" value={d.productBarcode || d.barcode || '—'} />}
-            {!d.items && <Row label="Barcode" value={d.productBarcode || d.barcode || '—'} />}
             {!d.items && <Row label="Quantity" value={d.quantity} />}
           </div>
           {d.items && d.items.length > 0 && (
@@ -327,7 +324,6 @@ function TransactionDetails({ item }: { item: ApprovalItem }) {
               items={d.items}
               cols={[
                 { key: 'productName', label: 'Product' },
-                { key: 'productBarcode', label: 'Barcode' },
                 { key: 'productBarcode', label: 'Barcode' },
                 { key: 'quantity', label: 'Qty', right: true },
               ]}
