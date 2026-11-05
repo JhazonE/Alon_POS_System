@@ -107,30 +107,84 @@ Read before designing; the implementer can rely on these:
 
 ## The decisions, as made
 
-### Cost updates the product record, and the batch follows for free
+### Cost updates the product record, and the batch follows — after a prerequisite fix
 
 The user chose: the typed cost updates the product's cost record, not just the
 batch.
 
-Because `lib/stock-movements.ts` reads `products.cost` when it creates the new
-batch, **updating `products.cost` before the stock change makes the batch pick up
-the new cost automatically.** One write satisfies both halves of the
-requirement.
-
-So the ordering inside the route's per-item loop is load-bearing:
+`lib/stock-movements.ts` reads `products.cost` when it creates the new batch, so
+updating `products.cost` before the stock change is intended to make the batch
+pick up the new cost. The ordering inside the route's per-item loop is therefore
+load-bearing:
 
 1. update `products.cost` (when a cost was supplied), then
 2. perform the stock change as it does today.
 
-Both already happen inside the same `withTransaction`, so a failure rolls back
-the cost change along with the stock.
+Both happen inside the same `withTransaction`, so a failure rolls back the cost
+change along with the stock.
+
+**But this does not work today, and fixing it is step one.** The read at
+`lib/stock-movements.ts` ~line 195 is:
+
+```ts
+const costInfo = await query('SELECT cost, price FROM products WHERE id = ?', [productId]);
+```
+
+`query()` is the **pool**, not the `connection` threaded through the rest of
+that function. Under InnoDB REPEATABLE READ on a separate connection, an
+uncommitted `UPDATE products SET cost = ?` is invisible to it, so the batch
+would be created at the **old** cost while `products.cost` carries the new one —
+and the printout, which must show the cost the batch was actually posted at,
+would disagree with the batch.
+
+**Decision: fix the read to use `connection` when one is passed.**
+
+This is a pre-existing bug, not merely an obstacle: *any* caller that updates
+cost inside a transaction and then adds stock already gets a stale batch cost,
+silently. The alternative considered and rejected was post-correcting the batch
+with an `UPDATE inventory_batches` scoped to this feature — that leaves the bug
+in place and adds a second cost-writing path on top of it.
+
+Because `updateStockAndRecordMovement` is called from **every** stock write path
+in the system (sales, POs, transfers, counts, family sync), this is a repo-wide
+behaviour change and must be **its own step, with its own tests, landed before
+the feature work**. The change makes the batch see same-transaction cost writes;
+no existing caller updates cost inside its transaction before adding stock, so
+no current behaviour should shift — but that expectation is exactly what the
+tests must pin down.
+
+**Note the surrounding `try/catch`**, which currently only `console.warn`s on a
+batch-costing failure. That is out of scope here, but the implementer should
+know it exists: a swallowed failure would produce a printout claiming a cost no
+batch carries. CLAUDE.md records that the product-create path made its opening
+batch insert fatal for the same class of reason. Flag it as a follow-up; do not
+change it as part of this work.
 
 **Do not** add a cost parameter to `addFamilyStock` or
-`updateStockAndRecordMovement` to carry it down. That would duplicate the source
-of truth and would also force a decision about what cost a *family member's*
-cascaded batch should take — a question this feature has no business answering.
-Letting the family cascade keep reading each member's own `products.cost` is the
-correct existing behaviour.
+`updateStockAndRecordMovement` to carry the cost down. That would duplicate the
+source of truth and would also force a decision about what cost a *family
+member's* cascaded batch should take — a question this feature has no business
+answering. Letting the family cascade keep reading each member's own
+`products.cost` is the correct existing behaviour. The fix above changes only
+*which connection* that read uses, not where the cost comes from.
+
+### The cost write must also sync the base selling unit
+
+`lib/selling-unit-sync.ts` states it directly: any writer of `products.cost`
+that does not also update the base selling unit leaves a stale value there, **and
+the next unrelated Edit Product save silently reverts the change.**
+`lib/price-update-batch.ts` and `lib/purchase-actions.ts` both call
+`syncBaseSellingUnit` after writing cost.
+
+**Decision: this feature calls it too**, passing only `cost`. Without it, the
+cost would be reverted by the next edit of that product, leaving the batch and
+the printed document disagreeing with the product record an auditor later looks
+up — squarely this design's own anti-goal.
+
+This slightly widens what the feature writes (`product_selling_units.cost` of
+the base row) and deserves its own test. Note that the Constraints section calls
+`products.cost` the single source of truth; that is true of what *readers*
+consult, but writers must keep the base selling unit in step.
 
 ### Cost applies to ADD only
 
@@ -183,9 +237,29 @@ already resolves the caller for branch scope, so the grant check belongs
 alongside it. Refuse the request rather than silently dropping the costs — a
 dropped cost would post stock at the wrong valuation with no signal.
 
+**The check is strict: an `EXISTS` against `user_permissions` for
+`edit_product_cost`, mirroring `assertHeadOffice`.** No `userType` shortcut — an
+`Admin` does not carry it implicitly. That is what makes the next sentence true.
+
 Existing users do not have this permission, so cost entry is off everywhere
 until an administrator grants it. That is the correct default for a field that
 moves valuation.
+
+**Two consequences the implementer must handle, both verified in the code:**
+
+- The client-side `hasPermission` in `app/(app)/use-app-layout.ts` returns true
+  for everything when the session carries `super_admin`, which is set only by the
+  **dev-only** localStorage fallback session. So in development the UI would
+  render the cost column while a strict server check rejects the submission.
+  Grant `edit_product_cost` to the relevant seeded users so the dev flow and the
+  E2E suite exercise the real path; do not loosen the server check to
+  accommodate the dev session.
+- `userType === 'Cashier'` is narrowed to `access_pos` client-side and never
+  reaches this screen; no special handling needed.
+
+No migration is required for the permission itself: permissions are per-user
+rows, `ALL_PERMISSIONS` feeds only the user-management UI grids, and there are
+no role templates to update.
 
 ### The printout
 
@@ -193,9 +267,18 @@ The user reviewed a mockup and approved the version **with the signature
 block**. The mockup is at
 `.superpowers/brainstorm/845-1793793333/content/printout.html`.
 
-**Header:** title "STOCK ADJUSTMENT REPORT", business/branch name, reference
-number, date and time, warehouse, mode, supplier (when one was chosen), and who
-posted it.
+**Header:** title "STOCK ADJUSTMENT REPORT", the **issuing branch's**
+`business_name`, reference number, date and time, warehouse, mode, supplier
+(when one was chosen), and who posted it.
+
+The branch's `business_name`, **not** the company name from `/api/pos-settings`.
+The audience is a supplier and an auditor, and the whole branch phase exists to
+keep establishments distinct; a document about one branch's stock should name
+that branch. The stock-count print layout has no business-name header, so there
+is no existing pattern to copy. Note that `GET /api/branches` is flagged in
+CLAUDE.md as unauthenticated and wider than it looks — take only the name
+needed, and prefer resolving it server-side alongside the posted results rather
+than widening any client's access to the BIR identity fields.
 
 **Table, one row per posted product:** product name, barcode, signed quantity,
 unit cost, total cost (quantity × unit cost), stock after.
@@ -212,6 +295,59 @@ The unit cost shown must be **the cost the batch was actually posted at** — th
 newly typed cost where one was given, otherwise the product's existing cost. The
 document is for an auditor; it must state what happened, not what was typed.
 
+### The cost travels through approval
+
+When `STOCK_ADJUSTMENT` approval is on, the route `continue`s before any
+`stock_adjustments` row is written and the item goes to the approval queue. A
+typed cost must therefore either travel in the approval payload and be applied
+at finalization, or be dropped.
+
+**Decision: carry it.**
+
+The alternative considered and rejected was suppressing the cost field whenever
+approval is on. That would disable the feature for exactly the stores most
+likely to want cost control, and the per-store approval setting is not visible
+from this screen, so the field would vanish for reasons the user cannot see.
+
+**What this costs, verified in the code.** Finalization does not come back
+through the bulk route. `app/api/approvals/process/route.ts:168` calls
+`adjustStockWithScope(...)` in `lib/stock-adjust.ts`, which writes
+`stock_adjustments` with only `(id, product_id, quantity, reason, new_stock)` —
+no `reference_no`, no `supplier_id`, no cost column. So carrying the cost means:
+
+1. Putting the cost in the approval payload alongside the existing
+   `expirationDate`, `referenceNo` and `supplierId` metadata.
+2. Extending `adjustStockWithScope` with an **optional** cost parameter, and
+   extending its `stock_adjustments` INSERT to write `unit_cost` (and, while
+   there, the reference, so a queued-then-approved item is not invisible to a
+   future reprint screen).
+3. Applying the same `products.cost` update **and** `syncBaseSellingUnit` call
+   at finalization that the direct path performs.
+
+This touches the single-product adjustment path's *signature*, but adds no cost
+UI there — the non-goal ("a cost column on the single-product adjustment path")
+stands, because the parameter is optional and that path passes nothing.
+
+**`adjustStockWithScope` has the same connection problem.** It uses `query()`
+(the pool) for its `stock_adjustments` insert and opens its own
+`withTransaction` for the family sync. The step-one fix above addresses the read
+inside `updateStockAndRecordMovement`; the implementer must confirm the cost
+update here is visible to the batch created by that call, and order the writes
+so it is. This is a second instance of the same hazard, not a separate design
+question.
+
+**The permission re-check at finalization targets the creator, not the
+approver** — `item.created_by`, consistent with how
+`scopeForQueuedItem(item.created_by)` already resolves branch scope on the line
+above. The approver may legitimately lack `edit_product_cost`; they are
+approving someone else's request, not typing a cost.
+
+**On failure, refuse the item** and leave it Pending with a message, matching
+the branch-refusal precedent in that same route. Do not finalize the stock
+change while dropping the cost: that would post stock at a valuation nobody
+chose. CLAUDE.md notes `created_by` is DB-sourced but not session-proven; that
+limitation is inherited here and is not made worse by this feature.
+
 ### What prints is what posted
 
 Confirmed with the user.
@@ -226,6 +362,14 @@ The route's response already distinguishes `results` (posted) from `queuedItems`
 
 A document that listed queued items as adjusted would be a false record going to
 an auditor.
+
+**There is no partial-failure case to handle.** The route's `withTransaction`
+wraps the whole loop and any per-item failure throws, so the outcomes are: all
+posted, all queued, or all rolled back with a 500. The only mixed case is
+`results` vs `queuedItems`, which is what the rule above covers. Do **not**
+restructure the transaction boundary to tolerate per-item failure — the
+all-or-nothing behaviour is correct and matches the batch writers described in
+CLAUDE.md.
 
 For this to work the route must return enough per-item data to render the
 document. `results` currently carries `{ productId, productName, newStock }`.
@@ -242,11 +386,23 @@ later — it needs one.
 
 When the batch is ADD and the user left the reference blank, generate one
 server-side and use it for every row in the batch. Return it in the response so
-the printout can show it. Format should follow whatever the codebase already
-uses for internal document series — prefer `getNextReference()` (the existing
-company-wide internal series mechanism) over inventing a new counter; the
-implementer should confirm it has a suitable series and add one if not. A
-user-supplied reference is used as-is.
+the printout can show it. A user-supplied reference is used as-is.
+
+**Decision: use `getNextReference('stock_adjustment')` — company-wide, and it
+needs no migration.**
+
+Verified: `transaction_references` already has a `stock_adjustment` column, and
+all three data-reset paths already seed it in their fixed `INSERT` column list
+(`app/api/data-management/reset/route.ts`). No caller increments it today, so
+this feature inherits the counter at its seeded `'1000'`. Reusing it therefore
+touches neither a migration nor the reset route, and the CLAUDE.md invariant
+about resets re-issuing filed numbers is already satisfied for this series.
+
+**Company-wide, not per-branch**, matching CLAUDE.md: the nine internal document
+series and `receipt_number` stay company-wide, while per-establishment numbering
+is reserved for BIR documents in `branch_number_series`. This is an internal
+document, not a BIR one, and the issuing branch is already identified in the
+printout header. Do **not** add a `branch_number_series` column for it.
 
 This is deliberately the one piece of groundwork that makes a future "reprint
 this batch" screen possible without another migration.
@@ -256,17 +412,37 @@ this batch" screen possible without another migration.
 `stock_adjustments` records what each adjustment did but has no cost column, so
 today the posted cost is only recoverable indirectly through the batch. For an
 auditable document, store it: **migration 145** adds a nullable
-`unit_cost DECIMAL(15, 4) DEFAULT NULL` to `stock_adjustments`, written on every
+`unit_cost DECIMAL(10, 2) DEFAULT NULL` to `stock_adjustments`, written on every
 ADD row with the cost the batch was posted at (typed or existing).
 
 Nullable, because every historical row predates it and REMOVE/TRANSFER rows have
 no meaningful single cost. `down()` drops the column. Follow the shape of
 migration 073, which added the other metadata fields to this same table.
 
-Match the precision already used for money in this schema rather than copying
-`DECIMAL(15, 4)` blindly — migration 078 set stock columns to `DECIMAL(15, 4)`;
-the implementer should check what `products.cost` itself uses and match that, so
-a cost cannot round differently between the two tables.
+**Precision: `DECIMAL(10, 2)`, matching `products.cost`** (migration 001, never
+altered). Note the consequence, which is accepted rather than solved:
+`inventory_batches.unit_cost` is 4dp, so a cost is stored at 2dp here and in
+`products.cost` but at 4dp on the batch. Matching the product record is the
+right call — this column exists to state what the product's cost was set to, and
+a cost the user typed in pesos and centavos should round once, consistently,
+wherever cost is stored. The input should therefore accept 2 decimal places;
+rejecting or rounding beyond that is better than storing a precision the product
+record cannot hold.
+
+## Order of work
+
+The first item is a prerequisite, not part of the feature, and must land and be
+tested on its own:
+
+1. **Fix the batch-costing read** in `lib/stock-movements.ts` to use the passed
+   `connection`. Repo-wide blast radius; own tests.
+2. Migration 145 — `stock_adjustments.unit_cost`.
+3. The `edit_product_cost` permission, server check included.
+4. Cost capture in the bulk route: `products.cost` + `syncBaseSellingUnit` +
+   `unit_cost` + the reference number.
+5. The approval payload and `adjustStockWithScope` extension.
+6. The cost column in the table and mobile card.
+7. The print layout and the post-success print offer.
 
 ## Open to the builder
 
@@ -291,10 +467,6 @@ a cost cannot round differently between the two tables.
   server-side validation and the permission gate exists because a wrong cost
   silently misstates margin and inventory value on every downstream report.
   None of those three is optional.
-- **The approval path is easy to get wrong.** The queued branch of the route
-  `continue`s before any `stock_adjustments` row is written, so a cost attached
-  to a queued item must travel in the approval payload and be applied at
-  finalization, or be knowingly dropped. The builder must pick one and say which
-  — and if the cost travels in the payload, finalization re-checks the permission
-  question, because the approver is not the person who typed the cost. Carrying
-  it is the better behaviour; dropping it silently is not acceptable.
+- **The approval path carries real work.** See the dedicated section above; it
+  is the largest piece of this feature, and the estimate should reflect that
+  rather than treating it as a payload tweak.
