@@ -60,6 +60,11 @@ async function chooseAllWarehouses(page: Page) {
   await warehouseTab(page, 'All warehouses').click();
 }
 
+/** Warehouse names are free text; escape them before building a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 test.describe('products table defaults to a single warehouse', () => {
   let seeded: SeededBranch;
   let firstWh: string;
@@ -280,6 +285,15 @@ test.describe('products table defaults to a single warehouse', () => {
     await expect(selected).toHaveText(
       new RegExp(`^(${mainNames.map((r) => r.name).join('|')})`),
     );
-    await expect(warehouseTab(page, firstWhName)).toHaveAttribute('aria-selected', 'false');
+    // Head office sees every branch's warehouses, and each tab then carries its
+    // branch name as a suffix ("Test WH 21cc522a Test Branch 21cc522a"), so the
+    // exact-name `warehouseTab` helper (right for branch users, whose tabs have no
+    // suffix) can never find it. Match the warehouse-name prefix, and require the
+    // tab to exist: a missing locator must fail, not pass vacuously.
+    const otherBranchTab = page
+      .getByRole('tablist', { name: 'Warehouse' })
+      .getByRole('tab', { name: new RegExp(`^${escapeRegExp(firstWhName)}`) });
+    await expect(otherBranchTab).toHaveCount(1);
+    await expect(otherBranchTab).toHaveAttribute('aria-selected', 'false');
   });
 });

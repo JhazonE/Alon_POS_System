@@ -119,7 +119,17 @@ test.describe('Add product with a supplier mapping', () => {
     // I-verify nga na-persist ang supplier mapping pinaagi sa pag-abli sa Edit
     // Product's Suppliers tab (walay REST endpoint para sa supplier_product_mapping,
     // mao nga ang UI mismo ang verification layer, sama sa Edit Product's own test).
+    // The search is debounced (500ms) and then keys a NEW products query, which
+    // swaps the rows for skeletons while it loads. The new product is already the
+    // only row in the default warehouse, so `row` below is visible BEFORE that
+    // filtered fetch lands; opening Edit inside that window loses the sheet when
+    // the rows remount (its open state lives in the row component). So wait for
+    // the filtered request itself, registered before the fill so it cannot be missed.
+    const filtered = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && (r.request().postData() ?? '').includes(NEW_PRODUCT.name),
+    );
     await page.getByPlaceholder('Search products...').fill(NEW_PRODUCT.name);
+    await filtered;
     const row = page.getByRole('row', { name: new RegExp(NEW_PRODUCT.name) });
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: 'Open menu' }).click();
