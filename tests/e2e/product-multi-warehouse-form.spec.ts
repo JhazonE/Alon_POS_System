@@ -253,6 +253,23 @@ test.describe('add product: multi-warehouse picker', () => {
     await expect(dialog.getByLabel('Cost (₱)')).toHaveCount(1);
   });
 
+  // Regression: the Branch field is NOT a react-hook-form field, but it was built
+  // from FormItem/FormLabel/FormControl/FormDescription, all of which call
+  // useFormField() and THROW outside a <FormField>. It only renders when there is
+  // more than one branch to choose, so it crashed the Inventory tab for exactly
+  // one audience - head office on a multi-branch install - and nothing else
+  // exercised it: the branch-user tests never render the field at all.
+  test('head office with several branches gets the Branch field, and the tab renders', async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (e) => pageErrors.push(e.message));
+
+    // beforeEach seeds two extra branches, so head office has several to choose from.
+    const dialog = await openInventoryTab(page, DEFAULT_ADMIN);
+
+    await expect(dialog.getByLabel('Branch', { exact: true })).toBeVisible();
+    expect(pageErrors.filter((m) => m.includes('useFormField')), 'the Branch field must not read FormField context').toEqual([]);
+  });
+
   test('head office tells warehouses of different branches apart by branch name', async ({ page }) => {
     const branch: any[] = await testQuery('SELECT name FROM branches WHERE id = ?', [seeded.branchId]);
     const dialog = await openInventoryTab(page, DEFAULT_ADMIN);

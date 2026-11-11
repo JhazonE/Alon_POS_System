@@ -2,6 +2,7 @@
 
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { UnitOfMeasure, Warehouse } from '@/lib/types';
@@ -279,29 +280,35 @@ export function InventoryTab() {
               option is a question with no answer to give. The server derives
               the branch from the warehouse rows themselves and refuses a
               submission spanning two, so this field is a convenience, not the
-              guard. */}
+              guard.
+
+              It is deliberately NOT a FormItem/FormLabel/FormControl/
+              FormDescription: the branch lives in local state
+              (`selectedBranch`) and is never submitted, so there is no
+              react-hook-form field to bind it to, and every one of those
+              components reads the FormField context through useFormField,
+              which THROWS outside a <FormField>. That blanked this dialog for
+              a head office with more than one branch. */}
           {branchOptions.length > 1 && (
-            <FormItem className="sm:col-span-2">
-              <FormLabel htmlFor="product-branch">Branch</FormLabel>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="product-branch">Branch</Label>
               <Select
                 value={selectedBranch ?? undefined}
                 onValueChange={setSelectedBranch}
               >
-                <FormControl>
-                  <SelectTrigger id="product-branch" className="sm:max-w-sm">
-                    <SelectValue placeholder="Select a branch" />
-                  </SelectTrigger>
-                </FormControl>
+                <SelectTrigger id="product-branch" className="sm:max-w-sm">
+                  <SelectValue placeholder="Select a branch" />
+                </SelectTrigger>
                 <SelectContent>
                   {branchOptions.map((b: { id: string; name: string }) => (
                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <FormDescription>
+              <p className="text-sm text-muted-foreground">
                 Changing the branch clears the warehouses picked below.
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
           )}
 
           {/* The warehouses this product is created in, each with its OWN opening
