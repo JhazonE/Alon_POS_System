@@ -16,8 +16,8 @@ npm run dev                  # Next.js + Turbopack on port 3000
 npm run build && npm start   # Production build
 
 # Code quality
-npm run lint
-npm run typecheck
+npm run lint                 # BROKEN: `next lint` was removed in Next 16 and there is no eslint config
+npm run typecheck           # run `rm -rf .next/types` first (see E2E Tests)
 
 # Database
 npm run migrate              # Run all pending migrations
@@ -185,6 +185,10 @@ A completely standalone HTTP server (no Next.js), in its own git repository. Man
 ### E2E Tests
 
 Playwright tests run on port 3100 against a separate `alon_pos_test` database. `tests/e2e/setup/global-setup.ts` creates and seeds this DB before any test runs. Tests are sequential (workers: 1) to avoid concurrent DB mutations. Run `npm run test:e2e:db` to reset the test DB without re-running tests.
+
+**Clear the build cache before any E2E run whose failures you will compare.** The web server runs from `.next-test` (`NEXT_DIST_DIR` in `playwright.config.ts`) and `reuseExistingServer` is `!process.env.CI`, so locally a run uses whatever server and Turbopack cache is already there. A stale ~3 GB `.next-test` made one run report 85 failures where the same code on a cleared cache reported 16: 70 were phantom (routes resolving to `_not-found`, `Failed to find Server Action`, 30.1s timeouts on specs the change never touched). `rm -rf .next-test` first. Compare runs by spec file + test title, not `file:line` (edits shift line numbers), and read the `N failed` summary line rather than the exit code of a shell chain you wrapped around the run — a trailing `tail` or `grep` reports its own exit status, not Playwright's. Even on a clean cache a few specs time out at exactly 30.1s under full-suite load and pass alone (`branch-server-action-isolation`, the "Cancel Order" page-level test in `branch-write-isolation`), so re-run a spec in isolation before treating such a failure as a regression.
+
+**Clear `.next/types` before `npm run typecheck`.** After an interrupted or earlier `npm run build`, `tsc --noEmit` picks up stale generated route types and reports errors under `.next/types/**` that are not in source (10 phantom errors on one occasion, 0 after `rm -rf .next/types`).
 
 ---
 
