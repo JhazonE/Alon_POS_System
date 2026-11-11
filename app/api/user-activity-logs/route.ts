@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200);
     const offset = parseInt(searchParams.get('offset') || '0');
-    const module = searchParams.get('module');
+    const moduleFilter = searchParams.get('module');
     const action = searchParams.get('action');
     const userUid = searchParams.get('userUid');
     const search = searchParams.get('search');
@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
     const conditions: string[] = [];
     const params: any[] = [];
 
-    if (module && module !== 'ALL') {
+    if (moduleFilter && moduleFilter !== 'ALL') {
       conditions.push('module = ?');
-      params.push(module);
+      params.push(moduleFilter);
     }
     if (action && action !== 'ALL') {
       conditions.push('action = ?');
