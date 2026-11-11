@@ -12,7 +12,6 @@ export async function getStockAdjustments(limit?: number, offset?: number) {
         sa.*,
         'Completed' as status,
         p.name as product_name,
-        p.sku as product_sku,
         p.category,
         p.brand
       FROM stock_adjustments sa
@@ -26,7 +25,6 @@ export async function getStockAdjustments(limit?: number, offset?: number) {
       SELECT 
         aq.*,
         p.name as product_name,
-        p.sku as product_sku,
         p.category,
         p.brand
       FROM approval_queue aq
@@ -48,7 +46,6 @@ export async function getStockAdjustments(limit?: number, offset?: number) {
       product: adj.product_name ? {
         id: adj.product_id,
         name: adj.product_name,
-        sku: adj.product_sku,
         category: adj.category,
         brand: adj.brand
       } : undefined
@@ -68,7 +65,6 @@ export async function getStockAdjustments(limit?: number, offset?: number) {
         product: item.product_name ? {
             id: txData.productId,
             name: item.product_name,
-            sku: item.product_sku,
             category: item.category,
             brand: item.brand
         } : undefined
@@ -106,8 +102,7 @@ export async function getStockAdjustmentsByProduct(productId: string, limit?: nu
     let sql = `
       SELECT
         sa.*,
-        p.name as product_name,
-        p.sku as product_sku
+        p.name as product_name
       FROM stock_adjustments sa
       LEFT JOIN products p ON sa.product_id = p.id
       WHERE sa.product_id = ?
@@ -133,8 +128,7 @@ export async function getStockAdjustmentsByProduct(productId: string, limit?: nu
       newStock: parseInt(adj.new_stock),
       product: adj.product_name ? {
         id: adj.product_id,
-        name: adj.product_name,
-        sku: adj.product_sku
+        name: adj.product_name
       } : undefined
     })) as StockAdjustment[];
   } catch (error) {

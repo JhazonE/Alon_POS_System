@@ -8,7 +8,6 @@ export interface ProductEntity {
   stock: number;
   price: number;
   cost?: number;
-  sku: string;
   barcode?: string;
   vatStatus?: string;
   availability?: string;

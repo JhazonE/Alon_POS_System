@@ -220,7 +220,7 @@ export function CountDetailClient({ countId }: { countId: string }) {
             <TableHeader>
               <TableRow>
                 <TableHead>Product Name</TableHead>
-                <TableHead>SKU/Barcode</TableHead>
+                <TableHead>Barcode</TableHead>
                 <TableHead className="text-right">Expected (Snapshot)</TableHead>
                 <TableHead className="text-right w-48">Actual Count</TableHead>
                 <TableHead className="text-right">Cost Amount</TableHead>
@@ -245,7 +245,7 @@ export function CountDetailClient({ countId }: { countId: string }) {
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.product_name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {item.product_sku || item.product_barcode || '-'}
+                      {item.product_barcode || '-'}
                     </TableCell>
                     <TableCell className="text-right">{item.snapshot_quantity}</TableCell>
                     <TableCell className="text-right">

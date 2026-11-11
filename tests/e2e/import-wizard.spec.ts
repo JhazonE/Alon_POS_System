@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { testQuery } from './helpers/db';
 
 const fixture = (f: string) => path.join(__dirname, 'fixtures', f);
 
@@ -43,10 +44,30 @@ test('products export round-trips through the import wizard as updates', async (
   await page.setInputFiles('input[type="file"]', exportPath!);
   await page.getByRole('button', { name: /Next: Preview/i }).click();
 
-  // Every exported row already exists -> all classify as updates, none new, none skipped.
-  await expect(page.getByText('0 new')).toBeVisible();
-  await expect(page.getByText('0 skipped')).toBeVisible();
-  await expect(page.getByText(/[1-9]\d* update/)).toBeVisible();
+  // Every exported row already exists, so nothing is new. The export writes one
+  // CSV row per warehouse row and has no warehouse column, so a product held in
+  // several warehouses exports as several rows with the same barcode. The wizard
+  // matches on barcode (name when there is none) and flags every repeat after the
+  // first as a duplicate. That skip is correct for this importer: an update
+  // touches catalogue fields only and never stock, so the repeat adds nothing.
+  // What must hold is that the ONLY skips are those repeats -- compute how many
+  // there are from the DB rather than hard-coding the fixture's count, so a
+  // skip for any other reason (missing identifier, bad number) still fails this.
+  const [{ total, uniq }]: any[] = await testQuery(
+    `SELECT COUNT(*) AS total,
+            COUNT(DISTINCT LOWER(TRIM(COALESCE(NULLIF(TRIM(barcode), ''), name)))) AS uniq
+       FROM products`,
+  );
+  const repeats = Number(total) - Number(uniq);
+
+  await expect(page.getByText(/^0 new$/)).toBeVisible();
+  await expect(page.getByText(new RegExp(`^${uniq} update$`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`^${repeats} skipped$`))).toBeVisible();
+
+  // Every skipped row is a barcode/name repeat, and nothing else is skipped.
+  const skippedRows = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'error', exact: true }) });
+  await expect(skippedRows).toHaveCount(repeats);
+  await expect(page.getByText(/Duplicate of another row/)).toHaveCount(repeats);
 });
 
 test('products import wizard — mixed rows skips invalid', async ({ page }) => {

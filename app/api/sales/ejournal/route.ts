@@ -90,12 +90,12 @@ export async function GET(request: NextRequest) {
 
     // ── Tax-type breakdown across all line items (VATable / Exempt / Zero-rated / Non-VAT).
     const taxSql = `
-      SELECT pti.tax_type, SUM(pti.line_total) as amount
+      SELECT COALESCE(pti.tax_type, 'VAT') as tax_type, SUM(pti.line_total) as amount
       FROM sales_transactions st
       JOIN pos_transactions pt ON st.id = pt.sale_id
       JOIN pos_transaction_items pti ON pti.pos_transaction_id = pt.id
       WHERE DATE(st.created_at) = ? AND st.is_training = 0${terminalFilter}
-      GROUP BY pti.tax_type
+      GROUP BY COALESCE(pti.tax_type, 'VAT')
     `;
 
     const params: any[] = [date];

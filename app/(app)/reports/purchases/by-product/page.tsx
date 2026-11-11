@@ -39,7 +39,6 @@ import { Spinner } from '@/components/ui/spinner';
 interface ProductPurchase {
   productId: string;
   productName: string;
-  sku: string;
   barcode: string;
   category: string;
   brand: string;
@@ -101,7 +100,6 @@ export default function PurchasesByProductPage() {
     const search = searchTerm.toLowerCase();
     return (
       record.productName?.toLowerCase().includes(search) ||
-      record.sku?.toLowerCase().includes(search) ||
       record.barcode?.toLowerCase().includes(search) ||
       record.category?.toLowerCase().includes(search) ||
       record.brand?.toLowerCase().includes(search)
@@ -356,7 +354,7 @@ export default function PurchasesByProductPage() {
                     <TableCell className="py-2 px-4 font-medium">
                       <div className="flex flex-col">
                         <span>{record.productName}</span>
-                        <span className="text-xs text-muted-foreground">{record.barcode || record.sku || '-'}</span>
+                        <span className="text-xs text-muted-foreground">{record.barcode || '-'}</span>
                       </div>
                     </TableCell>
                     <TableCell className="py-2 px-4 text-right font-mono font-semibold">{record.totalQuantity.toLocaleString()}</TableCell>

@@ -9,7 +9,6 @@ async function run() {
       SELECT 
         id, 
         name, 
-        sku, 
         barcode, 
         stock as stock_quantity,
         reorder_point,

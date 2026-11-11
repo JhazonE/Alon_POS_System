@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
         AND pt.is_training = 0
         ${terminalCondition}
         ${ptDateCondition}
-        GROUP BY pti.tax_type
+        GROUP BY COALESCE(pti.tax_type, 'VAT')
     `;
     const vatAdjustmentResults = await query(vatAdjustmentSql, allParams) as any[];
 

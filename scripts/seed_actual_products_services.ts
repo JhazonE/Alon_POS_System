@@ -36,7 +36,6 @@ const ACTUAL_DATA = [
     reorder_point: 5,
     price: 70990.00,
     cost: 58000.00,
-    sku: 'AAPL-PH15P-256',
     barcode: '194253701234',
     unit_of_measure: 'Piece',
     is_serialized: true
@@ -51,7 +50,6 @@ const ACTUAL_DATA = [
     reorder_point: 3,
     price: 68990.00,
     cost: 52000.00,
-    sku: 'SAMS-S23U-512',
     barcode: '8806094761234',
     unit_of_measure: 'Piece',
     is_serialized: true
@@ -66,7 +64,6 @@ const ACTUAL_DATA = [
     reorder_point: 2,
     price: 59990.00,
     cost: 49000.00,
-    sku: 'AAPL-MBA-M2-256',
     barcode: '194253012345',
     unit_of_measure: 'Piece',
     is_serialized: true
@@ -81,7 +78,6 @@ const ACTUAL_DATA = [
     reorder_point: 10,
     price: 6590.00,
     cost: 4200.00,
-    sku: 'LOGI-MXM3S',
     barcode: '097855171234',
     unit_of_measure: 'Piece',
     is_serialized: false
@@ -97,7 +93,6 @@ const ACTUAL_DATA = [
     reorder_point: 0,
     price: 5000.00,
     cost: 0.00,
-    sku: 'SRV-NW-SETUP',
     barcode: '',
     unit_of_measure: 'Service',
     is_serialized: false
@@ -112,7 +107,6 @@ const ACTUAL_DATA = [
     reorder_point: 0,
     price: 1500.00,
     cost: 150.00,
-    sku: 'SRV-PC-CLEAN',
     barcode: '',
     unit_of_measure: 'Service',
     is_serialized: false
@@ -127,7 +121,6 @@ const ACTUAL_DATA = [
     reorder_point: 0,
     price: 12000.00,
     cost: 0.00,
-    sku: 'SRV-DATA-REC',
     barcode: '',
     unit_of_measure: 'Service',
     is_serialized: false
@@ -171,9 +164,9 @@ async function seed() {
       await query(`
         INSERT INTO products (
           id, name, description, category, brand, stock, reorder_point, 
-          price, cost, sku, barcode, unit_of_measure, 
+          price, cost, barcode, unit_of_measure, 
           income_account, expense_account, warehouse_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ON DUPLICATE KEY UPDATE
         name = VALUES(name),
         description = VALUES(description),
@@ -192,7 +185,7 @@ async function seed() {
       `, [
         item.id, item.name, item.description, item.category, item.brand, 
         item.stock, item.reorder_point, item.price, item.cost, 
-        item.sku, item.barcode, item.unit_of_measure,
+        item.barcode, item.unit_of_measure,
         incomeAccId, defaultExpenseId, defaultWarehouseId
       ]);
     }

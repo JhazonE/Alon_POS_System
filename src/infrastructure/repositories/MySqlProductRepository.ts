@@ -4,8 +4,45 @@ import { ProductRepository, GetProductsFilters } from '../../core/products/domai
 import { ProductEntity } from '../../core/products/domain/Product';
 import { expandProductSellingUnits } from './product-selling-unit-expansion';
 
+/**
+ * Outcome of interpreting `filters.warehouseId`.
+ *
+ *  - `none`    : no warehouse filter was requested (undefined / null).
+ *  - `match`   : a usable warehouse id; restrict to it.
+ *  - `nothing` : a filter WAS supplied but cannot resolve to a warehouse (blank,
+ *                whitespace, or not a string at all). It must match no rows.
+ *
+ * This used to be `if (filters.warehouseId)`, which treated a blank id the same
+ * as an absent one and so DROPPED the restriction: a POS terminal whose
+ * `location` was '' returned every warehouse's copy of every product. Fan-out
+ * makes those copies same-barcode duplicates, so that is a correctness problem.
+ *
+ * A non-string is "unresolved", not "absent": TypeScript types are erased at
+ * the HTTP boundary and `pool.query` escapes an OBJECT parameter as
+ * `` `key` = value ``, which is a match-many predicate.
+ *
+ * A well-formed string that names no warehouse (e.g. the literal 'Store') needs
+ * no special case: `products.warehouse_id = 'Store'` already matches nothing.
+ */
+type WarehouseFilter =
+  | { kind: 'none' }
+  | { kind: 'match'; id: string }
+  | { kind: 'nothing' };
+
+function resolveWarehouseFilter(warehouseId: unknown): WarehouseFilter {
+  if (warehouseId === undefined || warehouseId === null) return { kind: 'none' };
+  if (typeof warehouseId !== 'string' || warehouseId.trim() === '') return { kind: 'nothing' };
+  return { kind: 'match', id: warehouseId };
+}
+
 export class MySqlProductRepository implements ProductRepository {
   async findAll(limit: number, offset: number, filters: GetProductsFilters): Promise<ProductEntity[]> {
+    // `supplier` is the PRIMARY mapping's supplier, falling back to the legacy
+    // products.supplier_id — the same identity getProducts() uses in
+    // app/(app)/products/actions.ts. Without it Product.supplier is always
+    // undefined for every caller of /api/products, and a consumer that reads
+    // it (the Restock flow's supplier prefill) silently does nothing rather
+    // than failing visibly.
     let sql = `
       SELECT
         products.id,
@@ -18,7 +55,6 @@ export class MySqlProductRepository implements ProductRepository {
         products.type,
         products.price,
         products.cost,
-        products.sku,
         products.barcode,
         products.vat_status as vatStatus,
         products.availability,
@@ -31,9 +67,12 @@ export class MySqlProductRepository implements ProductRepository {
         (SELECT GROUP_CONCAT(CONCAT(shelf_id, ':', quantity)) FROM product_shelves WHERE product_id = products.id) as shelfQuantitiesRaw,
         products.updated_at as updatedAt,
         products.parent_id as parentId,
-        products.conversion_factor as conversionFactor
+        products.conversion_factor as conversionFactor,
+        COALESCE(spm_primary.supplier_id, products.supplier_id) as supplier
       FROM products
       LEFT JOIN units_of_measure uom ON products.unit_of_measure = uom.name
+      LEFT JOIN supplier_product_mapping spm_primary
+        ON spm_primary.product_id = products.id AND spm_primary.is_primary = 1
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -53,19 +92,22 @@ export class MySqlProductRepository implements ProductRepository {
       // the hook hard-codes limit=100, so joining would make that limit count
       // unit rows and silently drop whole products off the end of the page.
       if (filters.expandSellingUnits) {
-        sql += ` AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?
+        sql += ` AND (products.name LIKE ? OR products.barcode LIKE ?
                  OR EXISTS (SELECT 1 FROM product_selling_units psu
                              WHERE psu.product_id = products.id AND psu.barcode LIKE ?))`;
-        params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-      } else {
-        sql += ' AND (products.name LIKE ? OR products.sku LIKE ? OR products.barcode LIKE ?)';
         params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      } else {
+        sql += ' AND (products.name LIKE ? OR products.barcode LIKE ?)';
+        params.push(`%${filters.search}%`, `%${filters.search}%`);
       }
     }
 
-    if (filters.warehouseId) {
+    const warehouseFilter = resolveWarehouseFilter(filters.warehouseId);
+    if (warehouseFilter.kind === 'match') {
       sql += ' AND products.warehouse_id = ?';
-      params.push(filters.warehouseId);
+      params.push(warehouseFilter.id);
+    } else if (warehouseFilter.kind === 'nothing') {
+      sql += ' AND 1=0';
     }
 
     if (filters.availability) {
@@ -183,19 +225,22 @@ export class MySqlProductRepository implements ProductRepository {
       // Mirrors findAll: when expanding, a unit-barcode-only match counts too, so
       // `total` agrees with the rows findAll can return.
       if (filters.expandSellingUnits) {
-        countSql += ` AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?
+        countSql += ` AND (name LIKE ? OR barcode LIKE ?
                  OR EXISTS (SELECT 1 FROM product_selling_units psu
                              WHERE psu.product_id = products.id AND psu.barcode LIKE ?))`;
-        countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-      } else {
-        countSql += ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)';
         countParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      } else {
+        countSql += ' AND (name LIKE ? OR barcode LIKE ?)';
+        countParams.push(`%${filters.search}%`, `%${filters.search}%`);
       }
     }
 
-    if (filters.warehouseId) {
+    const warehouseFilter = resolveWarehouseFilter(filters.warehouseId);
+    if (warehouseFilter.kind === 'match') {
       countSql += ' AND warehouse_id = ?';
-      countParams.push(filters.warehouseId);
+      countParams.push(warehouseFilter.id);
+    } else if (warehouseFilter.kind === 'nothing') {
+      countSql += ' AND 1=0';
     }
 
     if (filters.availability) {
@@ -227,9 +272,19 @@ export class MySqlProductRepository implements ProductRepository {
     const rows = await query(productSql, [id]);
     if (rows.length === 0) return null;
     
-    // We would also need price levels for a single product... 
+    // We would also need price levels for a single product...
     // For brevity, let's reuse a more specific method or implement properly later.
-    const products = await this.findAll(1, 0, { search: rows[0].sku }); // Hacky
+    //
+    // Ang search term kay `sku` kaniadto. Sa dihang gi-retire ang products.sku,
+    // ang barcode mao ang pinakaduol nga gipuli — apan timan-i nga DILI kini
+    // like-for-like: ang kada products.sku blangko na man kaniadto, mao nga ang
+    // search mo-match sa bisan unsa (o sa wala), samtang ang barcode usa ka
+    // tinuod nga identity. Mas husto ang bag-o, dili mas sayop. Ang method wala
+    // gyud nay caller (ang IProductRepository ra ang nag-declare niya), mao nga
+    // ang kausaban dili makaabot sa production path — gipabilin ra siya nga
+    // compilable instead sa gi-tangtang, ug ang "Hacky" nga design wala
+    // gihilabti dinhi kay laing trabaho na kana.
+    const products = await this.findAll(1, 0, { search: rows[0].barcode }); // Hacky
     return products[0] || null;
   }
 
@@ -237,13 +292,13 @@ export class MySqlProductRepository implements ProductRepository {
     const id = product.id || `prod_${Date.now()}`;
     const sql = `
       INSERT INTO products (
-        id, name, description, category, brand, department, stock, price, cost, sku, barcode, reorder_point, avg_daily_sales
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, name, description, category, brand, department, stock, price, cost, barcode, reorder_point, avg_daily_sales
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await query(sql, [
       id, product.name, product.description, product.category, product.brand, product.department,
-      product.stock || 0, product.price, product.cost, product.sku, product.barcode, 0, 0
+      product.stock || 0, product.price, product.cost, product.barcode, 0, 0
     ]);
 
     if (product.priceLevels && product.priceLevels.length > 0) {

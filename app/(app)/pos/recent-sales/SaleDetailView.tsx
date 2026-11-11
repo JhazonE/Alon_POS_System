@@ -106,11 +106,9 @@ export function SaleDetailView({ sale, onReprint }: SaleDetailViewProps) {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium text-sm leading-tight">{it.product?.name || it.name}</span>
-                        {(it.product?.sku || it.product?.unitOfMeasure) && (
+                        {it.product?.unitOfMeasure && (
                           <span className="text-[11px] text-muted-foreground">
-                            {it.product?.sku ? `${it.product.sku}` : ''}
-                            {it.product?.sku && it.product?.unitOfMeasure ? ' · ' : ''}
-                            {it.product?.unitOfMeasure || ''}
+                            {it.product.unitOfMeasure}
                           </span>
                         )}
                       </div>

@@ -422,11 +422,11 @@ export async function processPullSync(): Promise<void> {
             INSERT INTO products (
               id, name, barcode, price, cost, stock, category, brand, created_at, updated_at,
               description, additional_description, department, subcategory, reorder_point,
-              avg_daily_sales, sku, image_url, image_hint, unit_of_measure, parent_id,
+              avg_daily_sales, image_url, image_hint, unit_of_measure, parent_id,
               conversion_factor, supplier_id, income_account, expense_account, warehouse_id,
               vat_status, availability, earns_points, expiration_date, shelf_location_id
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             name = VALUES(name),
             barcode = VALUES(barcode),
@@ -442,7 +442,6 @@ export async function processPullSync(): Promise<void> {
             subcategory = VALUES(subcategory),
             reorder_point = VALUES(reorder_point),
             avg_daily_sales = VALUES(avg_daily_sales),
-            sku = VALUES(sku),
             image_url = VALUES(image_url),
             image_hint = VALUES(image_hint),
             unit_of_measure = VALUES(unit_of_measure),
@@ -468,8 +467,7 @@ export async function processPullSync(): Promise<void> {
             product.subcategory ?? null, 
             product.reorder_point ?? null,
             product.avg_daily_sales ?? null, 
-            product.sku ?? null, 
-            product.image_url ?? null, 
+            product.image_url ?? null,
             product.image_hint ?? null, 
             product.unit_of_measure ?? null, 
             product.parent_id ?? null,

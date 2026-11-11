@@ -33,9 +33,9 @@ export async function legacyProductCsvImport(request: NextRequest) {
     const defaultWarehouseId = await getDefaultWarehouseId(scope);
 
     for (const p of productsData) {
-      if (!p.name || !p.sku) { errorCount++; continue; }
+      if (!p.name || !p.barcode) { errorCount++; continue; }
       try {
-        const [existing]: any = await query(`SELECT id FROM products WHERE sku = ?${inBranch.sql}`, [p.sku, ...inBranch.params]);
+        const [existing]: any = await query(`SELECT id FROM products WHERE barcode = ?${inBranch.sql}`, [p.barcode, ...inBranch.params]);
         if (existing) {
           await query(
             `UPDATE products SET name=?, barcode=?, description=?, category=?, brand=?, subcategory=?, unit_of_measure=?,
@@ -47,10 +47,10 @@ export async function legacyProductCsvImport(request: NextRequest) {
           updateCount++;
         } else {
           await query(
-            `INSERT INTO products (id, name, sku, barcode, description, category, brand, subcategory, unit_of_measure,
+            `INSERT INTO products (id, name, barcode, description, category, brand, subcategory, unit_of_measure,
                cost, price, stock, reorder_point, parent_id, image_url, conversion_factor, warehouse_id, type, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-            [uuidv4(), p.name, p.sku, p.barcode || null, p.description || '', p.category || 'General', p.brand || null,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            [uuidv4(), p.name, p.barcode, p.description || '', p.category || 'General', p.brand || null,
               p.subcategory || null, p.unit || 'pcs', parseFloat(p.cost_price) || 0, parseFloat(p.selling_price) || 0,
               parseFloat(p.stock_quantity) || 0, parseFloat(p.reorder_point) || 0, p.parent_id || null, p.image_url || null,
               parseFloat(p.conversion_factor) || 1, defaultWarehouseId,
@@ -61,7 +61,7 @@ export async function legacyProductCsvImport(request: NextRequest) {
           );
           successCount++;
         }
-      } catch (err) { console.error(`Failed to import product ${p.sku}:`, err); errorCount++; }
+      } catch (err) { console.error(`Failed to import product ${p.barcode}:`, err); errorCount++; }
     }
     return NextResponse.json({ success: true, message: `Import processed. Added: ${successCount}, Updated: ${updateCount}, Errors: ${errorCount}` });
   } catch (error: any) {

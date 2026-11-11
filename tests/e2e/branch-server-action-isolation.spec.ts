@@ -19,6 +19,7 @@ import {
 } from '../../lib/branch-context';
 import { testQuery } from './helpers/db';
 import { seedSession } from './helpers/auth';
+import { showAllWarehouses } from './helpers/products-page';
 import { EDITABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/test-data';
 
 /**
@@ -47,14 +48,14 @@ function branchUser(seeded: SeededBranch) {
 /** Mo-seed ug produkto nga kompleto ang field aron molampos ang edit form validation. */
 async function seedFullProduct(warehouseId: string, tag: string) {
   const id = `ba-${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const sku = `BA-${tag}-${Date.now()}`.toUpperCase();
+  const barcode = `BA-${tag}-${Date.now()}`.toUpperCase();
   const name = `Branch Action Widget ${tag} ${Date.now()}`;
   await testQuery(
-    `INSERT INTO products (id, name, price, cost, stock, sku, description, brand, category, unit_of_measure, availability, warehouse_id)
+    `INSERT INTO products (id, name, price, cost, stock, barcode, description, brand, category, unit_of_measure, availability, warehouse_id)
      VALUES (?, ?, 40, 20, 5, ?, 'Product para sa server-action isolation.', ?, ?, ?, 'Available', ?)`,
-    [id, name, sku, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure, warehouseId]
+    [id, name, barcode, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure, warehouseId]
   );
-  return { id, sku, name };
+  return { id, barcode, name };
 }
 
 async function readProduct(id: string) {
@@ -108,6 +109,9 @@ async function rewriteNextServerAction(
 }
 
 async function openRowMenu(page: Page, sku: string, name: string) {
+  // Ang hostile-UI tests nagpangita ug produkto sa laing branch, mao nga ang
+  // default warehouse sa user kinahanglan i-override.
+  await showAllWarehouses(page);
   await page.getByPlaceholder('Search products...').fill(sku);
   const row = page.getByRole('row', { name: new RegExp(name) });
   await expect(row).toBeVisible();
@@ -115,9 +119,9 @@ async function openRowMenu(page: Page, sku: string, name: string) {
 }
 
 /** Ablihi ang Edit dialog, usba ang ngalan, ug i-save; ibalik ang server-action response. */
-async function editNameViaUI(page: Page, p: { sku: string; name: string }, newName: string) {
+async function editNameViaUI(page: Page, p: { barcode: string; name: string }, newName: string) {
   await page.goto('/products');
-  await openRowMenu(page, p.sku, p.name);
+  await openRowMenu(page, p.barcode, p.name);
   await page.getByRole('menuitem', { name: 'Edit Product' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Edit Product')).toBeVisible();
@@ -127,9 +131,9 @@ async function editNameViaUI(page: Page, p: { sku: string; name: string }, newNa
   return action;
 }
 
-async function deleteViaUI(page: Page, p: { sku: string; name: string }) {
+async function deleteViaUI(page: Page, p: { barcode: string; name: string }) {
   await page.goto('/products');
-  await openRowMenu(page, p.sku, p.name);
+  await openRowMenu(page, p.barcode, p.name);
   await page.getByRole('menuitem', { name: 'Delete Product' }).click();
   const confirm = page.getByRole('alertdialog');
   await expect(confirm.getByText('Are you sure?')).toBeVisible();
@@ -730,7 +734,6 @@ const shelfUpdate = (page: Page, args: unknown[]) =>
 function priceItem(productId: string, field: 'price' | 'cost', newValue: number) {
   return {
     productId,
-    sku: 'x',
     barcode: '',
     productName: 'Batch item',
     field,

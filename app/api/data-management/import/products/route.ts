@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
 import { v4 as uuidv4 } from 'uuid';
-import { generateSku } from '@/lib/sku';
 import { recordStockMovement } from '@/lib/stock-movements';
 import { legacyProductCsvImport } from './legacy';
 import { getDefaultWarehouseId, productInBranchClause } from './branch-scope';
@@ -61,17 +60,16 @@ export async function POST(request: NextRequest) {
           updated++;
         } else {
           const id = uuidv4();
-          const sku = generateSku(p.brand, p.name);
           const stock = num(p.stock_quantity);
           const cost = num(p.cost_price);
           const price = num(p.selling_price);
           const rowType = String(p.type || '').toLowerCase() === 'service' ? 'service' : 'standard';
           await query(
-            `INSERT INTO products (id, name, sku, barcode, description, category, brand, subcategory,
+            `INSERT INTO products (id, name, barcode, description, category, brand, subcategory,
                unit_of_measure, cost, price, stock, reorder_point, image_url, conversion_factor, warehouse_id, type, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
-              id, p.name, sku, barcode, p.description ?? '', p.category ?? 'General', p.brand ?? null, p.subcategory ?? null,
+              id, p.name, barcode, p.description ?? '', p.category ?? 'General', p.brand ?? null, p.subcategory ?? null,
               p.unit ?? 'pcs', cost, price, stock, num(p.reorder_point), p.image_url ?? null,
               p.conversion_factor != null ? num(p.conversion_factor) : 1, defaultWarehouseId, rowType,
             ],

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery } from './helpers/db';
-import { EDITABLE_PRODUCT, DELETABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/test-data';
+import { EDITABLE_PRODUCT, DELETABLE_PRODUCT, TEST_SUPPLIER, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Edit / Delete product (DB-backed) — i-drive ang products table row actions batok
@@ -10,9 +10,9 @@ import { EDITABLE_PRODUCT, DELETABLE_PRODUCT, TEST_SUPPLIER } from './fixtures/t
  * dili maapektuhan ang ubang specs.
  */
 
-/** I-search ang product pinaagi sa SKU dayon ablihi ang iyang row action menu. */
-async function openRowMenu(page: Page, sku: string, name: string) {
-  await page.getByPlaceholder('Search products...').fill(sku);
+/** I-search ang product pinaagi sa barcode dayon ablihi ang iyang row action menu. */
+async function openRowMenu(page: Page, code: string, name: string) {
+  await page.getByPlaceholder('Search products...').fill(code);
   const row = page.getByRole('row', { name: new RegExp(name) });
   await expect(row).toBeVisible();
   await row.getByRole('button', { name: 'Open menu' }).click();
@@ -25,59 +25,27 @@ test.describe('Edit product', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
 
-    await openRowMenu(page, EDITABLE_PRODUCT.sku, EDITABLE_PRODUCT.name);
+    await openRowMenu(page, EDITABLE_PRODUCT.barcode, EDITABLE_PRODUCT.name);
     await page.getByRole('menuitem', { name: 'Edit Product' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Edit Product')).toBeVisible();
-    // Ang legacy read-only SKU line makita ug mao ang stored value.
-    await expect(dialog.getByLabel('SKU', { exact: true })).toHaveValue(EDITABLE_PRODUCT.sku);
+    // Wala nay SKU field: gi-retire ang products.sku, barcode na ang identity.
+    await expect(dialog.getByLabel('SKU', { exact: true })).toHaveCount(0);
 
     // I-usab ang Product Name dayon i-save.
     await dialog.getByLabel('Product Name').fill(newName);
     await dialog.getByRole('button', { name: 'Save Changes' }).click();
     await expect(dialog).toBeHidden();
 
-    // I-verify nga na-persist ang bag-ong ngalan (parehas ra nga SKU).
-    const res = await request.get(`/api/products?search=${EDITABLE_PRODUCT.sku}&limit=50`);
+    // I-verify nga na-persist ang bag-ong ngalan (parehas ra nga barcode).
+    const res = await request.get(`/api/products?search=${EDITABLE_PRODUCT.barcode}&limit=50`);
     const body = await res.json();
-    const match = (body.data ?? []).find((p: any) => p.sku === EDITABLE_PRODUCT.sku);
-    expect(match, 'product gihapon naa pinaagi sa SKU').toBeTruthy();
+    const match = (body.data ?? []).find((p: any) => p.barcode === EDITABLE_PRODUCT.barcode);
+    expect(match, 'product gihapon naa pinaagi sa barcode').toBeTruthy();
     expect(match.name).toBe(newName);
   });
 
-  test('admin makausab ug product nga walay SKU — dili mo-require ug dili mag-set ug SKU', async ({ page, request }) => {
-    const id = 'test-no-sku-1';
-    const name = 'No SKU Widget';
-    const newName = 'No SKU Widget Renamed';
-    await testQuery('DELETE FROM products WHERE id = ?', [id]);
-    await testQuery(
-      `INSERT INTO products (id, name, price, stock, sku, description, brand, category, unit_of_measure, availability)
-       VALUES (?, ?, 40, 5, NULL, 'Product nga walay SKU.', ?, ?, ?, 'Available')`,
-      [id, name, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure],
-    );
-    try {
-      await seedSession(page, DEFAULT_ADMIN);
-      await page.goto('/products');
-      await openRowMenu(page, name, name);
-      await page.getByRole('menuitem', { name: 'Edit Product' }).click();
-
-      const dialog = page.getByRole('dialog');
-      await expect(dialog.getByText('Edit Product')).toBeVisible();
-      // No SKU line for a product that has none.
-      await expect(dialog.getByLabel('SKU', { exact: true })).toHaveCount(0);
-
-      await dialog.getByLabel('Product Name').fill(newName);
-      await dialog.getByRole('button', { name: 'Save Changes' }).click();
-      await expect(dialog).toBeHidden();
-
-      const [row] = await testQuery('SELECT name, sku FROM products WHERE id = ?', [id]);
-      expect(row.name).toBe(newName);
-      expect(row.sku, 'SKU stays NULL, not empty string').toBeNull();
-    } finally {
-      await testQuery('DELETE FROM products WHERE id = ?', [id]);
-    }
-  });
 });
 
 /**
@@ -102,7 +70,7 @@ type SeedMapping = {
 };
 
 /**
- * Seeds a standard product (with a stored SKU so it is searchable) and,
+ * Seeds a standard product (with a stored barcode so it is searchable) and,
  * optionally, its supplier mappings. `legacySupplierId` sets only
  * products.supplier_id (no mapping row) — the pre-mapping-table shape.
  */
@@ -110,16 +78,17 @@ async function seedSupplierProduct(
   id: string,
   opts: { mappings?: SeedMapping[]; legacySupplierId?: string; reorderPoint?: number } = {},
 ) {
-  const sku = `SUPMAP-${id}`;
+  const barcode = `SUPMAP-${id}`;
   const name = `Supplier Map Widget ${id}`;
   await cleanupSupplierProduct(id);
   await testQuery(
-    `INSERT INTO products (id, name, price, cost, stock, sku, description, brand, category, unit_of_measure, availability, supplier_id, reorder_point)
-     VALUES (?, ?, 40, 20, 5, ?, 'Product para sa supplier-tab e2e.', ?, ?, ?, 'Available', ?, ?)`,
+    `INSERT INTO products (id, name, price, cost, stock, barcode, description, brand, category, unit_of_measure, availability, supplier_id, reorder_point, warehouse_id)
+     VALUES (?, ?, 40, 20, 5, ?, 'Product para sa supplier-tab e2e.', ?, ?, ?, 'Available', ?, ?, ?)`,
     [
-      id, name, sku, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure,
+      id, name, barcode, EDITABLE_PRODUCT.brand, EDITABLE_PRODUCT.category, EDITABLE_PRODUCT.unitOfMeasure,
       opts.legacySupplierId ?? opts.mappings?.find((m) => m.isPrimary)?.supplierId ?? null,
       opts.reorderPoint ?? opts.mappings?.find((m) => m.isPrimary)?.rop ?? 0,
+      TEST_MAIN_WAREHOUSE.id,
     ],
   );
   for (const [i, m] of (opts.mappings ?? []).entries()) {
@@ -130,7 +99,7 @@ async function seedSupplierProduct(
       [`${id}-m${i}`, id, m.supplierId, m.sku ?? null, m.leadTime ?? 0, m.rop ?? 0, m.cost ?? null, m.isPrimary ? 1 : 0],
     );
   }
-  return { id, sku, name };
+  return { id, barcode, name };
 }
 
 async function cleanupSupplierProduct(id: string) {
@@ -157,9 +126,9 @@ async function storedProduct(productId: string) {
 }
 
 /** Opens the Edit drawer for a seeded product. */
-async function openEditDialog(page: Page, p: { sku: string; name: string }) {
+async function openEditDialog(page: Page, p: { barcode: string; name: string }) {
   await page.goto('/products');
-  await openRowMenu(page, p.sku, p.name);
+  await openRowMenu(page, p.barcode, p.name);
   await page.getByRole('menuitem', { name: 'Edit Product' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Edit Product', { exact: true })).toBeVisible();
@@ -500,7 +469,7 @@ test.describe('Delete product', () => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
 
-    await openRowMenu(page, DELETABLE_PRODUCT.sku, DELETABLE_PRODUCT.name);
+    await openRowMenu(page, DELETABLE_PRODUCT.barcode, DELETABLE_PRODUCT.name);
     await page.getByRole('menuitem', { name: 'Delete Product' }).click();
 
     // Kumpirmahon sa AlertDialog (Radix role = alertdialog).
@@ -510,9 +479,9 @@ test.describe('Delete product', () => {
 
     // I-verify nga wala na ang product sa DB.
     await expect(async () => {
-      const res = await request.get(`/api/products?search=${DELETABLE_PRODUCT.sku}&limit=50`);
+      const res = await request.get(`/api/products?search=${DELETABLE_PRODUCT.barcode}&limit=50`);
       const body = await res.json();
-      const match = (body.data ?? []).find((p: any) => p.sku === DELETABLE_PRODUCT.sku);
+      const match = (body.data ?? []).find((p: any) => p.barcode === DELETABLE_PRODUCT.barcode);
       expect(match, 'product kinahanglan wala na').toBeFalsy();
     }).toPass({ timeout: 10_000 });
   });

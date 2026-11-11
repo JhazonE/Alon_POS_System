@@ -27,16 +27,19 @@ async function startShift(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
   await page.getByRole('button', { name: /start shift/i }).click();
   // Human ma-start ang shift, mawala ang overlay ug mogawas ang barcode input.
-  await expect(page.getByPlaceholder(/scan barcode or enter product sku/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/scan barcode or search product/i)).toBeVisible();
 }
 
 /**
- * I-add ang product pinaagi sa SKU. Gi-retry kay ang `products` state mag-load ug
+ * I-add ang product pinaagi sa barcode (gi-retire na ang products.sku; ang
+ * ngalan sa function ug ang titulo sa test sa ubos nagpabilin nga "BySku" /
+ * "by SKU" aron dili mausab ang test IDs nga gigamit sa pagtandi batok sa
+ * baseline nga E2E run). Gi-retry kay ang `products` state mag-load ug
  * asynchronous — posible nga wala pa ma-load sa pag-type (race), busa i-retry
  * hangtod motungha ang item sa cart.
  */
 async function addProductBySku(page: import('@playwright/test').Page, sku: string, name: string) {
-  const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+  const barcode = page.getByPlaceholder(/scan barcode or search product/i);
   await expect(async () => {
     await barcode.fill(sku);
     await barcode.press('Enter');
@@ -60,7 +63,7 @@ test.describe('POS sale flow', () => {
     await posLogin(page);
     await startShift(page);
 
-    await addProductBySku(page, product.sku, product.name);
+    await addProductBySku(page, product.barcode, product.name);
     await expect(page.getByText(product.name).first()).toBeVisible();
   });
 
@@ -71,8 +74,8 @@ test.describe('POS sale flow', () => {
     const p1 = TEST_PRODUCTS[0]; // 12.50
     const p2 = TEST_PRODUCTS[1]; // 20.00
 
-    await addProductBySku(page, p1.sku, p1.name);
-    await addProductBySku(page, p2.sku, p2.name);
+    await addProductBySku(page, p1.barcode, p1.name);
+    await addProductBySku(page, p2.barcode, p2.name);
 
     // Total = 12.50 + 20.00 = 32.50. Magpakita ni bisan asa sa POS total area.
     const expectedTotal = (p1.price + p2.price).toFixed(2);
@@ -82,10 +85,10 @@ test.describe('POS sale flow', () => {
   test('kompleto nga cash sale → na-save → cart mo-clear', async ({ page }) => {
     await posLogin(page);
     await startShift(page);
-    await addProductBySku(page, product.sku, product.name);
+    await addProductBySku(page, product.barcode, product.name);
 
     // Empty barcode + Enter → default tender (Cash) → ablihi ang TenderDialog.
-    const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+    const barcode = page.getByPlaceholder(/scan barcode or search product/i);
     await barcode.click();
     await barcode.press('Enter');
 

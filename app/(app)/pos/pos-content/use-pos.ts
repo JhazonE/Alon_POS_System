@@ -65,8 +65,20 @@ export function usePOS() {
     [terminals, selectedTerminalId]
   );
   const inventoryLocation = currentTerminal?.inventoryLocation || '';
+  // Which warehouse the POS lists products from. Three states, deliberately kept apart:
+  //  - no terminal yet (terminals still loading): `undefined` + queries held, so the
+  //    POS neither shows an unfiltered list nor flashes an empty one;
+  //  - a terminal whose location is blank/NULL: `null`, sent to the server as an
+  //    explicit blank so it answers with NOTHING rather than every warehouse's copy;
+  //  - otherwise the terminal's warehouse id.
+  const terminalResolved = currentTerminal !== null;
+  const productWarehouse: string | null | undefined = !terminalResolved
+    ? undefined
+    : (inventoryLocation.trim() ? inventoryLocation : null);
+  // For consumers that cannot hold: with no terminal they still must not widen.
+  const productWarehouseId: string | null = productWarehouse ?? null;
 
-  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, inventoryLocation, true);
+  const { products: fetchedProducts, loading: productsLoading, refetch: refreshProducts } = useProducts('', 'Available', undefined, productWarehouse, true, terminalResolved);
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -84,8 +96,9 @@ export function usePOS() {
     debouncedSearchQuery.trim(),
     'Available',
     undefined,
-    inventoryLocation,
-    true
+    productWarehouse,
+    true,
+    terminalResolved
   );
 
   const [isTenderDialogOpen, setIsTenderDialogOpen] = useState(false);
@@ -693,12 +706,11 @@ export function usePOS() {
       const lineKey = buildLineId(p.id, p.sellingUnitId);
       if (seen.has(lineKey)) continue;
       seen.add(lineKey);
-      const sku = (p.sku || '').toLowerCase();
       const barcode = (p.barcode || '').toLowerCase();
       const name = (p.name || '').toLowerCase();
-      if (sku === q || barcode === q) exactCode.push(p);
+      if (barcode === q) exactCode.push(p);
       else if (name === q) exactName.push(p);
-      else if (sku.includes(q) || barcode.includes(q) || name.includes(q)) partial.push(p);
+      else if (barcode.includes(q) || name.includes(q)) partial.push(p);
     }
     return [...exactCode, ...exactName, ...partial].slice(0, limit);
   };
@@ -715,24 +727,26 @@ export function usePOS() {
     return rankMatches(source || [], q, limit);
   }, [products, serverSearchResults, searchLoading, debouncedSearchQuery]);
 
-  // Scanners submit a barcode/SKU that exactly matches one product. Check the
+  // Scanners submit a barcode that exactly matches one product. Check the
   // instant local cache first (covers the common case with zero lag), then
   // the debounced server results so products outside the cached page still
   // auto-add once their search response lands.
   const findExactCodeMatch = useCallback((query: string): any | undefined => {
     const q = query.trim().toLowerCase();
     if (!q) return undefined;
-    const inLocal = (products || []).find(p => (p.sku || '').toLowerCase() === q || (p.barcode || '').toLowerCase() === q);
+    const inLocal = (products || []).find(p => (p.barcode || '').toLowerCase() === q);
     if (inLocal) return inLocal;
     if (debouncedSearchQuery.trim().toLowerCase() === q) {
-      return (serverSearchResults || []).find(p => (p.sku || '').toLowerCase() === q || (p.barcode || '').toLowerCase() === q);
+      return (serverSearchResults || []).find(p => (p.barcode || '').toLowerCase() === q);
     }
     return undefined;
   }, [products, serverSearchResults, debouncedSearchQuery]);
 
-  const handleAddItemBySKU = (sku: string) => {
-    if (!sku) return;
-    const product = findExactCodeMatch(sku) || getSearchSuggestions(sku, 1)[0];
+  // Named for the scanner-entry box, not products.sku: the code it receives is
+  // a barcode (or free text that falls through to the suggestion ranking).
+  const handleAddItemBySKU = (code: string) => {
+    if (!code) return;
+    const product = findExactCodeMatch(code) || getSearchSuggestions(code, 1)[0];
     handleAddItem(product);
   };
 
@@ -1375,7 +1389,7 @@ export function usePOS() {
     handleReadingDialogOpenChange,
     lastEndedShiftId,
     // cart
-    items, inputValue, setInputValue, inventoryLocation,
+    items, inputValue, setInputValue, inventoryLocation, productWarehouseId, productsReady: terminalResolved,
     selectedItemId, setSelectedItemId, selectedItem,
     editingNameItemId, setEditingNameItemId,
     editingQtyItemId, setEditingQtyItemId,

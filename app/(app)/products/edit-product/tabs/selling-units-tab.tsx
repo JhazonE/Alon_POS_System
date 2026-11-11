@@ -256,6 +256,7 @@ export function SellingUnitsTab() {
                           className="rounded-md border p-3 sm:border-0 sm:p-0 sm:grid sm:grid-cols-[minmax(0,1fr)_10rem_10rem] sm:items-start sm:gap-x-4"
                         >
                           <div
+                            data-testid="price-level-name"
                             className="text-xs font-medium sm:self-center sm:py-2 sm:truncate"
                             title={level.name}
                           >

@@ -52,7 +52,6 @@ export function ProductCard({ product, hasChildren = false, onSuccess, requireAd
                 </Badge>
               )}
             </h3>
-            <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
             {product.barcode && (
               <p className="text-sm text-muted-foreground font-mono">BC: {product.barcode}</p>
             )}

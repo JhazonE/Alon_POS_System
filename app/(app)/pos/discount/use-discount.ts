@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { SaleItem } from '../pos-content/pos-types';
 import type { DiscountType, DiscountDetails } from './discount-types';
+import { statutoryDiscountPercentOfGross } from '@/lib/tax-utils';
 
 type Options = {
   isOpen: boolean;
@@ -38,10 +39,13 @@ export function useDiscount({ isOpen, item, onApplyDiscount, onOpenChange }: Opt
 
     let percentage = 0;
 
-    if (discountType === 'pwd' || discountType === 'senior' || discountType === 'naac') {
-      percentage = 20;
-    } else if (discountType === 'solo_parent') {
-      percentage = 10;
+    if (isStatutory) {
+      // NOT the headline 20%/10%: the statutory discount is computed on the
+      // VAT-exclusive price (RA 9994 / 10754 / 10699 / 11861), while the shelf
+      // price this percentage multiplies is VAT-inclusive. Taking 20% straight
+      // off the shelf price overcharges the customer by the VAT on the
+      // discounted portion. See lib/tax-utils.ts.
+      percentage = statutoryDiscountPercentOfGross(discountType);
     } else {
       const numValue = parseFloat(value) || 0;
       if (discountType === 'percent') {

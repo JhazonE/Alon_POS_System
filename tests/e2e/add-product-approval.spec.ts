@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, setWarehouseStock, priceInput } from './helpers/product-form';
 import { resetPosState, testQuery } from './helpers/db';
-import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE } from './fixtures/test-data';
+import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT, TEST_PRICE_LEVEL, TEST_PRICE_LEVEL_WHOLESALE, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Add Product Approval (DB-backed) — verifies the require_product_confirmation
@@ -38,7 +38,7 @@ async function fillAndSubmitProduct(
   await page.goto('/products');
   await page.getByRole('button', { name: 'Add Product' }).first().click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByText('Add New Product')).toBeVisible();
+  await expect(dialog.getByText('Add New Product')).toBeVisible({ timeout: 20000 });
 
   // --- Basic Info ---
   await dialog.getByLabel('Product Name').fill(opts.name);
@@ -48,7 +48,10 @@ async function fillAndSubmitProduct(
 
   // --- Inventory ---
   await dialog.getByRole('tab', { name: 'Inventory' }).click();
-  await dialog.getByLabel('Initial Stock').fill(String(opts.stock));
+  // Stock is per warehouse now: the warehouse is picked first, then its own
+  // opening stock. The queued/finalized item therefore carries a warehouse
+  // entry, which is what the approval path has to round-trip.
+  await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, opts.stock);
 
   // --- Selling Units (base row owns unit name, barcode, cost ug price) ---
   await dialog.getByRole('tab', { name: 'Selling Units' }).click();
@@ -58,9 +61,9 @@ async function fillAndSubmitProduct(
   // Unique kada tawag — product_selling_units.barcode kay globally UNIQUE.
   await base.getByLabel('Barcode').fill(String(Date.now()).slice(-8));
   await base.getByLabel('Cost (₱)').fill(opts.cost);
-  await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(Number(opts.cost) * 1.25));
+  await priceInput(base, TEST_PRICE_LEVEL.name).fill(String(Number(opts.cost) * 1.25));
   // Every active price level's column is required.
-  await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(Number(opts.cost) * 1.25));
+  await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(Number(opts.cost) * 1.25));
 
   // --- Submit ---
   await dialog.getByRole('button', { name: 'Add Product' }).click();
@@ -73,6 +76,14 @@ async function setRequireProductConfirmation(request: import('@playwright/test')
 }
 
 test.describe('Add Product Approval', () => {
+  // This file sorts FIRST in the suite, so its first test pays the cold
+  // Turbopack compile of /products on top of its own work. Three dialog
+  // round-trips plus an approval finalization do not fit the default 30s once
+  // that compile is included, and the symptom is a timeout waiting for the
+  // Brand select's options — not a failed assertion. The isolated run of this
+  // file passes well inside 30s; this budget is for suite order.
+  test.setTimeout(90_000);
+
   test.beforeEach(async () => {
     await resetPosState();
     await testQuery("DELETE FROM approval_queue WHERE transaction_type='PRODUCT_CREATE'");

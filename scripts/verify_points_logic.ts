@@ -17,13 +17,13 @@ async function main() {
     const prodFive = `PROD-FIVE-${Date.now()}`;
     
     const resProdNormal = await query(`
-      INSERT INTO products (id, name, category, price, stock, sku, unit_of_measure) 
+      INSERT INTO products (id, name, category, price, stock, barcode, unit_of_measure) 
       VALUES (?, 'Normal Item', ?, 100, 100, ?, 'Piece')
     `, [prodNormal, normalCat, prodNormal]);
     console.log('Insert Normal Prod Result:', resProdNormal);
     
     await query(`
-      INSERT INTO products (id, name, category, price, stock, sku, unit_of_measure) 
+      INSERT INTO products (id, name, category, price, stock, barcode, unit_of_measure) 
       VALUES (?, '5% Item', ?, 100, 100, ?, 'Piece')
     `, [prodFive, fivePercentCat, prodFive]);
     console.log('Created Products');

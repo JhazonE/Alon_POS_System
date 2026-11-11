@@ -25,7 +25,6 @@ import { Spinner } from '@/components/ui/spinner';
 interface Row {
   id: string;
   name: string;
-  sku: string;
   barcode: string;
   category: string;
   brand: string;

@@ -59,7 +59,7 @@ test.describe('Membership payment', () => {
 
     await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
     await page.getByRole('button', { name: /start shift/i }).click();
-    await expect(page.getByPlaceholder(/scan barcode or enter product sku/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/scan barcode or search product/i)).toBeVisible();
 
     // Phase 2 moved membership into the Customer drawer, so the standalone
     // footer Membership button no longer exists.

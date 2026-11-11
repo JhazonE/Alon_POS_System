@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, setWarehouseStock, priceInput } from './helpers/product-form';
 import {
   TEST_BRAND,
   TEST_CATEGORY,
@@ -8,6 +8,7 @@ import {
   TEST_PRICE_LEVEL,
   TEST_PRICE_LEVEL_WHOLESALE,
   TEST_SUPPLIER,
+  TEST_MAIN_WAREHOUSE,
 } from './fixtures/test-data';
 
 /**
@@ -68,7 +69,8 @@ test.describe('Add product with a supplier mapping', () => {
 
     // --- Inventory ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await dialog.getByLabel('Initial Stock').fill(String(NEW_PRODUCT.stock));
+    // Per-warehouse stock: pick the warehouse, then fill its own stock input.
+    await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, NEW_PRODUCT.stock);
 
     // --- Selling Units (base row owns unit name, barcode, cost ug price;
     // Unit Name is a Select — InlineEditableSelect over units_of_measure —
@@ -79,8 +81,8 @@ test.describe('Add product with a supplier mapping', () => {
     await base.getByLabel('Barcode').fill(`SUP-${NEW_PRODUCT.uniq}`);
     await base.getByLabel('Cost (₱)').fill('80');
     // Every active price level's column is required.
-    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill('100');
-    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill('100');
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill('100');
+    await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill('100');
 
     // --- Suppliers (new tab, local state — nothing persists until final submit) ---
     await dialog.getByRole('tab', { name: 'Suppliers' }).click();
@@ -117,7 +119,17 @@ test.describe('Add product with a supplier mapping', () => {
     // I-verify nga na-persist ang supplier mapping pinaagi sa pag-abli sa Edit
     // Product's Suppliers tab (walay REST endpoint para sa supplier_product_mapping,
     // mao nga ang UI mismo ang verification layer, sama sa Edit Product's own test).
+    // The search is debounced (500ms) and then keys a NEW products query, which
+    // swaps the rows for skeletons while it loads. The new product is already the
+    // only row in the default warehouse, so `row` below is visible BEFORE that
+    // filtered fetch lands; opening Edit inside that window loses the sheet when
+    // the rows remount (its open state lives in the row component). So wait for
+    // the filtered request itself, registered before the fill so it cannot be missed.
+    const filtered = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && (r.request().postData() ?? '').includes(NEW_PRODUCT.name),
+    );
     await page.getByPlaceholder('Search products...').fill(NEW_PRODUCT.name);
+    await filtered;
     const row = page.getByRole('row', { name: new RegExp(NEW_PRODUCT.name) });
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: 'Open menu' }).click();

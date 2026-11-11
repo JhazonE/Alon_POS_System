@@ -161,6 +161,37 @@ export async function GET(request: NextRequest) {
         const lastMonthStartStr = toLocalYmd(lastMonth.start);
         const lastMonthEndStr = toLocalYmd(lastMonth.end);
 
+        // total_items and low_stock_items are business metrics ("how many
+        // products does this branch sell / need reordering"), not row counts.
+        // Product creation fans a product out into one zero-stock copy per
+        // active warehouse of its branch, and scoped_products spans every
+        // warehouse of the branch, so a plain COUNT(*) would count one product
+        // once per warehouse. Count its identity instead: the barcode, falling
+        // back to the name.
+        //
+        // THIS IDENTITY DELIBERATELY MIRRORS NO CROSS-WAREHOUSE MATCHER, and it
+        // used to. Before products.sku was retired this count keyed on sku ->
+        // name and so did both matchers. Today they have all diverged:
+        // TransferStockService (and lib/family-sync.ts) match on the NAME ONLY,
+        // the bulk-adjust transfer path matches barcode -> name (see
+        // resolveTransferTarget in app/api/inventory/adjust/bulk/route.ts for
+        // why it keeps the barcode step), and migration 144's fan-out backfill
+        // still matches sku -> name but is inert now that migration 145 dropped
+        // the column. No matcher keys on barcode first. That is fine here
+        // because this is a REPORTING count, not a write target: it only has to
+        // collapse the fan-out copies of one product into one, and barcode is
+        // the most specific user-facing code for that. Nothing reconciles this
+        // number against a matcher's grouping, so do not "restore parity" by
+        // changing either side to match the other.
+        //
+        // products.barcode is NULLable (and '' is falsy), so
+        // COUNT(DISTINCT barcode) alone would silently drop every barcode-less
+        // product. The barcode:/name: prefixes keep the two kinds of identity
+        // from colliding.
+        // reports/inventory is deliberately NOT changed: it lists one row per
+        // product-warehouse, so its pagination COUNT(*) must keep matching.
+        const productIdentity = "COALESCE(CONCAT('barcode:', NULLIF(barcode, '')), CONCAT('name:', name))";
+
         // Services are excluded: they have no stock, so they would otherwise appear
         // permanently out-of-stock and drag inventory valuation totals to zero.
         const summaryQuery = `
@@ -171,8 +202,8 @@ export async function GET(request: NextRequest) {
                 (SELECT COUNT(*) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ?) as total_sales_month,
                 (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si JOIN scoped_sales st ON si.sale_id = st.id WHERE st.status = 'Paid' AND st.invoice_date >= ?) as products_sold_month,
                 (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date >= ? AND invoice_date <= ?) as total_revenue_fiscal_ytd,
-                (SELECT COUNT(*) FROM scoped_products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
-                (SELECT COUNT(*) FROM scoped_products WHERE type = 'standard') as total_items,
+                (SELECT COUNT(DISTINCT ${productIdentity}) FROM scoped_products WHERE type = 'standard' AND stock > 0 AND (stock < reorder_point OR stock < (SELECT COALESCE(low_stock_threshold, 0) FROM pos_settings LIMIT 1))) as low_stock_items,
+                (SELECT COUNT(DISTINCT ${productIdentity}) FROM scoped_products WHERE type = 'standard') as total_items,
                 (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as today_revenue,
                 (SELECT COUNT(*) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as today_sales,
                 (SELECT COALESCE(SUM(total), 0) FROM scoped_sales WHERE status = 'Paid' AND invoice_date = ?) as yesterday_revenue,

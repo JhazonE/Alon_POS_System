@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Product } from '@/lib/types';
+import { Product, Warehouse } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddProductDialog } from './add-product/add-product-dialog';
 import { ManageBrandsDialog } from './brands/ManageBrandsDialog';
@@ -30,9 +30,9 @@ import { ManageShelfLocationsDialog } from './shelf-locations/ManageShelfLocatio
 import { ManageUnitOfMeasureDialog } from './units-of-measure/ManageUnitOfMeasureDialog';
 import { ManageWarehousesDialog } from '../sales/manage-warehouses/ManageWarehousesDialog';
 
-import { Search, ChevronDown, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
+import { Search, ChevronRight, Trash2, PlusCircle, Settings, ShoppingCart, MoreVertical, Edit, Eye, AlertTriangle, Printer } from 'lucide-react';
 import { PrintBarcodeDialog } from './print-barcode/print-barcode-dialog';
-import { useState, useMemo, Fragment, useEffect, useCallback, Suspense } from 'react';
+import { useState, useMemo, Fragment, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -40,14 +40,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from '@/components/ui/input';
 import { cn, formatQuantity, formatStockQuantity } from '@/lib/utils';
 import { ViewProductDialog } from './view-product/view-product-dialog';
-import { getProducts, getProductsCount, deleteProduct, getDepartments } from './actions';
+import { getProducts, getProductsCount, deleteProduct, getDepartments, getDefaultProductWarehouse, getBranchWarehouses } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
+import { getSessionUid } from '@/lib/session-uid';
 import { SellingUnitsPanel, StockDot } from './components/selling-units-panel';
 
 // Expand, Name, Barcode, Unit, Stock, Cost, Retail Price, Warehouse, Shelf, Actions
@@ -112,11 +114,16 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
 
   return (
     <>
-      <TableRow className={cn(depth > 0 && "bg-muted/20")}>
+      <TableRow className={cn(depth > 0 && "bg-muted/20", isOpen && "bg-muted/40 hover:bg-muted/40")}>
         <TableCell className="hidden sm:table-cell" style={indentStyle}>
           {hasChildren || hasSellingUnits ? (
-            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 group" onClick={() => setIsOpen(!isOpen)}>
-              <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
+            <button
+              aria-expanded={isOpen}
+              aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${product.name}`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring h-10 w-10 p-0 group"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-90")} />
             </button>
           ) : depth > 0 ? (
             <div className="text-sm text-muted-foreground">└</div>
@@ -125,7 +132,16 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
           )}
         </TableCell>
         <TableCell className="font-medium">
-          {product.name}
+          <span className="inline-flex items-center gap-2">
+            {product.name}
+            {/* Surfaces that a product HAS selling units without expanding it --
+                the caret alone did not say whether anything was under it. */}
+            {hasSellingUnits && (
+              <span className="shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                {product.sellingUnits!.length} units
+              </span>
+            )}
+          </span>
           {product.parentId && <div className="text-xs text-muted-foreground">Child Unit</div>}
           {product.expirationDate && (
             <div className="text-[10px] text-orange-600 font-medium flex items-center gap-1 mt-0.5">
@@ -227,18 +243,15 @@ function ProductRow({ product, onProductDeleted, onProductUpdated, products, pro
         </TableCell>
       </TableRow>
 
+      {/* Rendered as sibling <tr> of this row, sharing the table's columns --
+          see SellingUnitsPanel. Not wrapped in anything: a wrapper element
+          between <tbody> and these rows is invalid table markup. */}
       {isOpen && hasSellingUnits && (
-        <TableRow className="bg-muted/30 hover:bg-muted/30" data-testid="selling-units-panel">
-          <TableCell colSpan={PRODUCT_TABLE_COLUMN_COUNT} className="py-2 pr-4 pl-4 sm:pl-14">
-            <div style={indentStyle}>
-              <SellingUnitsPanel
-                product={product}
-                priceLevels={productOptions?.priceLevels ?? []}
-                effectiveReorderPoint={effectiveReorderPoint}
-              />
-            </div>
-          </TableCell>
-        </TableRow>
+        <SellingUnitsPanel
+          product={product}
+          priceLevels={productOptions?.priceLevels ?? []}
+          effectiveReorderPoint={effectiveReorderPoint}
+        />
       )}
 
       {isOpen && hasChildren && product.children!.map(child => (
@@ -290,8 +303,96 @@ function ProductSkeleton() {
   );
 }
 
+// Warehouse filter value that matches no row: used when the user's branch has no
+// warehouse, so the table is empty instead of unfiltered.
+const NO_WAREHOUSE = '__no-warehouse__';
+
 interface ProductWithChildren extends Product {
   children?: Product[];
+}
+
+const ALL_WAREHOUSES = 'all';
+
+/**
+ * Ang warehouse strip sa ibabaw sa products table. Usa ka tab kada active
+ * warehouse sa branch sa user (head office: tanan), dugang ang "All warehouses".
+ *
+ * Nganong tab ug dili filter: ang warehouse mao ang LUGAR nga naa ka, dili usa
+ * ka narrowing sa list. Mao nga wala siya sa filter dialog, walay chip, ug dili
+ * siya mo-count sa active-filter badge.
+ *
+ * Fail-closed: kon ang branch sa user walay warehouse, WALAY warehouse tab ug
+ * ang `value` kay ang NO_WAREHOUSE sentinel -- walay trigger nga mo-match niini,
+ * mao nga walay tab nga selected ug ang table walay sulod (dili unfiltered).
+ * Mao nga kini nga component WALA mag-normalize sa sentinel ngadto sa 'all'.
+ *
+ * Ang overflow kay horizontal scroll (never wraps): ang strip usa ka row nga
+ * `flex-nowrap` sulod sa `overflow-x-auto` nga wrapper, ug ang selected tab
+ * gi-scroll ngadto sa view pag-mount ug kada kausaban.
+ */
+function WarehouseTabs({
+  warehouses,
+  value,
+  onChange,
+  isLoading,
+  showLocation,
+}: {
+  warehouses: Warehouse[];
+  value: string;
+  onChange: (value: string) => void;
+  isLoading: boolean;
+  showLocation: boolean;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // I-scroll ang selected tab ngadto sa view pag-mount ug kada kausaban, aron
+  // ang usa ka tab nga naa sa gawas sa viewport makita gihapon.
+  useEffect(() => {
+    const el = listRef.current?.querySelector<HTMLElement>('[data-state="active"]');
+    el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [value, warehouses.length]);
+
+  if (isLoading) {
+    // Skeleton samtang wala pa ma-resolve ang default: aron dili makita ang
+    // "All warehouses" nga selected dayon molukso sa tinuod nga default.
+    return (
+      <div className="flex items-center gap-1 flex-shrink-0" aria-hidden="true">
+        <Skeleton className="h-9 w-32 rounded-md" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+      </div>
+    );
+  }
+
+  return (
+    // activationMode="manual": Radix otherwise activates a tab on FOCUS, so merely
+    // tabbing into the strip would select "All warehouses" -- and in a branch with
+    // no warehouses (value is the NO_WAREHOUSE sentinel, "All" is the only tab) that
+    // would silently turn the fail-closed empty table into the cross-branch
+    // catalogue. Manual mode needs an explicit click / Enter / Space. No
+    // `flex-shrink-0` here: `min-w-0` must be allowed to shrink the Tabs below its
+    // content width, or the inner `overflow-x-auto` never engages.
+    <Tabs value={value} onValueChange={onChange} activationMode="manual" className="min-w-0 max-w-full">
+      {/* Ang wrapper ang mo-scroll; ang list mismo `w-max` aron dili mo-wrap. */}
+      <div ref={listRef} className="overflow-x-auto overscroll-x-contain max-w-full">
+        <TabsList aria-label="Warehouse" className="w-max flex-nowrap justify-start h-auto gap-1">
+          {warehouses.map((w) => (
+            <TabsTrigger key={w.id} value={w.id} className="flex-shrink-0 py-1.5">
+              <span className="truncate max-w-[14rem]">{w.name}</span>
+              {showLocation && (w.branchName || w.location) ? (
+                <span className="ml-1.5 text-[0.7rem] font-normal text-muted-foreground truncate max-w-[10rem]">
+                  {w.branchName || w.location}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          ))}
+          <TabsTrigger value={ALL_WAREHOUSES} className="flex-shrink-0 py-1.5">
+            All warehouses
+          </TabsTrigger>
+        </TabsList>
+      </div>
+    </Tabs>
+  );
 }
 
 export default function ProductsPage() {
@@ -312,7 +413,11 @@ function ProductsContent() {
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
+  // Starts at 'all' only until the user's default warehouse resolves (see the
+  // effect below); the products query is held back until then, so 'all' is never
+  // fetched on first load.
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all');
+  const [warehouseDefaultReady, setWarehouseDefaultReady] = useState(false);
   const [selectedShelfLocation, setSelectedShelfLocation] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>(filter === 'low-stock' ? 'low-stock' : 'all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
@@ -321,7 +426,6 @@ function ProductsContent() {
   const [tempBrand, setTempBrand] = useState('all');
   const [tempCategory, setTempCategory] = useState('all');
   const [tempSupplier, setTempSupplier] = useState('all');
-  const [tempWarehouse, setTempWarehouse] = useState('all');
   const [tempShelfLocation, setTempShelfLocation] = useState('all');
   const [tempStatus, setTempStatus] = useState(filter === 'low-stock' ? 'low-stock' : 'all');
   const [tempDepartment, setTempDepartment] = useState('all');
@@ -340,6 +444,14 @@ function ProductsContent() {
   const [isUnitOfMeasureOpen, setIsUnitOfMeasureOpen] = useState(false);
   const [isWarehousesOpen, setIsWarehousesOpen] = useState(false);
 
+  // Every user-initiated warehouse change goes through here. Marking the default as
+  // settled is what stops the async default from overwriting a choice the user
+  // made first: the effect below does nothing once warehouseDefaultReady is set.
+  const chooseWarehouse = useCallback((value: string) => {
+    setSelectedWarehouse(value);
+    setWarehouseDefaultReady(true);
+  }, []);
+
   const filters = {
     search: debouncedSearchTerm || undefined,
     brand: selectedBrand !== 'all' ? selectedBrand : undefined,
@@ -353,6 +465,7 @@ function ProductsContent() {
 
   const { data: productsDataResult, isLoading: isLoadingProducts, refetch } = useQuery({
     queryKey: ['products', currentPage, pageSize, filters],
+    enabled: warehouseDefaultReady,
     queryFn: async () => {
       const [productsData, totalCount] = await Promise.all([
         getProducts(pageSize, (currentPage - 1) * pageSize, filters),
@@ -373,6 +486,47 @@ function ProductsContent() {
     }
   });
 
+  // Captured once per mount so the query key is stable across renders.
+  const [sessionUid] = useState(() => getSessionUid());
+
+  // The branch's default warehouse. Resolved server-side from the session so it is
+  // always a warehouse of the user's own branch (never "first of every branch").
+  const { data: defaultWarehouse, isError: defaultWarehouseFailed } = useQuery({
+    // The identity is part of the key: the QueryClient is a module-level singleton
+    // that survives sign-out -> sign-in as another user, so without the uid a user
+    // would inherit the previous user's (other branch's) cached default.
+    queryKey: ['defaultProductWarehouse', sessionUid],
+    queryFn: () => getDefaultProductWarehouse(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  // The tab strip's warehouses: the active warehouses of the user's own branch
+  // (head office, and a null cookie, get every branch's). Keyed by the session uid
+  // for the same reason the default is -- the QueryClient outlives a sign-out.
+  // `getWarehouses()` stays unfiltered for its other callers; only this page's
+  // list is branch-scoped.
+  const { data: branchWarehouses, isError: branchWarehousesFailed } = useQuery({
+    queryKey: ['branchWarehouses', sessionUid],
+    queryFn: () => getBranchWarehouses(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  // Apply the default exactly once, and only if the user has not already chosen
+  // (chooseWarehouse sets warehouseDefaultReady, which short-circuits this).
+  // No warehouse in the branch => a sentinel that matches nothing, so the list is
+  // empty rather than unfiltered.
+  useEffect(() => {
+    if (warehouseDefaultReady) return;
+    if (defaultWarehouse) {
+      setSelectedWarehouse(defaultWarehouse.warehouseId ?? NO_WAREHOUSE);
+      setWarehouseDefaultReady(true);
+    } else if (defaultWarehouseFailed) {
+      setWarehouseDefaultReady(true); // fall back to 'all' rather than a blank page
+    }
+  }, [defaultWarehouse, defaultWarehouseFailed, warehouseDefaultReady]);
+
   const { data: posSettings } = useQuery({
     queryKey: ['posSettings'],
     queryFn: async () => {
@@ -391,16 +545,26 @@ function ProductsContent() {
     refetchOptions();
   }, [refetchOptions]);
 
-  useLiveRefresh(refetch);
+  // refetch() ignores `enabled`, so a stock-updated event before the default
+  // warehouse resolves would fetch the unfiltered list. Hold it until ready.
+  const refreshWhenReady = useCallback(() => {
+    if (warehouseDefaultReady) refetch();
+  }, [refetch, warehouseDefaultReady]);
+  useLiveRefresh(refreshWhenReady);
 
   // Reset to page 1 when structural filters or search term change
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedBrand, selectedCategory, selectedSupplier, selectedWarehouse, selectedShelfLocation, selectedStatus, selectedDepartment, debouncedSearchTerm]);
 
-  const filtersActive = useMemo(() => {
-    return selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedWarehouse !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all' || !!debouncedSearchTerm;
-  }, [selectedBrand, selectedCategory, selectedSupplier, selectedWarehouse, selectedShelfLocation, selectedStatus, selectedDepartment, debouncedSearchTerm]);
+  // Mirrors `rollupSuppressed` in ./actions.ts: row filters (and search) flatten the
+  // family tree; the warehouse filter does NOT -- it only scopes which rows are
+  // visible, so a family stays nested under its default warehouse. Deliberately
+  // separate from the chip/badge checks below, which DO count a warehouse selection
+  // as an active filter. Keep this list in step with the server's.
+  const suppressRollup = useMemo(() => {
+    return selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all' || !!debouncedSearchTerm;
+  }, [selectedBrand, selectedCategory, selectedSupplier, selectedShelfLocation, selectedStatus, selectedDepartment, debouncedSearchTerm]);
 
   // Server-side results are already filtered
   const products = useMemo(() => {
@@ -410,8 +574,8 @@ function ProductsContent() {
   const productTree = useMemo(() => {
     if (!products) return [];
 
-    // If filters are active, show flat list
-    if (filtersActive) {
+    // If a row filter or search is active, show flat list (a warehouse alone does not)
+    if (suppressRollup) {
         return products.map((p: Product) => ({ ...p, children: [] }));
     }
 
@@ -431,7 +595,7 @@ function ProductsContent() {
     };
 
     return buildTree();
-  }, [products, filtersActive]);
+  }, [products, suppressRollup]);
 
   const filteredProducts = useMemo(() => {
     return productTree;
@@ -553,7 +717,6 @@ function ProductsContent() {
                    setTempBrand(selectedBrand);
                    setTempCategory(selectedCategory);
                    setTempSupplier(selectedSupplier);
-                   setTempWarehouse(selectedWarehouse);
                    setTempShelfLocation(selectedShelfLocation);
                    setTempStatus(selectedStatus);
                    setTempDepartment(selectedDepartment);
@@ -561,10 +724,10 @@ function ProductsContent() {
                    <span className="sr-only">Open filters</span>
                    <Settings className="h-4 w-4 mr-2" />
                    Filter Products
-                   {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedWarehouse !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
+                   {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
                        <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center">
                            {
-                               [selectedBrand, selectedCategory, selectedSupplier, selectedWarehouse, selectedShelfLocation, selectedStatus, selectedDepartment].filter(v => v !== 'all').length
+                               [selectedBrand, selectedCategory, selectedSupplier, selectedShelfLocation, selectedStatus, selectedDepartment].filter(v => v !== 'all').length
                            }
                        </Badge>
                    )}
@@ -630,23 +793,6 @@ function ProductsContent() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="warehouse-filter">Warehouse</Label>
-                    <Select value={tempWarehouse} onValueChange={setTempWarehouse}>
-                      <SelectTrigger id="warehouse-filter">
-                        <SelectValue placeholder="All Warehouses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Warehouses</SelectItem>
-                        {productOptions?.warehouses?.map((warehouse: any) => (
-                          <SelectItem key={warehouse.id} value={warehouse.id}>
-                            {warehouse.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
                     <Label htmlFor="shelf-filter">Shelf Location</Label>
                     <Select value={tempShelfLocation} onValueChange={setTempShelfLocation}>
                       <SelectTrigger id="shelf-filter">
@@ -699,7 +845,6 @@ function ProductsContent() {
                        setTempBrand('all');
                        setTempCategory('all');
                        setTempSupplier('all');
-                       setTempWarehouse('all');
                        setTempShelfLocation('all');
                        setTempStatus('all');
                        setTempDepartment('all');
@@ -708,7 +853,6 @@ function ProductsContent() {
                        setSelectedBrand(tempBrand);
                        setSelectedCategory(tempCategory);
                        setSelectedSupplier(tempSupplier);
-                       setSelectedWarehouse(tempWarehouse);
                        setSelectedShelfLocation(tempShelfLocation);
                        setSelectedStatus(tempStatus);
                        setSelectedDepartment(tempDepartment);
@@ -724,11 +868,22 @@ function ProductsContent() {
             />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-3 flex-shrink-0 min-w-0">
 
-        
+        <WarehouseTabs
+          warehouses={branchWarehouses?.warehouses ?? []}
+          value={selectedWarehouse}
+          onChange={chooseWarehouse}
+          // On a failed list fetch still render the strip (just "All warehouses"),
+          // mirroring the default-warehouse fallback: otherwise the skeleton would
+          // sit there forever and, with the old <Select> gone, the user could not
+          // change warehouse at all.
+          isLoading={!warehouseDefaultReady || (!branchWarehouses && !branchWarehousesFailed)}
+          showLocation={branchWarehouses?.isHeadOffice ?? false}
+        />
+
         {/* Active Filters Badges */}
-        {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedWarehouse !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
+        {(selectedBrand !== 'all' || selectedCategory !== 'all' || selectedSupplier !== 'all' || selectedShelfLocation !== 'all' || selectedStatus !== 'all' || selectedDepartment !== 'all') && (
             <div className="flex flex-wrap items-center gap-2">
                  {selectedBrand !== 'all' && (
                      <Badge variant="secondary" className="gap-1 pl-2">
@@ -752,15 +907,6 @@ function ProductsContent() {
                      <Badge variant="secondary" className="gap-1 pl-2">
                          Supplier: {productOptions?.suppliers?.find((s:any) => s.id === selectedSupplier)?.name || 'Unknown'}
                          <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedSupplier('all')}>
-                             <span className="sr-only">Remove</span>
-                             <span className="text-xs">×</span>
-                         </button>
-                     </Badge>
-                 )}
-                 {selectedWarehouse !== 'all' && (
-                     <Badge variant="secondary" className="gap-1 pl-2">
-                         Warehouse: {productOptions?.warehouses?.find((w:any) => w.id === selectedWarehouse)?.name || 'Unknown'}
-                         <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-[-0.005em] whitespace-nowrap transition-[background-color,box-shadow,transform] active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent focus-visible:ring-ring p-0 h-4 w-4 ml-1 hover:bg-transparent" onClick={() => setSelectedWarehouse('all')}>
                              <span className="sr-only">Remove</span>
                              <span className="text-xs">×</span>
                          </button>
@@ -799,7 +945,8 @@ function ProductsContent() {
                         setSelectedBrand('all');
                         setSelectedCategory('all');
                         setSelectedSupplier('all');
-                        setSelectedWarehouse('all');
+                        // Ang warehouse DILI usa ka filter -- ang tab strip ang
+                        // nagdumala niini, mao nga ang "Clear All" wala motandog.
                         setSelectedShelfLocation('all');
                         setSelectedStatus('all');
                         setSelectedDepartment('all');
@@ -838,7 +985,7 @@ function ProductsContent() {
 
             </TableHeader>
             <TableBody>
-              {isLoadingProducts ? (
+              {isLoadingProducts || !warehouseDefaultReady ? (
                 Array.from({ length: 5 }).map((_, i) => <ProductSkeleton key={i} />)
               ) : (
                 filteredProducts.map((product: ProductWithChildren) => (
@@ -854,7 +1001,7 @@ function ProductsContent() {
                   />
                 ))
               )}
-              {!isLoadingProducts && filteredProducts.length === 0 && (
+              {!isLoadingProducts && warehouseDefaultReady && filteredProducts.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={PRODUCT_TABLE_COLUMN_COUNT} className="h-24 text-center">
                     No products found.

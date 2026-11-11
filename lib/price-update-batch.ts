@@ -10,7 +10,6 @@ import {
 
 export interface PriceUpdateItem {
   productId: string;
-  sku: string;
   barcode: string;
   productName: string;
   field: 'price' | 'cost' | 'priceLevel';

@@ -15,7 +15,7 @@ test.describe('Inventory adjustment', () => {
     await page.goto('/inventory');
 
     // I-search ang target product aron usa ra ka card ang makita.
-    await page.getByPlaceholder(/search products by name or sku/i).fill(INVENTORY_PRODUCT.sku);
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(INVENTORY_PRODUCT.barcode);
 
     // Ablihi ang row action menu → Adjust Stock.
     await page.getByRole('button', { name: 'Actions' }).first().click();
@@ -34,9 +34,9 @@ test.describe('Inventory adjustment', () => {
 
     // I-verify nga ang stock midugang sa DB.
     await expect(async () => {
-      const res = await request.get(`/api/products?search=${INVENTORY_PRODUCT.sku}&limit=50`);
+      const res = await request.get(`/api/products?search=${INVENTORY_PRODUCT.barcode}&limit=50`);
       const body = await res.json();
-      const match = (body.data ?? []).find((p: any) => p.sku === INVENTORY_PRODUCT.sku);
+      const match = (body.data ?? []).find((p: any) => p.barcode === INVENTORY_PRODUCT.barcode);
       expect(match, 'inventory product makita').toBeTruthy();
       expect(Number(match.stock)).toBe(expectedStock);
     }).toPass({ timeout: 10_000 });

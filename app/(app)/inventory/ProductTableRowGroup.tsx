@@ -53,7 +53,6 @@ export function ProductTableRowGroup({ productGroup, onSuccess, requireAdjustmen
             )}
           </div>
         </TableCell>
-        <TableCell>{productGroup.sku}</TableCell>
         <TableCell className="font-mono text-xs">{productGroup.barcode || '-'}</TableCell>
         <TableCell>
           <span className="font-medium">{formatStockQuantity(displayStock, productGroup.unitOfMeasure)}</span> <span className="text-muted-foreground text-xs">{productGroup.unitOfMeasure}</span>
@@ -93,7 +92,6 @@ export function ProductTableRowGroup({ productGroup, onSuccess, requireAdjustmen
                   )}
                 </div>
               </TableCell>
-              <TableCell className="text-sm">{child.sku}</TableCell>
               <TableCell className="text-sm font-mono text-xs">{child.barcode || '-'}</TableCell>
               <TableCell className="text-sm">
                  <span className="font-medium">{formatStockQuantity(child.stock, child.unitOfMeasure)}</span> <span className="text-muted-foreground text-xs">{child.unitOfMeasure}</span>

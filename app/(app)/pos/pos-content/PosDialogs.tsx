@@ -62,7 +62,8 @@ export function PosDialogs(pos: Props) {
         activeLevelId={pos.activeLevelId}
         defaultLevelId={pos.defaultLevelId}
         activeLevelName={pos.activeLevelName}
-        warehouseId={pos.inventoryLocation}
+        warehouseId={pos.productWarehouseId}
+        enabled={pos.productsReady}
         allProducts={pos.products}
       />
 
@@ -217,6 +218,8 @@ export function PosDialogs(pos: Props) {
         activeLevelId={pos.activeLevelId}
         defaultLevelId={pos.defaultLevelId}
         activeLevelName={pos.activeLevelName}
+        warehouseId={pos.productWarehouseId}
+        enabled={pos.productsReady}
       />
 
       <ZReadingDialog

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
 import { testQuery, resetPosState } from './helpers/db';
-import { TEST_USERS } from './fixtures/test-data';
+import { TEST_USERS, TEST_MAIN_WAREHOUSE } from './fixtures/test-data';
 
 /**
  * Service product type (DB-backed) — mga services (labor, delivery fee, repair)
@@ -32,12 +32,12 @@ async function posLogin(page: Page) {
 async function startShift(page: Page) {
   await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
   await page.getByRole('button', { name: /start shift/i }).click();
-  await expect(page.getByPlaceholder(/scan barcode or enter product sku/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/scan barcode or search product/i)).toBeVisible();
 }
 
 /** I-add ang product pinaagi sa SKU (retry kay async ang product load). */
 async function addProductBySku(page: Page, sku: string, name: string) {
-  const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+  const barcode = page.getByPlaceholder(/scan barcode or search product/i);
   await expect(async () => {
     await barcode.fill(sku);
     await barcode.press('Enter');
@@ -47,7 +47,7 @@ async function addProductBySku(page: Page, sku: string, name: string) {
 
 /** I-checkout pinaagi sa empty-barcode+Enter → TenderDialog → Confirm Payment. */
 async function checkoutCash(page: Page) {
-  const barcode = page.getByPlaceholder(/scan barcode or enter product sku/i);
+  const barcode = page.getByPlaceholder(/scan barcode or search product/i);
   await barcode.click();
   await barcode.press('Enter');
   await expect(page.getByText(/tender payment/i)).toBeVisible();
@@ -55,12 +55,20 @@ async function checkoutCash(page: Page) {
 }
 
 test.describe('Service product type', () => {
-  const SERVICE_SKU = 'E2E-SVC-001';
+  // One literal serving as BOTH the row's primary key and its barcode: the
+  // scanner-entry box needs a code to type, and every test here re-inserts the
+  // same row under the same id.
+  const SERVICE_CODE = 'E2E-SVC-001';
   const SERVICE_NAME = 'E2E Test Service';
 
   test.beforeEach(async ({ page }) => {
     await testQuery('DELETE FROM sale_items WHERE product_name = ?', [SERVICE_NAME]);
-    await testQuery('DELETE FROM products WHERE sku = ?', [SERVICE_SKU]);
+    // Keyed on `id`, NOT on `barcode`. The INSERTs below write SERVICE_CODE to
+    // both columns, but `id` is what the row's existence actually hinges on: a
+    // leftover row whose barcode was changed or nulled by another spec would
+    // survive a barcode-keyed DELETE while still occupying this id, and the
+    // next INSERT would then die on a PRIMARY duplicate.
+    await testQuery('DELETE FROM products WHERE id = ?', [SERVICE_CODE]);
     await resetPosState();
   });
 
@@ -79,10 +87,15 @@ test.describe('Service product type', () => {
     await expect(dialog.getByRole('tab', { name: 'Selling Units' })).toBeHidden();
 
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await expect(dialog.getByLabel('Initial Stock')).toBeHidden();
-    await expect(dialog.getByLabel('Reorder Point')).toBeHidden();
-    await expect(dialog.getByLabel('Supplier (Optional)')).toBeHidden();
-    await expect(dialog.getByLabel('Warehouse (Optional)')).toBeHidden();
+    // The warehouse picker and its per-warehouse opening-stock rows are the
+    // stock surface now (there is no single "Initial Stock" field any more), so
+    // a service must show NEITHER. Asserted by COUNT, not by `toBeHidden()`:
+    // `toBeHidden` on a name that does not exist at all passes vacuously and
+    // would keep passing if the section were later rendered under a new label.
+    await expect(dialog.getByLabel(/^Warehouses/)).toHaveCount(0);
+    await expect(dialog.getByTestId('warehouse-row')).toHaveCount(0);
+    await expect(dialog.getByLabel(/^Initial stock for /)).toHaveCount(0);
+    await expect(dialog.getByText('Initial stock', { exact: true })).toHaveCount(0);
     await expect(dialog.getByLabel('Shelf Locations (Optional)')).toBeHidden();
     // Ang Department nag-grupo sa mga stocked nga produkto para sa markup ug
     // reporting — walay kalabotan sa serbisyo, mao nga tago sad.
@@ -100,24 +113,24 @@ test.describe('Service product type', () => {
 
   test('selling a service leaves stock untouched but records cost_at_sale with no batch_source', async ({ page }) => {
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type)
-       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      `INSERT INTO products (id, name, description, category, brand, barcode, stock, price, cost, unit_of_measure, type, warehouse_id)
+       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service', ?)`,
+      [SERVICE_CODE, SERVICE_NAME, SERVICE_CODE, TEST_MAIN_WAREHOUSE.id]
     );
 
     await posLogin(page);
     await startShift(page);
-    await addProductBySku(page, SERVICE_SKU, SERVICE_NAME);
+    await addProductBySku(page, SERVICE_CODE, SERVICE_NAME);
     await checkoutCash(page);
 
     await expect(page.getByText(/saved successfully/i)).toBeVisible({ timeout: 15000 });
 
-    const stock: any = await testQuery('SELECT stock FROM products WHERE sku = ?', [SERVICE_SKU]);
+    const stock: any = await testQuery('SELECT stock FROM products WHERE id = ?', [SERVICE_CODE]);
     expect(Number(stock[0].stock)).toBe(0);
 
     const movements: any = await testQuery(
       'SELECT COUNT(*) c FROM stock_movements WHERE product_id = ?',
-      [SERVICE_SKU]
+      [SERVICE_CODE]
     );
     expect(Number(movements[0].c)).toBe(0);
 
@@ -136,15 +149,15 @@ test.describe('Service product type', () => {
     await testQuery('UPDATE pos_settings SET batch_costing_oversell_block = 1');
 
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type)
-       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      `INSERT INTO products (id, name, description, category, brand, barcode, stock, price, cost, unit_of_measure, type, warehouse_id)
+       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service', ?)`,
+      [SERVICE_CODE, SERVICE_NAME, SERVICE_CODE, TEST_MAIN_WAREHOUSE.id]
     );
 
     try {
       await posLogin(page);
       await startShift(page);
-      await addProductBySku(page, SERVICE_SKU, SERVICE_NAME);
+      await addProductBySku(page, SERVICE_CODE, SERVICE_NAME);
       await checkoutCash(page);
 
       // A batch-exhaustion rejection surfaces as a "Stock Alert" destructive toast
@@ -159,9 +172,9 @@ test.describe('Service product type', () => {
 
   test('services are absent from the low-stock report', async ({ page }) => {
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, reorder_point, price, cost, unit_of_measure, type)
+      `INSERT INTO products (id, name, description, category, brand, barcode, stock, reorder_point, price, cost, unit_of_measure, type)
        VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 10, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      [SERVICE_CODE, SERVICE_NAME, SERVICE_CODE]
     );
 
     await seedSession(page, DEFAULT_ADMIN);
@@ -175,9 +188,9 @@ test.describe('Service product type', () => {
     // Stock 0 is the normal, permanent state of a service. The stock ladder
     // would call that "Out of Stock", which reads as a problem to fix.
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, reorder_point, price, cost, unit_of_measure, type)
+      `INSERT INTO products (id, name, description, category, brand, barcode, stock, reorder_point, price, cost, unit_of_measure, type)
        VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      [SERVICE_CODE, SERVICE_NAME, SERVICE_CODE]
     );
 
     await seedSession(page, DEFAULT_ADMIN);
@@ -194,14 +207,14 @@ test.describe('Service product type', () => {
 
   test('type is read-only in Edit Product', async ({ page }) => {
     await testQuery(
-      `INSERT INTO products (id, name, description, category, brand, sku, stock, price, cost, unit_of_measure, type)
-       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service')`,
-      [SERVICE_SKU, SERVICE_NAME, SERVICE_SKU]
+      `INSERT INTO products (id, name, description, category, brand, barcode, stock, price, cost, unit_of_measure, type, warehouse_id)
+       VALUES (?, ?, 'E2E service', 'IT Services', 'Generic', ?, 0, 500, 200, 'Service', 'service', ?)`,
+      [SERVICE_CODE, SERVICE_NAME, SERVICE_CODE, TEST_MAIN_WAREHOUSE.id]
     );
 
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
-    await page.getByPlaceholder('Search products...').fill(SERVICE_SKU);
+    await page.getByPlaceholder('Search products...').fill(SERVICE_CODE);
 
     const row = page.getByRole('row', { name: new RegExp(SERVICE_NAME) });
     await expect(row).toBeVisible();

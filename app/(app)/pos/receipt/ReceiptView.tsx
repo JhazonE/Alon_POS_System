@@ -6,6 +6,7 @@ import { formatQuantity } from '@/lib/utils';
 import { formatSINumber } from '@/lib/si-number';
 import { useReceipt } from './use-receipt';
 import type { ReceiptViewProps } from './receipt-types';
+import { displayDiscountPercent } from '@/lib/tax-utils';
 
 export const ReceiptView = forwardRef<HTMLDivElement, ReceiptViewProps>(({ saleDetails, settings }, ref) => {
     const { items, customer, totalDue, change, paymentMethod } = saleDetails;
@@ -69,7 +70,7 @@ export const ReceiptView = forwardRef<HTMLDivElement, ReceiptViewProps>(({ saleD
                         <span className="w-10 text-left">{formatQuantity(item.quantity)} {item.unitOfMeasure}</span>
                         <span className="flex-1 text-left px-1">
                             <div>{item.name}</div>
-                            {item.discount > 0 && <div className="text-[9px] italic">Disc: {item.discount}%</div>}
+                            {item.discount > 0 && <div className="text-[9px] italic">Disc: {displayDiscountPercent(item.discount, (item as any).discountType)}%</div>}
                             <div className="text-black">@ {formatCurrency(item.price)}</div>
                         </span>
                         <span className="w-12 text-right">{formatCurrency(item.price * item.quantity)}</span>

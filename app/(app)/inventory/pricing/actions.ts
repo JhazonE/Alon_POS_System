@@ -3,7 +3,6 @@
 import { query } from '@/lib/mysql';
 import { applyAdjustment, isValidPriceValue } from '@/lib/price-update-math';
 import { addProduct } from '@/app/(app)/products/actions';
-import { generateSku } from '@/lib/sku';
 import { resolveScopeForAction, BranchResolutionError } from '@/lib/branch-context';
 import {
   submitPriceUpdateBatchWithScope,
@@ -37,7 +36,6 @@ export async function submitPriceUpdateBatch(
 }
 
 export interface PriceListRow {
-  sku: string;
   barcode: string;
   name?: string;
   brand?: string;
@@ -49,7 +47,6 @@ export interface PriceListRow {
 }
 
 export interface NewProductFromExcel {
-  sku: string;
   barcode: string;
   name: string;
   brand: string;
@@ -72,36 +69,27 @@ export async function previewPriceListUpload(
   const matched: PriceUpdateItem[] = [];
   const toCreate: NewProductFromExcel[] = [];
   const skipped: PriceListPreviewResult['skipped'] = [];
-  const seenSkus = new Set<string>();
+  // The barcode is the only product identity an uploaded sheet can carry; a
+  // SKU column in the file is ignored.
+  const seenBarcodes = new Set<string>();
 
   for (const row of rows) {
-    const sku = (row.sku || '').trim();
     const barcode = (row.barcode || '').trim();
 
-    if (!sku && !barcode) {
-      skipped.push({ row, reason: 'Missing SKU and barcode' });
+    if (!barcode) {
+      skipped.push({ row, reason: 'Missing barcode' });
       continue;
     }
-    if (sku && seenSkus.has(sku)) {
-      skipped.push({ row, reason: `Duplicate SKU "${sku}" (earlier row in this file superseded)` });
+    if (seenBarcodes.has(barcode)) {
+      skipped.push({ row, reason: `Duplicate barcode "${barcode}" (earlier row in this file superseded)` });
       continue;
     }
 
-    let product: any;
-    if (sku) {
-      const bySku: any = await query(
-        'SELECT id, name, sku, barcode, price, cost FROM products WHERE sku = ? AND warehouse_id = ? LIMIT 1',
-        [sku, warehouseId],
-      );
-      product = bySku?.[0];
-    }
-    if (!product && barcode) {
-      const byBarcode: any = await query(
-        'SELECT id, name, sku, barcode, price, cost FROM products WHERE barcode = ? AND warehouse_id = ? LIMIT 1',
-        [barcode, warehouseId],
-      );
-      product = byBarcode?.[0];
-    }
+    const byBarcode: any = await query(
+      'SELECT id, name, barcode, price, cost FROM products WHERE barcode = ? AND warehouse_id = ? LIMIT 1',
+      [barcode, warehouseId],
+    );
+    const product: any = byBarcode?.[0];
     if (!product) {
       // Unmatched: with enough identity data + a price, treat this as a new
       // product to create rather than an unconditional skip. Reusing
@@ -126,29 +114,26 @@ export async function previewPriceListUpload(
         skipped.push({ row, reason: 'new_cost must be a non-negative number' });
         continue;
       }
-      // A blank sku is common for a genuinely new product the uploader
-      // doesn't have a code for yet — auto-generate one instead of skipping,
-      // using generateSku (brand/name prefix + random suffix).
-      const newSku = sku || generateSku(row.brand, row.name);
-      if (seenSkus.has(newSku)) {
-        skipped.push({ row, reason: `Duplicate SKU "${newSku}" (earlier row in this file superseded)` });
-        continue;
-      }
-      seenSkus.add(newSku);
+      // Claimed only once this row is actually going to be acted on. A row
+      // skipped above for a bad price must NOT consume its barcode: a later
+      // row carrying the same barcode with a valid price still has to be
+      // processed. Hence this `.add` is duplicated rather than hoisted to the
+      // dedup check — the two call sites are the two "this row counts" points.
+      seenBarcodes.add(barcode);
       toCreate.push({
-        sku: newSku, barcode, name: row.name!, brand: row.brand!, category: row.category!, unitOfMeasure: row.unitOfMeasure!,
+        barcode, name: row.name!, brand: row.brand!, category: row.category!, unitOfMeasure: row.unitOfMeasure!,
         price: row.newPrice!, cost: row.newCost,
       });
       continue;
     }
-    if (sku) seenSkus.add(sku);
+    seenBarcodes.add(barcode);
 
     if (row.newPrice != null) {
       if (!isValidPriceValue(row.newPrice)) {
         skipped.push({ row, reason: 'new_price must be a non-negative number' });
       } else {
         matched.push({
-          productId: product.id, sku: product.sku, barcode: product.barcode || '', productName: product.name,
+          productId: product.id, barcode: product.barcode || '', productName: product.name,
           field: 'price', oldValue: parseFloat(product.price), newValue: row.newPrice,
           adjustmentType: 'exact', adjustmentValue: row.newPrice,
         });
@@ -159,7 +144,7 @@ export async function previewPriceListUpload(
         skipped.push({ row, reason: 'new_cost must be a non-negative number' });
       } else {
         matched.push({
-          productId: product.id, sku: product.sku, barcode: product.barcode || '', productName: product.name,
+          productId: product.id, barcode: product.barcode || '', productName: product.name,
           field: 'cost', oldValue: parseFloat(product.cost || 0), newValue: row.newCost,
           adjustmentType: 'exact', adjustmentValue: row.newCost,
         });
@@ -181,7 +166,7 @@ export async function previewPriceListUpload(
           skipped.push({ row, reason: 'Computed price from new_markup_pct is invalid (check product cost)' });
         } else {
           matched.push({
-            productId: product.id, sku: product.sku, barcode: product.barcode || '', productName: product.name,
+            productId: product.id, barcode: product.barcode || '', productName: product.name,
             field: 'price', oldValue: parseFloat(product.price), newValue: newPrice,
             adjustmentType: 'markup', adjustmentValue: row.newMarkupPct,
           });
@@ -213,7 +198,6 @@ export async function createProductsFromExcel(
       const result = await addProduct({
         name: row.name,
         brand: row.brand,
-        sku: row.sku,
         barcode: row.barcode || undefined,
         description: row.name,
         category: row.category,

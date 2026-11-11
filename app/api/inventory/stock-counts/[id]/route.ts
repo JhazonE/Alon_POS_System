@@ -18,7 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     // Fetch the items associated with this count
     const itemsSql = `
-      SELECT sci.*, p.name as product_name, p.sku as product_sku, p.barcode as product_barcode, p.cost as product_cost, p.price as product_retail
+      SELECT sci.*, p.name as product_name, p.barcode as product_barcode, p.cost as product_cost, p.price as product_retail
       FROM stock_count_items sci
       JOIN products p ON sci.product_id = p.id
       WHERE sci.stock_count_id = ?

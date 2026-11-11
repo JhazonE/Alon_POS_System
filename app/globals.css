@@ -145,9 +145,21 @@
   }
 
   .dark {
-    --matte-ground:   10  33  69;  /* #0A2145 */
+    /*
+      The ground sits well below the surface on purpose. At the old
+      #0A2145 it was ~11 lightness points from --matte-surface, so cards
+      did not read as cards and the dashboard looked like one flat navy
+      sheet. Keep the gap wide when retuning this ramp.
+    */
+    --matte-ground:    5  14  32;  /* #050E20 */
     --matte-surface:  15  44  88;  /* #0F2C58 — sidebar nav card */
-    --matte-line:     26  59 110;  /* #1A3B6E — sidebar nav card border */
+    /*
+      Brightened from the sidebar's #1A3B6E so a card edge still reads
+      against the deepened ground. The sidebar hardcodes its own border
+      (`components/sidebar/sidebar-shell.tsx`) and is navy in BOTH themes,
+      so it no longer tracks this value -- intentionally.
+    */
+    --matte-line:     30  65 120;  /* #1E4178 */
     --matte-inset:     7  26  56;  /* #071A38 */
     --matte-label:   157 180 214;  /* #9DB4D6 */
     --matte-value:   220 233 248;  /* #DCE9F8 */

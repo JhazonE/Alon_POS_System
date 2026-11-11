@@ -43,7 +43,6 @@ export async function PATCH(
       stock, 
       price, 
       cost, 
-      sku, 
       barcode,
       stockIncrement 
     } = body;
@@ -76,7 +75,6 @@ export async function PATCH(
     if (stock !== undefined) { updates.push('stock = ?'); values.push(stock); }
     if (price !== undefined) { updates.push('price = ?'); values.push(price); }
     if (cost !== undefined) { updates.push('cost = ?'); values.push(cost); }
-    if (sku !== undefined) { updates.push('sku = ?'); values.push(sku); }
     if (barcode !== undefined) { updates.push('barcode = ?'); values.push(barcode); }
 
     if (updates.length > 0) {

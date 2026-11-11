@@ -9,7 +9,7 @@ async function verifySync() {
 
         // 1. Setup Parent (Case)
         await query(`
-      INSERT INTO products (id, name, description, category, brand, stock, price, sku, unit_of_measure, conversion_factor)
+      INSERT INTO products (id, name, description, category, brand, stock, price, barcode, unit_of_measure, conversion_factor)
       VALUES (?, 'Test Case', 'Desc', 'Cat', 'Brand', 10, 1200, 'CASE123', 'CASE', 1.0)
       ON DUPLICATE KEY UPDATE stock = 10
     `, [PARENT_ID]);
@@ -20,7 +20,7 @@ async function verifySync() {
 
         // 2. Setup Child (Piece)
         await query(`
-      INSERT INTO products (id, name, description, category, brand, stock, price, sku, unit_of_measure, parent_id, conversion_factor)
+      INSERT INTO products (id, name, description, category, brand, stock, price, barcode, unit_of_measure, parent_id, conversion_factor)
       VALUES (?, 'Test Piece', 'Desc', 'Cat', 'Brand', 120, 100, 'PCS123', 'Piece', ?, 1.0)
       ON DUPLICATE KEY UPDATE stock = 120
     `, [CHILD_ID, PARENT_ID]);

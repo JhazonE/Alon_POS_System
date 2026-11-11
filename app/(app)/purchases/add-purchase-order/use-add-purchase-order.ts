@@ -346,13 +346,21 @@ export function useAddPurchaseOrder({
       // Read the live form value, not `fields`: this effect can run twice before
       // `fields` re-renders (the page mounts before suppliers have loaded), and
       // a stale empty `fields` would append the product twice.
+      // The supplier prefill is deliberately OUTSIDE the append guard below.
+      // `suppliers` loads after `products`, so the first run appends the item
+      // with an empty supplier list and no match; by the run where the match
+      // is finally possible, `items.length` is 1 and a combined guard would
+      // skip the lookup forever — the order silently opened with no supplier.
+      // Setting it again on a later run is harmless: it resolves to the same
+      // id, and a user's own choice is not overwritten because the effect
+      // stops re-initialising once `initialisedFor` is set.
+      if (prefillProduct?.supplier && !form.getValues('supplierId')) {
+        const sup = suppliers.find(
+          (s) => s.id === prefillProduct.supplier || s.name === prefillProduct.supplier,
+        );
+        if (sup) form.setValue('supplierId', sup.id);
+      }
       if (prefillProduct && form.getValues('items').length === 0) {
-        if (prefillProduct.supplier) {
-          const sup = suppliers.find(
-            (s) => s.id === prefillProduct.supplier || s.name === prefillProduct.supplier,
-          );
-          if (sup) form.setValue('supplierId', sup.id);
-        }
         handleAddProduct(prefillProduct);
       }
     }

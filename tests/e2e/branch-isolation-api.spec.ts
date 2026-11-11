@@ -7,6 +7,7 @@ import {
   cleanupSale,
   removeBranchWarehouses,
 } from './helpers/branches';
+import { testQuery } from './helpers/db';
 
 /**
  * Isolation kay gi-assert direkta batok sa API, dili pinaagi sa UI.
@@ -18,14 +19,14 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
     const a = await seedSecondBranch();
     const b = await seedSecondBranch();
     try {
-      const skuB = `ISO-B-${Date.now()}`;
-      await seedProductInWarehouse(b.warehouseId, skuB);
+      const tagB = `ISO-B-${Date.now()}`;
+      await seedProductInWarehouse(b.warehouseId, tagB);
 
       const res = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
       expect(res.ok()).toBeTruthy();
       const body = await res.json();
-      const skus = (body.data ?? []).map((p: any) => p.sku);
-      expect(skus).not.toContain(skuB);
+      const barcodes = (body.data ?? []).map((p: any) => p.barcode);
+      expect(barcodes).not.toContain(tagB);
     } finally {
       await cleanupSecondBranch(b);
       await cleanupSecondBranch(a);
@@ -35,13 +36,13 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
   test('makakita ang user sa branch A sa kaugalingon niyang produkto', async ({ request }) => {
     const a = await seedSecondBranch();
     try {
-      const skuA = `ISO-A-${Date.now()}`;
-      await seedProductInWarehouse(a.warehouseId, skuA);
+      const tagA = `ISO-A-${Date.now()}`;
+      await seedProductInWarehouse(a.warehouseId, tagA);
 
       const res = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
       const body = await res.json();
-      const skus = (body.data ?? []).map((p: any) => p.sku);
-      expect(skus).toContain(skuA);
+      const barcodes = (body.data ?? []).map((p: any) => p.barcode);
+      expect(barcodes).toContain(tagA);
     } finally {
       await cleanupSecondBranch(a);
     }
@@ -78,14 +79,14 @@ test.describe('GET /api/reports/inventory — branch isolation', () => {
   test('mo-uli ug data ang tinuod nga uid, ug gi-403 kung walay uid', async ({ request }) => {
     const a = await seedSecondBranch();
     try {
-      const skuA = `ISO-UID-${Date.now()}`;
-      await seedProductInWarehouse(a.warehouseId, skuA);
+      const tagA = `ISO-UID-${Date.now()}`;
+      await seedProductInWarehouse(a.warehouseId, tagA);
 
       const withUid = await request.get(`/api/reports/inventory?uid=${a.userUid}&limit=200`);
       expect(withUid.status()).toBe(200);
       const body = await withUid.json();
       expect(body.success).toBe(true);
-      expect((body.data ?? []).map((p: any) => p.sku)).toContain(skuA);
+      expect((body.data ?? []).map((p: any) => p.barcode)).toContain(tagA);
 
       // Ang server kinahanglan mo-reject sa wala'y uid — dili mo-fallback.
       const noUid = await request.get('/api/reports/inventory?limit=200');
@@ -267,6 +268,55 @@ test.describe('branch isolation — dugang nga endpoints', () => {
     ]) {
       const res = await request.get(withQuery(endpoint, 'uid=test-admin-uid'));
       expect(res.status(), endpoint).toBe(200);
+    }
+  });
+});
+
+/**
+ * Ang invoice-detail route mo-build ug IKADUHANG query (`itemsSql`) HUMAN
+ * makit-an ang invoice. Ang 404 nga test sa taas mo-return sa dili pa kana
+ * modagan, mao nga dili gyud niya matandog. Kini nga test mo-agi sa success
+ * path aron ang `itemsSql` tinuod nga ma-execute — usa ka sayop nga SQL didto
+ * (pananglitan usa ka nahibilin nga comma human matangtang ang kolum) kay
+ * 500 lang unta ug hilom, kay ang route mo-catch sa parse error.
+ *
+ * Live caller: app/(app)/customer/payment/view-invoice-dialog.tsx
+ */
+test.describe('GET /api/customers/invoices/[id] — ang items query modagan', () => {
+  test('mo-return sa invoice uban ang mga linya niini', async ({ request }) => {
+    const a = await seedSecondBranch();
+    const tag = `INVDET-${Date.now()}`;
+    const customerId = `cust-${tag}`;
+    const invoiceId = `inv-${tag}`;
+    const productId = await seedProductInWarehouse(a.warehouseId, tag);
+    try {
+      await testQuery('INSERT INTO customers (id, name) VALUES (?, ?)', [customerId, `Customer ${tag}`]);
+      await testQuery(
+        `INSERT INTO sales_invoices (id, customer_id, invoice_date, total, status)
+         VALUES (?, ?, CURDATE(), 250.00, 'Pending')`,
+        [invoiceId, customerId],
+      );
+      await testQuery(
+        `INSERT INTO sales_invoice_items (id, sales_invoice_id, product_id, product_name, quantity, price)
+         VALUES (?, ?, ?, ?, 2, 125.00)`,
+        [`${invoiceId}-item`, invoiceId, productId, `Test Product ${tag}`],
+      );
+
+      const res = await request.get(`/api/customers/invoices/${invoiceId}?uid=${a.userUid}`);
+      const body = await res.json();
+      expect(res.status(), JSON.stringify(body)).toBe(200);
+      expect(body.success).toBe(true);
+      // Mao kini ang assertion nga mo-pakyas kung ang itemsSql dili ma-parse.
+      expect(body.data.items).toHaveLength(1);
+      expect(body.data.items[0].productId).toBe(productId);
+      expect(body.data.items[0].quantity).toBe(2);
+      expect(body.data.items[0].total).toBe(250);
+    } finally {
+      await testQuery('DELETE FROM sales_invoice_items WHERE sales_invoice_id = ?', [invoiceId]);
+      await testQuery('DELETE FROM sales_invoices WHERE id = ?', [invoiceId]);
+      await testQuery('DELETE FROM customers WHERE id = ?', [customerId]);
+      await testQuery('DELETE FROM products WHERE id = ?', [productId]);
+      await cleanupSecondBranch(a);
     }
   });
 });

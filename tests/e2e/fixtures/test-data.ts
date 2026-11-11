@@ -37,26 +37,24 @@ export type TestProduct = {
   name: string;
   price: number;
   stock: number;
-  sku: string;
   barcode: string;
 };
 
 export const TEST_PRODUCTS: TestProduct[] = [
-  { id: 'test-prod-1', name: 'Test Coffee 3-in-1', price: 12.5, stock: 100, sku: 'TST-COF-001', barcode: '4800000000017' },
-  { id: 'test-prod-2', name: 'Test Bottled Water 500ml', price: 20, stock: 250, sku: 'TST-WTR-002', barcode: '4800000000024' },
-  { id: 'test-prod-3', name: 'Test Instant Noodles', price: 15.75, stock: 80, sku: 'TST-NDL-003', barcode: '4800000000031' },
+  { id: 'test-prod-1', name: 'Test Coffee 3-in-1', price: 12.5, stock: 100, barcode: '4800000000017' },
+  { id: 'test-prod-2', name: 'Test Bottled Water 500ml', price: 20, stock: 250, barcode: '4800000000024' },
+  { id: 'test-prod-3', name: 'Test Instant Noodles', price: 15.75, stock: 80, barcode: '4800000000031' },
 ];
 
 /** POS terminal — ip 127.0.0.1 aron auto-match sa local test client; fallback usab
  * isip terminalsData[0] kay kini ra ang terminal.
  *
- * location MUST be '' (walay inventory location). Ang POS mo-filter sa products
- * pinaagi sa terminal.location → products.warehouse_id; ang atong test products
- * naa'y NULL warehouse_id, mao nga ang bisan unsang location mo-exclude nila. */
+ * Ang location sa seeded terminal kay TEST_MAIN_WAREHOUSE.id (gi-set sa prepare-test-db).
+ * Ang POS mo-list ra ug products gikan sa warehouse sa terminal, ug WALAY ipakita kung
+ * blangko/dili ma-resolve ang location - mao nga dili na ni pwede nga ''. */
 export const TEST_TERMINAL = {
   id: 'test-terminal-1',
   name: 'Test Counter 1',
-  location: '',
   ipAddress: '127.0.0.1',
 };
 
@@ -115,7 +113,8 @@ export const NEW_PRODUCT = {
 export type FullProduct = {
   id: string;
   name: string;
-  sku: string;
+  /** Ang barcode mao na ang bugtong product identity (gi-retire ang products.sku). */
+  barcode: string;
   description: string;
   price: number;
   stock: number;
@@ -127,7 +126,7 @@ export type FullProduct = {
 export const EDITABLE_PRODUCT: FullProduct = {
   id: 'test-editable-1',
   name: 'Editable Widget',
-  sku: 'EDIT-ME-001',
+  barcode: '5400000000001',
   description: 'Product para edit-on sa e2e test.',
   price: 50,
   stock: 30,
@@ -139,7 +138,7 @@ export const EDITABLE_PRODUCT: FullProduct = {
 export const DELETABLE_PRODUCT: FullProduct = {
   id: 'test-deletable-1',
   name: 'Deletable Widget',
-  sku: 'DELETE-ME-001',
+  barcode: '5400000000002',
   description: 'Product para delete-on sa e2e test.',
   price: 60,
   stock: 20,
@@ -152,7 +151,7 @@ export const DELETABLE_PRODUCT: FullProduct = {
 export const INVENTORY_PRODUCT: FullProduct = {
   id: 'test-inventory-1',
   name: 'Inventory Stock Item',
-  sku: 'INV-ADJ-001',
+  barcode: '5400000000003',
   description: 'Product para sa stock-adjustment test.',
   price: 10,
   stock: 100,
@@ -169,7 +168,7 @@ export const INVENTORY_PRODUCT: FullProduct = {
 export const PERISHABLE_PRODUCT: FullProduct = {
   id: 'test-perishable-1',
   name: 'Perishable Stock Item',
-  sku: 'PERISH-001',
+  barcode: '5400000000004',
   description: 'Product para sa expiration-date test.',
   price: 45,
   stock: 50,
@@ -192,7 +191,7 @@ export const PERISHABLE_PRODUCT: FullProduct = {
 export const PERISHABLE_FAMILY_PARENT: FullProduct = {
   id: 'test-perishable-family-parent',
   name: 'Perishable Family Parent',
-  sku: 'PERISH-FAM-PAR-001',
+  barcode: '5400000000005',
   description: 'Non-perishable root product para sa expiry-target regression test.',
   price: 300,
   stock: 10,
@@ -204,7 +203,7 @@ export const PERISHABLE_FAMILY_PARENT: FullProduct = {
 export const PERISHABLE_FAMILY_CHILD: FullProduct & { parentId: string } = {
   id: 'test-perishable-family-child',
   name: 'Perishable Family Child',
-  sku: 'PERISH-FAM-CHD-001',
+  barcode: '5400000000006',
   description: 'Perishable child unit para sa expiry-target regression test.',
   price: 30,
   stock: 0,
@@ -222,7 +221,7 @@ export const PERISHABLE_FAMILY_CHILD: FullProduct & { parentId: string } = {
 export const REASSIGN_PARENT_A: FullProduct = {
   id: 'test-reassign-parent-a',
   name: 'Reassign Parent A',
-  sku: 'RSN-PAR-A-001',
+  barcode: '5400000000007',
   description: 'Original mother product para sa reassign test.',
   price: 120,
   stock: 10,
@@ -234,7 +233,7 @@ export const REASSIGN_PARENT_A: FullProduct = {
 export const REASSIGN_PARENT_B: FullProduct = {
   id: 'test-reassign-parent-b',
   name: 'Reassign Parent B',
-  sku: 'RSN-PAR-B-001',
+  barcode: '5400000000008',
   description: 'New mother product para sa reassign test.',
   price: 150,
   stock: 5,
@@ -246,7 +245,7 @@ export const REASSIGN_PARENT_B: FullProduct = {
 export const REASSIGN_CHILD: FullProduct & { parentId: string } = {
   id: 'test-reassign-child',
   name: 'Reassign Child Piece',
-  sku: 'RSN-CHD-001',
+  barcode: '5400000000009',
   description: 'Child unit nga i-reassign.',
   price: 12,
   stock: 0,
@@ -265,7 +264,7 @@ export const REASSIGN_CHILD: FullProduct & { parentId: string } = {
 export const REASSIGN_TOP_MOVER: FullProduct = {
   id: 'test-reassign-top-mover',
   name: 'Reassign Top Mover',
-  sku: 'RSN-TOP-MVR-001',
+  barcode: '5400000000010',
   description: 'Top-level mother nga i-move under a new parent.',
   price: 200,
   stock: 8,
@@ -277,7 +276,7 @@ export const REASSIGN_TOP_MOVER: FullProduct = {
 export const REASSIGN_TOP_TARGET: FullProduct = {
   id: 'test-reassign-top-target',
   name: 'Reassign Top Target',
-  sku: 'RSN-TOP-TGT-001',
+  barcode: '5400000000011',
   description: 'Bag-ong parent para sa top-level mover.',
   price: 500,
   stock: 3,
@@ -289,7 +288,7 @@ export const REASSIGN_TOP_TARGET: FullProduct = {
 export const REASSIGN_TOP_MOVER_CHILD: FullProduct & { parentId: string } = {
   id: 'test-reassign-top-mover-child',
   name: 'Reassign Top Mover Child',
-  sku: 'RSN-TOP-CHD-001',
+  barcode: '5400000000012',
   description: 'Anak sa mover — kinahanglan magpabilin nested human sa move.',
   price: 34,
   stock: 0,
@@ -314,7 +313,7 @@ export const REASSIGN_TOP_MOVER_CHILD: FullProduct & { parentId: string } = {
 export const REASSIGN_AUTO_MOVER: FullProduct = {
   id: 'test-reassign-auto-mover',
   name: 'Reassign Auto Mover',
-  sku: 'RSN-AMV-001',
+  barcode: '5400000000013',
   description: 'Top-level mover nga dedicado sa auto-detect test.',
   price: 220,
   stock: 4,
@@ -326,7 +325,7 @@ export const REASSIGN_AUTO_MOVER: FullProduct = {
 export const REASSIGN_AUTO_MATCH: FullProduct = {
   id: 'test-reassign-auto-match',
   name: 'Reassign Auto Match Target',
-  sku: 'RSN-AMT-001',
+  barcode: '5400000000014',
   description: 'Top-level nga naay Box factor — auto-detect dapat mo-fire.',
   price: 410,
   stock: 2,
@@ -338,7 +337,7 @@ export const REASSIGN_AUTO_MATCH: FullProduct = {
 export const REASSIGN_AUTO_NOMATCH: FullProduct = {
   id: 'test-reassign-auto-nomatch',
   name: 'Reassign Auto No Match Target',
-  sku: 'RSN-ANM-001',
+  barcode: '5400000000015',
   description: 'Top-level nga walay Box factor — genuine blank case.',
   price: 415,
   stock: 2,
@@ -352,15 +351,23 @@ export const TEST_SUPPLIER = { id: 'sup-test', name: 'Test Supplier Co.' };
 export const TEST_WAREHOUSE = { id: 'wh-test', name: 'Test Warehouse' };
 
 /**
+ * Ang default warehouse sa main branch (pinakaluma, gi-seed nga naay explicit
+ * created_at) -- ang products table mo-land dinhi. Gihuptan niya ang general
+ * catalogue. Ang TEST_WAREHOUSE gihuptan ang BULK_PRICE_PRODUCT ug ang duha ka
+ * bulk-transfer fixtures (TRANSFER_PAIRED_SOURCE, TRANSFER_ORPHAN_PRODUCT).
+ */
+export const TEST_MAIN_WAREHOUSE = { id: 'wh-main-test', name: 'Main Warehouse' };
+
+/**
  * Product nga naka-assign sa TEST_WAREHOUSE — gikinahanglan sa bulk-price-update
  * e2e test kay ang Pricing page's product picker mo-filter pinaagi
- * sa warehouse_id, ug ang TEST_PRODUCTS naa'y NULL warehouse_id (dili sila
- * motungha bisan unsang warehouse ang piliin).
+ * sa warehouse_id. Tulo ka seeded products ang naa sa "Test Warehouse" (kini ug ang
+ * duha ka transfer fixtures), mao nga ang pricing.spec.ts mopili sa row pinaagi sa
+ * barcode, dili sa posisyon. Ang ubang seeded products naa sa TEST_MAIN_WAREHOUSE.
  */
 export const BULK_PRICE_PRODUCT = {
   id: 'test-bulk-price-product-1',
   name: 'Bulk Price Update Product',
-  sku: 'BULK-PRC-001',
   barcode: '4800000099999',
   price: 100,
   cost: 60,
@@ -374,9 +381,9 @@ export const BULK_PRICE_PRODUCT = {
  * supplier dili motungha).
  */
 export const PO_PRODUCT = {
+  barcode: '5400000000016',
   id: 'test-po-product-1',
   name: 'PO Line Item',
-  sku: 'PO-ITEM-001',
   price: 25,
   cost: 18,
   stock: 0,
@@ -396,7 +403,7 @@ export const SO_CUSTOMER = { id: 'cust-so-test', name: 'SO Test Customer' };
 export const SO_PRODUCT = {
   id: 'test-so-product-1',
   name: 'SO Line Item',
-  sku: 'SO-ITEM-001',
+  barcode: '5400000000018',
   price: 120,
   cost: 80,
   stock: 50,
@@ -412,7 +419,7 @@ export const SO_PRODUCT = {
 export const SO_SERVICE = {
   id: 'test-so-service-1',
   name: 'SO Service Line',
-  sku: 'SO-SVC-001',
+  barcode: '5400000000019',
   price: 500,
   cost: 200,
   stock: 0,
@@ -460,7 +467,6 @@ export const SELLING_UNITS_PRODUCT: FullProduct & {
 } = {
   id: 'test-selling-units-1',
   name: 'Selling Units Sardines',
-  sku: 'SU-EDIT-001',
   description: 'Product nga naa nay selling units para sa edit test.',
   price: 25,
   stock: 60,
@@ -505,17 +511,15 @@ export const SELLING_UNITS_PRODUCT: FullProduct & {
 export const TRANSFER_TARGET_WAREHOUSE = { id: 'wh-xfer-dest', name: 'Transfer Destination' };
 
 /**
- * Produkto nga NAA sa duha ka warehouse apan WALAY SKU (sku = NULL).
+ * Produkto nga NAA sa duha ka warehouse, gi-pares pinaagi sa name ug barcode.
  *
- * Ang SKU optional sa product form (`sku: formData.sku || null`), mao nga NULL
- * usa ka normal nga estado — dili edge case. Gi-pares kini nga fixture aron
- * ma-regress ang bug diin ang bulk-transfer nag-resolve sa target pinaagi ra sa
- * `WHERE sku = ?`: sa SQL ang `sku = NULL` dili gyud mo-match, mao nga ang
- * transfer mo-500 bisan tuod naa na ang produkto sa target warehouse.
+ * Ang target resolution kay (name, warehouse_id) — gi-pares kini nga fixture
+ * aron ma-regress nga ang bulk-transfer mo-match sa existing nga row sa target
+ * warehouse imbes mo-500 o mo-create ug duplicate.
  */
-export const TRANSFER_NULL_SKU_SOURCE = {
-  id: 'test-xfer-nullsku-src',
-  name: 'Transfer No SKU Product',
+export const TRANSFER_PAIRED_SOURCE = {
+  id: 'test-xfer-paired-src',
+  name: 'Transfer Paired Product',
   barcode: '5300000000011',
   price: 90,
   cost: 55,
@@ -523,11 +527,11 @@ export const TRANSFER_NULL_SKU_SOURCE = {
   warehouseId: TEST_WAREHOUSE.id,
 };
 
-/** Ang parehas nga produkto sa target warehouse — parehas og name ug barcode, NULL gihapon ang SKU. */
-export const TRANSFER_NULL_SKU_TARGET = {
-  id: 'test-xfer-nullsku-dest',
-  name: TRANSFER_NULL_SKU_SOURCE.name,
-  barcode: TRANSFER_NULL_SKU_SOURCE.barcode,
+/** Ang parehas nga produkto sa target warehouse — parehas og name ug barcode. */
+export const TRANSFER_PAIRED_TARGET = {
+  id: 'test-xfer-paired-dest',
+  name: TRANSFER_PAIRED_SOURCE.name,
+  barcode: TRANSFER_PAIRED_SOURCE.barcode,
   price: 90,
   cost: 55,
   stock: 3,
@@ -544,7 +548,6 @@ export const TRANSFER_NULL_SKU_TARGET = {
 export const TRANSFER_ORPHAN_PRODUCT = {
   id: 'test-xfer-orphan-src',
   name: 'Transfer Orphan Product',
-  sku: 'XFER-ORPH-001',
   barcode: '5300000000028',
   price: 140,
   cost: 95,
@@ -565,9 +568,9 @@ export const SHELF_B = { id: 'shelf-xfer-b', name: 'Aisle B2' };
  * ang total (30). Usa ka test nga pareho ni sila dili makakita sa bug.
  */
 export const SHELF_XFER_PRODUCT = {
+  barcode: '5400000000017',
   id: 'test-shelf-xfer-1',
   name: 'Shelf Transfer Product',
-  sku: 'SHLF-XFER-001',
   price: 75,
   cost: 40,
   stock: 30,

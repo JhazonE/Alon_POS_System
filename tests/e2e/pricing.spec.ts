@@ -9,9 +9,12 @@ const WORKFLOW_ID = 'wf-priceupdate-e2e';
  * Pricing page (DB-backed) — drives the bulk price update form and its Excel
  * upload path on /inventory/pricing against the seeded alon_pos_test DB.
  *
- * Uses BULK_PRICE_PRODUCT, the only seeded product with a non-NULL warehouse_id
- * (see fixtures/test-data.ts) — the page's product picker filters by warehouse,
- * and every other seeded product has warehouse_id = NULL.
+ * Uses BULK_PRICE_PRODUCT, one of three seeded products in "Test Warehouse"
+ * (the other two are the bulk-transfer fixtures TRANSFER_PAIRED_SOURCE and
+ * TRANSFER_ORPHAN_PRODUCT; see fixtures/test-data.ts). The page's product picker
+ * filters by warehouse, so these tests select the row by BULK_PRICE_PRODUCT's
+ * barcode rather than by position. The rest of the seeded catalogue lives in
+ * TEST_MAIN_WAREHOUSE.
  *
  * Selectors were verified against the real rendered markup (not assumed from the
  * plan): the shadcn Checkbox renders `button[role="checkbox"]`, the "Value" input
@@ -30,8 +33,7 @@ async function openPricingAndSelectWarehouse(page: import('@playwright/test').Pa
   await page.getByRole('option', { name: 'Test Warehouse' }).click();
 
   // Product table only renders once a warehouse is selected. The table
-  // shows Barcode, not SKU (changed after this spec was first written —
-  // see commit cf83d36).
+  // shows Barcode, which is now the only product identity.
   await expect(pricing.getByText(BULK_PRICE_PRODUCT.barcode)).toBeVisible();
   return pricing;
 }
@@ -50,18 +52,18 @@ test.describe('Pricing', () => {
 
     // Baseline price straight from the DB — don't assume the seeded value in case
     // an earlier run/spec mutated it.
-    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
     const beforeBody = await before.json();
-    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
     expect(beforeProduct, 'seeded bulk-price product should exist').toBeTruthy();
     const priceBefore = parseFloat(beforeProduct.price);
 
     const pricing = await openPricingAndSelectWarehouse(page);
 
-    // Select the (only) product row's checkbox — shadcn Checkbox renders as
+    // Select BULK_PRICE_PRODUCT's row (by barcode) checkbox — shadcn Checkbox renders as
     // button[role="checkbox"], not a native input.
     const table = pricing.locator('table').first();
-    await table.locator('tbody tr').first().getByRole('checkbox').check();
+    await table.locator('tbody tr').filter({ hasText: BULK_PRICE_PRODUCT.barcode }).getByRole('checkbox').check();
 
     // "Value" Label/Input are siblings with no htmlFor/id link, so getByLabel
     // doesn't resolve it — target the (only) number input on the page instead.
@@ -71,13 +73,17 @@ test.describe('Pricing', () => {
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
-    await expect(page.getByText('Prices updated')).toBeVisible();
+    // `exact: true` scopes this to the toast's own title element. Without it the
+    // locator also matches the aria-live announcement ("Notification Prices
+    // updatedUpdated 1 product(s)."), which populates a beat after the toast and
+    // trips Playwright's strict mode intermittently.
+    await expect(page.getByText('Prices updated', { exact: true })).toBeVisible();
 
     const expectedPrice = Math.round(priceBefore * 1.1 * 100) / 100;
     await expect(async () => {
-      const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+      const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
       const afterBody = await after.json();
-      const afterProduct = (afterBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+      const afterProduct = (afterBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
       expect(afterProduct, 'product still findable after update').toBeTruthy();
       expect(parseFloat(afterProduct.price)).toBeCloseTo(expectedPrice, 2);
     }).toPass({ timeout: 10_000 });
@@ -99,15 +105,15 @@ test.describe('Pricing', () => {
 
     await request.post('/api/pos-settings', { data: { requirePriceUpdateConfirmation: true } });
 
-    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
     const beforeBody = await before.json();
-    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
     const priceBefore = parseFloat(beforeProduct.price);
 
     const pricing = await openPricingAndSelectWarehouse(page);
 
     const table = pricing.locator('table').first();
-    await table.locator('tbody tr').first().getByRole('checkbox').check();
+    await table.locator('tbody tr').filter({ hasText: BULK_PRICE_PRODUCT.barcode }).getByRole('checkbox').check();
     await pricing.locator('input[type="number"]').fill('5');
 
     const submitButton = pricing.getByRole('button', { name: /Update 1 Product/ });
@@ -120,9 +126,9 @@ test.describe('Pricing', () => {
     await expect(page.getByText('Submitted for approval', { exact: true })).toBeVisible();
 
     // Price must NOT have moved — it's sitting in the approval queue, not applied.
-    const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+    const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
     const afterBody = await after.json();
-    const afterProduct = (afterBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+    const afterProduct = (afterBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
     expect(parseFloat(afterProduct.price)).toBeCloseTo(priceBefore, 2);
 
     // Grab the queued row now, before approving, so we can assert its final
@@ -153,9 +159,9 @@ test.describe('Pricing', () => {
 
       const expectedApprovedPrice = Math.round(priceBefore * 1.05 * 100) / 100;
       await expect(async () => {
-        const afterApproval = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+        const afterApproval = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
         const afterApprovalBody = await afterApproval.json();
-        const afterApprovalProduct = (afterApprovalBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+        const afterApprovalProduct = (afterApprovalBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
         expect(afterApprovalProduct, 'product still findable after approval').toBeTruthy();
         expect(parseFloat(afterApprovalProduct.price)).toBeCloseTo(expectedApprovedPrice, 2);
       }).toPass({ timeout: 10_000 });
@@ -179,9 +185,9 @@ test.describe('Pricing', () => {
 
     // Baseline price straight from the DB, same discipline as the tests above —
     // don't assume the seeded value, and revert to it afterward.
-    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
     const beforeBody = await before.json();
-    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
     expect(beforeProduct, 'seeded bulk-price product should exist').toBeTruthy();
     const priceBefore = parseFloat(beforeProduct.price);
     const newPrice = 123.45;
@@ -194,17 +200,17 @@ test.describe('Pricing', () => {
       const uploadDialog = page.getByRole('dialog').filter({ hasText: 'Upload Price List' });
       await expect(uploadDialog).toBeVisible();
 
-      // Build a minimal xlsx in-memory with TWO rows: one valid row (real SKU,
-      // matched via previewPriceListUpload's `new_price` branch — exercises the
-      // apply path) and one row referencing a SKU that doesn't exist in this
-      // warehouse (the skip path). Exercising both in one file matches the
-      // brief's "valid + invalid rows in one file".
+      // Build a minimal xlsx in-memory with TWO rows: one valid row (real
+      // barcode, matched via previewPriceListUpload's `new_price` branch —
+      // exercises the apply path) and one row referencing a barcode that
+      // doesn't exist in this warehouse (the skip path). Exercising both in one
+      // file matches the brief's "valid + invalid rows in one file".
       const XLSX = require('xlsx');
       const wb = XLSX.utils.book_new();
       const sheet = XLSX.utils.aoa_to_sheet([
-        ['sku', 'barcode', 'new_price', 'new_cost', 'new_markup_pct'],
-        [BULK_PRICE_PRODUCT.sku, '', String(newPrice), '', ''],
-        ['BAD-SKU-DOES-NOT-EXIST', '', '99', '', ''],
+        ['barcode', 'new_price', 'new_cost', 'new_markup_pct'],
+        [BULK_PRICE_PRODUCT.barcode, String(newPrice), '', ''],
+        ['BAD-BARCODE-DOES-NOT-EXIST', '99', '', ''],
       ]);
       XLSX.utils.book_append_sheet(wb, sheet, 'Price List');
       const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -224,9 +230,9 @@ test.describe('Pricing', () => {
 
       // Verify the valid row actually persisted to the DB — not just previewed.
       await expect(async () => {
-        const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+        const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
         const afterBody = await after.json();
-        const afterProduct = (afterBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+        const afterProduct = (afterBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
         expect(afterProduct, 'product still findable after update').toBeTruthy();
         expect(parseFloat(afterProduct.price)).toBeCloseTo(newPrice, 2);
       }).toPass({ timeout: 10_000 });
@@ -240,13 +246,13 @@ test.describe('Pricing', () => {
   test('excel upload: creates a new product alongside an existing-product update', async ({ page, request }) => {
     await request.post('/api/pos-settings', { data: { requirePriceUpdateConfirmation: false } });
 
-    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+    const before = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
     const beforeBody = await before.json();
-    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+    const beforeProduct = (beforeBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
     expect(beforeProduct, 'seeded bulk-price product should exist').toBeTruthy();
     const priceBefore = parseFloat(beforeProduct.price);
     const updatedPrice = 999;
-    const newSku = 'E2E-NEW-PRODUCT-' + Date.now();
+    const newBarcode = 'E2E-NEW-PRODUCT-' + Date.now();
 
     try {
       const pricing = await openPricingAndSelectWarehouse(page);
@@ -259,9 +265,9 @@ test.describe('Pricing', () => {
       const XLSX = require('xlsx');
       const wb = XLSX.utils.book_new();
       const sheet = XLSX.utils.aoa_to_sheet([
-        ['sku', 'barcode', 'name', 'brand', 'category', 'unit_of_measure', 'new_price', 'new_cost', 'new_markup_pct'],
-        [BULK_PRICE_PRODUCT.sku, '', '', '', '', '', String(updatedPrice), '', ''],
-        [newSku, '', 'E2E New Product', 'E2E Brand', 'E2E Category', 'pcs', '75', '', ''],
+        ['barcode', 'name', 'brand', 'category', 'unit_of_measure', 'new_price', 'new_cost', 'new_markup_pct'],
+        [BULK_PRICE_PRODUCT.barcode, '', '', '', '', String(updatedPrice), '', ''],
+        [newBarcode, 'E2E New Product', 'E2E Brand', 'E2E Category', 'pcs', '75', '', ''],
       ]);
       XLSX.utils.book_append_sheet(wb, sheet, 'Price List');
       const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -285,18 +291,18 @@ test.describe('Pricing', () => {
 
       // The existing-product update actually persisted.
       await expect(async () => {
-        const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.sku}&limit=50`);
+        const after = await request.get(`/api/products?search=${BULK_PRICE_PRODUCT.barcode}&limit=50`);
         const afterBody = await after.json();
-        const afterProduct = (afterBody.data ?? []).find((p: any) => p.sku === BULK_PRICE_PRODUCT.sku);
+        const afterProduct = (afterBody.data ?? []).find((p: any) => p.barcode === BULK_PRICE_PRODUCT.barcode);
         expect(afterProduct, 'product still findable after update').toBeTruthy();
         expect(parseFloat(afterProduct.price)).toBeCloseTo(updatedPrice, 2);
       }).toPass({ timeout: 10_000 });
 
       // The new product was actually created.
       await expect(async () => {
-        const created = await request.get(`/api/products?search=${newSku}&limit=50`);
+        const created = await request.get(`/api/products?search=${newBarcode}&limit=50`);
         const createdBody = await created.json();
-        const createdProduct = (createdBody.data ?? []).find((p: any) => p.sku === newSku);
+        const createdProduct = (createdBody.data ?? []).find((p: any) => p.barcode === newBarcode);
         expect(createdProduct, 'new product should exist after upload').toBeTruthy();
         expect(parseFloat(createdProduct.price)).toBeCloseTo(75, 2);
       }).toPass({ timeout: 10_000 });
@@ -304,7 +310,7 @@ test.describe('Pricing', () => {
       // Revert the update and remove the created product so this test's
       // mutations don't bleed into a re-run of this spec file.
       await testQuery('UPDATE products SET price = ? WHERE id = ?', [priceBefore, BULK_PRICE_PRODUCT.id]);
-      await testQuery('DELETE FROM products WHERE sku = ?', [newSku]);
+      await testQuery('DELETE FROM products WHERE barcode = ?', [newBarcode]);
     }
   });
 

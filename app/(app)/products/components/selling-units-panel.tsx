@@ -1,7 +1,5 @@
 'use client';
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, formatStockQuantity } from '@/lib/utils';
 import type { Product, PriceLevel } from '@/lib/types';
@@ -51,6 +49,44 @@ function unitStockLevel(derivedStock: number, unit: SellingUnit, effectiveReorde
   return derivedStock < derivedThreshold ? 'low-stock' : 'in-stock';
 }
 
+/**
+ * One price level as a compact pill: level name, price, and the minimum
+ * quantity as `24+` when the level carries one.
+ *
+ * These replace what used to be a third nested table (a Level / Min Qty /
+ * Price header repeated once per selling unit). The old shape put three sets
+ * of column headers on screen at the same time, none of them aligned to the
+ * products table they sat inside.
+ */
+function PriceLevelChip({ name, price, minQuantity }: { name: string; price: number | null; minQuantity?: number | null }) {
+  return (
+    <span className="inline-flex shrink-0 items-baseline gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]">
+      <span className="text-muted-foreground">{name}</span>
+      <span className="font-semibold tabular-nums">
+        {typeof price === 'number' ? `₱${price.toFixed(2)}` : '—'}
+      </span>
+      {minQuantity ? <span className="text-muted-foreground">· {minQuantity}+</span> : null}
+    </span>
+  );
+}
+
+/**
+ * The selling units of one product, as sibling rows of the products table.
+ *
+ * These are deliberately `<tr>` in the SAME `<table>` as the product rows, so
+ * they inherit its column widths and `Stock` / `Cost` / `Retail Price` land
+ * under the headers they belong to. The previous version rendered an
+ * `Accordion` inside a single full-width `colSpan` cell, which laid itself out
+ * with its own flex widths and therefore lined up with nothing -- and needed a
+ * second click to reach a wholesale price.
+ *
+ * Returns a fragment of rows, so the caller must splice it directly into
+ * `<TableBody>`: wrapping it in anything produces invalid table markup.
+ *
+ * Every cell repeats the product row's responsive visibility classes. They
+ * must stay in lockstep -- a unit row that keeps a column its product row
+ * drops shifts every cell after it at that breakpoint.
+ */
 export function SellingUnitsPanel({
   product,
   priceLevels,
@@ -65,10 +101,11 @@ export function SellingUnitsPanel({
   const levelById = new Map(priceLevels.map(level => [level.id, level]));
 
   return (
-    <Accordion type="multiple" className="w-full">
-      {units.map(unit => {
+    <>
+      {units.map((unit, index) => {
         const derivedStock = unitStock(product, unit);
         const level = unitStockLevel(derivedStock, unit, effectiveReorderPoint);
+        const isLast = index === units.length - 1;
         const priceRows = Object.entries(unit.prices ?? {})
           .map(([levelId, entry]) => ({
             levelId,
@@ -80,69 +117,76 @@ export function SellingUnitsPanel({
           .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 
         return (
-          <AccordionItem
+          <tr
             key={unit.id}
-            value={unit.id}
             data-testid="selling-unit-item"
-            className="border-b last:border-b-0"
+            className={cn('bg-muted/20 hover:bg-muted/30', !isLast && 'border-b-0')}
           >
-            <AccordionTrigger className="py-2 text-sm hover:no-underline">
-              <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 pr-3 text-left">
-                <span className="flex min-w-[8rem] items-center gap-2 font-semibold">
-                  {unit.unitName}
-                  {unit.isBase && <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">Base</Badge>}
-                </span>
-                <span className="min-w-[7rem] font-mono text-xs font-normal text-muted-foreground">
-                  {unit.barcode || '—'}
-                </span>
+            {/* The accent spine carries the depth that an indent used to. Child
+                rows keep full column width so their figures stay in-column. */}
+            <td className="hidden p-0 sm:table-cell">
+              <div className="h-full border-l-[3px] border-primary" />
+            </td>
+
+            <td className="py-2 pl-0 pr-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span className="h-px w-[18px] shrink-0 bg-border" aria-hidden="true" />
+                <span className="whitespace-nowrap font-semibold">{unit.unitName}</span>
+                {unit.isBase && (
+                  <span className="shrink-0 rounded-[5px] bg-green-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-400">
+                    Base
+                  </span>
+                )}
                 {unit.qtyBase !== 1 && (
-                  <span className="text-xs font-normal text-muted-foreground">
-                    = {parseFloat(Number(unit.qtyBase).toFixed(3))} {product.unitOfMeasure}
+                  <span className="shrink-0 whitespace-nowrap rounded-[5px] bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                    {parseFloat(Number(unit.qtyBase).toFixed(3))} {product.unitOfMeasure}
                   </span>
                 )}
-                {!isService && (
-                  <span className="flex items-center gap-1.5 font-normal">
-                    <StockDot status={level} testId="selling-unit-stock" />
-                    <span className="font-semibold">{formatStockQuantity(derivedStock)}</span>
-                  </span>
-                )}
-                <span className="ml-auto font-semibold tabular-nums">
-                  {typeof unit.price === 'number' ? `₱${unit.price.toFixed(2)}` : '—'}
-                </span>
+                {priceRows.map(row => (
+                  <PriceLevelChip
+                    key={row.levelId}
+                    name={row.name}
+                    price={row.price}
+                    minQuantity={row.minQuantity}
+                  />
+                ))}
               </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              {priceRows.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No price levels set</p>
+            </td>
+
+            <td className="hidden truncate px-4 text-xs tabular-nums text-muted-foreground lg:table-cell">
+              {unit.barcode || '—'}
+            </td>
+
+            {/* The unit's own name already states the unit, so repeating the
+                product's base unit of measure here would be noise. */}
+            <td className="hidden sm:table-cell" />
+
+            <td className="px-4 text-center">
+              {isService ? (
+                <span className="text-muted-foreground">—</span>
               ) : (
-                <table className="w-full max-w-md text-xs">
-                  <thead>
-                    <tr className="text-muted-foreground">
-                      <th className="py-1 pr-4 text-left font-medium">Level</th>
-                      <th className="py-1 pr-4 text-right font-medium">Min Qty</th>
-                      <th className="py-1 text-right font-medium">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {priceRows.map(row => (
-                      <tr key={row.levelId} className="border-t border-border/50">
-                        <td className="py-1 pr-4">{row.name}</td>
-                        <td className="py-1 pr-4 text-right tabular-nums">{row.minQuantity ?? '—'}</td>
-                        <td className="py-1 text-right tabular-nums">
-                          {typeof row.price === 'number' ? `₱${row.price.toFixed(2)}` : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <span className="inline-flex items-center justify-center gap-2">
+                  <StockDot status={level} testId="selling-unit-stock" />
+                  <span className="font-semibold tabular-nums">{formatStockQuantity(derivedStock)}</span>
+                </span>
               )}
-              <p className="mt-2 text-xs text-muted-foreground">
-                Cost: {typeof unit.cost === 'number' && unit.cost > 0 ? `₱${unit.cost.toFixed(2)}` : '—'}
-              </p>
-            </AccordionContent>
-          </AccordionItem>
+            </td>
+
+            <td className="hidden px-4 text-right text-xs tabular-nums text-muted-foreground md:table-cell">
+              {typeof unit.cost === 'number' && unit.cost > 0 ? `₱${unit.cost.toFixed(2)}` : '—'}
+            </td>
+
+            <td className="hidden px-4 text-right font-semibold tabular-nums md:table-cell">
+              {typeof unit.price === 'number' ? `₱${unit.price.toFixed(2)}` : '—'}
+            </td>
+
+            {/* Warehouse and shelf belong to the product, not to a unit of it. */}
+            <td className="hidden md:table-cell" />
+            <td className="hidden md:table-cell" />
+            <td />
+          </tr>
         );
       })}
-    </Accordion>
+    </>
   );
 }

@@ -14,7 +14,6 @@ export interface Product {
   avgDailySales: number;
   price: number;
   cost?: number;
-  sku: string;
   barcode?: string;
   imageUrl: string;
   imageHint: string;
@@ -205,8 +204,6 @@ export interface PurchaseOrder {
     expirationDate?: string;
     barcode?: string;
     productBarcode?: string;
-    sku?: string;
-    productSku?: string;
     name?: string;
     currentStock?: number;
     // Landed cost fields (calculated, not stored)
@@ -290,6 +287,13 @@ export interface Warehouse {
   location?: string;
   isActive?: boolean;
   createdAt?: string;
+  /**
+   * The owning branch's name. Populated ONLY by `getBranchWarehouses()` and only
+   * for a head-office / unguarded caller, who can see several branches' warehouses
+   * and must tell them apart; a branch-scoped caller leaves it undefined. Every
+   * other producer of `Warehouse` (e.g. `getWarehouses()`) omits it.
+   */
+  branchName?: string;
 }
 
 export interface ShelfLocation {

@@ -3,7 +3,7 @@ import { format, addYears } from 'date-fns';
 import type { POSSaleItem, Customer } from './types';
 import { SystemSettings } from './types';
 import { formatSINumber } from './si-number';
-import { resolveEffectiveTaxType } from './tax-utils';
+import { resolveEffectiveTaxType, displayDiscountPercent } from './tax-utils';
 
 // Default for 58mm
 const DEFAULT_COLS = 32;
@@ -252,7 +252,11 @@ export class ReceiptGenerator {
 
             // Discount line
             if (item.discount && item.discount > 0) {
-                const discText = `Disc: ${item.discount}%`;
+                // The headline statutory rate for a senior/PWD/NAAC/solo-parent
+                // line, not the grossed-up percentage stored against the
+                // VAT-inclusive price. This is the printed BIR receipt, so the
+                // rate shown must be the one the law grants.
+                const discText = `Disc: ${displayDiscountPercent(item.discount, (item as any).discountType)}%`;
                 absoluteIndent();
                 enc.line(discText);
             }

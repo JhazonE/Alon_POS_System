@@ -29,7 +29,7 @@ export function ProductSearchDialog({
   onSelectProduct, children, isOpen, onOpenChange,
   showQuantityInSearch = true,
   activeLevelId, defaultLevelId, activeLevelName = 'Retail',
-  warehouseId, allProducts,
+  warehouseId, allProducts, enabled,
 }: ProductSearchDialogProps) {
   const {
     searchTerm, setSearchTerm,
@@ -38,7 +38,7 @@ export function ProductSearchDialog({
     displayedProducts, loading, error,
     handleSelect, stockTone,
     brands, categories,
-  } = useProductSearch({ isOpen, onOpenChange, onSelectProduct, activeLevelId, warehouseId, allProducts });
+  } = useProductSearch({ isOpen, onOpenChange, onSelectProduct, activeLevelId, warehouseId, allProducts, enabled });
 
   const [showCategory, setShowCategory] = useState(true);
   const [showBrand, setShowBrand]       = useState(true);
@@ -266,7 +266,7 @@ export function ProductSearchDialog({
                           <p className="truncate text-sm font-semibold leading-tight">{product.name}</p>
                           <div className="mt-0.5 flex items-center gap-1.5">
                             <span className="text-[11px] text-muted-foreground font-mono truncate">
-                              {product.barcode || product.sku}
+                              {product.barcode || '—'}
                             </span>
                             {product.brand && (
                               <span className="shrink-0 rounded bg-sky-100 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 px-1.5 py-px text-[10px] font-medium">

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, setWarehouseStock, priceInput } from './helpers/product-form';
 import {
   TEST_BRAND,
   TEST_CATEGORY,
@@ -8,6 +8,7 @@ import {
   TEST_PRICE_LEVEL,
   TEST_PRICE_LEVEL_WHOLESALE,
   NEW_PRODUCT,
+  TEST_MAIN_WAREHOUSE,
 } from './fixtures/test-data';
 
 /**
@@ -31,6 +32,14 @@ async function selectOption(
 }
 
 test.describe('Add product', () => {
+  // Kini nga file naa sa sinugdanan sa suite, mao nga nagbayad sa cold compile
+  // sa /products ug sa dev-server nga busy pa. Ang 30s nga default mahurot sa
+  // usa ka click o sa pag-ablihi sa dialog — usa ka timeout, DILI usa ka
+  // assertion nga napakyas (bisan ang category-picker test, nga walay labot sa
+  // warehouse o presyo, nahurot). Mag-isa, kini nga file mo-pass sulod sa 30s,
+  // mao nga kini nga budget para sa suite order lang.
+  test.setTimeout(90_000);
+
   test('admin makahimo ug bag-ong product pinaagi sa dialog', async ({ page, request }) => {
     await seedSession(page, DEFAULT_ADMIN);
     await page.goto('/products');
@@ -48,7 +57,10 @@ test.describe('Add product', () => {
 
     // --- Inventory ---
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await dialog.getByLabel('Initial Stock').fill(String(NEW_PRODUCT.stock));
+    // Ang stock per warehouse na: pili-a una ang warehouse, unya ang stock niini.
+    // Gipili ang main-branch default warehouse kay didto mo-land ang /api/products
+    // nga gi-assert sa ubos.
+    await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, NEW_PRODUCT.stock);
 
     // --- Selling Units (base row owns unit name, barcode, cost ug price) ---
     await dialog.getByRole('tab', { name: 'Selling Units' }).click();
@@ -57,10 +69,10 @@ test.describe('Add product', () => {
     await selectOption(page, dialog, 'Unit Name', `${TEST_UNIT.name} (${TEST_UNIT.abbreviation})`);
     await base.getByLabel('Barcode').fill(NEW_PRODUCT.barcode);
     await base.getByLabel('Cost (₱)').fill(String(NEW_PRODUCT.cost));
-    await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill(String(NEW_PRODUCT.retail));
+    await priceInput(base, TEST_PRICE_LEVEL.name).fill(String(NEW_PRODUCT.retail));
     // Every active price level's column is required — a second (Wholesale)
     // level now exists, so it needs a value too or submit fails validation.
-    await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill(String(NEW_PRODUCT.retail));
+    await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill(String(NEW_PRODUCT.retail));
 
     // --- Submit ---
     await dialog.getByRole('button', { name: 'Add Product' }).click();
@@ -74,7 +86,6 @@ test.describe('Add product', () => {
     const body = await res.json();
     const match = (body.data ?? []).find((p: any) => p.name === NEW_PRODUCT.name);
     expect(match, 'bag-ong product makita sa /api/products').toBeTruthy();
-    expect(match.sku ?? null).toBeNull();
     expect(Number(match.stock)).toBe(NEW_PRODUCT.stock);
     expect(Number(match.price)).toBe(NEW_PRODUCT.retail);
   });

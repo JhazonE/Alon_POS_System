@@ -279,28 +279,15 @@ export async function syncFamilyStockDuringTransfer(
     );
 
     // --- TARGET Warehouse Update ---
+    // Identification by name: the only match path. A family member is matched
+    // to its counterpart in the target warehouse by (name, warehouse_id).
     let targetMemberId = null;
-    
-    // Primary identification by SKU
-    if (sourceMember.sku) {
-      const [targetProductsBySku]: any = await connection.query(
-        'SELECT id FROM products WHERE sku = ? AND warehouse_id = ?',
-        [sourceMember.sku, targetWarehouseId]
-      );
-      if (targetProductsBySku && targetProductsBySku.length > 0) {
-        targetMemberId = targetProductsBySku[0].id;
-      }
-    }
-    
-    // Secondary identification by Name
-    if (!targetMemberId) {
-      const [targetProductsByName]: any = await connection.query(
-        'SELECT id FROM products WHERE name = ? AND warehouse_id = ?',
-        [sourceMember.name, targetWarehouseId]
-      );
-      if (targetProductsByName && targetProductsByName.length > 0) {
-        targetMemberId = targetProductsByName[0].id;
-      }
+    const [targetProductsByName]: any = await connection.query(
+      'SELECT id FROM products WHERE name = ? AND warehouse_id = ?',
+      [sourceMember.name, targetWarehouseId]
+    );
+    if (targetProductsByName && targetProductsByName.length > 0) {
+      targetMemberId = targetProductsByName[0].id;
     }
 
     if (!targetMemberId) {
@@ -309,17 +296,17 @@ export async function syncFamilyStockDuringTransfer(
       await connection.query(
         `INSERT INTO products (
           id, name, description, additional_description, category, brand, subcategory,
-          stock, reorder_point, avg_daily_sales, price, cost, sku, barcode, 
+          stock, reorder_point, avg_daily_sales, price, cost, barcode, 
           image_url, image_hint, unit_of_measure, parent_id, conversion_factor,
           supplier_id, income_account, expense_account, warehouse_id, 
           vat_status, availability, earns_points, expiration_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           targetMemberId, sourceMember.name, sourceMember.description,
           sourceMember.additional_description, sourceMember.category, sourceMember.brand,
           sourceMember.subcategory, sourceMember.reorder_point || 0,
           sourceMember.avg_daily_sales || 0, sourceMember.price, sourceMember.cost,
-          sourceMember.sku, sourceMember.barcode, sourceMember.image_url,
+          sourceMember.barcode, sourceMember.image_url,
           sourceMember.image_hint, sourceMember.unit_of_measure, sourceMember.parent_id,
           sourceMember.conversion_factor, sourceMember.supplier_id,
           sourceMember.income_account, sourceMember.expense_account, targetWarehouseId,

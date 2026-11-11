@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -10,8 +11,9 @@ import { dispatchStockUpdate } from '@/hooks/use-live-refresh';
 import { logActivity } from '@/lib/client-activity-logger';
 import { useToast } from '@/hooks/use-toast';
 import { getApiUrl } from '@/lib/api-config';
+import { getSessionUid } from '@/lib/session-uid';
 import { generateSku } from '@/lib/sku';
-import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings } from '@/lib/types';
+import { Category, Brand, UnitOfMeasure, Supplier, TaxRate, SystemSettings, Warehouse } from '@/lib/types';
 import type { ProductType } from '@/lib/product-type';
 
 import {
@@ -21,12 +23,12 @@ import {
   getUnitsOfMeasure,
   addProduct,
   getSuppliers,
-  getWarehouses,
+  getBranchWarehouses,
   getShelfLocations,
   getDepartments,
 } from '../actions';
 import { useSupplierMappings } from '../components/use-supplier-mappings';
-import { productSchema, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
+import { productSchema, withFirstPrimary, type ProductFormValues, type SellingUnitValues, type SupplierMappingValues } from './product-schema';
 
 function getCurrentUid(): string {
   if (typeof window === 'undefined') return 'system';
@@ -101,8 +103,115 @@ export function useAddProductForm({
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
-  const [warehouses, setWarehouses] = useState<any[]>([]); // Using any for now to avoid cross-file type issues
-  const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(false);
+  // The warehouses the picker offers: the active ones of the user's own branch
+  // (head office, and an unguarded null cookie, get every branch's). Same action
+  // and same uid-keyed cache entry as the products-table tab strip: the QueryClient
+  // is a module-level singleton that survives sign-out -> sign-in, so an unkeyed
+  // query would let the next user on this terminal inherit the previous user's
+  // branch's list. Held until the dialog opens; `staleTime` is left at its default
+  // (0) so each open refetches and a warehouse added elsewhere shows up.
+  const queryClient = useQueryClient();
+  const [sessionUid] = useState(() => getSessionUid());
+  const branchWarehousesKey = ['branchWarehouses', sessionUid] as const;
+  const {
+    data: branchWarehouses,
+    isLoading: isLoadingWarehouses,
+    isError: isWarehousesError,
+    refetch: refetchBranchWarehouses,
+  } = useQuery({
+    queryKey: branchWarehousesKey,
+    queryFn: () => getBranchWarehouses(),
+    enabled: isOpen,
+    refetchOnWindowFocus: false,
+  });
+  const warehouses = branchWarehouses?.warehouses ?? [];
+  // A stable dependency for the default-selection effect below: the array
+  // itself is a new identity each render.
+  const warehouseIdsKey = warehouses.map((w: { id: string }) => w.id).join(',');
+
+  /**
+   * The branches the picker may offer, derived from the warehouse list the
+   * server already scoped — never fetched separately, so it cannot widen what
+   * the caller is allowed to see.
+   *
+   * A branch user gets exactly one (their own, unnamed: `branchName` is only
+   * populated for head office), so the Branch field is not shown to them at
+   * all. Head office gets one entry per branch that actually has an active
+   * warehouse; a warehouse with no branch is grouped under a single
+   * `__none__` key rather than dropped, because head office can legitimately
+   * create a branchless product.
+   */
+  const branchOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const w of warehouses as Warehouse[]) {
+      const name = w.branchName;
+      if (name) byId.set(name, name);
+      else byId.set('__none__', 'No branch');
+    }
+    return [...byId.entries()].map(([id, name]) => ({ id, name }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouseIdsKey]);
+
+  /**
+   * The branch the warehouse picker is scoped to. A product belongs to ONE
+   * branch (lib/product-create.ts refuses a submission spanning two), so this
+   * is a single selection, not a filter that can be cleared.
+   *
+   * Local UI state, NOT a form field: the submission still carries only
+   * warehouse ids, and the server derives the branch from those rows rather
+   * than trusting anything sent. Changing it clears the warehouse selection,
+   * because keeping another branch's picks would build exactly the cross-branch
+   * payload the server refuses.
+   */
+  const [selectedBranch, setSelectedBranchState] = useState<string | null>(null);
+
+  /**
+   * The warehouses the picker actually offers: those of `selectedBranch`.
+   *
+   * With one branch (every branch user, and head office in a single-branch
+   * install) this is the whole list and the Branch field is hidden, so the
+   * behaviour is unchanged for them. The fallback to the full list while no
+   * branch is chosen yet matters only for the instant before the default
+   * effect below picks one.
+   */
+  const branchWarehouseList = useMemo(() => {
+    if (branchOptions.length < 2 || selectedBranch === null) return warehouses;
+    return (warehouses as Warehouse[]).filter(
+      (w) => (w.branchName ?? '__none__') === selectedBranch,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouseIdsKey, branchOptions.length, selectedBranch]);
+
+  /**
+   * Switching branch CLEARS the warehouse selection and re-defaults to the new
+   * branch's warehouses. Carrying the old picks across would build the exact
+   * cross-branch payload `assertEntriesShareOneBranch` refuses, and silently
+   * dropping only the out-of-branch ones would lose stock the user had typed
+   * without saying so.
+   */
+  const setSelectedBranch = (branchId: string) => {
+    setSelectedBranchState(branchId);
+    const next = (warehouses as Warehouse[])
+      .filter((w) => (w.branchName ?? '__none__') === branchId)
+      .map((w) => ({ warehouseId: w.id, stock: 0 }));
+    form.setValue('warehouses', withFirstPrimary(next), { shouldDirty: true });
+  };
+  // `true` only once the server says head office (or an unguarded null cookie).
+  const isHeadOffice = branchWarehouses?.isHeadOffice === true;
+  /**
+   * Whether the warehouse list actually RESOLVED. The min-one-warehouse rule is
+   * gated on this, not on the falsy `isHeadOffice` default: while the list is
+   * loading, and especially when the fetch FAILED, `isHeadOffice` is false and
+   * the picker is empty, so gating on it alone dead-ends a head-office user —
+   * the rule blocks submission, there is no warehouse to pick and no way out.
+   * With no resolved list the rule is not applied; the server still refuses a
+   * branch caller's warehouse-less write, so nothing is let through unguarded,
+   * and `warehousesError` below gives the user a retry instead of a dead form.
+   */
+  const warehousesResolved = branchWarehouses !== undefined;
+  const warehouseGateRef = useRef({ isHeadOffice, warehousesResolved });
+  warehouseGateRef.current = { isHeadOffice, warehousesResolved };
+
   const [shelfLocations, setShelfLocations] = useState<any[]>([]);
   const [isLoadingShelfLocations, setIsLoadingShelfLocations] = useState(false);
   const [priceLevels, setPriceLevels] = useState<any[]>([]);
@@ -134,7 +243,33 @@ export function useAddProductForm({
   }, []);
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+    resolver: async (values, context, options) => {
+      const result = await zodResolver(productSchema)(values, context, options);
+      // A branch user must pick at least one warehouse: the server refuses a
+      // NULL warehouse for a branch caller ("A product must stay in a warehouse
+      // of your branch"), which the user could not otherwise trace to this tab.
+      // The schema deliberately accepts an empty list (head office may create a
+      // warehouse-less product), so the rule lives here, where isHeadOffice is
+      // known. A Service carries no warehouse, so it is exempt.
+      const v = values as { itemType?: string; warehouses?: unknown[] };
+      const gate = warehouseGateRef.current;
+      const needsWarehouse =
+        v.itemType === 'standard' &&
+        // Only once the list has resolved: a loading or failed list leaves
+        // isHeadOffice false with an empty picker, which would dead-end a head
+        // office user with a rule they cannot satisfy.
+        gate.warehousesResolved &&
+        !gate.isHeadOffice &&
+        (!Array.isArray(v.warehouses) || v.warehouses.length === 0);
+      if (!needsWarehouse) return result;
+      return {
+        values: {},
+        errors: {
+          ...(result.errors ?? {}),
+          warehouses: { type: 'required', message: 'Select at least one warehouse for this product.' },
+        },
+      } as typeof result;
+    },
     defaultValues: {
       itemType: 'standard',
       name: '',
@@ -145,10 +280,9 @@ export function useAddProductForm({
       category: '',
       subcategory: '',
       supplier: '',
-      warehouse: '',
+      warehouses: [],
       shelfLocationIds: [],
       unitOfMeasure: '',
-      stock: 0,
       reorderPoint: 0,
       price: 0,
       cost: 0,
@@ -204,7 +338,7 @@ export function useAddProductForm({
   const tabErrors = {
     basic: !!(formErrors.name || formErrors.brand || formErrors.description || formErrors.category),
     // unitOfMeasure can still error here — a Service edits it on this tab.
-    inventory: !!(formErrors.unitOfMeasure || formErrors.stock),
+    inventory: !!(formErrors.unitOfMeasure || formErrors.warehouses),
     sellingUnits: !!formErrors.sellingUnits,
     suppliers: !!formErrors.supplierMappings,
   };
@@ -220,7 +354,6 @@ export function useAddProductForm({
       setBrands(externalProductOptions.brands || []);
       setUnitsOfMeasure(externalProductOptions.units || []);
       setSuppliers(externalProductOptions.suppliers || []);
-      setWarehouses(externalProductOptions.warehouses || []);
       setShelfLocations(externalProductOptions.shelfLocations || []);
       setDepartments(externalProductOptions.departments || []);
       setPriceLevels(externalProductOptions.priceLevels || []);
@@ -257,6 +390,64 @@ export function useAddProductForm({
   // Switching to Service clears every stock-side field. Without this, values
   // typed while Standard was selected stay in form state and fail the service
   // branch's z.undefined() checks on submit, with no visible field to fix.
+
+  /**
+   * Every warehouse the picker offers starts SELECTED, each at 0.
+   *
+   * Creating a product in all of the branch's warehouses is the common case;
+   * picking a subset is the exception, so the form opens on the common case and
+   * the user unticks rather than ticks. Opening stock is still typed per
+   * warehouse — the default is the SELECTION, never a quantity.
+   *
+   * Applied when the list RESOLVES, not at reset, because the list is fetched:
+   * at reset time there is nothing to select. It must therefore not clobber a
+   * choice the user has already made, so it runs once per dialog opening and
+   * only while the collection is still untouched (`isDirty` is false and the
+   * collection is empty). `appliedForOpenRef` holds the open it ran for, so a
+   * refetch mid-edit — adding a warehouse inline refetches — does not re-select
+   * warehouses the user has just unticked.
+   *
+   * A service carries no warehouse at all; the itemType effect below clears the
+   * collection, and the `itemType` guard here keeps this from putting it back.
+   */
+  const warehouseDefaultAppliedRef = useRef(false);
+  useEffect(() => {
+    // Reset on CLOSE so the next opening defaults again. Doing this in the same
+    // effect that applies the default (rather than during render) keeps the
+    // flag's lifetime tied to the dialog's, including the very first mount,
+    // which already has isOpen true.
+    if (!isOpen) {
+      warehouseDefaultAppliedRef.current = false;
+      setSelectedBranchState(null);
+      return;
+    }
+    if (warehouseDefaultAppliedRef.current) return;
+    if (!warehousesResolved || warehouses.length === 0) return;
+    if (itemType === 'service') return;
+    const current = form.getValues('warehouses');
+    if (Array.isArray(current) && current.length > 0) return;
+    warehouseDefaultAppliedRef.current = true;
+    // Default the BRANCH first (the first one offered — for a branch user the
+    // only one), then select that branch's warehouses. Defaulting the
+    // selection to every branch's would be a payload the server refuses.
+    const defaultBranch = branchOptions[0]?.id ?? null;
+    setSelectedBranchState(defaultBranch);
+    const inBranch =
+      branchOptions.length < 2 || defaultBranch === null
+        ? warehouses
+        : (warehouses as Warehouse[]).filter(
+            (w) => (w.branchName ?? '__none__') === defaultBranch,
+          );
+    form.setValue(
+      'warehouses',
+      withFirstPrimary(inBranch.map((w: Warehouse) => ({ warehouseId: w.id, stock: 0 }))),
+      { shouldDirty: false },
+    );
+    // `warehouses` is a fresh array identity on every render (it is derived from
+    // the query data), so the effect is keyed on the warehouse IDS instead —
+    // otherwise it re-runs constantly and the ref is the only thing stopping it.
+  }, [isOpen, warehousesResolved, warehouseIdsKey, itemType, form]);
+
   useEffect(() => {
     // Must run for BOTH branches: this is the only place that writes the
     // discriminator into react-hook-form state. `itemType` otherwise lives
@@ -271,6 +462,7 @@ export function useAddProductForm({
       form.setValue('department', undefined);
       form.setValue('supplier', undefined);
       form.setValue('warehouse', undefined);
+      form.setValue('warehouses', []);
       form.setValue('shelfLocationIds', undefined);
       form.setValue('sellingUnits' as any, undefined);
       form.setValue('isPerishable', undefined);
@@ -534,7 +726,13 @@ export function useAddProductForm({
   const refreshCategories = () => getCategories().then(setCategories);
   const refreshSubcategories = () => getSubcategories().then(setSubcategories);
   const refreshSuppliers = () => getSuppliers().then(setSuppliers);
-  const refreshWarehouses = () => getWarehouses().then(setWarehouses);
+  // Refetch the branch-scoped list, publish it to the shared cache (so the tab
+  // strip sees it too) and hand it back so a caller can look a new warehouse up.
+  const refreshWarehouses = async () => {
+    const fresh = await getBranchWarehouses();
+    queryClient.setQueryData(branchWarehousesKey, fresh);
+    return fresh.warehouses;
+  };
   const refreshShelfLocations = () => getShelfLocations().then(setShelfLocations);
   const refreshUnits = () => getUnitsOfMeasure().then(setUnitsOfMeasure);
 
@@ -552,7 +750,15 @@ export function useAddProductForm({
     departments, isLoadingDepartments,
     unitsOfMeasure, isLoadingUnits,
     suppliers, isLoadingSuppliers,
-    warehouses, isLoadingWarehouses,
+    // The picker is scoped to the selected branch; `warehouses` stays the full
+    // (already branch-scoped by the server) list for anything that needs it.
+    warehouses: branchWarehouseList,
+    allWarehouses: warehouses,
+    branchOptions, selectedBranch, setSelectedBranch,
+    isLoadingWarehouses, isHeadOffice,
+    // The picker needs to tell "no warehouses" apart from "the list failed":
+    // the second needs a retry, not an empty state the user cannot act on.
+    isWarehousesError, retryWarehouses: refetchBranchWarehouses,
     shelfLocations, isLoadingShelfLocations,
     priceLevels, isLoadingPriceLevels,
     taxRates,

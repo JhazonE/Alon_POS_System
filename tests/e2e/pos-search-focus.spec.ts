@@ -27,7 +27,7 @@ async function posLogin(page: import('@playwright/test').Page) {
 async function startShift(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: /start new shift/i })).toBeVisible();
   await page.getByRole('button', { name: /start shift/i }).click();
-  await expect(page.getByPlaceholder(/scan barcode or enter product sku/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/scan barcode or search product/i)).toBeVisible();
 }
 
 const searchInput = (page: import('@playwright/test').Page) =>

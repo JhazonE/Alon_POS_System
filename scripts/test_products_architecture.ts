@@ -25,7 +25,6 @@ async function testProductsAPI() {
     category: 'Test',
     brand: 'Antigravity',
     price: 99.99,
-    sku: `CAT-${Date.now()}`,
     stock: 10
   };
 

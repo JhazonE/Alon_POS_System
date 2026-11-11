@@ -18,7 +18,7 @@ const CASE = P.units.find(u => !u.isBase)!;
 const CASE_NAME = `${P.name} ${CASE.unitName}`;
 const cashier = TEST_USERS.cashier;
 
-const barcodeInput = (page: Page) => page.getByPlaceholder(/scan barcode or enter product sku/i);
+const barcodeInput = (page: Page) => page.getByPlaceholder(/scan barcode or search product/i);
 const cartRows = (page: Page) => page.locator('tr[id^="pos-item-"]');
 
 async function posLogin(page: Page) {

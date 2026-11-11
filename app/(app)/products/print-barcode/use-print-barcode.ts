@@ -22,7 +22,7 @@ export function usePrintBarcode({ product }: UsePrintBarcodeProps) {
   const [showName, setShowName]   = useState(true);
 
   const size         = LABEL_SIZES[sizeIndex];
-  const barcodeValue = product.barcode || product.sku || product.id;
+  const barcodeValue = product.barcode || product.id;
 
   const dataUrl = useMemo(
     () => (barcodeValue ? generateBarcodeDataUrl(barcodeValue, format) : null),

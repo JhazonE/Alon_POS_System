@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { seedSession, DEFAULT_ADMIN } from './helpers/auth';import { selectCategory } from './helpers/product-form';
+import { seedSession, DEFAULT_ADMIN } from './helpers/auth';
+import { selectCategory, setWarehouseStock, priceInput } from './helpers/product-form';
 import { resetPosState, testQuery } from './helpers/db';
 import {
   TEST_BRAND,
@@ -12,6 +13,7 @@ import {
   TEST_WAREHOUSE,
   TEST_PAYMENT_METHOD,
   PO_PRODUCT,
+  TEST_MAIN_WAREHOUSE,
 } from './fixtures/test-data';
 
 /**
@@ -36,13 +38,21 @@ async function selectOption(page: Page, dialog: Locator, label: string | RegExp,
   await page.getByRole('option', { name: optionName }).click();
 }
 
-/** Open a fresh PO page (/purchases/new) from /purchases and return its locator. */
+/**
+ * Open a fresh PO page (/purchases/new) from /purchases and return its locator.
+ *
+ * `.last()` is load-bearing: the app shell nests TWO <main> elements
+ * (`components/sidebar/sidebar-shell.tsx` wraps the one in
+ * `app/(app)/layout.tsx`), so a bare `getByRole('main')` is a strict-mode
+ * violation the moment it is asserted on in its own right rather than only used
+ * as a scope. The inner one is the page content area this spec means.
+ */
 async function openPurchaseOrder(page: Page) {
   await seedSession(page, DEFAULT_ADMIN);
   await page.goto('/purchases');
   await page.getByRole('link', { name: 'Add New Purchase Order' }).click();
   await expect(page).toHaveURL(/\/purchases\/new/);
-  const poDialog = page.getByRole('main');
+  const poDialog = page.getByRole('main').last();
   await expect(poDialog.getByRole('button', { name: 'Create Order' })).toBeVisible();
   return poDialog;
 }
@@ -59,7 +69,9 @@ async function fillRequiredProductFields(
   await selectCategory(page, dialog, TEST_CATEGORY.name);
 
   await dialog.getByRole('tab', { name: 'Inventory' }).click();
-  await dialog.getByLabel('Initial Stock').fill('0');
+  // A warehouse must be picked before its stock input exists; the PO flow
+  // receives into the warehouse itself, so this product opens at zero.
+  await setWarehouseStock(page, dialog, TEST_MAIN_WAREHOUSE.name, 0);
 
   await dialog.getByRole('tab', { name: 'Selling Units' }).click();
   const base = dialog.locator('div.bg-card.border.rounded-md.shadow-sm').nth(0);
@@ -67,8 +79,8 @@ async function fillRequiredProductFields(
   // product_selling_units.barcode is globally UNIQUE.
   await base.getByLabel('Barcode').fill(`PO${Date.now()}`.slice(-10));
   await base.getByLabel('Cost (₱)').fill(opts.cost);
-  await base.getByLabel(`${TEST_PRICE_LEVEL.name} (₱)`).fill('100');
-  await base.getByLabel(`${TEST_PRICE_LEVEL_WHOLESALE.name} (₱)`).fill('100');
+  await priceInput(base, TEST_PRICE_LEVEL.name).fill('100');
+  await priceInput(base, TEST_PRICE_LEVEL_WHOLESALE.name).fill('100');
 }
 
 test.describe('Purchase order: Add New Product', () => {
@@ -122,7 +134,7 @@ test.describe('Purchase order: Add New Product', () => {
     test.setTimeout(90_000);
     const poDialog = await openPurchaseOrder(page);
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
-    const search = poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name');
+    const search = poDialog.getByPlaceholder('Scan barcode or type product name');
 
     // Partial name -> inline suggestion; clicking it adds the row and clears the input.
     await search.fill('PO Line');
@@ -132,7 +144,7 @@ test.describe('Purchase order: Add New Product', () => {
     await expect(search).toHaveValue('');
 
     // Exact SKU + Enter adds again (bumps the qty of the same product).
-    await search.fill(PO_PRODUCT.sku);
+    await search.fill(PO_PRODUCT.barcode);
     await page.keyboard.press('Enter');
     await expect(row.locator('input[name="items.0.quantity"]')).toHaveValue('2');
   });
@@ -143,7 +155,7 @@ test.describe('Purchase order: Add New Product', () => {
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
 
     // Add an item so the form is dirty.
-    await poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name').fill(PO_PRODUCT.sku);
+    await poDialog.getByPlaceholder('Scan barcode or type product name').fill(PO_PRODUCT.barcode);
     await page.keyboard.press('Enter');
     await expect(poDialog.getByRole('row', { name: new RegExp(PO_PRODUCT.name) })).toBeVisible();
 
@@ -166,7 +178,7 @@ test.describe('Purchase order: Add New Product', () => {
     const poDialog = await openPurchaseOrder(page);
     await selectOption(page, poDialog, 'Supplier', TEST_SUPPLIER.name);
 
-    await poDialog.getByPlaceholder('Scan barcode, enter SKU, or type product name').fill(typed);
+    await poDialog.getByPlaceholder('Scan barcode or type product name').fill(typed);
 
     // The suggestions open inline under the input (no separate search dialog).
     await expect(poDialog.getByText('No products found.')).toBeVisible();
@@ -219,7 +231,7 @@ test.describe('Purchase order: Add New Product', () => {
     await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
 
     await expect(page).toHaveURL(new RegExp('/purchases/.+/edit'));
-    const poDialog = page.getByRole('main');
+    const poDialog = page.getByRole('main').last();
     const existingRow = poDialog.getByRole('row', { name: new RegExp(PO_PRODUCT.name) });
     await expect(existingRow).toBeVisible();
 
@@ -261,7 +273,7 @@ test.describe('Purchase order: Add New Product', () => {
 
     // Restock prefills the product's own supplier; the user switches to another.
     await expect(page).toHaveURL(/\/purchases\/new\?productId=/);
-    const poDialog = page.getByRole('main');
+    const poDialog = page.getByRole('main').last();
     await expect(poDialog.getByRole('combobox', { name: 'Supplier' })).toContainText(TEST_SUPPLIER.name);
     await selectOption(page, poDialog, 'Supplier', otherSupplier.name);
     await expect(poDialog.getByRole('combobox', { name: 'Supplier' })).toContainText(otherSupplier.name);

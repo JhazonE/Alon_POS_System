@@ -7,7 +7,10 @@
  * `app/(app)/header-tokens.ts`.
  *
  * Matte rules these encode: solid fills (no backdrop-blur, no surface alpha)
- * and no shadows. Separation comes from `--matte-line` alone.
+ * and no shadows. Separation comes from `--matte-line` alone -- and, in dark
+ * mode, from the gap between `--matte-ground` and `--matte-surface`. Both
+ * carry the weight a shadow would: do not add one here to compensate for a
+ * ground that was retuned too close to the surface. Fix the ground.
  */
 
 export const MATTE_SURFACE =

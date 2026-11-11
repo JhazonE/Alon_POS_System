@@ -33,6 +33,11 @@ test.describe('developer page toggles — sidebar', () => {
   });
 
   test('navigating to a disabled page URL redirects to dashboard', async ({ page, request }) => {
+    // The redirect is a client-side fetch after hydration, so it cannot start
+    // until the dev server has finished rendering /sales/orders. Under load that
+    // exceeded the default 30s with the page still on "Rendering" (a timeout, not
+    // a wrong redirect), so give it the same headroom the cold-compile specs get.
+    test.setTimeout(90_000);
     await request.post('/api/developer/disabled-pages', { data: { disabled: ['sales_orders'] } });
 
     await seedSession(page, ADMIN);

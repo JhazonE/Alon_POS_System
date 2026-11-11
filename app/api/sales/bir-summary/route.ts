@@ -234,7 +234,14 @@ export async function GET(request: NextRequest) {
           pti.discount_id_number                                                   AS id_number,
           SUM(pti.quantity * pti.unit_price)                                       AS sales_inclusive_vat,
           SUM(CASE WHEN COALESCE(pti.tax_type,'VAT') = 'VAT' THEN (pti.quantity * pti.unit_price) - ((pti.quantity * pti.unit_price) / ${VAT_RATE}) ELSE 0 END) AS vat_amount,
-          SUM(CASE WHEN pti.tax_type = 'VAT_EXEMPT' THEN (pti.quantity * pti.unit_price) ELSE (pti.quantity * pti.unit_price) / ${VAT_RATE} END) AS vat_exempt_sales,
+          -- Only a VAT_EXEMPT line contributes to VAT-exempt sales. Checkout forces
+          -- every senior/PWD/NAAC/solo-parent line to VAT_EXEMPT (lib/tax-utils.ts)
+          -- and these books select on exactly those discount types, so in practice
+          -- every row qualifies. The ELSE used to divide a non-exempt line by the
+          -- VAT rate and report it here anyway, which would overstate exempt sales
+          -- in this statutory book for any line that ever reached it without the
+          -- override -- legacy rows, or a future discount type.
+          SUM(CASE WHEN pti.tax_type = 'VAT_EXEMPT' THEN (pti.quantity * pti.unit_price) ELSE 0 END) AS vat_exempt_sales,
           MAX(pti.discount_percentage)                                             AS discount_percentage,
           SUM(pti.discount_amount)                                                 AS discount_amount,
           SUM(pti.line_total)                                                      AS net_sales

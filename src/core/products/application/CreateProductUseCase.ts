@@ -9,7 +9,6 @@ export interface CreateProductRequest {
   stock?: number;
   price: number;
   cost?: number;
-  sku: string;
   barcode?: string;
   priceLevels?: { levelId: string; price: number; minQuantity: number }[];
 }

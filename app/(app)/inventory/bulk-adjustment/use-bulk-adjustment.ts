@@ -138,7 +138,7 @@ export function useBulkAdjustment() {
 
     return filtered.filter(p =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.sku ?? '').toLowerCase().includes(search.toLowerCase())
+      (p.barcode ?? '').toLowerCase().includes(search.toLowerCase())
     ).slice(0, 40);
   }, [allProducts, search, warehouseId, adjustmentType, transferTarget, sourceShelfId]);
 

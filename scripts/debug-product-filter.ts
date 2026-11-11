@@ -30,7 +30,6 @@ async function main() {
     const productResult = await addProduct({
       name: productName,
       brand: 'Test Brand',
-      sku: `SKU-${timestamp}`,
       description: 'Test Description',
       category: 'Test Category',
       unitOfMeasure: 'pcs',

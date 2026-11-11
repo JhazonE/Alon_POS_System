@@ -4,6 +4,7 @@ import { query, withTransaction } from '@/lib/mysql';
 import {
   mainBranchId,
   resolveScopeForAction,
+  resolveScopeFromSession,
   assertProductInScope,
   BranchResolutionError,
 } from '@/lib/branch-context';
@@ -20,12 +21,12 @@ import {
   resolveDefaultPriceLevelId,
 } from '@/lib/product-selling-unit-writes';
 import { addProductWithScope, assertWarehouseForWrite } from '@/lib/product-create';
+import type { WarehouseEntry } from './add-product/product-schema';
 
 
 export type ProductFormData = {
   name: string;
   brand: string;
-  sku?: string;
   barcode?: string;
   description: string;
   additionalDescription?: string;
@@ -33,7 +34,16 @@ export type ProductFormData = {
   department?: string;
   subcategory?: string;
   supplier?: string;
+  /**
+   * Legacy single-warehouse pair. `warehouse` and `stock` are what
+   * `updateProduct` reads (Edit Product stays single-warehouse: a product row
+   * IS per-warehouse), and what a pre-multi-warehouse queued approval item
+   * carries. On create, prefer `warehouses`; the write path normalises this
+   * pair into it via `normalizeLegacyWarehouseInput`.
+   */
   warehouse?: string;
+  /** Create-only: every warehouse the product is created in, each with its own opening stock. */
+  warehouses?: WarehouseEntry[];
   shelfLocationIds?: string[];
   image?: string;
   imageFile?: File;
@@ -87,7 +97,34 @@ export type ProductFilters = {
   warehouse?: string;
   shelfLocation?: string;
   status?: 'in-stock' | 'low-stock' | 'out-of-stock' | 'all' | string;
+  /** Opt out of the family roll-up: return a flat row list (LIMIT counts rows, not roots). */
+  flat?: boolean;
 };
+
+/**
+ * The single source of truth for whether the family roll-up (root-only paging via
+ * `parent_id IS NULL`, plus the descendant CTE) is switched off. getProducts and
+ * getProductsCount both call this, so the page and its count cannot disagree.
+ *
+ * Row filters (search, brand, ...) flatten the list. The warehouse filter
+ * deliberately does NOT: it only scopes row visibility. A caller that needs a flat,
+ * warehouse-scoped row list (e.g. the bulk price tool, which writes prices from it)
+ * opts out explicitly with `flat: true`.
+ * Kept un-exported: a 'use server' file may only export async functions.
+ */
+function rollupSuppressed(filters?: ProductFilters): boolean {
+  if (!filters) return false;
+  return Boolean(
+    filters.flat ||
+    (filters.brand && filters.brand !== 'all') ||
+    (filters.category && filters.category !== 'all') ||
+    (filters.department && filters.department !== 'all') ||
+    (filters.supplier && filters.supplier !== 'all') ||
+    (filters.shelfLocation && filters.shelfLocation !== 'all') ||
+    (filters.status && filters.status !== 'all') ||
+    filters.search
+  );
+}
 
 export async function getProducts(limit?: number, offset?: number, filters?: ProductFilters) {
   try {
@@ -112,22 +149,13 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
     const whereClauses: string[] = [];
     const params: any[] = [];
 
-    const hasActiveFilters = filters && (
-      (filters.brand && filters.brand !== 'all') ||
-      (filters.category && filters.category !== 'all') ||
-      (filters.department && filters.department !== 'all') ||
-      (filters.supplier && filters.supplier !== 'all') ||
-      (filters.warehouse && filters.warehouse !== 'all') ||
-      (filters.shelfLocation && filters.shelfLocation !== 'all') ||
-      (filters.status && filters.status !== 'all') ||
-      filters.search
-    );
+    const suppressRollup = rollupSuppressed(filters);
 
     if (filters) {
       if (filters.search) {
-        whereClauses.push(`(p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`);
+        whereClauses.push(`(p.name LIKE ? OR p.barcode LIKE ?)`);
         const searchParam = `%${filters.search}%`;
-        params.push(searchParam, searchParam, searchParam);
+        params.push(searchParam, searchParam);
       }
       if (filters.brand && filters.brand !== 'all') {
         whereClauses.push(`p.brand = ?`);
@@ -164,7 +192,7 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
       }
     }
 
-    if (!hasActiveFilters && limit !== undefined && offset !== undefined) {
+    if (!suppressRollup && limit !== undefined && offset !== undefined) {
       whereClauses.push(`p.parent_id IS NULL`);
     }
 
@@ -182,7 +210,7 @@ export async function getProducts(limit?: number, offset?: number, filters?: Pro
     const pagedProducts = await query(sql, params.length > 0 ? params : undefined);
     
     let products = pagedProducts;
-    if (!hasActiveFilters && limit !== undefined && offset !== undefined && pagedProducts.length > 0) {
+    if (!suppressRollup && limit !== undefined && offset !== undefined && pagedProducts.length > 0) {
       const rootIds = pagedProducts.map((p: any) => p.id);
       
       try {
@@ -381,9 +409,9 @@ export async function getProductsCount(filters?: ProductFilters) {
 
     if (filters) {
        if (filters.search) {
-        whereClauses.push(`(p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)`);
+        whereClauses.push(`(p.name LIKE ? OR p.barcode LIKE ?)`);
         const searchParam = `%${filters.search}%`;
-        params.push(searchParam, searchParam, searchParam);
+        params.push(searchParam, searchParam);
       }
       if (filters.brand && filters.brand !== 'all') {
         whereClauses.push(`p.brand = ?`);
@@ -420,18 +448,9 @@ export async function getProductsCount(filters?: ProductFilters) {
       }
     }
 
-    const hasActiveFilters = filters && (
-      (filters.brand && filters.brand !== 'all') ||
-      (filters.category && filters.category !== 'all') ||
-      (filters.department && filters.department !== 'all') ||
-      (filters.supplier && filters.supplier !== 'all') ||
-      (filters.warehouse && filters.warehouse !== 'all') ||
-      (filters.shelfLocation && filters.shelfLocation !== 'all') ||
-      (filters.status && filters.status !== 'all') ||
-      filters.search
-    );
+    const suppressRollup = rollupSuppressed(filters);
 
-    if (!hasActiveFilters) {
+    if (!suppressRollup) {
       whereClauses.push(`p.parent_id IS NULL`);
     }
 
@@ -546,10 +565,6 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         reorder_point: formData.reorderPoint !== undefined ? formData.reorderPoint : existing.reorder_point,
         price: formData.price !== undefined ? formData.price : existing.price,
         cost: (formData.cost !== undefined ? formData.cost : existing.cost) || null,
-        // '' or null from the form (SKU-less products, or forms that no longer
-        // collect a SKU) must not overwrite what is stored — and '' must never
-        // be written (the (sku, warehouse_id) unique index treats '' as a value).
-        sku: formData.sku || existing.sku || null,
         barcode: (formData.barcode !== undefined ? formData.barcode : existing.barcode) || null,
         image_url: (formData.image !== undefined ? formData.image : existing.image_url) || null,
         image_hint: formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : existing.image_hint,
@@ -566,7 +581,7 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         UPDATE products SET
           name = ?, description = ?, additional_description = ?, category = ?, brand = ?,
           department = ?, subcategory = ?, supplier_id = ?, warehouse_id = ?, stock = ?,
-          reorder_point = ?, price = ?, cost = ?, sku = ?, barcode = ?,
+          reorder_point = ?, price = ?, cost = ?, barcode = ?,
           image_url = ?, image_hint = ?, unit_of_measure = ?,
           income_account = ?, expense_account = ?, vat_status = ?,
           availability = ?, earns_points = ?, shelf_location_id = ?, is_perishable = ?
@@ -597,7 +612,7 @@ export async function updateProduct(id: string, formData: ProductFormData) {
         productData.name, productData.description, productData.additional_description,
         productData.category, productData.brand, productData.department, productData.subcategory,
         productData.supplier_id, productData.warehouse_id, productData.stock, productData.reorder_point,
-        productData.price, productData.cost, productData.sku, productData.barcode,
+        productData.price, productData.cost, productData.barcode,
         productData.image_url, productData.image_hint, productData.unit_of_measure,
         productData.income_account, productData.expense_account, productData.vat_status,
         productData.availability, productData.earns_points, legacyShelfId, productData.is_perishable, id
@@ -1114,6 +1129,117 @@ export async function getWarehouses(): Promise<Warehouse[]> {
   } catch (error) {
     console.error('Error fetching warehouses:', error);
     return [];
+  }
+}
+
+/**
+ * The warehouse the products table should open on, so a product fanned out to
+ * every warehouse of a branch is listed once instead of once per warehouse.
+ *
+ * Resolves the branch from the SESSION (same rule as every other read of the
+ * caller's identity): a branch user gets a warehouse of its own branch; head
+ * office (or no usable cookie) gets the main branch's. It deliberately does NOT
+ * use `warehouses.is_main` -- that column is only added at runtime by
+ * app/api/warehouses/route.ts and has no migration -- but the oldest active
+ * warehouse of the branch, which is the original one in a single-store install.
+ *
+ * Returns `{ warehouseId: null }` when the answer is genuinely "none": the branch has
+ * no active warehouse, or the identity is known not to belong to a usable branch
+ * (a BranchResolutionError with a 4xx status: unassigned, inactive branch, unknown
+ * uid). The caller treats that as "show nothing", never as "show everything".
+ *
+ * It THROWS when resolution itself failed -- a non-BranchResolutionError (e.g. a
+ * transient DB error) or a 5xx BranchResolutionError (mainBranchId() with no
+ * is_main branch: an install misconfiguration, not a statement about the user).
+ * Returning null there would be indistinguishable from "no warehouse" to
+ * react-query, which would never see an error, so the client would pin the
+ * NO_WAREHOUSE sentinel for the whole session (staleTime: Infinity) and show an
+ * empty catalogue. Throwing lets isError fire so products/page.tsx falls back to
+ * "all" -- a degraded but non-blank view (getProducts is not branch-filtered; see
+ * CLAUDE.md "Still open after the fan-out work").
+ */
+export async function getDefaultProductWarehouse(): Promise<{ warehouseId: string | null }> {
+  try {
+    const scope = await resolveScopeFromSession();
+    const branchId = scope && scope.scope === 'single' ? scope.branchId : await mainBranchId();
+    if (!branchId) return { warehouseId: null };
+    const rows = (await query(
+      `SELECT id FROM warehouses
+        WHERE branch_id = ? AND is_active = 1
+        ORDER BY created_at ASC, name ASC, id ASC
+        LIMIT 1`,
+      [branchId]
+    )) as any[];
+    return { warehouseId: rows.length > 0 ? (rows[0].id as string) : null };
+  } catch (error) {
+    // 4xx: the identity has no usable branch -> genuinely "none".
+    if (error instanceof BranchResolutionError && error.status < 500) {
+      return { warehouseId: null };
+    }
+    console.error('Error resolving default product warehouse:', error);
+    throw error;
+  }
+}
+
+/**
+ * The active warehouses the products UI may offer: the tab strip on the products
+ * table and the warehouse picker in the create form share this one source.
+ *
+ * Scope is resolved from the SESSION, never from an argument (a `'use server'`
+ * export must not take a `scope` parameter). A branch user gets the active
+ * warehouses of exactly that branch; head office gets every branch's. With no
+ * valid cookie (`scope === null`) it falls back to the unfiltered active list --
+ * the pre-guard behaviour -- and reports `isHeadOffice: true` so callers do not
+ * impose a "keep at least one warehouse" rule the old path never had.
+ *
+ * `is_active` is the source of truth; the runtime-added `active` column is stale
+ * and deliberately not read. `getWarehouses()` stays unfiltered for its other
+ * callers; this is a separate action beside it.
+ *
+ * Error discipline mirrors getDefaultProductWarehouse(): a 4xx
+ * BranchResolutionError (unassigned, inactive branch, unknown uid) is genuinely
+ * "none" and returns an empty list; anything else is RE-THROWN so react-query's
+ * isError fires instead of caching an empty list as the answer.
+ */
+export async function getBranchWarehouses(): Promise<{ warehouses: Warehouse[]; isHeadOffice: boolean }> {
+  try {
+    const scope = await resolveScopeFromSession();
+    const isHeadOffice = !scope || scope.scope === 'all';
+    // Head office / unguarded: join the branch name so a caller choosing across
+    // branches can tell the warehouses apart (`location` is free text, can be
+    // blank or identical across branches). LEFT JOIN so a warehouse with no
+    // branch row is still listed, exactly as the unjoined query listed it. A
+    // branch-scoped caller needs no disambiguation and gets no branchName.
+    const rows = (scope && scope.scope === 'single'
+      ? await query(
+          'SELECT * FROM warehouses WHERE branch_id = ? AND is_active = 1 ORDER BY name',
+          [scope.branchId]
+        )
+      : await query(
+          `SELECT w.*, b.name AS branch_name
+             FROM warehouses w
+             LEFT JOIN branches b ON b.id = w.branch_id
+            WHERE w.is_active = 1
+            ORDER BY w.name`
+        )) as any[];
+    return {
+      warehouses: rows.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        location: w.location,
+        isActive: w.is_active === 1,
+        createdAt: w.created_at,
+        ...(w.branch_name ? { branchName: w.branch_name as string } : {}),
+      })),
+      isHeadOffice,
+    };
+  } catch (error) {
+    // 4xx: the identity has no usable branch -> genuinely "none".
+    if (error instanceof BranchResolutionError && error.status < 500) {
+      return { warehouses: [], isHeadOffice: false };
+    }
+    console.error('Error fetching branch warehouses:', error);
+    throw error;
   }
 }
 

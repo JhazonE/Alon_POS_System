@@ -27,7 +27,7 @@ export function CondensedProductRow({ product, isLast = false, onSuccess, requir
           )}
         </div>
         <p className="text-[9px] text-muted-foreground truncate uppercase font-mono">
-          SKU: {product.sku} {product.barcode && `| BC: ${product.barcode}`}
+          {product.barcode ? `BC: ${product.barcode}` : '—'}
         </p>
       </div>
 

@@ -53,7 +53,7 @@ export function AddOrderItemsTable({ form, fields, remove }: Props) {
                   <TableCell className="font-medium pl-4 pr-2 py-1">
                     <div className="truncate font-bold text-sm leading-tight" title={field.product.name}>{field.product.name}</div>
                     <div className="flex gap-2 text-[11px] leading-tight text-muted-foreground">
-                      <span className="truncate">{field.product.sku || 'No SKU'}</span>
+                      <span className="truncate">{field.product.barcode || 'No barcode'}</span>
                       {field.product.stock !== undefined && (
                         <span className={field.product.stock <= 0 ? 'text-destructive' : 'text-emerald-600'}>
                           Stock: {formatStockQuantity(field.product.stock)}

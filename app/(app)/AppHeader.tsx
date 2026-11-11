@@ -33,7 +33,7 @@ export function AppHeader({
 }) {
   return (
     <header className="non-printable window-drag shrink-0 px-[10px] pt-[10px]">
-      <div className="window-no-drag flex h-14 items-center gap-3 rounded-2xl border border-[#d6e4f5] bg-white px-3 shadow-sm dark:border-[#1a3b6e] dark:bg-[#0f2c58]">
+      <div className="window-no-drag flex h-14 items-center gap-3 rounded-2xl border border-[#d6e4f5] bg-white px-3 shadow-sm dark:border-[rgb(var(--matte-line))] dark:bg-[rgb(var(--matte-surface))]">
         <AnimatedSidebarTrigger />
         <AppBreadcrumbs />
 
@@ -41,15 +41,22 @@ export function AppHeader({
 
         {businessName && (
           <>
-            <div className="hidden items-center gap-2.5 rounded-xl border border-[#d6e4f5] bg-[#f3f8fd] py-1.5 pl-1.5 pr-3 sm:flex dark:border-[#1a3b6e] dark:bg-[#0a2145]">
+            {/*
+              The chip is inset INSIDE the header's surface card, so it takes
+              --matte-inset, not --matte-ground. It used to hardcode the old
+              ground (#0a2145); once the ground was deepened for card
+              separation, reusing it here would have punched a near-black hole
+              in the header.
+            */}
+            <div className="hidden items-center gap-2.5 rounded-xl border border-[#d6e4f5] bg-[#f3f8fd] py-1.5 pl-1.5 pr-3 sm:flex dark:border-[rgb(var(--matte-line))] dark:bg-[rgb(var(--matte-inset))]">
               <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-[rgba(42,158,205,0.13)] text-[#104885] dark:text-[#4db4e0]">
                 <Store className="h-[13px] w-[13px]" />
               </span>
-              <span className="text-[12.5px] font-semibold text-[#0a2145] dark:text-[#dce9f8]">
+              <span className="text-[12.5px] font-semibold text-[#0a2145] dark:text-[rgb(var(--matte-value))]">
                 {businessName}
               </span>
             </div>
-            <div className="hidden h-6 w-px bg-[#d6e4f5] sm:block dark:bg-[#1a3b6e]" />
+            <div className="hidden h-6 w-px bg-[#d6e4f5] sm:block dark:bg-[rgb(var(--matte-line))]" />
           </>
         )}
 

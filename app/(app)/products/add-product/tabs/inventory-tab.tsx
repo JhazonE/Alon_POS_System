@@ -2,15 +2,18 @@
 
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UnitOfMeasure } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+import { UnitOfMeasure, Warehouse } from '@/lib/types';
 
 import { useAddProductFormContext } from '../add-product-form-context';
+import { withFirstPrimary, type WarehouseEntry } from '../product-schema';
 import { InlineEditableSelect } from '../../components/inline-editable-select';
 import { InlineEditableMultiSelect } from '../../components/inline-editable-multi-select';
 import {
   addDepartment, updateDepartment,
-  addWarehouse, updateWarehouse, getWarehouses,
+  addWarehouse, updateWarehouse,
   addShelfLocation, updateShelfLocation, getShelfLocations,
   addUnitOfMeasure, updateUnitOfMeasure,
 } from '../../actions';
@@ -21,7 +24,9 @@ export function InventoryTab() {
     itemType,
     departments, isLoadingDepartments,
     taxRates,
-    warehouses, isLoadingWarehouses,
+    warehouses, isLoadingWarehouses, isHeadOffice,
+    branchOptions, selectedBranch, setSelectedBranch,
+    isWarehousesError, retryWarehouses,
     shelfLocations,
     unitsOfMeasure, isLoadingUnits,
     selects, setSelects,
@@ -30,6 +35,7 @@ export function InventoryTab() {
     refreshShelfLocations,
     refreshUnits,
   } = useAddProductFormContext();
+  const { toast } = useToast();
 
   if (itemType === 'service') {
     return (
@@ -223,52 +229,7 @@ export function InventoryTab() {
           )}
         />
 
-      {/* Unit of measure now lives on the base selling-unit row — one source of
-          truth, same treatment as barcode and cost. */}
-      {itemType === 'standard' && (
-        <>
-          <FormField
-            control={form.control}
-            name="warehouse"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Warehouse (Optional)</FormLabel>
-                <InlineEditableSelect
-                  items={warehouses}
-                  isLoading={isLoadingWarehouses}
-                  value={field.value}
-                  onChange={field.onChange}
-                  open={selects.warehouses}
-                  onOpenChange={(o) => setSelects((p) => ({ ...p, warehouses: o }))}
-                  placeholder="Select a warehouse"
-                  addLabel="Add Warehouse"
-                  emptyLabel="No warehouses found"
-                  getId={(w: any) => w.id}
-                  getValue={(w: any) => w.id}
-                  getOptionLabel={(w: any) => w.name}
-                  getName={(w: any) => w.name}
-                  onAdd={async (name) => {
-                    const r = await addWarehouse(name);
-                    if (r.success) {
-                      await refreshWarehouses();
-                      const fresh = await getWarehouses();
-                      const created = fresh.find((w: any) => w.name === name);
-                      return created?.id;
-                    }
-                    return undefined;
-                  }}
-                  onRename={async (id, name) => {
-                    const existing = warehouses.find((w: any) => w.id === id);
-                    const r = await updateWarehouse(id, name, existing?.location);
-                    if (r.success) { await refreshWarehouses(); return id; }
-                    return undefined;
-                  }}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+        {itemType === 'standard' && (
           <FormField
             control={form.control}
             name="shelfLocationIds"
@@ -306,25 +267,205 @@ export function InventoryTab() {
               </FormItem>
             )}
           />
+        )}
+
+      {/* Unit of measure now lives on the base selling-unit row — one source of
+          truth, same treatment as barcode and cost. */}
+      {itemType === 'standard' && (
+        <>
+          {/* A product belongs to ONE branch, so the branch is chosen first and
+              the warehouse picker below offers only that branch's warehouses.
+              Hidden when there is only one branch to choose — every branch
+              user, and a single-branch install — because a field with one
+              option is a question with no answer to give. The server derives
+              the branch from the warehouse rows themselves and refuses a
+              submission spanning two, so this field is a convenience, not the
+              guard.
+
+              It is deliberately NOT a FormItem/FormLabel/FormControl/
+              FormDescription: the branch lives in local state
+              (`selectedBranch`) and is never submitted, so there is no
+              react-hook-form field to bind it to, and every one of those
+              components reads the FormField context through useFormField,
+              which THROWS outside a <FormField>. That blanked this dialog for
+              a head office with more than one branch. */}
+          {branchOptions.length > 1 && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="product-branch">Branch</Label>
+              <Select
+                value={selectedBranch ?? undefined}
+                onValueChange={setSelectedBranch}
+              >
+                <SelectTrigger id="product-branch" className="sm:max-w-sm">
+                  <SelectValue placeholder="Select a branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branchOptions.map((b: { id: string; name: string }) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Changing the branch clears the warehouses picked below.
+              </p>
+            </div>
+          )}
+
+          {/* The warehouses this product is created in, each with its OWN opening
+              stock. Everything else on the form (cost, prices, reorder point,
+              suppliers) is shared by every warehouse: it is entered once, in the
+              tabs that own it, not repeated per row. */}
+          <FormField
+            control={form.control}
+            name="warehouses"
+            render={({ field }) => {
+              const entries: WarehouseEntry[] = field.value ?? [];
+              const warehouseById = (id: string): Warehouse | undefined => warehouses.find((w: Warehouse) => w.id === id);
+              // The picker is already filtered to the branch selected above, so
+              // every warehouse here belongs to that one branch — appending its
+              // name to each option and chip would repeat what the Branch field
+              // already says. `branchName` stays on the type for the products
+              // page's own disambiguation.
+              const labelOf = (w: Warehouse) => w.name;
+              const rowErrors = (form.formState.errors as any).warehouses as any;
+              // A row cannot show its own error while the popover is shut, so
+              // they are collected and listed under the field, each naming its
+              // warehouse.
+              const stockErrorMessages: string[] = entries.flatMap((e, i) => {
+                const m = rowErrors?.[i]?.stock?.message as string | undefined;
+                if (!m) return [];
+                const w = warehouseById(e.warehouseId);
+                return [`${w?.name ?? e.warehouseId}: ${m}`];
+              });
+
+              // Rebuild the entries from the picked ids, keeping each kept row's
+              // stock. There is NO primary control: the FIRST entry is the
+              // primary, always. An unticked warehouse is dropped entirely, so
+              // unticking the first one promotes the next — a non-empty list
+              // therefore always has exactly one primary, and re-ticking starts
+              // that warehouse at 0 rather than restoring a hidden old value.
+              const setSelected = (ids: string[]) => {
+                const next: WarehouseEntry[] = ids.map(
+                  (id) => entries.find((e) => e.warehouseId === id) ?? { warehouseId: id, stock: 0, isPrimary: false },
+                );
+                field.onChange(withFirstPrimary(next));
+              };
+              const setStock = (id: string, stock: number) =>
+                field.onChange(entries.map((e) => (e.warehouseId === id ? { ...e, stock } : e)));
+
+              return (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>{isHeadOffice ? 'Warehouses (Optional)' : 'Warehouses'}</FormLabel>
+                  <InlineEditableMultiSelect
+                    items={warehouses}
+                    value={entries.map((e) => e.warehouseId)}
+                    onChange={setSelected}
+                    placeholder="Select warehouses..."
+                    searchPlaceholder="Search warehouse..."
+                    addLabel="Add Warehouse"
+                    emptyLabel={
+                      isLoadingWarehouses
+                        ? 'Loading warehouses...'
+                        : isWarehousesError
+                          ? 'Could not load warehouses'
+                          : 'No warehouses found'
+                    }
+                    getId={(w: Warehouse) => w.id}
+                    getName={(w: Warehouse) => w.name}
+                    getOptionLabel={labelOf}
+                    onAdd={async (name) => {
+                      const r = await addWarehouse(name);
+                      if (!r.success) return undefined;
+                      const fresh = await refreshWarehouses();
+                      const created = fresh.find((w: Warehouse) => w.name === name);
+                      if (!created) {
+                        // addWarehouse files a new warehouse under the MAIN branch;
+                        // a branch user's own list does not include it, so it
+                        // cannot be picked here (the server would refuse it).
+                        toast({
+                          title: 'Warehouse added to the main branch',
+                          description: `"${name}" is not part of your branch, so it cannot be used for this product.`,
+                        });
+                        return undefined;
+                      }
+                      return created.id;
+                    }}
+                    onRename={async (id, name) => {
+                      const existing = warehouseById(id);
+                      const r = await updateWarehouse(id, name, existing?.location);
+                      if (r.success) { await refreshWarehouses(); return id; }
+                      return undefined;
+                    }}
+                    renderSelectedAccessory={(w: Warehouse) => {
+                      const entry = entries.find((e) => e.warehouseId === w.id);
+                      if (!entry) return null;
+                      const i = entries.indexOf(entry);
+                      const stockError = rowErrors?.[i]?.stock?.message as string | undefined;
+                      return (
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          placeholder="0"
+                          aria-label={`Initial stock for ${w.name}`}
+                          aria-invalid={stockError ? true : undefined}
+                          className={`h-7 w-20 rounded-full text-center ${stockError ? 'border-destructive' : ''}`}
+                          value={entry.stock}
+                          onChange={(ev) => setStock(w.id, parseInt(ev.target.value) || 0)}
+                        />
+                      );
+                    }}
+                  />
+                  <FormDescription>
+                    All warehouses in your branch are selected by default. Open the list and type each one&apos;s opening
+                    stock beside its name. Cost, prices, reorder point and suppliers are shared by every warehouse —
+                    only the opening stock is set per warehouse, and the first one picked is the primary.
+                  </FormDescription>
+
+                  {/* A failed list leaves the picker empty with nothing to pick,
+                      so the user needs to be told why and given a retry rather
+                      than a silent empty state. */}
+                  {isWarehousesError && (
+                    <div
+                      data-testid="warehouse-list-error"
+                      className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive"
+                    >
+                      <span>The warehouse list could not be loaded.</span>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 items-center justify-center rounded-md border border-input bg-background px-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        onClick={() => { void retryWarehouses(); }}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+                  {/* The opening-stock inputs live INSIDE the picker rows
+                      (renderSelectedAccessory above), so there is no table
+                      here. What a row cannot show is its own validation
+                      message while the popover is closed — those are listed
+                      here instead, naming the warehouse. */}
+                  {stockErrorMessages.length > 0 && (
+                    <ul data-testid="warehouse-stock-errors" className="mt-1 space-y-1">
+                      {stockErrorMessages.map((m) => (
+                        <li key={m} className="text-xs text-destructive">{m}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+
         </>
       )}
 
       {/* Cost now lives on the base selling unit row in the Selling Units tab —
           one source of truth. Reorder point is set per supplier in the
-          Suppliers tab. */}
-        <FormField
-          control={form.control}
-          name="stock"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Initial Stock</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          Suppliers tab. Opening stock is per warehouse (the rows above). */}
     </div>
   );
 }

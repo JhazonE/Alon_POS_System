@@ -4,7 +4,7 @@ import { testQuery } from './helpers/db';
 import {
   SHELF_A, SHELF_B, SHELF_XFER_PRODUCT,
   TEST_WAREHOUSE, TRANSFER_TARGET_WAREHOUSE,
-  TRANSFER_NULL_SKU_SOURCE, TRANSFER_NULL_SKU_TARGET,
+  TRANSFER_PAIRED_SOURCE, TRANSFER_PAIRED_TARGET,
 } from './fixtures/test-data';
 
 /**
@@ -48,7 +48,7 @@ test.describe('Bulk Adjustment transfers', () => {
     await page.getByRole('combobox').filter({ hasText: /select destination shelf/i }).click();
     await page.getByRole('option', { name: SHELF_B.name }).click();
 
-    await page.getByPlaceholder(/search products by name or sku/i).fill(SHELF_XFER_PRODUCT.sku);
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(SHELF_XFER_PRODUCT.barcode);
     await page.getByText(SHELF_XFER_PRODUCT.name).first().click();
 
     await page.getByRole('button', { name: /process|confirm|apply/i }).first().click();
@@ -82,7 +82,7 @@ test.describe('Bulk Adjustment transfers', () => {
     await page.getByRole('combobox').filter({ hasText: /select destination shelf/i }).click();
     await page.getByRole('option', { name: SHELF_B.name }).click();
 
-    await page.getByPlaceholder(/search products by name or sku/i).fill(SHELF_XFER_PRODUCT.sku);
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(SHELF_XFER_PRODUCT.barcode);
     await page.getByText(SHELF_XFER_PRODUCT.name).first().click();
 
     // Gamay ra ang naa sa SHELF_A kaysa total stock (30). Ang item row kinahanglan
@@ -97,8 +97,8 @@ test.describe('Bulk Adjustment transfers', () => {
     await seedSession(page, DEFAULT_ADMIN);
 
     // Gibasa gikan sa DB sa sinugdan — dili gi-hardcode, aron dili depende sa order sa mga test.
-    const srcBefore = await totalStock(TRANSFER_NULL_SKU_SOURCE.id);
-    const destBefore = await totalStock(TRANSFER_NULL_SKU_TARGET.id);
+    const srcBefore = await totalStock(TRANSFER_PAIRED_SOURCE.id);
+    const destBefore = await totalStock(TRANSFER_PAIRED_TARGET.id);
 
     await page.goto('/inventory/bulk-adjustment');
 
@@ -113,14 +113,14 @@ test.describe('Bulk Adjustment transfers', () => {
     await page.getByRole('option', { name: TRANSFER_TARGET_WAREHOUSE.name }).click();
 
     // Walay SKU kini nga produkto (NULL), mao nga pangitaon pinaagi sa name.
-    await page.getByPlaceholder(/search products by name or sku/i).fill(TRANSFER_NULL_SKU_SOURCE.name);
-    await page.getByText(TRANSFER_NULL_SKU_SOURCE.name).first().click();
+    await page.getByPlaceholder(/search products by name or barcode/i).fill(TRANSFER_PAIRED_SOURCE.name);
+    await page.getByText(TRANSFER_PAIRED_SOURCE.name).first().click();
 
     await page.getByRole('button', { name: /process|confirm|apply/i }).first().click();
 
     await expect(async () => {
-      expect(await totalStock(TRANSFER_NULL_SKU_SOURCE.id)).toBe(srcBefore - 1);
-      expect(await totalStock(TRANSFER_NULL_SKU_TARGET.id)).toBe(destBefore + 1);
+      expect(await totalStock(TRANSFER_PAIRED_SOURCE.id)).toBe(srcBefore - 1);
+      expect(await totalStock(TRANSFER_PAIRED_TARGET.id)).toBe(destBefore + 1);
     }).toPass({ timeout: 15_000 });
   });
 
