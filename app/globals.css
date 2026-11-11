@@ -150,8 +150,14 @@
       #0A2145 it was ~11 lightness points from --matte-surface, so cards
       did not read as cards and the dashboard looked like one flat navy
       sheet. Keep the gap wide when retuning this ramp.
+
+      It must ALSO equal the app shell's `--background` (`.dark`: hsl(222 47% 7%),
+      which is rgb(9, 14, 26)). The dashboard paints this colour on its own root,
+      and when it was a different navy (#050E20) the page showed as a visibly
+      separate panel with a hard edge against the shell. If `--background` is
+      retuned, retune this with it.
     */
-    --matte-ground:    5  14  32;  /* #050E20 */
+    --matte-ground:    9  14  26;  /* #090E1A — same as the shell's --background */
     --matte-surface:  15  44  88;  /* #0F2C58 — sidebar nav card */
     /*
       Brightened from the sidebar's #1A3B6E so a card edge still reads

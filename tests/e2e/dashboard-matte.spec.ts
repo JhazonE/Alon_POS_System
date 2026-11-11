@@ -74,9 +74,10 @@ test.describe('dashboard layout', () => {
     await page.goto('/dashboard');
     const bg = await page.locator('[data-dashboard="root"]')
       .evaluate(el => getComputedStyle(el).backgroundColor);
-    // --matte-ground in globals.css: light #F0F5FB, dark #050E20 (navy/blue
-    // rebrand 86591e5 + 0df1689; the old teal grounds were 241,247,246 / 11,42,45).
-    expect(['rgb(240, 245, 251)', 'rgb(5, 14, 32)']).toContain(bg);
+    // --matte-ground in globals.css: light #F0F5FB, dark #090E1A. The dark value
+    // deliberately equals the shell's `--background` (hsl 222 47% 7%) so the
+    // dashboard reads as one seamless ground, not a panel on top of the page.
+    expect(['rgb(240, 245, 251)', 'rgb(9, 14, 26)']).toContain(bg);
   });
 
   test('kung mapakyas ang refetch, magpabilin ang cards ug motungha ang banner', async ({ page }) => {
