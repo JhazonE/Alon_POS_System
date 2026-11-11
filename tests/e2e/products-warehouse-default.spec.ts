@@ -270,6 +270,14 @@ test.describe('products table defaults to a single warehouse', () => {
   });
 
   test('head office lands on a main-branch warehouse, not on another branch', async ({ page }) => {
+    // beforeEach pins the seeded warehouses NEWER than every main-branch one, which
+    // is right for the branch-user test but makes this one vacuous: a default that
+    // ignored the branch and just took the oldest active warehouse would still land
+    // on a main-branch warehouse. Make the seeded one the oldest in the database, so
+    // that mistake would select it and fail the assertions below. The fixture's own
+    // Main Warehouse is dated 2000-01-01, so use an earlier date: on a tie the
+    // `name ASC` tie-break would hand the win to "Main Warehouse" and hide the bug.
+    await testQuery("UPDATE warehouses SET created_at = '1990-01-01 00:00:00' WHERE id = ?", [firstWh]);
     await openProducts(page, DEFAULT_ADMIN);
 
     const mainNames: any[] = await testQuery(
