@@ -31,10 +31,12 @@ test.describe('sidebar panel', () => {
     expect(labels).toContain('PURCHASING');
   });
 
-  test('the active row is filled with the brand teal', async ({ page }) => {
+  test('the active row is filled with the brand blue', async ({ page }) => {
     await page.goto('/products');
     await expect(page.locator('[data-sidebar="row"][data-href="/products"]')).toHaveAttribute('data-active', 'true');
-    expect(await bg(page, '[data-sidebar="row"][data-href="/products"]')).toBe('rgb(14, 124, 134)');
+    // #1e7db8 -- the navy/blue rebrand (86591e5) replaced the old teal #0e7c86,
+    // which is what this assertion still checked.
+    expect(await bg(page, '[data-sidebar="row"][data-href="/products"]')).toBe('rgb(30, 125, 184)');
   });
 
   test('a resting row has no background', async ({ page }) => {

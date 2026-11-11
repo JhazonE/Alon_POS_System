@@ -74,7 +74,9 @@ test.describe('dashboard layout', () => {
     await page.goto('/dashboard');
     const bg = await page.locator('[data-dashboard="root"]')
       .evaluate(el => getComputedStyle(el).backgroundColor);
-    expect(['rgb(241, 247, 246)', 'rgb(11, 42, 45)']).toContain(bg);
+    // --matte-ground in globals.css: light #F0F5FB, dark #050E20 (navy/blue
+    // rebrand 86591e5 + 0df1689; the old teal grounds were 241,247,246 / 11,42,45).
+    expect(['rgb(240, 245, 251)', 'rgb(5, 14, 32)']).toContain(bg);
   });
 
   test('kung mapakyas ang refetch, magpabilin ang cards ug motungha ang banner', async ({ page }) => {

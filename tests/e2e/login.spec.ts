@@ -9,7 +9,9 @@ test.describe('Login page', () => {
   test('mo-render ang login form', async ({ page }) => {
     await page.goto('/login');
 
-    await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+    // The login screen was rebuilt (c00dd43): its h1 is the product name, there
+    // is no longer a "Welcome back" heading.
+    await expect(page.getByRole('heading', { level: 1, name: /alon pos system/i })).toBeVisible();
     await expect(page.getByLabel('Username')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
     await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
