@@ -50,6 +50,11 @@ function limiter(name: string, max: number, windowMs = MINUTE) {
   return getRateLimiter(name, { max, windowMs });
 }
 
+/** Label a result with the bucket and key that produced it, for the log. */
+function tag(result: RateLimitResult, bucket: string, key: string): RateLimitResult {
+  return { ...result, bucket, key };
+}
+
 /** Normalise the path the same way the allowlist does (no trailing slash). */
 function normalize(pathname: string): string {
   return pathname.replace(/\/+$/, '') || '/';
@@ -74,9 +79,9 @@ export function checkPublicRateLimit(
   if (rateLimitingDisabled()) return null;
   const l = limits();
   const ip = clientAddress(headers);
-  const results = [limiter('public', l.public).consume(`public:${ip}`)];
+  const results = [tag(limiter('public', l.public).consume(`public:${ip}`), 'public', `public:${ip}`)];
   if (method.toUpperCase() === 'POST' && normalize(pathname) === '/api/auth/login') {
-    results.push(limiter('login', l.login).consume(`login:${ip}`));
+    results.push(tag(limiter('login', l.login).consume(`login:${ip}`), 'login', `login:${ip}`));
   }
   return firstBlockedOrTightest(results);
 }
@@ -97,12 +102,12 @@ export function checkAuthenticatedRateLimit(
   if (method.toUpperCase() === 'POST' && path === '/api/pos/checkout') return null;
 
   const l = limits();
-  const results = [limiter('api', l.api).consume(`uid:${uid}`)];
+  const results = [tag(limiter('api', l.api).consume(`uid:${uid}`), 'api', `uid:${uid}`)];
 
   if (path.startsWith('/api/reports/') || path === '/api/reports') {
-    results.push(limiter('reports', l.reports).consume(`uid:${uid}`));
+    results.push(tag(limiter('reports', l.reports).consume(`uid:${uid}`), 'reports', `uid:${uid}`));
   } else if (path.startsWith('/api/data-management/') || path === '/api/data-management') {
-    results.push(limiter('bulk', l.bulk).consume(`uid:${uid}`));
+    results.push(tag(limiter('bulk', l.bulk).consume(`uid:${uid}`), 'bulk', `uid:${uid}`));
   }
   return firstBlockedOrTightest(results);
 }
@@ -139,9 +144,9 @@ export function checkLoginLock(headers: Headers, username: unknown): RateLimitRe
   const { pair, user } = loginLimiters();
   const name = normalizeUsername(username);
   const a = pair.peek(pairKey(headers, username));
-  if (a.remaining === 0) return { ...a, allowed: false };
+  if (a.remaining === 0) return { ...tag(a, 'login-failures', pairKey(headers, username)), allowed: false };
   const b = user.peek(`user:${name}`);
-  if (b.remaining === 0) return { ...b, allowed: false };
+  if (b.remaining === 0) return { ...tag(b, 'login-failures-user', `user:${name}`), allowed: false };
   return null;
 }
 
@@ -163,12 +168,42 @@ export function clearLoginFailures(headers: Headers, username: unknown): void {
   loginLimiters().pair.reset(pairKey(headers, username));
 }
 
+// ---- logging ----------------------------------------------------------------
+
+// A refusal is only useful for tuning if it is visible, but a flood must not
+// become a log flood: one line per bucket+key per minute, and the table of
+// "last logged" times is itself bounded.
+const LOG_EVERY_MS = MINUTE;
+const LOG_TABLE_MAX = 1000;
+const lastLogged = new Map<string, number>();
+
+function logThrottled(result: RateLimitResult, route?: string): void {
+  if (!result.bucket || !result.key) return;
+  const id = `${result.bucket}|${result.key}`;
+  const t = Date.now();
+  const prev = lastLogged.get(id);
+  if (prev !== undefined && t - prev < LOG_EVERY_MS) return;
+  if (lastLogged.size >= LOG_TABLE_MAX) lastLogged.clear();
+  lastLogged.set(id, t);
+  console.warn(
+    `[rate-limit] 429 bucket=${result.bucket} key=${result.key}` +
+      (route ? ` route=${route}` : '') +
+      ` limit=${result.limit} retryAfter=${result.retryAfterSeconds}s ` +
+      '(logged at most once a minute per bucket+key)'
+  );
+}
+
 // ---- response ---------------------------------------------------------------
 
 /** The 429 every limited caller gets. Body keeps the `{ success, error }` shape
  *  the rest of the API uses; `error` also satisfies the login route's
  *  `{ error }` readers. */
-export function rateLimitedResponse(result: RateLimitResult, message?: string): NextResponse {
+export function rateLimitedResponse(
+  result: RateLimitResult,
+  message?: string,
+  route?: string
+): NextResponse {
+  logThrottled(result, route);
   return NextResponse.json(
     {
       success: false,

@@ -50,7 +50,7 @@ export default function proxy(request: NextRequest) {
     // Anonymous traffic is the brute-force surface (login, licence activation),
     // so it is limited by address before it reaches a handler.
     const limited = checkPublicRateLimit(request.method, pathname, request.headers);
-    if (limited && !limited.allowed) return rateLimitedResponse(limited);
+    if (limited && !limited.allowed) return rateLimitedResponse(limited, undefined, `${request.method} ${pathname}`);
     return NextResponse.next({ request: { headers } });
   }
 
@@ -91,7 +91,7 @@ export default function proxy(request: NextRequest) {
   // caller therefore cannot spend (or exhaust) a real user's allowance by
   // guessing their id, and a 401 flood stays cheap (no counters are touched).
   const limited = checkAuthenticatedRateLimit(request.method, pathname, session.uid);
-  if (limited && !limited.allowed) return rateLimitedResponse(limited);
+  if (limited && !limited.allowed) return rateLimitedResponse(limited, undefined, `${request.method} ${pathname}`);
 
   headers.set(AUTH_HEADERS.uid, session.uid);
   headers.set(AUTH_HEADERS.userType, session.userType);

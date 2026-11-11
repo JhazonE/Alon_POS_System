@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
         if (locked) {
             return rateLimitedResponse(
                 locked,
-                'Too many failed login attempts. Please wait a few minutes and try again.'
+                'Too many failed login attempts. Please wait a few minutes and try again.',
+                'POST /api/auth/login'
             );
         }
 

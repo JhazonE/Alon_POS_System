@@ -23,6 +23,9 @@ export interface RateLimitResult {
   remaining: number;
   /** Whole seconds until the window resets; always >= 1 when blocked. */
   retryAfterSeconds: number;
+  /** Set by the policy layer (not the limiter) so a refusal can be logged. */
+  bucket?: string;
+  key?: string;
 }
 
 export interface RateLimiter {

@@ -139,6 +139,25 @@ const authed = (uid: string) => ({ authorization: `Bearer ${tokenFor(uid)}` });
   assert.equal(call('GET', '/api/products', authed('victim')).status, 200, 'a real user is unaffected');
 }
 
+// A refusal is logged (so the limits can be tuned from real data), but only
+// once a minute per bucket+key, so a flood is not a log flood.
+{
+  resetRateLimiters();
+  const logged: string[] = [];
+  const realWarn = console.warn;
+  console.warn = (...a: unknown[]) => { logged.push(a.join(' ')); };
+  try {
+    for (let i = 0; i < 5; i++) call('GET', '/api/products', authed('noisy'));
+    for (let i = 0; i < 10; i++) call('GET', '/api/products', authed('noisy'));
+  } finally {
+    console.warn = realWarn;
+  }
+  const lines = logged.filter((l) => l.includes('[rate-limit]') && l.includes('uid:noisy'));
+  assert.equal(lines.length, 1, '10 refusals produce ONE log line, not ten');
+  assert.match(lines[0], /bucket=api/, 'the line names the bucket');
+  assert.match(lines[0], /route=GET \/api\/products/, 'the line names the route');
+}
+
 // Login is limited per address, and other addresses are unaffected.
 {
   resetRateLimiters();
