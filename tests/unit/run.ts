@@ -73,6 +73,7 @@ const TEST_FILES = [
   'shelf-quantities.test',
   'session-cookie.test',
   'reading-number-uniqueness.test',
+  'rate-limit.test',
 ];
 
 const failures: { file: string; error: unknown }[] = [];
