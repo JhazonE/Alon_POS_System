@@ -20,6 +20,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
 import type { SessionPayload } from '@/lib/auth/session';
 import { AUTH_HEADERS, isPublicApiRoute } from '@/lib/auth/public-routes';
+import {
+  checkAuthenticatedRateLimit,
+  checkPublicRateLimit,
+  rateLimitedResponse,
+} from '@/lib/rate-limit-policy';
 
 function unauthorized(reason: string) {
   // The reason is deliberately coarse: a tampered token and an expired one
@@ -42,6 +47,10 @@ export default function proxy(request: NextRequest) {
   for (const name of Object.values(AUTH_HEADERS)) headers.delete(name);
 
   if (isPublicApiRoute(request.method, pathname)) {
+    // Anonymous traffic is the brute-force surface (login, licence activation),
+    // so it is limited by address before it reaches a handler.
+    const limited = checkPublicRateLimit(request.method, pathname, request.headers);
+    if (limited && !limited.allowed) return rateLimitedResponse(limited);
     return NextResponse.next({ request: { headers } });
   }
 
@@ -77,6 +86,12 @@ export default function proxy(request: NextRequest) {
   if (!session) {
     return unauthorized('Authentication required');
   }
+
+  // Limit AFTER authentication so the key is the verified uid. An anonymous
+  // caller therefore cannot spend (or exhaust) a real user's allowance by
+  // guessing their id, and a 401 flood stays cheap (no counters are touched).
+  const limited = checkAuthenticatedRateLimit(request.method, pathname, session.uid);
+  if (limited && !limited.allowed) return rateLimitedResponse(limited);
 
   headers.set(AUTH_HEADERS.uid, session.uid);
   headers.set(AUTH_HEADERS.userType, session.userType);

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/mysql';
 import { compare } from 'bcryptjs';
 import { signSession } from '@/lib/auth/session';
+import {
+    checkLoginLock,
+    clearLoginFailures,
+    rateLimitedResponse,
+    recordLoginFailure,
+} from '@/lib/rate-limit-policy';
 
 export async function POST(request: NextRequest) {
     try {
@@ -44,6 +50,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Brute-force guard: after a few failures for this address+username the
+        // attempt is refused BEFORE any DB lookup or bcrypt compare.
+        const locked = checkLoginLock(request.headers, username);
+        if (locked) {
+            return rateLimitedResponse(
+                locked,
+                'Too many failed login attempts. Please wait a few minutes and try again.'
+            );
+        }
+
         // Fetch user and their role category from database
         const users = await query(`
             SELECT 
@@ -58,6 +74,8 @@ export async function POST(request: NextRequest) {
         const user = users[0];
 
         if (!user) {
+            // Counted like a wrong password so the two cannot be told apart.
+            recordLoginFailure(request.headers, username);
             return NextResponse.json(
                 { error: 'Invalid credentials' },
                 { status: 401 }
@@ -75,11 +93,14 @@ export async function POST(request: NextRequest) {
         const isValid = await compare(password, user.password);
 
         if (!isValid) {
+            recordLoginFailure(request.headers, username);
             return NextResponse.json(
                 { error: 'Invalid credentials' },
                 { status: 401 }
             );
         }
+
+        clearLoginFailures(request.headers, username);
 
         // Fetch permissions
         const permissions = await query(

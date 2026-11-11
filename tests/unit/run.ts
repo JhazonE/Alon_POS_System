@@ -64,6 +64,7 @@ const TEST_FILES = [
   'session.test',
   'session-secret.test',
   'proxy-allowlist.test',
+  'rate-limit.test',
   'require-permission.test',
   'destructive-route-guards.test',
   'auth-fetch-migration.test',
