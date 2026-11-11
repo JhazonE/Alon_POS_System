@@ -193,7 +193,12 @@ test.describe('addProductWithScope multi-warehouse create', () => {
     expect(movements[0].warehouse_id).toBe(b.warehouseId);
   });
 
-  test('head office may select warehouses in two different branches', async () => {
+  // A product belongs to ONE branch (669431b). `assertWarehouseForWrite` is a no-op
+  // for head office, so without `assertEntriesShareOneBranch` a head-office caller
+  // could put a single product, and its stock, in two BIR establishments. This used
+  // to be asserted the other way round ("head office may select warehouses in two
+  // different branches"), which is the hole that commit closed.
+  test('head office cannot put one product in two branches, and nothing is written', async () => {
     const b1 = await seed();
     const b2 = await seed();
     const sku = newSku();
@@ -206,9 +211,58 @@ test.describe('addProductWithScope multi-warehouse create', () => {
       }),
       'tester', true, { scope: 'all', branchId: null },
     );
+    expect(result.success).toBe(false);
+    // The refusal names the split so the user can see which pick is the odd one.
+    expect(String(result.message)).toMatch(/belongs to one branch/);
+    expect(String(result.message)).toMatch(/span 2/);
+
+    expect(await rowsBySku(sku)).toHaveLength(0);
+    expect(await batchesBySku(sku)).toHaveLength(0);
+    expect(await movementsBySku(sku)).toHaveLength(0);
+  });
+
+  // The per-entry assert is skipped entirely without a session cookie (scope null),
+  // so for that caller the one-branch rule is the ONLY thing between it and a
+  // cross-branch product.
+  test('an unguarded caller (no session cookie) cannot span two branches either', async () => {
+    const b1 = await seed();
+    const b2 = await seed();
+    const sku = newSku();
+    const result: any = await addProductWithScope(
+      form(sku, {
+        warehouses: [
+          { warehouseId: b1.warehouseId, stock: 3, isPrimary: true },
+          { warehouseId: b2.warehouseId, stock: 4 },
+        ],
+      }),
+      'tester', true, null,
+    );
+    expect(result.success).toBe(false);
+    expect(String(result.message)).toMatch(/belongs to one branch/);
+
+    expect(await rowsBySku(sku)).toHaveLength(0);
+    expect(await batchesBySku(sku)).toHaveLength(0);
+    expect(await movementsBySku(sku)).toHaveLength(0);
+  });
+
+  // The positive control: the refusal is about SPANNING branches, not about head
+  // office, so several warehouses of one branch must still go through.
+  test('head office may still pick several warehouses of ONE branch', async () => {
+    const b = await seed();
+    const extra = await addWarehouse(b.branchId);
+    const sku = newSku();
+    const result: any = await addProductWithScope(
+      form(sku, {
+        warehouses: [
+          { warehouseId: b.warehouseId, stock: 3, isPrimary: true },
+          { warehouseId: extra, stock: 4 },
+        ],
+      }),
+      'tester', true, { scope: 'all', branchId: null },
+    );
     expect(result.success).toBe(true);
     const rows = await rowsBySku(sku);
-    expect(rows.map((r) => r.warehouse_id).sort()).toEqual([b1.warehouseId, b2.warehouseId].sort());
+    expect(rows.map((r) => r.warehouse_id).sort()).toEqual([b.warehouseId, extra].sort());
   });
 
   // --- refusals: nothing is written ----------------------------------------

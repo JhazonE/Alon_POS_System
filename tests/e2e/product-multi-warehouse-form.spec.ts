@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { seedSession, DEFAULT_ADMIN, type SessionUser } from './helpers/auth';
-import { selectCategory } from './helpers/product-form';
+import { selectCategory, openWarehousePicker, closeWarehousePicker, pickWarehouses } from './helpers/product-form';
 import {
   seedSecondBranch,
   cleanupSecondBranch,
@@ -11,16 +11,28 @@ import { testQuery } from './helpers/db';
 import { TEST_BRAND, TEST_CATEGORY, TEST_UNIT } from './fixtures/test-data';
 
 /**
- * Ang Inventory tab sa Add Product dili na single-select: ang warehouse picker
- * multi-select na, ug kada napili nga warehouse naay kaugalingon nga initial
- * stock input ug primary marker. Cost ug reorder point nagpabilin nga usa ra
- * ka shared field para sa tibuok submission.
+ * The Inventory tab of Add Product: a multi-select warehouse picker where every
+ * warehouse of the user's branch starts ticked at 0, the opening-stock input
+ * lives INSIDE each ticked picker row, and the first warehouse ticked is the
+ * primary (there is no primary control). Cost and reorder point stay single
+ * fields shared by the whole submission.
  *
- * Ang tanan test moagi sa dialog (UI surface). Ang write path (Task 5) wala pa
- * ania dinhi: ang mga test nga mo-submit mag-assert lang sa unsa ang gipadala o
- * sa dili pag-padala.
+ * add-product-warehouse-picker.spec.ts owns the default selection, where the
+ * stock input lives, and the missing primary control. This file covers the rest:
+ * per-warehouse stock being independent, the zero-warehouse rules, the submitted
+ * payload, and head office's branch-first flow.
+ *
+ * History worth knowing: this spec was written against the FIRST multi-warehouse
+ * design (nothing ticked by default, a separate list of warehouse rows below the
+ * picker, a primary radio per row). 870953d and 669431b replaced that design and
+ * seven tests here then sat failing against a UI that no longer existed, which
+ * hid a real crash behind them. They are rewritten for the current UI. The
+ * primary-radio test has no successor as such: the radio is gone, so "which one
+ * is primary" is now asserted on the submitted payload instead.
+ *
+ * Tests that submit capture the create server action's body and abort it; the
+ * write path itself is covered by product-multi-warehouse-create.spec.ts.
  */
-
 const tag = `MWF-${Date.now()}`;
 
 function branchUser(uid: string): SessionUser {
@@ -42,35 +54,6 @@ async function openInventoryTab(page: Page, user: SessionUser): Promise<Locator>
   await expect(dialog.getByText('Add New Product')).toBeVisible({ timeout: 20000 });
   await dialog.getByRole('tab', { name: 'Inventory' }).click();
   return dialog;
-}
-
-function picker(dialog: Locator) {
-  return dialog.getByLabel(/^Warehouses/);
-}
-
-async function openPicker(page: Page, dialog: Locator) {
-  await picker(dialog).click();
-  const pop = page.locator('[data-radix-popper-content-wrapper]');
-  // Naghulat sa listahan nga ma-load.
-  await expect(pop.getByRole('option').first()).toBeVisible();
-  return pop;
-}
-
-async function closePicker(page: Page) {
-  await page.keyboard.press('Escape');
-  await expect(page.locator('[data-radix-popper-content-wrapper]')).toBeHidden();
-}
-
-async function chooseWarehouses(page: Page, dialog: Locator, names: string[]) {
-  const pop = await openPicker(page, dialog);
-  for (const n of names) {
-    await pop.getByRole('option', { name: n }).click();
-  }
-  await closePicker(page);
-}
-
-function rows(dialog: Locator) {
-  return dialog.getByTestId('warehouse-row');
 }
 
 async function selectOption(page: Page, dialog: Locator, label: string, optionName: string) {
@@ -100,6 +83,10 @@ async function fillRequiredFields(page: Page, dialog: Locator, name: string) {
 }
 
 test.describe('add product: multi-warehouse picker', () => {
+  // The first test in a cold run pays the compile of /products, which can pass the
+  // 30s default: a timeout, not an assertion that failed. Alone, each test fits.
+  test.setTimeout(120_000);
+
   let seeded: SeededBranch;
   let otherBranch: SeededBranch;
   let whA: string;
@@ -131,57 +118,36 @@ test.describe('add product: multi-warehouse picker', () => {
     await cleanupSecondBranch(otherBranch);
   });
 
-  test('selecting two warehouses shows a stock input for each', async ({ page }) => {
+  test('each ticked warehouse has its own stock input, and unticking one leaves the other alone', async ({ page }) => {
     const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
 
-    await expect(rows(dialog)).toHaveCount(0);
-    await chooseWarehouses(page, dialog, [nameA, nameB]);
-
-    await expect(rows(dialog)).toHaveCount(2);
-    const stockA = dialog.getByLabel(`Initial stock for ${nameA}`, { exact: true });
-    const stockB = dialog.getByLabel(`Initial stock for ${nameB}`, { exact: true });
+    // Both of the branch's active warehouses start ticked, so the picker already
+    // holds one stock input per warehouse.
+    const pop = await openWarehousePicker(page, dialog);
+    const stockA = pop.getByLabel(`Initial stock for ${nameA}`, { exact: true });
+    const stockB = pop.getByLabel(`Initial stock for ${nameB}`, { exact: true });
     await expect(stockA).toBeVisible();
     await expect(stockB).toBeVisible();
 
-    // Kada warehouse naay kaugalingong stock: ang usa dili mo-apekto sa usa.
+    // Each warehouse has its OWN stock: typing in one does not touch the other.
     await stockA.fill('7');
     await stockB.fill('3');
     await expect(stockA).toHaveValue('7');
     await expect(stockB).toHaveValue('3');
 
-    // Ang pag-uncheck sa usa mo-wala sa row niini, ug ang stock sa nahabilin dili mausab.
-    const pop = await openPicker(page, dialog);
+    // Unticking one drops its input, and the other warehouse's stock is untouched.
     await pop.getByRole('option', { name: nameA }).click();
-    await closePicker(page);
-    await expect(rows(dialog)).toHaveCount(1);
-    await expect(dialog.getByLabel(`Initial stock for ${nameB}`, { exact: true })).toHaveValue('3');
+    await expect(stockA).toHaveCount(0);
+    await expect(stockB).toHaveValue('3');
+    await closeWarehousePicker(page, pop);
   });
 
-  test('the first selected warehouse is the primary by default and the primary can be changed', async ({ page }) => {
-    const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
-
-    // Gi-pili una ang B, unya A: ang una nga napili (B), dili ang una sa listahan.
-    await chooseWarehouses(page, dialog, [nameB, nameA]);
-    const primaryA = dialog.getByRole('radio', { name: `Primary warehouse: ${nameA}`, exact: true });
-    const primaryB = dialog.getByRole('radio', { name: `Primary warehouse: ${nameB}`, exact: true });
-    await expect(primaryB).toBeChecked();
-    await expect(primaryA).not.toBeChecked();
-
-    await primaryA.click();
-    await expect(primaryA).toBeChecked();
-    await expect(primaryB).not.toBeChecked();
-
-    // Kon ang primary gi-tangtang, ang nahabilin mahimong primary (kinahanglan naay usa).
-    const pop = await openPicker(page, dialog);
-    await pop.getByRole('option', { name: nameA }).click();
-    await closePicker(page);
-    await expect(dialog.getByRole('radio', { name: `Primary warehouse: ${nameB}`, exact: true })).toBeChecked();
-  });
-
-  test('a branch user cannot submit with zero warehouses selected', async ({ page }) => {
+  test('a branch user cannot submit with zero warehouses ticked', async ({ page }) => {
     const productName = `Branch NoWH ${tag}`;
     createdNames.push(productName);
     const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
+    // Everything starts ticked, so a branch user reaches "zero" by unticking all.
+    await pickWarehouses(page, dialog, []);
     await fillRequiredFields(page, dialog, productName);
 
     let sawServerAction = false;
@@ -201,15 +167,18 @@ test.describe('add product: multi-warehouse picker', () => {
     expect(inDb).toHaveLength(0);
 
     // Kon naay napili, mawala ang error.
-    await chooseWarehouses(page, dialog, [nameA]);
+    await pickWarehouses(page, dialog, [nameA]);
     await expect(dialog.getByText('Select at least one warehouse for this product.')).toBeHidden();
   });
 
-  test('head office can submit with zero warehouses selected', async ({ page }) => {
+  test('head office can submit with zero warehouses ticked, and gets one NULL-warehouse row', async ({ page }) => {
     const productName = `HO NoWH ${tag}`;
     createdNames.push(productName);
     const dialog = await openInventoryTab(page, DEFAULT_ADMIN);
     await expect(dialog.getByText('Warehouses (Optional)')).toBeVisible();
+    // The branch's warehouses start ticked, so head office has to untick them to
+    // mean "no warehouse".
+    await pickWarehouses(page, dialog, []);
     await fillRequiredFields(page, dialog, productName);
 
     await dialog.getByRole('button', { name: 'Add Product' }).click();
@@ -220,31 +189,17 @@ test.describe('add product: multi-warehouse picker', () => {
     expect(created[0].warehouse_id).toBeNull();
   });
 
-  test("the picker lists only the branch's active warehouses", async ({ page }) => {
-    const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
-    const pop = await openPicker(page, dialog);
-
-    await expect(pop.getByRole('option')).toHaveCount(2);
-    await expect(pop.getByRole('option', { name: nameA })).toBeVisible();
-    await expect(pop.getByRole('option', { name: nameB })).toBeVisible();
-    // Inactive ug laing branch nga warehouse dili makita.
-    await expect(pop.getByRole('option', { name: nameInactive })).toHaveCount(0);
-    const other: any[] = await testQuery('SELECT name FROM warehouses WHERE id = ?', [otherBranch.warehouseId]);
-    await expect(pop.getByRole('option', { name: other[0].name })).toHaveCount(0);
-  });
-
   test('cost and reorder point appear once, not per warehouse', async ({ page }) => {
     const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
-    await chooseWarehouses(page, dialog, [nameA, nameB]);
-    await expect(rows(dialog)).toHaveCount(2);
+    const pop = await openWarehousePicker(page, dialog);
 
-    // Walay cost o reorder input sulod sa warehouse section: ang row naay stock ra.
-    for (const i of [0, 1]) {
-      const row = rows(dialog).nth(i);
-      await expect(row.getByRole('spinbutton')).toHaveCount(1);
-      await expect(row.getByLabel(/cost/i)).toHaveCount(0);
-      await expect(row.getByLabel(/reorder/i)).toHaveCount(0);
-    }
+    // The picker rows carry the opening-stock box and nothing else: one number
+    // input per ticked warehouse (A and B), no cost, no reorder point.
+    await expect(pop.getByRole('spinbutton')).toHaveCount(2);
+    await expect(pop.getByLabel(/cost/i)).toHaveCount(0);
+    await expect(pop.getByLabel(/reorder/i)).toHaveCount(0);
+    await closeWarehousePicker(page, pop);
+
     await expect(dialog.getByLabel(/reorder/i)).toHaveCount(0);
     await expect(dialog.getByText(/shared by every warehouse/i)).toBeVisible();
 
@@ -270,27 +225,64 @@ test.describe('add product: multi-warehouse picker', () => {
     expect(pageErrors.filter((m) => m.includes('useFormField')), 'the Branch field must not read FormField context').toEqual([]);
   });
 
-  test('head office tells warehouses of different branches apart by branch name', async ({ page }) => {
-    const branch: any[] = await testQuery('SELECT name FROM branches WHERE id = ?', [seeded.branchId]);
+  // 669431b: a product belongs to ONE branch, so head office picks the branch
+  // first and the picker offers only that branch's warehouses. This replaces the
+  // old "tells warehouses of different branches apart by branch name" test, which
+  // assumed one picker listing every branch's warehouses side by side.
+  test('head office chooses the branch first, and the picker offers only that branch', async ({ page }) => {
+    const branchA: any[] = await testQuery('SELECT name FROM branches WHERE id = ?', [seeded.branchId]);
+    const branchB: any[] = await testQuery('SELECT name FROM branches WHERE id = ?', [otherBranch.branchId]);
+    const otherWh: any[] = await testQuery('SELECT name FROM warehouses WHERE id = ?', [otherBranch.warehouseId]);
     const dialog = await openInventoryTab(page, DEFAULT_ADMIN);
-    const pop = await openPicker(page, dialog);
 
-    const option = pop.getByRole('option', { name: nameA });
-    await expect(option).toBeVisible();
-    await expect(option).toContainText(branch[0].name);
-    await closePicker(page);
+    const chooseBranch = async (name: string) => {
+      await dialog.getByLabel('Branch', { exact: true }).click();
+      await page.getByRole('option', { name, exact: true }).click();
+    };
+
+    await chooseBranch(branchA[0].name);
+    let pop = await openWarehousePicker(page, dialog);
+    await expect(pop.getByRole('option', { name: nameA })).toBeVisible();
+    await expect(pop.getByRole('option', { name: nameB })).toBeVisible();
+    await expect(pop.getByRole('option', { name: otherWh[0].name })).toHaveCount(0);
+    // Type some stock, to show it does NOT survive the switch below.
+    await pop.getByLabel(`Initial stock for ${nameA}`, { exact: true }).fill('7');
+    await closeWarehousePicker(page, pop);
+
+    // Switching branch swaps the offered warehouses and REPLACES the selection with
+    // the new branch's (every one ticked, at 0). Carrying the old picks across
+    // would build exactly the payload the server refuses.
+    await chooseBranch(branchB[0].name);
+    pop = await openWarehousePicker(page, dialog);
+    const other = pop.getByRole('option', { name: otherWh[0].name });
+    await expect(other).toBeVisible();
+    await expect(other).toHaveAttribute('data-ticked', 'true');
+    await expect(pop.getByLabel(`Initial stock for ${otherWh[0].name}`, { exact: true })).toHaveValue('0');
+    await expect(pop.getByRole('option', { name: nameA })).toHaveCount(0);
+    await expect(pop.getByRole('option', { name: nameB })).toHaveCount(0);
+    await closeWarehousePicker(page, pop);
+
+    // ...and switching back does not bring the 7 typed earlier back.
+    await chooseBranch(branchA[0].name);
+    pop = await openWarehousePicker(page, dialog);
+    await expect(pop.getByLabel(`Initial stock for ${nameA}`, { exact: true })).toHaveValue('0');
+    await closeWarehousePicker(page, pop);
   });
 
-  test('submitting sends each warehouse with its stock and the primary flag', async ({ page }) => {
-    const productName = `Payload ${tag}`;
-    createdNames.push(productName);
-    const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
+  /**
+   * Fill the required fields, run setUp on the Inventory tab, then submit and
+   * return the create server action's body (whitespace stripped) instead of
+   * letting it run.
+   */
+  async function submitAndCapture(
+    page: Page,
+    dialog: Locator,
+    productName: string,
+    setUp: (dialog: Locator) => Promise<void>,
+  ): Promise<string> {
     await fillRequiredFields(page, dialog, productName);
     await dialog.getByRole('tab', { name: 'Inventory' }).click();
-    await chooseWarehouses(page, dialog, [nameA, nameB]);
-    await dialog.getByLabel(`Initial stock for ${nameA}`, { exact: true }).fill('5');
-    await dialog.getByLabel(`Initial stock for ${nameB}`, { exact: true }).fill('9');
-    await dialog.getByRole('radio', { name: `Primary warehouse: ${nameB}`, exact: true }).click();
+    await setUp(dialog);
 
     const sent: string[] = [];
     await page.route('**/products**', async (route) => {
@@ -306,11 +298,47 @@ test.describe('add product: multi-warehouse picker', () => {
 
     await dialog.getByRole('button', { name: 'Add Product' }).click();
     await expect.poll(() => sent.length).toBeGreaterThan(0);
+    return sent[0].replace(/\s/g, '');
+  }
 
-    const compact = sent[0].replace(/\s/g, '');
+  test('submitting sends each warehouse with its stock, and the first one ticked is the primary', async ({ page }) => {
+    const productName = `Payload ${tag}`;
+    createdNames.push(productName);
+    const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
+
+    const compact = await submitAndCapture(page, dialog, productName, async (d) => {
+      const pop = await openWarehousePicker(page, d);
+      // Both start ticked. Untick and re-tick A so it is the SECOND one ticked:
+      // B is then the first, and so the primary.
+      await pop.getByRole('option', { name: nameA }).click();
+      await pop.getByRole('option', { name: nameA }).click();
+      await pop.getByLabel(`Initial stock for ${nameA}`, { exact: true }).fill('5');
+      await pop.getByLabel(`Initial stock for ${nameB}`, { exact: true }).fill('9');
+      await closeWarehousePicker(page, pop);
+    });
+
     expect(compact).toMatch(new RegExp(`"warehouseId":"${whA}"[^}]*"stock":5`));
     expect(compact).toMatch(new RegExp(`"warehouseId":"${whB}"[^}]*"stock":9`));
     expect(compact).toMatch(new RegExp(`"warehouseId":"${whB}"[^}]*"isPrimary":true`));
     expect(compact).not.toMatch(new RegExp(`"warehouseId":"${whA}"[^}]*"isPrimary":true`));
+  });
+
+  test('unticking the primary promotes the next warehouse in the payload', async ({ page }) => {
+    const productName = `Promote ${tag}`;
+    createdNames.push(productName);
+    const dialog = await openInventoryTab(page, branchUser(seeded.userUid));
+
+    const compact = await submitAndCapture(page, dialog, productName, async (d) => {
+      const pop = await openWarehousePicker(page, d);
+      // Make B the primary (first ticked), then untick it: A is the only one left
+      // and must be flagged primary - it was explicitly NOT primary a moment ago.
+      await pop.getByRole('option', { name: nameA }).click();
+      await pop.getByRole('option', { name: nameA }).click();
+      await pop.getByRole('option', { name: nameB }).click();
+      await closeWarehousePicker(page, pop);
+    });
+
+    expect(compact).not.toContain(`"warehouseId":"${whB}"`);
+    expect(compact).toMatch(new RegExp(`"warehouseId":"${whA}"[^}]*"isPrimary":true`));
   });
 });
